@@ -60,3 +60,7 @@ Sau git pull/pnpm install --frozen-lockfile/pnpm build, chỉ áp dụng migrati
 
 ## Nâng từ v0.3 lên v0.4
 Sau git pull/pnpm install --frozen-lockfile/pnpm build, chỉ chạy migration 0002 nếu 0000/0001 đã được áp dụng. Không chạy lại migration cũ. Mở Thực đơn & bếp để nhập món/giá/VAT/phí, sau đó gọi món từ phiên đang chơi. Xem docs/FNB.md. Mọi cửa sổ cũ cần tải lại trước khi thu tiền vì API mới yêu cầu xác nhận tổng phiếu đã xem.
+
+### Nâng cấp v0.4 → v0.5
+
+Chỉ áp dụng migration mới `drizzle/0003_minor_lady_deathstrike.sql` qua cùng lệnh D1 ở trên (thay đường dẫn file). Không chạy lại migration cũ đã áp dụng. Kho ban đầu chưa theo dõi món nào; bật từng món rồi nhập tồn thực tế. Chạy thêm `python tests/stock_sql_test.py` khi kiểm tra.

@@ -44,3 +44,5 @@ Apply migration 0001 once after 0000 (see docs/LOCAL_SETUP.md). Existing paid re
 
 ## v0.4 food workflow
 Apply migration 0002 after 0000/0001, once each. Configure actual menu prices and VAT/fees in Thực đơn & bếp, then order from a playing session. Kitchen marks the order served; only served orders enter the receipt. Pending orders or changed totals block collection. See docs/FNB.md. QR/OTP customer ordering and stock management remain pending.
+
+v0.5 bổ sung [Kho thành phẩm F&B](docs/STOCK.md): nhập/điều chỉnh, giữ hàng theo đơn và xuất kho khi phục vụ. Chạy thêm migration 0003 khi nâng cấp từ v0.4.

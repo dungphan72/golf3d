@@ -27,3 +27,7 @@ Full OTP/organization RBAC, financial adjustment approval and refund ledger, spl
 
 ## v0.4 incremental review
 Native audit rerun with unchanged dependencies returned the same counts. F&B POST is capped at 16 KB, strict schemas reject client totals/tenant, carts have at most 10 unique products, and server/D1 both check current item version and monetary snapshots. Customer QR access is intentionally not introduced before session authorization. Financial payment requests additionally compare expectedAmount with the server total. No bank/card transfers or new external services are executed.
+
+### v0.5 incremental review
+
+Không thêm dependency. API stock xác thực owner và tenant server-side, kiểm tra origin, giới hạn body, strict Zod; SQL prepared. Ledger bất biến, manual retry signature, internal sale key tách namespace. SQLite triggers bảo vệ reserved units và rollback stock/bill/status khi audit lỗi. UI không hiển thị tồn 0 giả khi chưa cấu hình. Chưa có RBAC/OTP và chưa nghiệm thu authenticated E2E. Các cảnh báo dependency đã ghi phía trên vẫn là giới hạn trước khi vận hành thật.

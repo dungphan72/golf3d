@@ -11,7 +11,7 @@ export async function GET(req:Request){
  const user=await getChatGPTUser();if(!user)return error('Vui lòng đăng nhập',401);
  try{
   const booking=new URL(req.url).searchParams.get('booking');if(booking&&!(await db().prepare('SELECT id FROM bookings WHERE tenant=? AND id=?').bind(user.userId,booking).first()))return error('Không tìm thấy phiên',404);
-  const menu=(await db().prepare('SELECT * FROM menu_items WHERE tenant=? ORDER BY active DESC,category,name LIMIT 500').bind(user.userId).all<MenuItem>()).results;
+  const menu=(await db().prepare('SELECT m.*,CASE WHEN s.low_level IS NULL THEN 0 ELSE 1 END AS stock_enabled,s.on_hand-s.reserved AS available FROM menu_items m JOIN stock_status s ON s.id=m.id AND s.tenant=m.tenant WHERE m.tenant=? ORDER BY m.active DESC,m.category,m.name LIMIT 500').bind(user.userId).all<MenuItem>()).results;
   const orders=booking?(await db().prepare('SELECT o.*,b.room FROM food_orders o JOIN bookings b ON b.id=o.booking_id AND b.tenant=o.tenant WHERE o.tenant=? AND o.booking_id=? ORDER BY o.created,o.id LIMIT 100').bind(user.userId,booking).all<FoodOrder>()).results:(await db().prepare("SELECT o.*,b.room FROM food_orders o JOIN bookings b ON b.id=o.booking_id AND b.tenant=o.tenant WHERE o.tenant=? ORDER BY CASE WHEN o.status IN ('new','preparing','ready') THEN 0 ELSE 1 END,o.created DESC,o.id LIMIT 200").bind(user.userId).all<FoodOrder>()).results;
   return reply({menu,orders});
  }catch(e){console.error('F&B load',e);return error('Chưa tải được thực đơn và đơn món. Kiểm tra migration mới.',503);}
@@ -42,7 +42,7 @@ export async function POST(req:Request){
   }
   if(input.action==='order'){
    const items:FoodLine[]=[];
-   for(const line of input.lines){const item=await db().prepare('SELECT * FROM menu_items WHERE tenant=? AND id=? AND active=1').bind(tenant,line.itemId).first<MenuItem>();if(!item||item.version!==line.expectedVersion)return error('Thực đơn vừa thay đổi. Kiểm tra lại món và giá.',409);items.push({itemId:item.id,name:item.name,unit:item.unit,category:item.category,price:item.price,qty:line.qty,version:item.version,feeBps:item.fee_bps,vatBps:item.vat_bps,...lineQuote(item.price,line.qty,item.fee_bps,item.vat_bps)});}
+   for(const line of input.lines){const item=await db().prepare('SELECT m.*,CASE WHEN s.low_level IS NULL THEN 0 ELSE 1 END AS stock_enabled,s.on_hand-s.reserved AS available FROM menu_items m JOIN stock_status s ON s.id=m.id AND s.tenant=m.tenant WHERE m.tenant=? AND m.id=? AND m.active=1').bind(tenant,line.itemId).first<MenuItem>();if(!item||item.version!==line.expectedVersion)return error('Thực đơn vừa thay đổi. Kiểm tra lại món và giá.',409);items.push({stockTracked:!!item.stock_enabled,itemId:item.id,name:item.name,unit:item.unit,category:item.category,price:item.price,qty:line.qty,version:item.version,feeBps:item.fee_bps,vatBps:item.vat_bps,...lineQuote(item.price,line.qty,item.fee_bps,item.vat_bps)});}
    const q=orderQuote(items);await db().prepare(CREATE_ORDER_SQL).bind(crypto.randomUUID(),tenant,input.bookingId,input.requestId,orderFingerprint(input),JSON.stringify(items),q.subtotal,q.fee,q.vat,q.total,input.note,user.userId,now,now).run();return reply({ok:true});
   }
   const current=await db().prepare('SELECT * FROM food_orders WHERE tenant=? AND id=?').bind(tenant,input.id).first<FoodOrder>();if(!current)return error('Không tìm thấy đơn món',404);
@@ -51,6 +51,8 @@ export async function POST(req:Request){
  }catch(e){
   try{const previous=await replay();if(previous)return previous;}catch{/* retain original failure */}
   const message=e instanceof Error?e.message:String(e);
+  if(message.includes('STOCK_UNAVAILABLE'))return error('Không đủ hàng khả dụng. Tải lại thực đơn trước khi gọi món.',409);
+  if(message.includes('STOCK_UNIT_LOCKED'))return error('Món đã theo dõi kho không được đổi đơn vị. Hãy tạo mã món mới.',409);
   if(message.includes('MENU_CHANGED'))return error('Món hoặc giá vừa thay đổi; tải lại thực đơn.',409);
   if(message.includes('SESSION_NOT_ORDERABLE'))return error('Chỉ gọi món trong phiên đang chơi; không thay đổi đơn của phiếu đã thanh toán.',409);
   if(message.includes('ORDER_ALREADY_FINAL')||message.includes('INVALID_ORDER_TRANSITION'))return error('Trạng thái đơn không phù hợp hoặc vừa được xử lý ở thiết bị khác.',409);

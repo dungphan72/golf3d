@@ -64,3 +64,9 @@
 4. F&B và hàng đợi bếp/bar đã có v0.4. Tiếp tục customer-session binding/QR, thông báo realtime, phân quyền, kho/công thức/mua hàng và chia station/hủy từng món.
 5. Gói/loyalty/HLV/CRM/giải/reporting và connectors thật.
 6. Tenant onboarding, billing thuê bao, branded website, 3 ngôn ngữ/CMS, domain, backup/restore, load/security/accessibility QA trước mở công khai.
+
+## v0.5 — Kho thành phẩm F&B
+
+Đã thêm menu Kho F&B, bật theo dõi từng món, nhập/điều chỉnh có lý do, ngưỡng cảnh báo, ledger bất biến. Đơn giữ số lượng ngay khi gửi, phục vụ mới trừ tồn; hủy trả phần giữ. Chặn vượt khả dụng, tenant khác, ghi trùng và đổi đơn vị đã theo dõi. Chi tiết: STOCK.md.
+
+Chưa có công thức nguyên liệu, giá vốn/nhà cung cấp, OTP/QR khách tự gọi món, RBAC nhân viên. Vẫn thử nội bộ; vấn đề audit dependency chưa giải quyết.

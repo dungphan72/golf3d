@@ -10,8 +10,8 @@ export const fnbInput=z.discriminatedUnion('action',[
  if(v.action==='order'&&new Set(v.lines.map(l=>l.itemId)).size!==v.lines.length)ctx.addIssue({code:z.ZodIssueCode.custom,path:['lines'],message:'Mỗi món chỉ xuất hiện một lần trong đơn'});
  if(v.action==='transition'&&v.status==='cancelled'&&v.reason.length<5)ctx.addIssue({code:z.ZodIssueCode.custom,path:['reason'],message:'Hủy món cần lý do ít nhất 5 ký tự'});
 });
-export type MenuItem={id:string;tenant:string;name:string;category:'food'|'drink'|'other';unit:string;price:number;fee_bps:number;vat_bps:number;active:number;version:number;created:number};
-export type FoodLine={itemId:string;name:string;unit:string;category:string;price:number;qty:number;version:number;feeBps:number;vatBps:number;subtotal:number;fee:number;vat:number;total:number};
+export type MenuItem={id:string;tenant:string;name:string;category:'food'|'drink'|'other';unit:string;price:number;fee_bps:number;vat_bps:number;active:number;version:number;created:number;stock_enabled?:number;available?:number};
+export type FoodLine={stockTracked?:boolean;itemId:string;name:string;unit:string;category:string;price:number;qty:number;version:number;feeBps:number;vatBps:number;subtotal:number;fee:number;vat:number;total:number};
 export type FoodOrder={id:string;tenant:string;booking_id:string;request_id:string;request_data:string;items:string;subtotal:number;fee:number;vat:number;total:number;note:string;status:'new'|'preparing'|'ready'|'served'|'cancelled';version:number;actor:string;created:number;updated:number;reason:string;room?:string};
 export type FoodData={menu:MenuItem[];orders:FoodOrder[]};
 export const foodLabels={new:'Chờ tiếp nhận',preparing:'Đang chuẩn bị',ready:'Sẵn sàng phục vụ',served:'Đã phục vụ',cancelled:'Đã hủy'};

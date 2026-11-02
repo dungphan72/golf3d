@@ -27,3 +27,8 @@
 
 ## 0.1.0 — 2026-11-02
 - Initial private room map, booking, session timer, receipts and basic support requests.
+
+## 0.5.0
+- Kho thành phẩm: nhập hàng, tăng/giảm có lý do, tồn thực tế/giữ/khả dụng, cảnh báo thấp và lịch sử bất biến.
+- Đơn giữ hàng khi gửi, hủy giải phóng, phục vụ xuất kho cùng giao dịch hóa đơn; chống ghi trùng và vượt tồn khi đồng thời.
+- 125 tests, migration 0003; chưa hỗ trợ công thức nguyên liệu/giá vốn, giữ bản thử riêng tư.

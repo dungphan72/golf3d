@@ -39,3 +39,9 @@ These checks cover an internal pilot, not readiness for real-money operation. Re
 
 ## Migration parser regression v0.4
 Wrangler 4.92.0 did not recognize CASE after `amount=CASE` as a compound block, split the trigger before its audit INSERT and returned incomplete input. SQLite executescript alone did not reveal this. No 0002 tables/triggers were applied after the failed local batch (verified in sqlite_master). The unapplied 0002 was repaired with `amount= CASE`; the added test uses Wrangler's actual splitter and executes every resulting statement against SQLite. It failed before the fix and passed after; the local D1 migration was then retried. Do not rewrite this migration once applied.
+
+## v0.5
+
+125 tests: 60 TypeScript, 13 booking SQL, 21 finance SQL, 19 F&B SQL, 11 stock SQL, 1 migration splitter. TypeScript strict và build Vinext thành công. Stock tests gồm tranh chấp tồn cuối, giữ/nhả hàng, không xuất phần đã giữ, chống ghi trùng, khóa đơn vị và audit failure rollback cả tiền/kho/đơn. Migration 0003 chạy thành công bằng Wrangler local (17 statements); 0000–0002 giữ nguyên.
+
+Chưa kiểm thử end-to-end sau đăng nhập thực tế vì browser preview không có identity. Audit dependency còn cảnh báo như REVIEW-v03; không thêm dependency trong v0.5.

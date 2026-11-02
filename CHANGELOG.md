@@ -32,3 +32,7 @@
 - Kho thành phẩm: nhập hàng, tăng/giảm có lý do, tồn thực tế/giữ/khả dụng, cảnh báo thấp và lịch sử bất biến.
 - Đơn giữ hàng khi gửi, hủy giải phóng, phục vụ xuất kho cùng giao dịch hóa đơn; chống ghi trùng và vượt tồn khi đồng thời.
 - 125 tests, migration 0003; chưa hỗ trợ công thức nguyên liệu/giá vốn, giữ bản thử riêng tư.
+
+## 0.5.1 — Security
+- Cập nhật Next.js và thư viện ảnh; audit giảm từ 3 xuống 0 cảnh báo critical.
+- Giữ bản thử riêng tư: còn 32 high, 31 moderate và 10 low cần xử lý theo từng nhóm.

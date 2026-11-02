@@ -70,3 +70,7 @@
 Đã thêm menu Kho F&B, bật theo dõi từng món, nhập/điều chỉnh có lý do, ngưỡng cảnh báo, ledger bất biến. Đơn giữ số lượng ngay khi gửi, phục vụ mới trừ tồn; hủy trả phần giữ. Chặn vượt khả dụng, tenant khác, ghi trùng và đổi đơn vị đã theo dõi. Chi tiết: STOCK.md.
 
 Chưa có công thức nguyên liệu, giá vốn/nhà cung cấp, OTP/QR khách tự gọi món, RBAC nhân viên. Vẫn thử nội bộ; vấn đề audit dependency chưa giải quyết.
+
+## v0.5.1 — Vá bảo mật dependency
+
+Next.js/eslint-config-next 16.4.1 và sharp 0.35.5. Native audit: 0 critical, 32 high, 31 moderate, 10 low; trước đó 3/35/36/11. Không sửa dữ liệu, migration hay nghiệp vụ. 125 regression tests, strict typecheck và build đã qua. Chi tiết REVIEW-v051.md; chưa sẵn sàng công khai và vẫn chờ authenticated E2E.

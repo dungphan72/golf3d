@@ -31,3 +31,7 @@ Native audit rerun with unchanged dependencies returned the same counts. F&B POS
 ### v0.5 incremental review
 
 Không thêm dependency. API stock xác thực owner và tenant server-side, kiểm tra origin, giới hạn body, strict Zod; SQL prepared. Ledger bất biến, manual retry signature, internal sale key tách namespace. SQLite triggers bảo vệ reserved units và rollback stock/bill/status khi audit lỗi. UI không hiển thị tồn 0 giả khi chưa cấu hình. Chưa có RBAC/OTP và chưa nghiệm thu authenticated E2E. Các cảnh báo dependency đã ghi phía trên vẫn là giới hạn trước khi vận hành thật.
+
+## Superseded dependency status — v0.5.1
+
+The historical counts above describe the old v0.3–v0.5 lockfile. The current v0.5.1 audit is **0 critical, 32 high, 31 moderate, 10 low**. See REVIEW-v051.md and dependency-audit-2026-11-03.json for the bounded upgrade and remaining release blockers.

@@ -1,6 +1,6 @@
 {
   "name": "golf3d",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -13,9 +13,10 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts && node --conditions=react-server --test tests/rsc-transport.test.mjs",
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts && node --conditions=react-server --test tests/rsc-transport.test.mjs && node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs",
     "test:migrations": "python tests/migration_splitter_test.py",
-    "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs"
+    "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs",
+    "test:runtime": "node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -68,7 +69,8 @@
   "type": "module",
   "overrides": {
     "miniflare": {
-      "sharp": "0.35.5"
+      "sharp": "0.35.5",
+      "undici": "7.30.1"
     }
   },
   "packageManager": "pnpm@11.25.0"

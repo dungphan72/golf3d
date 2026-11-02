@@ -53,3 +53,7 @@ Sau cập nhật Next 16.4.1 và sharp 0.35.5, strict typecheck, 125 regression 
 ## v0.5.2
 
 126 tests (60 TypeScript, 1 Flight transport thật, 65 SQLite/migration). Chạy `pnpm test:rsc` để kiểm tra server/client Flight truyền giá trị booking, Unicode và nhiều typed arrays. Typecheck/build qua; lockfile chỉ đổi react, react-dom, react-server-dom-webpack và peer identifiers. Audit 0 critical / 31 high / 31 moderate / 10 low; xem REVIEW-v052.md về giới hạn scanner và nguồn advisory ngoài feed. Chưa nghiệm thu authenticated E2E.
+
+## v0.5.3
+
+127 tests: 60 TypeScript, 1 Flight, 1 Worker HTTP/JSON/D1, 65 SQLite/migration. Test mới chạy `pnpm test:runtime`; không gọi Internet hay dữ liệu nghiệp vụ. Miniflare thực tế resolve undici 7.30.1, strict typecheck và build qua. Audit 0/21/17/5; chỉ là kết quả scanner. Authenticated E2E vẫn chưa nghiệm thu.

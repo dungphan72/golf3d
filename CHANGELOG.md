@@ -40,3 +40,7 @@
 ## 0.5.2 — Security
 - Vá React / React DOM / React Server Components lên 19.2.9, thêm kiểm tra Flight transport thực tế.
 - 126 kiểm tra qua; native audit còn 0 critical, 31 high, 31 moderate, 10 low. Giữ thử riêng tư, chưa nghiệm thu end-to-end sau đăng nhập.
+
+## 0.5.3 — Security
+- Vá thư viện mạng của môi trường Worker, thêm kiểm tra HTTP/JSON/D1 thực tế.
+- 127 kiểm tra qua; native audit giảm high 31 → 21, moderate 31 → 17, low 10 → 5; critical vẫn 0. Tiếp tục thử riêng tư.

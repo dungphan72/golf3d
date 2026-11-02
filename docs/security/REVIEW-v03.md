@@ -24,3 +24,6 @@ Triage and temporary mitigation:
 
 ## Remaining release blockers
 Full OTP/organization RBAC, financial adjustment approval and refund ledger, split tenders, backup/restore exercise, retention/access controls, real-device/browser E2E and the dependency findings above remain open.
+
+## v0.4 incremental review
+Native audit rerun with unchanged dependencies returned the same counts. F&B POST is capped at 16 KB, strict schemas reject client totals/tenant, carts have at most 10 unique products, and server/D1 both check current item version and monetary snapshots. Customer QR access is intentionally not introduced before session authorization. Financial payment requests additionally compare expectedAmount with the server total. No bank/card transfers or new external services are executed.

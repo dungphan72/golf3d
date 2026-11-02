@@ -6,7 +6,7 @@ Private pilot for a golf facility: 10 open practice lines and 2 VIP rooms in Bì
 
 Read [requirements](docs/REQUIREMENTS.md), [progress and limitations](docs/PROGRESS.md), and [design](docs/DESIGN.md).
 
-Current increment: **v0.3 — shift cashbook and reconciliation**. See [progress](docs/PROGRESS.md).
+Current increment: **v0.4 — session food orders, kitchen queue and combined receipts**. See [progress](docs/PROGRESS.md).
 
 ## Runtime
 Vinext/React/TypeScript, Cloudflare Workers + D1, owner-private Sites authentication. Source is synchronized to the Site's Git repository. Tenant scope currently corresponds to the authenticated private-site user; enterprise tenant membership, golfer OTP and RBAC are pending.
@@ -17,6 +17,8 @@ Vinext/React/TypeScript, Cloudflare Workers + D1, owner-private Sites authentica
 - Pricing and booking tests: `pnpm test`
 - SQLite booking tests: `python tests/booking_sql_test.py`
 - SQLite financial atomicity tests: `python tests/finance_sql_test.py`
+- SQLite F&B/billing tests: `python tests/fnb_sql_test.py`
+- Wrangler migration compatibility: `python tests/migration_splitter_test.py`
 - Build: supported Sites `scripts/build-site.mjs`; standalone `npm run build`.
 - Preview: `sites-preview start /workspace/sites/golf3d`
 
@@ -39,3 +41,6 @@ No secrets in source. No mocked OTP or bank confirmations. No GC3 hardware calls
 
 ## v0.3 migration and security
 Apply migration 0001 once after 0000 (see docs/LOCAL_SETUP.md). Existing paid receipts are not backfilled into the new cashbook. Dependency audit is not clean; see docs/security/REVIEW-v03.md. Keep this pilot owner-private and use test data.
+
+## v0.4 food workflow
+Apply migration 0002 after 0000/0001, once each. Configure actual menu prices and VAT/fees in Thực đơn & bếp, then order from a playing session. Kitchen marks the order served; only served orders enter the receipt. Pending orders or changed totals block collection. See docs/FNB.md. QR/OTP customer ordering and stock management remain pending.

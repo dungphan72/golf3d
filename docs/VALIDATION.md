@@ -1,3 +1,12 @@
+# Kiểm tra v0.4
+
+- 109 checks: 55 TypeScript, 13 booking SQL, 21 finance SQL, 19 F&B SQL, 1 migration-splitter regression. Strict TypeScript and production build pass.
+- F&B SQL tests use all migrations and actual server SQL. Cover serving before/after golf finish, concurrent finish/serve, 8 simultaneous serve attempts, tenant isolation, retry keys, stale menu, pending-order payment blocking, cancellation, immutable snapshots and audit-failure rollback.
+- Mutation check disabling the pending-food payment guard failed the corresponding test as expected; source restored before local migration.
+- Existing financial and pricing tests retained; cash collection now requires expectedAmount as a comparison, never as the trusted amount posted.
+- Native audit rerun on unchanged dependency lockfile still reports 3 critical, 35 high, 36 moderate and 11 low. Keep owner-private/test data; remediation still required before production.
+- Browser authenticated E2E, physical-device mobile/PWA, customer QR/OTP, stock, print-device and station routing acceptance are pending.
+
 # Kiểm tra v0.3
 
 - TypeScript strict + production build pass.
@@ -27,3 +36,6 @@
 - Mobile CSS: 2-column rooms, bottom nav, native dialogs and mobile forms implemented. Full physical-device/PWA, 3 locale and accessibility audits pending.
 
 These checks cover an internal pilot, not readiness for real-money operation. Required production work remains in PROGRESS.md.
+
+## Migration parser regression v0.4
+Wrangler 4.92.0 did not recognize CASE after `amount=CASE` as a compound block, split the trigger before its audit INSERT and returned incomplete input. SQLite executescript alone did not reveal this. No 0002 tables/triggers were applied after the failed local batch (verified in sqlite_master). The unapplied 0002 was repaired with `amount= CASE`; the added test uses Wrangler's actual splitter and executes every resulting statement against SQLite. It failed before the fix and passed after; the local D1 migration was then retried. Do not rewrite this migration once applied.

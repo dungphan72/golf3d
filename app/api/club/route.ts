@@ -5,6 +5,7 @@ import {defaults,quote,wholeQuote, type Config, type Booking, type Segment} from
 import {upgradeConfig} from '../../../lib/pricing';
 import {configSchema} from '../../../lib/config';
 import {planBooking} from '../../../lib/booking';
+import {FINISH_SESSION_SQL} from '../../../lib/fnb-sql';
 export const dynamic='force-dynamic';
 function db(){if(!env.DB)throw new Error('Cơ sở dữ liệu chưa kết nối');return env.DB;}
 function fail(message:string,status=400){return Response.json({error:message},{status});}
@@ -60,7 +61,10 @@ export async function POST(req:Request){
  else if(input.action==='resume'){if(status!=='paused')return fail('Phiên chưa tạm dừng');status='playing';started=now;}
  else if(input.action==='finish'){
   if(!['playing','paused'].includes(status))return fail('Phiên chưa bắt đầu');if(status==='playing'&&started!=null)segments.push({start:started,end:now});
-  try{amount=(b.service==='gdr'?quote(segments,snap.config,snap.vip):wholeQuote(snap.base,snap.config,b.service as '9'|'18')).total;}catch{amount=null;}status='finished';finished=now;started=null;
+  try{amount=(b.service==='gdr'?quote(segments,snap.config,snap.vip):wholeQuote(snap.base,snap.config,b.service as '9'|'18')).total;}catch{amount=null;}
+  const ended=await db().prepare(FINISH_SESSION_SQL).bind(JSON.stringify(segments),now,amount,amount,amount,now+(snap.vip?snap.config.vipClean:snap.config.clean)*60000,tenant,b.id,b.status,b.started).run();
+  if(!ended.meta.changes)return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.',409);
+  await log(tenant,'Kết thúc',b.id);return Response.json({ok:true});
  }else if(input.action==='pay'){return fail('Thanh toán phải được ghi vào sổ ca tại màn hình mới. Hãy tải lại ứng dụng.',409);}
  else if(input.action==='cancel'){if(status!=='booked')return fail('Chỉ hủy lịch chưa bắt đầu');status='cancelled';}
  else if(input.action==='support'){

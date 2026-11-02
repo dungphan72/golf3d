@@ -20,3 +20,6 @@ Phiếu v0.1/v0.2 đã thanh toán vẫn giữ nguyên, không tự chuyển th�
 Mỗi thao tác mở ca/thu/chi có mã chống lặp. Nếu mạng chập chờn, kiểm tra sổ và dùng lại thao tác đang chờ; đừng tạo một phiếu thu/chi mới chỉ vì chưa thấy phản hồi.
 
 Đây là sổ vận hành thử nội bộ, chưa phải phần mềm kế toán, chưa tự xác nhận ngân hàng, chưa có split payment, trả góp/nợ, hoàn tiền, doanh thu trả trước, hay phân quyền duyệt tài chính hoàn chỉnh.
+
+## Từ v0.4
+Phiếu gồm golf và F&B đã phục vụ. Chưa thể thu nếu còn đơn món chờ. API nhận expectedAmount chỉ để so khớp với số nhân viên đã xem; số tiền ghi sổ luôn lấy từ backend, không lấy tổng do client quyết định. Nếu món vừa cộng tiền, phải xem và nhận đủ tổng mới rồi xác nhận lại.

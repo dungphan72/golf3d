@@ -61,6 +61,7 @@ export async function POST(req:Request){
   const booking=await db.prepare('SELECT id,status,amount FROM bookings WHERE tenant=? AND id=?').bind(tenant,input.bookingId).first<{id:string;status:string;amount:number|null}>();
   if(!booking)return error('Không tìm thấy phiếu',404);
   if(booking.status!=='finished'||booking.amount==null||booking.amount<=0)return error('Chỉ thu phiếu đã kết thúc, có số tiền hợp lệ và chưa thanh toán',409);
+  if(booking.amount!==input.expectedAmount)return error('Tổng phiếu vừa thay đổi. Xem lại và nhận đủ tiền trước khi xác nhận.',409);
   const shift=await db.prepare("SELECT id FROM shifts WHERE tenant=? AND status='open'").bind(tenant).first<{id:string}>();
   if(!shift)return error('Hãy mở ca trước khi xác nhận thu tiền',409);
   await db.prepare(INSERT_ENTRY_SQL).bind(crypto.randomUUID(),tenant,shift.id,'payment',input.method,booking.amount,booking.id,input.requestId,'Thanh toán phiếu '+booking.id,user.userId,now).run();
@@ -69,6 +70,7 @@ export async function POST(req:Request){
   // A parallel identical request may have committed after replay() first checked.
   try{const previous=await replay();if(previous)return previous;}catch{/* Preserve the original storage failure below. */}
   const message=e instanceof Error?e.message:String(e);
+  if(message.includes('UNSERVED_FOOD_ORDERS'))return error('Còn món chưa phục vụ hoặc hủy. Hãy xử lý đơn món trước khi thu tiền.',409);
   if(message.includes('INSUFFICIENT_CASH'))return error('Số tiền chi vượt tiền mặt dự kiến trong quỹ',409);
   if(message.includes('SHIFT_NOT_OPEN'))return error('Ca đã đóng hoặc không thuộc cơ sở. Tải lại trước khi thao tác.',409);
   if((message.includes('one_open_shift_per_tenant')||message.includes('shifts.tenant')))return error('Đã có ca đang mở. Hãy đóng ca trước khi mở ca mới.',409);

@@ -1,6 +1,6 @@
 {
   "name": "golf3d",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -13,7 +13,8 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts"
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts",
+    "test:migrations": "python tests/migration_splitter_test.py"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

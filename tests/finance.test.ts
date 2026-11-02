@@ -12,7 +12,7 @@ test('manual cash movement needs a positive amount and reason',()=>{
  assert.equal(financeInput.safeParse({action:'cash-entry',requestId:key,shiftId:'s1',kind:'cash_out',amount:100000,note:'Mua nước'}).success,true);
 });
 test('client cannot choose a tenant or submit a payment total',()=>{
- assert.equal(financeInput.safeParse({action:'pay',requestId:key,bookingId:'b1',method:'cash',amount:1}).success,false);
+ assert.equal(financeInput.safeParse({action:'pay',requestId:key,bookingId:'b1',method:'cash',expectedAmount:100000,amount:1}).success,false);
  assert.equal(financeInput.safeParse({action:'open',requestId:key,openingCash:0,name:'Ca sáng',tenant:'other'}).success,false);
 });
 test('cash reconciliation separates opening float, receipts and expenses',()=>{
@@ -34,9 +34,9 @@ test('open shift retry identifiers are deterministic and tenant scoped',async()=
 test('a retry with a different payment method is not treated as success',async()=>{
  const {matchesEntry}=await import('../lib/finance.ts');
  const old={id:'e',tenant:'t',shift_id:'s',kind:'payment' as const,method:'cash' as const,amount:100000,booking_id:'b1',request_id:key,note:'Paid',actor:'u',created:1};
- assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b1',method:'cash'}),true);
- assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b1',method:'transfer'}),false);
- assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b2',method:'cash'}),false);
+ assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b1',method:'cash',expectedAmount:100000}),true);
+ assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b1',method:'transfer',expectedAmount:100000}),false);
+ assert.equal(matchesEntry(old,{action:'pay',requestId:key,bookingId:'b2',method:'cash',expectedAmount:100000}),false);
 });
 test('zero receipts do not include money deposited into the cash drawer',()=>{
  const r=reconciliation({openingCash:100000,cashReceived:0,transferReceived:0,cardReceived:0,cashIn:500000,cashOut:200000},{cash:400000,transfer:0,card:0});
@@ -45,4 +45,8 @@ test('zero receipts do not include money deposited into the cash drawer',()=>{
 test('unsafe financial aggregates and negative counted values are rejected',()=>{
  assert.throws(()=>reconciliation({openingCash:Number.MAX_SAFE_INTEGER,cashReceived:1,transferReceived:0,cardReceived:0,cashIn:0,cashOut:0},{cash:0,transfer:0,card:0}));
  assert.throws(()=>reconciliation({openingCash:0,cashReceived:0,transferReceived:0,cardReceived:0,cashIn:0,cashOut:0},{cash:-1,transfer:0,card:0}));
+});
+test('payment confirmation requires the amount the cashier actually reviewed',()=>{
+ assert.equal(financeInput.safeParse({action:'pay',requestId:key,bookingId:'b1',method:'cash'}).success,false);
+ assert.equal(financeInput.safeParse({action:'pay',requestId:key,bookingId:'b1',method:'cash',expectedAmount:100000}).success,true);
 });

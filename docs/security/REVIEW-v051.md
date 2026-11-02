@@ -21,3 +21,7 @@ TypeScript strict, 125 regression tests (including real Wrangler SQL splitting) 
 32 high findings remain, including react-server-dom-webpack, Zod, Vite, undici and transitive build utilities. These require separate compatibility-tested increments, rather than broad forced overrides. Do not onboard real paying customers or claim the audit is clean. Next review target: 2026-11-09, before public release; no scheduled automation created.
 
 Rollback: restore package.json, pnpm-workspace.yaml and pnpm-lock.yaml from v0.5, then perform frozen install and rebuild. This reintroduces the known critical advisories and is only an emergency compatibility rollback while remaining owner-private.
+
+## Update v0.5.2
+
+React/RSC have now moved to 19.2.9. Native high count is 31. The earlier zero-critical result was a scanner result only: the primary React RCE advisory was absent from that feed. See REVIEW-v052.md for source verification and transport regression coverage.

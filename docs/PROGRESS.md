@@ -74,3 +74,7 @@ Chưa có công thức nguyên liệu, giá vốn/nhà cung cấp, OTP/QR khách
 ## v0.5.1 — Vá bảo mật dependency
 
 Next.js/eslint-config-next 16.4.1 và sharp 0.35.5. Native audit: 0 critical, 32 high, 31 moderate, 10 low; trước đó 3/35/36/11. Không sửa dữ liệu, migration hay nghiệp vụ. 125 regression tests, strict typecheck và build đã qua. Chi tiết REVIEW-v051.md; chưa sẵn sàng công khai và vẫn chờ authenticated E2E.
+
+## v0.5.2 — React Server Components
+
+Đồng bộ 3 gói React lên 19.2.9 theo advisory chính thức; không dừng ở 19.2.8 chỉ sửa DoS cũ. 126 tests và build/typecheck qua, có Flight round-trip với nhiều typed arrays và tiếng Việt. Native audit: 0/31/31/10. Audit feed không liệt kê RCE RSC mới, nên zero critical của v0.5.1 không phải xác nhận không có rủi ro; REVIEW-v052.md ghi rõ đối chiếu nguồn chính thức và các blocker còn lại.

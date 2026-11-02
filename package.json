@@ -1,6 +1,6 @@
 {
   "name": "golf3d",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "engines": {
     "node": ">=22.13.0"
@@ -13,8 +13,9 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts",
-    "test:migrations": "python tests/migration_splitter_test.py"
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts && node --conditions=react-server --test tests/rsc-transport.test.mjs",
+    "test:migrations": "python tests/migration_splitter_test.py",
+    "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -31,9 +32,9 @@
     "next": "16.4.1",
     "next-themes": "^0.4.6",
     "radix-ui": "^1.6.7",
-    "react": "19.2.6",
+    "react": "19.2.9",
     "react-day-picker": "^10.0.1",
-    "react-dom": "19.2.6",
+    "react-dom": "19.2.9",
     "react-hook-form": "^7.85.0",
     "react-resizable-panels": "^4.12.2",
     "recharts": "^3.8.0",
@@ -56,7 +57,7 @@
     "eslint-config-next": "16.4.1",
     "json-rpc-2.0": "1.7.1",
     "raw-body": "3.0.2",
-    "react-server-dom-webpack": "19.2.6",
+    "react-server-dom-webpack": "19.2.9",
     "tailwindcss": "4.2.1",
     "tw-animate-css": "^1.4.0",
     "typescript": "5.9.3",

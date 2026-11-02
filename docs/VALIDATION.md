@@ -49,3 +49,7 @@ Chưa kiểm thử end-to-end sau đăng nhập thực tế vì browser preview 
 ## v0.5.1
 
 Sau cập nhật Next 16.4.1 và sharp 0.35.5, strict typecheck, 125 regression tests và production build đã qua. Frozen lockfile install dùng --ignore-scripts; không thêm quyền chạy lifecycle script. Native audit: 0 critical / 32 high / 31 moderate / 10 low. Vẫn chưa kiểm thử nghiệp vụ end-to-end bằng identity đăng nhập thật.
+
+## v0.5.2
+
+126 tests (60 TypeScript, 1 Flight transport thật, 65 SQLite/migration). Chạy `pnpm test:rsc` để kiểm tra server/client Flight truyền giá trị booking, Unicode và nhiều typed arrays. Typecheck/build qua; lockfile chỉ đổi react, react-dom, react-server-dom-webpack và peer identifiers. Audit 0 critical / 31 high / 31 moderate / 10 low; xem REVIEW-v052.md về giới hạn scanner và nguồn advisory ngoài feed. Chưa nghiệm thu authenticated E2E.

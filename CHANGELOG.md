@@ -36,3 +36,7 @@
 ## 0.5.1 — Security
 - Cập nhật Next.js và thư viện ảnh; audit giảm từ 3 xuống 0 cảnh báo critical.
 - Giữ bản thử riêng tư: còn 32 high, 31 moderate và 10 low cần xử lý theo từng nhóm.
+
+## 0.5.2 — Security
+- Vá React / React DOM / React Server Components lên 19.2.9, thêm kiểm tra Flight transport thực tế.
+- 126 kiểm tra qua; native audit còn 0 critical, 31 high, 31 moderate, 10 low. Giữ thử riêng tư, chưa nghiệm thu end-to-end sau đăng nhập.

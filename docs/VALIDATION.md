@@ -1,3 +1,12 @@
+# Kiểm tra v0.3
+
+- TypeScript strict + production build pass.
+- 48 TypeScript tests, 13 legacy booking SQL tests, 21 financial SQL tests. No tests skipped/deleted.
+- Finance SQL tests apply all migrations, use the exact server statement constants and real SQLite triggers. Cover 8 concurrent payment attempts, concurrent cash withdrawals, tenant scope, append-only enforcement, stale closes, audit failure rollback, all-entry aggregates and method separation.
+- New migration 0001 executed successfully with Wrangler local D1 (18 SQL commands); migration 0000 unchanged.
+- Native dependency audit NOT clean: 3 critical, 35 high, 36 moderate, 11 low. No dependency upgrades or forced fixes in this feature. Triage and private-only mitigation: docs/security/REVIEW-v03.md.
+- Authenticated browser end-to-end and physical mobile/PWA QA remain pending; preview lacks visitor identity. Do not interpret build/unit tests as production acceptance.
+
 # Kiểm tra v0.2
 
 - TypeScript strict và production build: pass.

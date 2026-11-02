@@ -10,7 +10,18 @@ function db(){if(!env.DB)throw new Error('Cơ sở dữ liệu chưa kết nối
 function fail(message:string,status=400){return Response.json({error:message},{status});}
 async function config(tenant:string){const row=await db().prepare('SELECT value FROM settings WHERE tenant=?').bind(tenant).first<{value:string}>();return upgradeConfig(row?JSON.parse(row.value):{},defaults);}
 async function log(tenant:string,action:string,detail:string){await db().prepare('INSERT INTO audit VALUES (?,?,?,?,?)').bind(crypto.randomUUID(),tenant,action,detail,Date.now()).run();}
-export async function GET(){const user=await getChatGPTUser();if(!user)return fail('Vui lòng đăng nhập',401);const tenant=user.userId;const [c,b,r,a]=await Promise.all([config(tenant),db().prepare('SELECT * FROM bookings WHERE tenant=? ORDER BY start DESC LIMIT 200').bind(tenant).all(),db().prepare('SELECT * FROM requests WHERE tenant=? ORDER BY created DESC LIMIT 100').bind(tenant).all(),db().prepare('SELECT * FROM audit WHERE tenant=? ORDER BY created DESC LIMIT 30').bind(tenant).all()]);return Response.json({config:c,bookings:b.results,requests:r.results,audit:a.results,user:user.displayName,auth:'Sites owner-private',stage:'internal-pilot'},{headers:{'Cache-Control':'no-store'}});}
+export async function GET(){
+ const user=await getChatGPTUser();if(!user)return fail('Vui lòng đăng nhập',401);
+ const tenant=user.userId,day=86400000,dayStart=Math.floor((Date.now()+7*3600000)/day)*day-7*3600000;
+ const [c,b,r,a,activeShift,receipts]=await Promise.all([
+  config(tenant),db().prepare('SELECT * FROM bookings WHERE tenant=? ORDER BY start DESC LIMIT 200').bind(tenant).all(),
+  db().prepare('SELECT * FROM requests WHERE tenant=? ORDER BY created DESC LIMIT 100').bind(tenant).all(),
+  db().prepare('SELECT * FROM audit WHERE tenant=? ORDER BY created DESC LIMIT 30').bind(tenant).all(),
+  db().prepare("SELECT id,name,opened_at FROM shifts WHERE tenant=? AND status='open'").bind(tenant).first(),
+  db().prepare("SELECT COALESCE(SUM(amount),0) AS total FROM finance_entries WHERE tenant=? AND kind='payment' AND created>=? AND created<?").bind(tenant,dayStart,dayStart+day).first<{total:number}>()
+ ]);
+ return Response.json({config:c,bookings:b.results,requests:r.results,audit:a.results,activeShift,todayReceipts:receipts?.total??0,user:user.displayName,auth:'Sites owner-private',stage:'internal-pilot'},{headers:{'Cache-Control':'no-store'}});
+}
 export async function POST(req:Request){
  const user=await getChatGPTUser();if(!user)return fail('Vui lòng đăng nhập',401);
  const origin=req.headers.get('origin');if(origin&&origin!==new URL(req.url).origin)return fail('Nguồn yêu cầu không hợp lệ',403);
@@ -50,7 +61,7 @@ export async function POST(req:Request){
  else if(input.action==='finish'){
   if(!['playing','paused'].includes(status))return fail('Phiên chưa bắt đầu');if(status==='playing'&&started!=null)segments.push({start:started,end:now});
   try{amount=(b.service==='gdr'?quote(segments,snap.config,snap.vip):wholeQuote(snap.base,snap.config,b.service as '9'|'18')).total;}catch{amount=null;}status='finished';finished=now;started=null;
- }else if(input.action==='pay'){if(status!=='finished')return fail('Chỉ thanh toán phiên đã kết thúc');if(amount==null)return fail('Phiên chưa có giá hợp lệ; không thể xác nhận thanh toán.');if(!['cash','transfer','card'].includes(input.method??''))return fail('Phương thức không hợp lệ');status='paid';payment=input.method??null;}
+ }else if(input.action==='pay'){return fail('Thanh toán phải được ghi vào sổ ca tại màn hình mới. Hãy tải lại ứng dụng.',409);}
  else if(input.action==='cancel'){if(status!=='booked')return fail('Chỉ hủy lịch chưa bắt đầu');status='cancelled';}
  else if(input.action==='support'){
   if(!['playing','paused'].includes(status))return fail('Chỉ gửi hỗ trợ trong phiên đang sử dụng');if(!['Nhân viên hỗ trợ','Hỗ trợ thiết bị','Yêu cầu khác'].includes(input.kind??''))return fail('Loại yêu cầu không hợp lệ');

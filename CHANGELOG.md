@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-11-02
+- Add opening float, cash movements, cash/card/transfer reconciliation and locked shift closing.
+- Route new receipts through a tenant-scoped append-only journal; atomically update invoice, shift version and audit.
+- Prevent duplicate receipts, negative cash balances, edits to paid totals and stale shift closes.
+- Keep old paid receipts unchanged; dashboard new receipts follow actual recording time.
+- Add migration 0001, financial input tests and SQLite concurrency/rollback tests.
+- Record unresolved starter dependency advisories; retain private-pilot status.
+
 ## 0.2.0 — 2026-11-02
 - Add configurable tariffs by room type, service, day type, time window and group size.
 - Show estimated service, fee, VAT and total before booking; reject stale displayed prices.

@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import {sql} from 'drizzle-orm';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 export const settings = sqliteTable('settings', {tenant:text('tenant').primaryKey(), value:text('value').notNull()});
 export const bookings = sqliteTable('bookings', {
  id:text('id').primaryKey(), tenant:text('tenant').notNull(), room:text('room').notNull(), customer:text('customer').notNull(), phone:text('phone').notNull(),
@@ -7,3 +8,14 @@ export const bookings = sqliteTable('bookings', {
 },t=>[index('booking_room_time').on(t.tenant,t.room,t.start,t.end)]);
 export const requests = sqliteTable('requests',{id:text('id').primaryKey(),tenant:text('tenant').notNull(),booking:text('booking').notNull(),kind:text('kind').notNull(),status:text('status').notNull(),created:integer('created').notNull()});
 export const audit = sqliteTable('audit',{id:text('id').primaryKey(),tenant:text('tenant').notNull(),action:text('action').notNull(),detail:text('detail').notNull(),created:integer('created').notNull()});
+
+export const shifts = sqliteTable('shifts', {
+ id:text('id').primaryKey(),tenant:text('tenant').notNull(),name:text('name').notNull(),status:text('status').notNull(),
+ openedBy:text('opened_by').notNull(),openedAt:integer('opened_at').notNull(),openingCash:integer('opening_cash').notNull(),version:integer('version').notNull().default(0),
+ closedBy:text('closed_by'),closedAt:integer('closed_at'),countedCash:integer('counted_cash'),countedTransfer:integer('counted_transfer'),countedCard:integer('counted_card'),
+ expectedCash:integer('expected_cash'),expectedTransfer:integer('expected_transfer'),expectedCard:integer('expected_card'),note:text('note')
+},t=>[uniqueIndex('one_open_shift_per_tenant').on(t.tenant).where(sql`${t.status} = 'open'`),index('shift_tenant_time').on(t.tenant,t.openedAt)]);
+export const financeEntries = sqliteTable('finance_entries', {
+ id:text('id').primaryKey(),tenant:text('tenant').notNull(),shiftId:text('shift_id').notNull().references(()=>shifts.id),kind:text('kind').notNull(),method:text('method').notNull(),
+ amount:integer('amount').notNull(),bookingId:text('booking_id').references(()=>bookings.id),requestId:text('request_id').notNull(),note:text('note').notNull(),actor:text('actor').notNull(),created:integer('created').notNull()
+},t=>[uniqueIndex('finance_request_once').on(t.tenant,t.requestId),uniqueIndex('booking_paid_once').on(t.tenant,t.bookingId).where(sql`${t.bookingId} IS NOT NULL`),index('finance_shift_time').on(t.tenant,t.shiftId,t.created)]);

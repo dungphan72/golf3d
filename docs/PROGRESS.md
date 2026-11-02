@@ -1,5 +1,17 @@
 # Tiến độ Golf3D
 
+## v0.3 — ca làm việc và sổ tiền
+- Mở ca với tiền mặt đầu ca; một ca mở/tenant, lưu người và thời điểm mở.
+- Thanh toán phiếu đi qua sổ mới; yêu cầu ca mở, lấy tiền từ backend, chống thu trùng và chống retry khác nội dung.
+- Ghi nộp/chi tiền mặt có lý do; không chi vượt quỹ. Chuyển khoản/thẻ không làm tăng tiền mặt.
+- Đối soát ba phương thức, bắt buộc lý do khi chênh; chặn đóng bằng version cũ và khóa ca đã đóng.
+- Migration 0001 thêm shifts/finance_entries, unique constraints và triggers; ghi sổ, booking, version và audit trong cùng transaction. Không sửa migration 0000, không backfill phiếu cũ.
+- Dashboard thực thu dùng thời điểm nhận tiền từ ledger; xem 30 ca và 100 dòng gần nhất nhưng tổng không cắt theo trang.
+- Mobile có tab Ca & quỹ; chốt/thu/chi qua native dialog.
+- 48 tests TypeScript + 13 tests SQL booking + 21 tests SQL tài chính. Migration đã chạy trên D1 local.
+- Native dependency audit có 3 critical/35 high từ nền starter; xem docs/security/REVIEW-v03.md. Giữ owner-private/test data, không đánh dấu production-ready.
+
+
 ## v0.2 — bảng giá và báo giá trước đặt
 - Quy tắc giá theo dịch vụ, loại phòng, ngày thường/cuối tuần/ngày lễ, khung giờ và nhóm 1–4 người. Thêm/sửa/tắt/xóa trong Admin, có bộ lọc.
 - GDR chia theo từng khung giá và ngày lịch Việt Nam; gói 9/18 khóa đơn giá theo giờ bắt đầu đã đặt.
@@ -26,7 +38,7 @@
 ## Giới hạn phải biết
 - KHÔNG sẵn sàng dùng làm hệ thống thu ngân chính thức.
 - Chỉ Sites owner-private; chưa có OTP golfer, tổ chức/nhân viên RBAC hay SaaS tự đăng ký.
-- Chưa có thay phòng, giảm giá/duyệt tài chính, mixed payment, hoàn tiền, chốt ca và duyệt xử lý phiên thiếu giá.
+- Chưa có thay phòng, giảm giá/duyệt tài chính, mixed payment, hoàn tiền, bàn giao giữa nhân viên có phân quyền và duyệt xử lý phiên thiếu giá.
 - Các khung giá tham khảo cần chủ cơ sở kiểm tra trước mở bán. Giá nhóm/VIP chưa rõ phải nhập, không suy đoán. Snapshot booking v0.1 vẫn giữ hành vi giá flat lịch sử.
 - Chưa có kho/F&B/QR gọi món, CRM, HLV, gói/hội viên, giải, báo cáo lợi nhuận, backup tự động và import Excel.
 - Chưa có kết nối bên ngoài, notification âm thanh/push/escalation hoặc kết nối thiết bị.
@@ -36,7 +48,7 @@
 ## Thứ tự tiếp tục (không bỏ yêu cầu)
 1. Tách service/api, hoàn thiện auth golfer + organization memberships/RBAC, bảo vệ tenant và kiểm thử truy cập chéo.
 2. Hoàn thiện policy booking/late/cancel/deposit, chuyển phòng, adjustment approvals. Bảng giá/revision/báo giá đã hoàn thành trong v0.2, chưa gồm lịch tự hiệu lực trong tương lai.
-3. Payment ledger idempotent, split/mixed tender, shift/cashbook và đối soát. Khóa audit bất biến, idempotency keys cho tất cả mutation.
+3. Ledger và ca cơ bản đã có v0.3. Tiếp tục split/mixed tender, hoàn tiền/duyệt điều chỉnh, bàn giao nhân viên, xuất/lọc lịch sử và idempotency cho các mutation ngoài tài chính.
 4. Gọi nhân viên realtime, customer-session binding, F&B/bar/kitchen, kho/mua hàng.
 5. Gói/loyalty/HLV/CRM/giải/reporting và connectors thật.
 6. Tenant onboarding, billing thuê bao, branded website, 3 ngôn ngữ/CMS, domain, backup/restore, load/security/accessibility QA trước mở công khai.

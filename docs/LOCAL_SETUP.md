@@ -19,6 +19,7 @@ Repo riêng tư: xác thực GitHub qua VS Code hoặc Git Credential Manager; k
 Sau khi build thành công, chạy tại thư mục gốc:
 ```
 pnpm exec wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_amazing_dreadnoughts.sql
+pnpm exec wrangler d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_overconfident_sphinx.sql
 pnpm dev
 ```
 Mở URL terminal hiển thị (profile portable mặc định dùng http://localhost:5173).
@@ -31,13 +32,14 @@ Khi có migration mới, áp dụng migration chưa chạy theo thứ tự; khô
 pnpm exec tsc --noEmit
 pnpm test
 python tests/booking_sql_test.py
+python tests/finance_sql_test.py
 pnpm build
 ```
 Trên Windows có thể dùng `py` thay `python` nếu đó là lệnh Python đã cài. Các lệnh local nêu trên dựa trên starter portable; build/check đã chạy trong Linux, chưa kiểm thử trên Windows thực tế.
 
 ## 4. Lệnh bắt đầu cho Copilot hoặc Codex
 
-> Đọc .github/copilot-instructions.md, docs/REQUIREMENTS.md và docs/PROGRESS.md. Kiểm tra hiện trạng trước khi sửa. Đây là pilot v0.2, chưa dùng thu tiền thật. Tiếp tục theo thứ tự trong PROGRESS, làm từng lát cắt hoàn chỉnh có kiểm tra. Không tự dựng lại dự án, không bỏ yêu cầu đã chốt, không giả OTP/thanh toán/tích hợp. Báo rõ phần đã chạy, chưa chạy và cập nhật PROGRESS sau mỗi đợt. Giao diện mobile phải có cách dùng như app.
+> Đọc .github/copilot-instructions.md, docs/REQUIREMENTS.md và docs/PROGRESS.md. Kiểm tra hiện trạng trước khi sửa. Đây là pilot v0.3, chưa dùng thu tiền thật. Tiếp tục theo thứ tự trong PROGRESS, làm từng lát cắt hoàn chỉnh có kiểm tra. Không tự dựng lại dự án, không bỏ yêu cầu đã chốt, không giả OTP/thanh toán/tích hợp. Báo rõ phần đã chạy, chưa chạy và cập nhật PROGRESS sau mỗi đợt. Giao diện mobile phải có cách dùng như app.
 
 ## 5. Quan hệ với bản đã triển khai
 - URL riêng tư hiện tại: https://golf3d-club-dung.balmydune24.chatgpt.site
@@ -49,3 +51,6 @@ Trên Windows có thể dùng `py` thay `python` nếu đó là lệnh Python đ
 
 ## 6. Các bước thử
 Vào Cài đặt: nhập giờ mở/đóng, sức chứa và VAT/phí (nhập 0 khi chính sách thực sự không thu). Cấu hình giá VIP và thời lượng gói trước khi thử dịch vụ đó. Tạo lịch thử gần giờ hiện tại, bắt đầu/tạm dừng/kết thúc, xem phiếu và chỉ xác nhận thanh toán trên dữ liệu thử.
+
+## Nâng từ v0.2 lên v0.3
+Sau git pull/pnpm install --frozen-lockfile/pnpm build, chỉ áp dụng migration 0001 nếu 0000 đã chạy. Không chạy lại 0000. Phiếu chưa thanh toán phải mở ca rồi ghi thu qua sổ mới. Xem docs/FINANCE.md và docs/security/REVIEW-v03.md trước thử nghiệm; chỉ dùng localhost, không public dev server.

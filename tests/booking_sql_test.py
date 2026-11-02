@@ -3,6 +3,7 @@ import sqlite3, pathlib, re, unittest, tempfile, concurrent.futures
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SOURCE=(ROOT/'app/api/club/route.ts').read_text()
 SQL=re.search(r'prepare\("(INSERT INTO bookings.*?)"\)',SOURCE).group(1)
+SETTINGS=re.search(r'prepare\("(INSERT INTO settings.*?)"\)',SOURCE).group(1)
 UPDATE=re.search(r"prepare\('(UPDATE bookings SET status=\?,segments=.*?)'\)",SOURCE).group(1)
 DDL=(ROOT/'drizzle/0000_amazing_dreadnoughts.sql').read_text().replace('--> statement-breakpoint','')
 def insert(conn,id,tenant='t1',room='line-1',start=1000000,end=2000000,status='booked',now=0):
@@ -29,6 +30,17 @@ class BookingSQL(unittest.TestCase):
  def test_transition_guard_prevents_repeat_payment(self):
   insert(self.c,'a',status='finished');values=('paid','[]',None,1500000,250000,'cash',1500000,1800000,'t1','a','finished',None)
   self.assertEqual(self.c.execute(UPDATE,values).rowcount,1);self.assertEqual(self.c.execute(UPDATE,values).rowcount,0)
+ def test_settings_revision_prevents_lost_update(self):
+  self.assertEqual(self.c.execute(SETTINGS,('t1','{"pricingRevision":"v2"}','v01-upgrade')).rowcount,1)
+  self.assertEqual(self.c.execute(SETTINGS,('t1','{"pricingRevision":"stale"}','v01-upgrade')).rowcount,0)
+  self.assertEqual(self.c.execute(SETTINGS,('t1','{"pricingRevision":"v3"}','v2')).rowcount,1)
+ def test_legacy_settings_upgrade_is_guarded(self):
+  self.c.execute('INSERT INTO settings VALUES (?,?)',('t1','{"name":"Golf3D"}'))
+  self.assertEqual(self.c.execute(SETTINGS,('t1','{"pricingRevision":"new"}','v01-upgrade')).rowcount,1)
+ def test_settings_of_other_tenant_are_not_overwritten(self):
+  self.c.execute('INSERT INTO settings VALUES (?,?)',('t1','{"pricingRevision":"first"}'))
+  self.c.execute(SETTINGS,('t2','{"pricingRevision":"second"}','v01-upgrade'))
+  self.assertEqual(self.c.execute('SELECT value FROM settings WHERE tenant="t1"').fetchone()[0],'{"pricingRevision":"first"}')
  def test_concurrent_booking_one_winner(self):
   with tempfile.TemporaryDirectory() as d:
    path=pathlib.Path(d)/'db.sqlite';con=sqlite3.connect(path);con.executescript(DDL);con.close()

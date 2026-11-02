@@ -29,7 +29,7 @@ Khi có migration mới, áp dụng migration chưa chạy theo thứ tự; khô
 ## 3. Kiểm tra
 ```
 pnpm exec tsc --noEmit
-node --experimental-strip-types --test tests/pricing.test.ts
+pnpm test
 python tests/booking_sql_test.py
 pnpm build
 ```
@@ -37,7 +37,7 @@ Trên Windows có thể dùng `py` thay `python` nếu đó là lệnh Python đ
 
 ## 4. Lệnh bắt đầu cho Copilot hoặc Codex
 
-> Đọc .github/copilot-instructions.md, docs/REQUIREMENTS.md và docs/PROGRESS.md. Kiểm tra hiện trạng trước khi sửa. Đây là pilot v0.1, chưa dùng thu tiền thật. Tiếp tục theo thứ tự trong PROGRESS, làm từng lát cắt hoàn chỉnh có kiểm tra. Không tự dựng lại dự án, không bỏ yêu cầu đã chốt, không giả OTP/thanh toán/tích hợp. Báo rõ phần đã chạy, chưa chạy và cập nhật PROGRESS sau mỗi đợt. Giao diện mobile phải có cách dùng như app.
+> Đọc .github/copilot-instructions.md, docs/REQUIREMENTS.md và docs/PROGRESS.md. Kiểm tra hiện trạng trước khi sửa. Đây là pilot v0.2, chưa dùng thu tiền thật. Tiếp tục theo thứ tự trong PROGRESS, làm từng lát cắt hoàn chỉnh có kiểm tra. Không tự dựng lại dự án, không bỏ yêu cầu đã chốt, không giả OTP/thanh toán/tích hợp. Báo rõ phần đã chạy, chưa chạy và cập nhật PROGRESS sau mỗi đợt. Giao diện mobile phải có cách dùng như app.
 
 ## 5. Quan hệ với bản đã triển khai
 - URL riêng tư hiện tại: https://golf3d-club-dung.balmydune24.chatgpt.site

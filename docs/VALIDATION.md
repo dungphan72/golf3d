@@ -57,3 +57,7 @@ Sau cập nhật Next 16.4.1 và sharp 0.35.5, strict typecheck, 125 regression 
 ## v0.5.3
 
 127 tests: 60 TypeScript, 1 Flight, 1 Worker HTTP/JSON/D1, 65 SQLite/migration. Test mới chạy `pnpm test:runtime`; không gọi Internet hay dữ liệu nghiệp vụ. Miniflare thực tế resolve undici 7.30.1, strict typecheck và build qua. Audit 0/21/17/5; chỉ là kết quả scanner. Authenticated E2E vẫn chưa nghiệm thu.
+
+## v0.5.4
+
+130 tests: 60 TypeScript + 1 Flight + 1 Worker HTTP/D1 + 3 tooling parsers + 65 SQLite/migration. `pnpm test:tooling` kiểm tra cả hai major brace và YAML thực tế của ESLint, gồm các trường hợp tài nguyên bị khai thác trong advisory. Strict typecheck/build qua. Native audit 0/8/16/5; authenticated E2E vẫn chờ.

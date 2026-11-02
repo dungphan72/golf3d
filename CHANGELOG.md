@@ -44,3 +44,7 @@
 ## 0.5.3 — Security
 - Vá thư viện mạng của môi trường Worker, thêm kiểm tra HTTP/JSON/D1 thực tế.
 - 127 kiểm tra qua; native audit giảm high 31 → 21, moderate 31 → 17, low 10 → 5; critical vẫn 0. Tiếp tục thử riêng tư.
+
+## 0.5.4 — Security
+- Vá bộ đọc YAML và xử lý mẫu tên tệp, giữ tương thích từng phiên bản lớn.
+- 130 kiểm tra qua. Native audit high giảm 21 → 8, moderate 17 → 16; critical vẫn 0, low 5. Giữ bản thử riêng tư.

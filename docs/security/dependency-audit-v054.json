@@ -1,0 +1,615 @@
+{
+  "checked_on": "2026-11-03",
+  "manager": "pnpm 11.25.0",
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 5,
+      "moderate": 16,
+      "high": 8,
+      "critical": 0
+    },
+    "dependencies": 205,
+    "devDependencies": 602,
+    "optionalDependencies": 215,
+    "totalDependencies": 842
+  },
+  "note": "Scanner results only; primary advisory review still required. At most two example paths per finding.",
+  "advisories": [
+    {
+      "module_name": "esbuild",
+      "severity": "moderate",
+      "title": "esbuild enables any website to send any requests to the development server and read the response",
+      "url": "https://github.com/advisories/GHSA-67mh-4wv8-2f99",
+      "vulnerable_versions": "<=0.24.2",
+      "patched_versions": ">=0.25.0",
+      "findings": [
+        {
+          "version": "0.18.20",
+          "dev": true,
+          "optional": false,
+          "path_count": 1,
+          "path_examples": [
+            ".>drizzle-kit>@esbuild-kit/esm-loader>@esbuild-kit/core-utils>esbuild"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "ws",
+      "severity": "moderate",
+      "title": "ws: Uninitialized memory disclosure",
+      "url": "https://github.com/advisories/GHSA-58qx-3vcg-4xpx",
+      "vulnerable_versions": ">=8.0.0 <8.20.1",
+      "patched_versions": ">=8.20.1",
+      "findings": [
+        {
+          "version": "8.18.0",
+          "dev": true,
+          "optional": false,
+          "path_count": 4,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>miniflare>ws",
+            ".>@cloudflare/vite-plugin>wrangler>miniflare>ws"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "esbuild",
+      "severity": "low",
+      "title": "esbuild allows arbitrary file read when running the development server on Windows",
+      "url": "https://github.com/advisories/GHSA-g7r4-m6w7-qqqr",
+      "vulnerable_versions": ">=0.27.3 <0.28.1",
+      "patched_versions": ">=0.28.1",
+      "findings": [
+        {
+          "version": "0.28.0",
+          "dev": true,
+          "optional": false,
+          "path_count": 23,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite>esbuild",
+            ".>@cloudflare/vite-plugin>vite>tsx>esbuild"
+          ]
+        },
+        {
+          "version": "0.27.3",
+          "dev": true,
+          "optional": false,
+          "path_count": 2,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>wrangler>esbuild",
+            ".>wrangler>esbuild"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "moderate",
+      "title": "launch-editor: NTLMv2 hash disclosure via UNC path handling on Windows",
+      "url": "https://github.com/advisories/GHSA-v6wh-96g9-6wx3",
+      "vulnerable_versions": ">=8.0.0 <=8.0.15",
+      "patched_versions": ">=8.0.16",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "ws",
+      "severity": "high",
+      "title": "ws: Memory exhaustion DoS from tiny fragments and data chunks",
+      "url": "https://github.com/advisories/GHSA-96hv-2xvq-fx4p",
+      "vulnerable_versions": ">=8.0.0 <8.21.0",
+      "patched_versions": ">=8.21.0",
+      "findings": [
+        {
+          "version": "8.18.0",
+          "dev": true,
+          "optional": false,
+          "path_count": 4,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>miniflare>ws",
+            ".>@cloudflare/vite-plugin>wrangler>miniflare>ws"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "@babel/core",
+      "severity": "low",
+      "title": "@babel/core: Arbitrary File Read via sourceMappingURL Comment",
+      "url": "https://github.com/advisories/GHSA-4x5r-pxfx-6jf8",
+      "vulnerable_versions": "<=7.29.0",
+      "patched_versions": ">=7.29.6",
+      "findings": [
+        {
+          "version": "7.29.0",
+          "dev": false,
+          "optional": false,
+          "path_count": 3,
+          "path_examples": [
+            ".>next>styled-jsx>@babel/core",
+            ".>eslint-config-next>eslint-plugin-react-hooks>@babel/core"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "browserslist",
+      "severity": "high",
+      "title": "Browserslist: Unbounded memory growth (no cache eviction) via distinct query results, leading to eventual OOM",
+      "url": "https://github.com/advisories/GHSA-c83g-rgw3-j3cx",
+      "vulnerable_versions": "<=4.28.6",
+      "patched_versions": ">=4.28.7",
+      "findings": [
+        {
+          "version": "4.28.2",
+          "dev": false,
+          "optional": false,
+          "path_count": 7,
+          "path_examples": [
+            ".>next>styled-jsx>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-rsc>react-server-dom-webpack>webpack>browserslist"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "browserslist",
+      "severity": "high",
+      "title": "Browserslist: Uncaught crash / prototype write via untrusted browserslist-stats.json custom stats (normalizeStats)",
+      "url": "https://github.com/advisories/GHSA-73wf-gq98-2v4g",
+      "vulnerable_versions": "<=4.28.6",
+      "patched_versions": ">=4.28.7",
+      "findings": [
+        {
+          "version": "4.28.2",
+          "dev": false,
+          "optional": false,
+          "path_count": 7,
+          "path_examples": [
+            ".>next>styled-jsx>@babel/core>@babel/helper-compilation-targets>browserslist",
+            ".>@vitejs/plugin-rsc>react-server-dom-webpack>webpack>browserslist"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fflate",
+      "severity": "moderate",
+      "title": "fflate unzipSync can enter an infinite loop when parsing malformed ZIP64 archives",
+      "url": "https://github.com/advisories/GHSA-px8p-9vwx-vf98",
+      "vulnerable_versions": ">=0.7.0 <0.7.5",
+      "patched_versions": ">=0.7.5",
+      "findings": [
+        {
+          "version": "0.7.4",
+          "dev": true,
+          "optional": false,
+          "path_count": 1,
+          "path_examples": [
+            ".>vinext>@vercel/og>satori>@shuding/opentype.js>fflate"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "baseline-browser-mapping",
+      "severity": "moderate",
+      "title": "baseline-browser-mapping process termination on invalid input causes denial of service",
+      "url": "https://github.com/advisories/GHSA-w5vr-8v7q-w6rv",
+      "vulnerable_versions": ">=2.0.0 <2.11.0",
+      "patched_versions": ">=2.11.0",
+      "findings": [
+        {
+          "version": "2.10.30",
+          "dev": false,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>next>baseline-browser-mapping",
+            ".>next>styled-jsx>@babel/core>@babel/helper-compilation-targets>browserslist>baseline-browser-mapping"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "image-size",
+      "severity": "high",
+      "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
+      "url": "https://github.com/advisories/GHSA-5p2g-fcmc-qvqq",
+      "vulnerable_versions": ">=1.2.0 <=2.0.2",
+      "patched_versions": ">=2.0.3",
+      "findings": [
+        {
+          "version": "2.0.2",
+          "dev": true,
+          "optional": false,
+          "path_count": 1,
+          "path_examples": [
+            ".>vinext>image-size"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "image-size",
+      "severity": "high",
+      "title": "image-size: ICNS parser allows denial of service through an infinite loop",
+      "url": "https://github.com/advisories/GHSA-w3rx-r6r6-pgpr",
+      "vulnerable_versions": ">=0.6.3 <=2.0.2",
+      "patched_versions": ">=2.0.3",
+      "findings": [
+        {
+          "version": "2.0.2",
+          "dev": true,
+          "optional": false,
+          "path_count": 1,
+          "path_examples": [
+            ".>vinext>image-size"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fast-uri",
+      "severity": "moderate",
+      "title": "fast-uri vulnerable to inconsistent host case normalization via percent-encoded octets",
+      "url": "https://github.com/advisories/GHSA-hrr3-gc8f-f4qj",
+      "vulnerable_versions": ">=3.0.0 <3.1.8",
+      "patched_versions": ">=3.1.8",
+      "findings": [
+        {
+          "version": "3.1.7",
+          "dev": false,
+          "optional": false,
+          "path_count": 26,
+          "path_examples": [
+            ".>@hookform/resolvers>ajv>fast-uri",
+            ".>@hookform/resolvers>ajv-formats>ajv>fast-uri"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "vulnerable_versions": "<1.1.21",
+      "patched_versions": ">=1.1.21",
+      "findings": [
+        {
+          "version": "1.1.20",
+          "dev": true,
+          "optional": false,
+          "path_count": 85,
+          "path_examples": [
+            ".>eslint>@eslint/config-array>minimatch>brace-expansion",
+            ".>eslint>@eslint/eslintrc>minimatch>brace-expansion"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "brace-expansion",
+      "severity": "moderate",
+      "title": "brace-expansion: Quadratic-time expansion of the `{a},b}` rewrite causes CPU denial of service",
+      "url": "https://github.com/advisories/GHSA-q2hr-2g5m-vwhr",
+      "vulnerable_versions": ">=4.0.0 <5.0.12",
+      "patched_versions": ">=5.0.12",
+      "findings": [
+        {
+          "version": "5.0.11",
+          "dev": true,
+          "optional": false,
+          "path_count": 11,
+          "path_examples": [
+            ".>eslint-config-next>eslint-import-resolver-typescript>eslint-plugin-import>eslint-module-utils>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch>brace-expansion",
+            ".>eslint-config-next>eslint-import-resolver-typescript>eslint-plugin-import>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch>brace-expansion"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "source-map-js",
+      "severity": "high",
+      "title": "source-map-js allows event-loop denial of service through indexed source-map section offsets",
+      "url": "https://github.com/advisories/GHSA-68fv-2mgg-jv7q",
+      "vulnerable_versions": ">=1.0.0 <1.2.2",
+      "patched_versions": ">=1.2.2",
+      "findings": [
+        {
+          "version": "1.2.1",
+          "dev": false,
+          "optional": false,
+          "path_count": 17,
+          "path_examples": [
+            ".>next>postcss>source-map-js",
+            ".>@cloudflare/vite-plugin>vite>postcss>source-map-js"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "moderate",
+      "title": "launch-editor: escapeCmdArgs() omits % escaping on Windows",
+      "url": "https://github.com/advisories/GHSA-698v-4r3x-3vcv",
+      "vulnerable_versions": ">=8.0.0 <=8.1.5",
+      "patched_versions": ">=8.1.6",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "moderate",
+      "title": "launch-editor: Editor CLI flag misinterpretation causing arbitrary command execution for some editors",
+      "url": "https://github.com/advisories/GHSA-r825-w8mm-5pxw",
+      "vulnerable_versions": ">=8.0.0 <=8.1.5",
+      "patched_versions": ">=8.1.6",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "high",
+      "title": "launch-editor: `fs.existsSync()` existence check can be bypassed on Windows",
+      "url": "https://github.com/advisories/GHSA-587h-7wmj-h5pm",
+      "vulnerable_versions": ">=8.0.0 <=8.1.5",
+      "patched_versions": ">=8.1.6",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "low",
+      "title": "Vite: Cross origin script execution through Vite custom middleware",
+      "url": "https://github.com/advisories/GHSA-9jrq-w75r-8gcw",
+      "vulnerable_versions": ">=8.0.0 <=8.1.5",
+      "patched_versions": ">=8.1.6",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "moderate",
+      "title": "Vite: Files outside `server.fs.allow` could be served when project paths match system paths on non-Windows machine",
+      "url": "https://github.com/advisories/GHSA-rq7h-c2jc-7f22",
+      "vulnerable_versions": ">=8.0.0 <=8.1.5",
+      "patched_versions": ">=8.1.6",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "zod",
+      "severity": "high",
+      "title": "Zod can exhaust memory while validating oversized constrained collections",
+      "url": "https://github.com/advisories/GHSA-mrhx-c7xc-m3w5",
+      "vulnerable_versions": "<4.6.6",
+      "patched_versions": ">=4.6.6",
+      "findings": [
+        {
+          "version": "3.25.76",
+          "dev": false,
+          "optional": false,
+          "path_count": 4,
+          "path_examples": [
+            ".>@hookform/resolvers>zod",
+            ".>zod"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fast-uri",
+      "severity": "moderate",
+      "title": "fast-uri vulnerable to URI scheme spoofing via percent-encoded scheme decoding",
+      "url": "https://github.com/advisories/GHSA-w74x-v6f9-j3xg",
+      "vulnerable_versions": ">=3.0.0 <3.1.9",
+      "patched_versions": ">=3.1.9",
+      "findings": [
+        {
+          "version": "3.1.7",
+          "dev": false,
+          "optional": false,
+          "path_count": 26,
+          "path_examples": [
+            ".>@hookform/resolvers>ajv>fast-uri",
+            ".>@hookform/resolvers>ajv-formats>ajv>fast-uri"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fast-uri",
+      "severity": "low",
+      "title": "fast-uri vulnerable to improper path equivalence in relative reference normalization",
+      "url": "https://github.com/advisories/GHSA-xhq7-xmqj-769h",
+      "vulnerable_versions": ">=3.0.0 <3.1.9",
+      "patched_versions": ">=3.1.9",
+      "findings": [
+        {
+          "version": "3.1.7",
+          "dev": false,
+          "optional": false,
+          "path_count": 26,
+          "path_examples": [
+            ".>@hookform/resolvers>ajv>fast-uri",
+            ".>@hookform/resolvers>ajv-formats>ajv>fast-uri"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fast-uri",
+      "severity": "moderate",
+      "title": "fast-uri vulnerable to host confusion via unchecked WHATWG host canonicalization",
+      "url": "https://github.com/advisories/GHSA-wjr9-j795-jxcr",
+      "vulnerable_versions": ">=3.1.3 <3.1.9",
+      "patched_versions": ">=3.1.9",
+      "findings": [
+        {
+          "version": "3.1.7",
+          "dev": false,
+          "optional": false,
+          "path_count": 26,
+          "path_examples": [
+            ".>@hookform/resolvers>ajv>fast-uri",
+            ".>@hookform/resolvers>ajv-formats>ajv>fast-uri"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "fast-uri",
+      "severity": "low",
+      "title": "fast-uri vulnerable to scheme injection via an unescaped first-segment colon in suffix references",
+      "url": "https://github.com/advisories/GHSA-333x-w4r6-6crp",
+      "vulnerable_versions": ">=3.0.0 <3.1.9",
+      "patched_versions": ">=3.1.9",
+      "findings": [
+        {
+          "version": "3.1.7",
+          "dev": false,
+          "optional": false,
+          "path_count": 26,
+          "path_examples": [
+            ".>@hookform/resolvers>ajv>fast-uri",
+            ".>@hookform/resolvers>ajv-formats>ajv>fast-uri"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "vite",
+      "severity": "moderate",
+      "title": "vite: `server.fs.deny` bypass on Windows alternate paths",
+      "url": "https://github.com/advisories/GHSA-fx2h-pf6j-xcff",
+      "vulnerable_versions": ">=8.0.0 <=8.0.15",
+      "patched_versions": ">=8.0.16",
+      "findings": [
+        {
+          "version": "8.0.13",
+          "dev": true,
+          "optional": false,
+          "path_count": 9,
+          "path_examples": [
+            ".>@cloudflare/vite-plugin>vite",
+            ".>@vitejs/plugin-react>vite"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "satori",
+      "severity": "moderate",
+      "title": "Satori-generated SVG has improper escaping",
+      "url": "https://github.com/advisories/GHSA-wx4j-mvgx-mqwp",
+      "vulnerable_versions": ">=0.0.27 <0.33.5",
+      "patched_versions": ">=0.33.5",
+      "findings": [
+        {
+          "version": "0.16.0",
+          "dev": true,
+          "optional": false,
+          "path_count": 1,
+          "path_examples": [
+            ".>vinext>@vercel/og>satori"
+          ]
+        }
+      ]
+    },
+    {
+      "module_name": "minimatch",
+      "severity": "moderate",
+      "title": "minimatch has potential denial of service via globparts amplification",
+      "url": "https://github.com/advisories/GHSA-g3hv-75wg-m249",
+      "vulnerable_versions": "<11.0.1",
+      "patched_versions": ">=11.0.1",
+      "findings": [
+        {
+          "version": "3.1.5",
+          "dev": true,
+          "optional": false,
+          "path_count": 85,
+          "path_examples": [
+            ".>eslint>@eslint/config-array>minimatch",
+            ".>eslint>@eslint/eslintrc>minimatch"
+          ]
+        },
+        {
+          "version": "10.2.5",
+          "dev": true,
+          "optional": false,
+          "path_count": 11,
+          "path_examples": [
+            ".>eslint-config-next>eslint-import-resolver-typescript>eslint-plugin-import>eslint-module-utils>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch",
+            ".>eslint-config-next>eslint-import-resolver-typescript>eslint-plugin-import>@typescript-eslint/parser>@typescript-eslint/typescript-estree>minimatch"
+          ]
+        }
+      ]
+    }
+  ]
+}

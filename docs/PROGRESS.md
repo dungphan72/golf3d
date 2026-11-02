@@ -82,3 +82,7 @@ Next.js/eslint-config-next 16.4.1 và sharp 0.35.5. Native audit: 0 critical, 32
 ## v0.5.3 — Mạng của môi trường Worker
 
 Scoped override Miniflare → undici 7.30.1, chỉ đổi một package family. 127 tests và build/typecheck qua; kiểm tra mới chạy Workerd thật với JSON HTTP + D1 tạm thời. Native audit 0 critical / 21 high / 17 moderate / 5 low. Xem REVIEW-v053.md về phạm vi local tooling, chính sách script và các blocker còn lại. Không thay đổi dữ liệu, auth hay quyền truy cập.
+
+## v0.5.4 — Bộ đọc cấu hình và mẫu tên tệp
+
+Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package records thay đổi. Thêm 3 kiểm tra: mở rộng mẫu thông thường, lồng sâu 4.000 cấp và merge YAML rỗng vượt budget. Tổng 130 tests, typecheck/build qua. Native audit: 0 critical / 8 high / 16 moderate / 5 low. REVIEW-v054.md ghi giới hạn và blocker còn lại; chưa mở công khai.

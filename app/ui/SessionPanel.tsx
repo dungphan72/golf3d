@@ -1,11 +1,80 @@
 'use client';
 import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Bell, X, Play, Pause, Square, Printer } from 'lucide-react';
 import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import type { Bill } from '../../lib/pricing';
 import { labels, time, date } from './shared';
+function PackageRedeem({
+  booking,
+  money: fmt,
+  onChanged,
+}: {
+  booking: Booking;
+  money: (n: number) => string;
+  onChanged: () => Promise<void>;
+}) {
+  type Usable = {
+    packages: { id: string; name: string; remaining: number; expires: number; customer: string }[];
+    covered: number;
+  };
+  const [data, setData] = useState<Usable | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let live = true;
+    fetch('/api/members?usableFor=' + encodeURIComponent(booking.id), { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<Usable>) : null))
+      .then((v) => live && setData(v));
+    return () => {
+      live = false;
+    };
+  }, [booking.id, booking.status]);
+  if (!data || (!data.packages.length && !data.covered)) return null;
+  async function redeem(packageId: string) {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'redeem', bookingId: booking.id, packageId }),
+      });
+      const result = (await r.json()) as { error?: string };
+      if (!r.ok) throw new Error(result.error || 'Không trả được bằng gói');
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="info-strip">
+      {data.covered > 0 ? (
+        <p>
+          Đã trả phần golf bằng gói ({fmt(data.covered)}). Chỉ thu phần còn lại:{' '}
+          <strong>{fmt((booking.amount ?? 0) - data.covered)}</strong>
+        </p>
+      ) : (
+        <>
+          <p>Khách có gói dùng được cho phiên này:</p>
+          {data.packages.map((p) => (
+            <button key={p.id} className="secondary" disabled={busy} onClick={() => redeem(p.id)}>
+              Trả bằng gói: {p.name} (còn {p.remaining >= 99999 ? 'không giới hạn' : p.remaining})
+            </button>
+          ))}
+        </>
+      )}
+      {error && (
+        <div className="error-box" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
+  );
+}
 export function SessionPanel({
   booking: b,
   now,
@@ -229,6 +298,7 @@ export function SessionPanel({
           )}
           {b.status === 'finished' && canPay && (
             <>
+              <PackageRedeem booking={b} money={money} onChanged={onRefresh} />
               <p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>
               {[
                 ['cash', 'Tiền mặt'],

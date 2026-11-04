@@ -38,3 +38,11 @@ Phương án thay thế "ghi bán gói riêng, không vào sổ ca" sẽ làm ti
 3. Quyền: `member.view`, `member.sell`, `member.adjust` (cashier bán/dùng; chỉ manager điều chỉnh).
 4. Giao diện: tab Hội viên (tìm khách theo SĐT, bán gói, số dư, lịch sử), nút "Trả bằng gói" ở phiếu thanh toán.
 5. Backup trước khi áp migration lên dữ liệu thật.
+
+## 6. Trạng thái triển khai (đã làm)
+- Migration `0005_ancient_bloodstrike.sql` (bảng mới + `finance_entries.package_id` + trigger). Áp dụng lên D1 **sau khi backup**; chỉ thêm bảng/cột/trigger, không sửa dữ liệu cũ.
+- Sổ ca: bán gói là dòng `payment` có `package_id` (tính vào chuyển khoản/thẻ/tiền mặt và đối soát ca); thu booking trừ phần golf đã trả bằng gói.
+- API `/api/members`; quyền `member.view`/`member.sell`/`member.adjust` (thu ngân, CSKH, sale bán gói; chỉ quản lý/chủ điều chỉnh, sửa danh mục gói).
+- Giao diện: mục **Hội viên** (nạp danh mục theo bảng giá chính thức một lần, bán gói, đổi điểm, điều chỉnh) và nút **Trả bằng gói** trong hộp thanh toán.
+- Giá GDR 6/12 tháng dùng giá sau giảm 30% (9,45tr / 17,5tr) và tặng 6/12 lượt 18 hố; gói theo tháng/kỳ dùng "không giới hạn" (99.999 lượt) trong hạn.
+- Chưa làm: giảm F&B theo thẻ/gói, tặng bia/nước, hết hạn tự gia hạn, chuyển nhượng lượt, đặt online gắn khách.

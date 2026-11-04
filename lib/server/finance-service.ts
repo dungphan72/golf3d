@@ -58,6 +58,14 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     db = database();
   const openingId = input.action === 'open' ? await scopedShiftId(tenant, input.requestId) : null;
   // Replays are scoped to the authenticated tenant and must match the original operation.
+  async function coveredByPackage(bookingId: string | null) {
+    if (!bookingId) return 0;
+    const row = await db
+      .prepare('SELECT covered FROM package_redemptions WHERE tenant=? AND booking_id=?')
+      .bind(tenant, bookingId)
+      .first<{ covered: number }>();
+    return row?.covered ?? 0;
+  }
   async function replay() {
     if (input.action === 'open') {
       const old = await db
@@ -75,7 +83,7 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
       .bind(tenant, input.requestId)
       .first<Entry>();
     if (!old) return null;
-    const matches = matchesEntry(old, input);
+    const matches = matchesEntry(old, input, await coveredByPackage(old.booking_id));
     return matches
       ? reply({ ok: true, replayed: true })
       : error('Mã yêu cầu đã dùng với dữ liệu khác', 409);
@@ -170,6 +178,9 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
       .bind(tenant)
       .first<{ id: string }>();
     if (!shift) return error('Hãy mở ca trước khi xác nhận thu tiền', 409);
+    // Golf already settled with a package use is not collected again (see package_redemptions).
+    const covered = await coveredByPackage(booking.id);
+    if (covered >= booking.amount) return error('Phiếu đã được trả đủ bằng gói', 409);
     await db
       .prepare(INSERT_ENTRY_SQL)
       .bind(
@@ -178,7 +189,7 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         shift.id,
         'payment',
         input.method,
-        booking.amount,
+        booking.amount - covered,
         booking.id,
         input.requestId,
         'Thanh toán phiếu ' + booking.id,

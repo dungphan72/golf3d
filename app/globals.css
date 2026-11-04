@@ -2979,3 +2979,48 @@ select:focus {
   text-align: left;
   border-bottom: 1px solid #e3e8e5;
 }
+
+/* ---- Members ---- */
+.members-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 2fr;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .members-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.customer-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  overflow: auto;
+}
+.customer-list button {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid #dfe6e2;
+  border-radius: 10px;
+  background: #fff;
+}
+.customer-list button.selected {
+  border-color: #2f6b4f;
+  background: #eef5f1;
+}
+.members-panel table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.members-panel th,
+.members-panel td {
+  padding: 9px 8px;
+  text-align: left;
+  border-bottom: 1px solid #e3e8e5;
+  vertical-align: top;
+}

@@ -16,6 +16,9 @@ export const PERMISSIONS = [
   'stock.manage',
   'settings.manage',
   'staff.manage',
+  'member.view',
+  'member.sell',
+  'member.adjust',
   'data.export',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -44,10 +47,20 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'finance.shift',
     'fnb.order',
     'fnb.kitchen',
+    'member.view',
+    'member.sell',
   ],
-  coach: ['view', 'support.handle'],
-  cskh: ['view', 'booking.create', 'booking.cancel', 'support.handle', 'fnb.order'],
-  sale: ['view', 'booking.create'],
+  coach: ['view', 'support.handle', 'member.view'],
+  cskh: [
+    'view',
+    'booking.create',
+    'booking.cancel',
+    'support.handle',
+    'fnb.order',
+    'member.view',
+    'member.sell',
+  ],
+  sale: ['view', 'booking.create', 'member.view', 'member.sell'],
 };
 
 export const isRole = (value: unknown): value is Role =>

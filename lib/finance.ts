@@ -144,12 +144,13 @@ export async function scopedShiftId(tenant: string, key: string) {
 export function matchesEntry(
   old: Entry,
   input: Extract<z.infer<typeof financeInput>, { action: 'pay' | 'cash-entry' }>,
+  coveredByPackage = 0,
 ) {
   return input.action === 'pay'
     ? old.kind === 'payment' &&
         old.booking_id === input.bookingId &&
         old.method === input.method &&
-        old.amount === input.expectedAmount
+        old.amount === input.expectedAmount - coveredByPackage
     : old.shift_id === input.shiftId &&
         old.kind === input.kind &&
         old.amount === input.amount &&

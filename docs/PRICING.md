@@ -32,6 +32,9 @@
 - Phòng VIP **dùng chung** bảng giá.
 - Triển khai: `lib/official-pricing.ts` (mặc định cho cơ sở mới).
 
+- VAT và phí dịch vụ **cộng thêm** trên giá niêm yết (cấu hình trong Cài đặt: `vat`, `fee`).
+- Combo và thẻ VIP **dùng được cho cả phòng VIP**.
+- Combo "10 tặng 110 + 1 free" nghĩa là mua 10 lượt được tặng thêm 1 lượt (tương tự 20 lượt tặng 5).
+
 ## Còn thiếu / cần xác nhận
-1. Giá đã gồm VAT/phí dịch vụ hay cộng thêm?
-2. Combo/thẻ VIP: dùng được cho cả VIP room? Lượt tặng và "10 tặng 110 + 1 free" (chữ gốc bị lỗi) hiểu là tặng 1 lượt khi mua 10?
+1. Tỷ lệ VAT và mức phí dịch vụ cụ thể (cần nhập trong Cài đặt trước khi thu tiền thật).

@@ -240,11 +240,11 @@ export async function POST(req: Request) {
     if (!b) return fail('Không tìm thấy phiên', 404);
     const segments: Segment[] = JSON.parse(b.segments);
     const snap = JSON.parse(b.price);
+    const finished = b.finished,
+      payment = b.payment;
     let status = b.status,
       started = b.started,
-      finished = b.finished,
-      amount = b.amount,
-      payment = b.payment;
+      amount = b.amount;
     if (input.action === 'start') {
       if (status !== 'booked') return fail('Chỉ bắt đầu lịch đã đặt');
       if (now < b.start - 15 * 60000) return fail('Chỉ bắt đầu trước lịch hẹn tối đa 15 phút');

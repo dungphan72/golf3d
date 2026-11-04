@@ -1,4 +1,5 @@
 'use client';
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import {
   Flag,
@@ -97,7 +98,7 @@ export default function ClubApp() {
     [busy, setBusy] = useState(false),
     [filter, setFilter] = useState('all'),
     [search, setSearch] = useState(''),
-    [now, setNow] = useState(Date.now()),
+    [now, setNow] = useState(() => Date.now()),
     [mobile, setMobile] = useState(false);
   async function load() {
     try {
@@ -111,6 +112,7 @@ export default function ClubApp() {
     }
   }
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
     load();
     const id = setInterval(() => {
       load();
@@ -200,7 +202,7 @@ export default function ClubApp() {
   return (
     <div className="app-shell">
       <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
-        <a className="brand" href="/" aria-label="Golf3D trang chủ">
+        <Link className="brand" href="/" aria-label="Golf3D trang chủ">
           <span className="brand-mark">
             <Flag size={23} />
           </span>
@@ -208,7 +210,7 @@ export default function ClubApp() {
             GOLF<span className="gold">3D</span>
             <small>CLUB MANAGEMENT</small>
           </span>
-        </a>
+        </Link>
         <button className="location-switch" onClick={() => go('settings')}>
           <span className="location-icon">
             <MapPin size={17} />

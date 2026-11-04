@@ -40,6 +40,7 @@ export default function StockPanel() {
     }
   }, []);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial data fetch on mount
     load();
     const timer = setInterval(load, 15000);
     return () => clearInterval(timer);

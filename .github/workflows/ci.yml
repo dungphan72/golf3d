@@ -17,7 +17,5 @@ jobs:
       - run: pnpm typecheck
       - name: Unit tests
         run: node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts
-      # Còn 10 lỗi React-hooks lint có từ trước; sửa ở bước dọn UI kế tiếp rồi bỏ continue-on-error.
       - name: Lint
         run: pnpm lint
-        continue-on-error: true

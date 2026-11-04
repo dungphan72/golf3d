@@ -18,8 +18,10 @@ export function BookingForm({
   onClose: () => void;
   onSave: (v: Record<string, unknown>) => Promise<void>;
 }) {
-  const next = Math.ceil((Date.now() + 60000) / 900000) * 900000;
-  const local = new Date(next + 7 * 3600000).toISOString().slice(0, 16);
+  const [local] = useState(() => {
+    const next = Math.ceil((Date.now() + 60000) / 900000) * 900000;
+    return new Date(next + 7 * 3600000).toISOString().slice(0, 16);
+  });
   const [room, setRoom] = useState(initialRoom),
     [service, setService] = useState('gdr'),
     [start, setStart] = useState(local),
@@ -41,6 +43,7 @@ export function BookingForm({
         minutes,
       },
       config,
+      // eslint-disable-next-line react-hooks/purity -- quote is relative to the current time
       Date.now(),
     );
   } catch (e) {
@@ -233,8 +236,10 @@ export function SettingsForm({
   const signature = JSON.stringify(config);
   useEffect(() => {
     const next = JSON.parse(signature);
+    /* eslint-disable react-hooks/set-state-in-effect -- re-sync editable copy when saved config changes */
     setC(next);
     setHolidayText((next.holidays ?? []).join(', '));
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [signature]);
   function num(key: keyof Config, value: string) {
     setC({ ...c, [key]: value === '' ? null : Number(value) });

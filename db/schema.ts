@@ -89,6 +89,7 @@ export const financeEntries = sqliteTable(
     note: text('note').notNull(),
     actor: text('actor').notNull(),
     created: integer('created').notNull(),
+    packageId: text('package_id'),
   },
   (t) => [
     uniqueIndex('finance_request_once').on(t.tenant, t.requestId),
@@ -222,4 +223,110 @@ export const sessions = sqliteTable(
     created: integer('created').notNull(),
   },
   (t) => [index('sessions_user').on(t.userId)],
+);
+
+// ---- Customers, prepaid packages, loyalty (see docs/MEMBERSHIP-DESIGN.md) ----
+export const customers = sqliteTable(
+  'customers',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(), // normalised: digits only, leading 0
+    note: text('note').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('customer_phone').on(t.tenant, t.phone)],
+);
+export const packageTypes = sqliteTable(
+  'package_types',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    name: text('name').notNull(),
+    price: integer('price').notNull(),
+    grants: text('grants').notNull(), // JSON [{kind:'holes9'|'holes18'|'gdr', qty}]
+    validDays: integer('valid_days').notNull(),
+    perks: text('perks').notNull().default(''),
+    active: integer('active').notNull().default(1),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('package_type_tenant').on(t.tenant)],
+);
+export const customerPackages = sqliteTable(
+  'customer_packages',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    typeId: text('type_id'),
+    name: text('name').notNull(),
+    source: text('source').notNull(), // sale | loyalty
+    pricePaid: integer('price_paid').notNull(),
+    grants: text('grants').notNull(),
+    perks: text('perks').notNull().default(''),
+    purchased: integer('purchased').notNull(),
+    expires: integer('expires').notNull(),
+    actor: text('actor').notNull(),
+  },
+  (t) => [index('customer_package_customer').on(t.tenant, t.customerId)],
+);
+export const packageLedger = sqliteTable(
+  'package_ledger',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    packageId: text('package_id')
+      .notNull()
+      .references(() => customerPackages.id),
+    kind: text('kind').notNull(),
+    delta: integer('delta').notNull(),
+    reason: text('reason').notNull(), // grant | use | adjust
+    bookingId: text('booking_id'),
+    actor: text('actor').notNull(),
+    note: text('note').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('package_ledger_package').on(t.tenant, t.packageId)],
+);
+export const packageRedemptions = sqliteTable(
+  'package_redemptions',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    packageId: text('package_id')
+      .notNull()
+      .references(() => customerPackages.id),
+    kind: text('kind').notNull(),
+    covered: integer('covered').notNull(),
+    actor: text('actor').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('redemption_once').on(t.tenant, t.bookingId)],
+);
+export const loyaltyLedger = sqliteTable(
+  'loyalty_ledger',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    delta: integer('delta').notNull(),
+    reason: text('reason').notNull(), // earn | redeem | adjust
+    bookingId: text('booking_id'),
+    actor: text('actor').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    index('loyalty_customer').on(t.tenant, t.customerId),
+    uniqueIndex('loyalty_earn_once')
+      .on(t.tenant, t.bookingId)
+      .where(sql`${t.reason} = 'earn'`),
+  ],
 );

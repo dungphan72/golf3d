@@ -27,8 +27,11 @@
 - Yêu cầu hợp đồng Bên A/Bên B: sổ doanh thu/chi phí thời gian thực và báo cáo chia doanh thu theo kỳ; gói trả trước còn hiệu lực phải truy vết được (điều khoản thoát vốn). Cơ chế chia (MG + bậc thang, hoặc 70/30, 65/35, Corporate/Event thưởng riêng) chưa chốt.
 - Mục tiêu chiến lược: CRM tự động sau buổi chơi (Zalo/SMS ngày 1/2/3/5/7, gửi dữ liệu GC3), Happy Hour 13–16h ngày thường giảm 20–25%, Member/Student Hour, Corporate theo block giờ.
 
+## Đã xác nhận (chủ dự án)
+- 9/18 hố tính **mỗi người** cho 1–3 người; 4 người dùng giá nhóm.
+- Phòng VIP **dùng chung** bảng giá.
+- Triển khai: `lib/official-pricing.ts` (mặc định cho cơ sở mới).
+
 ## Còn thiếu / cần xác nhận
-1. 9/18 hố là giá **mỗi người** đúng không (2 người = ×2, 3 người = ×3, 4 người dùng giá nhóm)? (Bảng gốc không ghi rõ; anh đã nói "thu trên đầu người".)
-2. Phòng VIP có phụ thu không?
-3. Giá đã gồm VAT/phí dịch vụ hay cộng thêm?
-4. Combo/thẻ VIP: dùng được cho cả VIP room? Lượt tặng và "10 tặng 110 + 1 free" (chữ gốc bị lỗi) hiểu là tặng 1 lượt khi mua 10?
+1. Giá đã gồm VAT/phí dịch vụ hay cộng thêm?
+2. Combo/thẻ VIP: dùng được cho cả VIP room? Lượt tặng và "10 tặng 110 + 1 free" (chữ gốc bị lỗi) hiểu là tặng 1 lượt khi mua 10?

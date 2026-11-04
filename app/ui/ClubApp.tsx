@@ -1,87 +1,1272 @@
 'use client';
-import {useEffect,useRef,useState} from 'react';
-import {Flag,LayoutDashboard,CalendarDays,Grid2X2,ReceiptText,Users,Settings,ChevronDown,ArrowUpRight,Plus,Search,Bell,MapPin,Clock,ArrowRight,Check,Headphones,UtensilsCrossed,Wallet,Menu,X,LogOut,RefreshCw,ShieldCheck,BookOpen,Play,Pause,Square,Printer,CircleHelp,ChevronRight,Activity,SlidersHorizontal} from 'lucide-react';
-import {rooms,defaults,money,quote,wholeQuote,type Config,type Booking,type Segment} from '../../lib/club';
-import {BookingForm,SettingsForm} from './Forms';
-import {TariffPreview} from './PriceEditor';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Flag,
+  LayoutDashboard,
+  CalendarDays,
+  Grid2X2,
+  ReceiptText,
+  Users,
+  Settings,
+  ChevronDown,
+  ArrowUpRight,
+  Plus,
+  Search,
+  Bell,
+  MapPin,
+  Clock,
+  ArrowRight,
+  Check,
+  Headphones,
+  UtensilsCrossed,
+  Wallet,
+  Menu,
+  X,
+  LogOut,
+  RefreshCw,
+  ShieldCheck,
+  BookOpen,
+  Play,
+  Pause,
+  Square,
+  Printer,
+  CircleHelp,
+  ChevronRight,
+  Activity,
+  SlidersHorizontal,
+} from 'lucide-react';
+import {
+  rooms,
+  defaults,
+  money,
+  quote,
+  wholeQuote,
+  type Config,
+  type Booking,
+  type Segment,
+} from '../../lib/club';
+import { BookingForm, SettingsForm } from './Forms';
+import { TariffPreview } from './PriceEditor';
 import FinancePanel from './FinancePanel';
 import FnbPanel from './FnbPanel';
 import StockPanel from './StockPanel';
-import {useFood,FoodReceipt,SessionOrdering} from './SessionFood';
-import {operationKey} from '../../lib/finance';
-import type {Bill} from '../../lib/pricing';
-type RequestRow={id:string;booking:string;kind:string;status:string;created:number};
-type Data={activeShift:{id:string;name:string;opened_at:number}|null;todayReceipts:number;config:Config;bookings:Booking[];requests:RequestRow[];audit:{id:string;action:string;detail:string;created:number}[];user:string};
-export const labels:Record<string,string>={booked:'Đã đặt',playing:'Đang chơi',paused:'Tạm dừng',finished:'Chờ thanh toán',paid:'Đã thanh toán',cancelled:'Đã hủy'};
-export function time(ms:number){return new Date(ms).toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit'});}
-export function date(ms:number){return new Date(ms).toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',day:'2-digit',month:'2-digit'});}
-export default function ClubApp(){
- const [data,setData]=useState<Data|null>(null),[view,setView]=useState('overview'),[mode,setMode]=useState('staff'),[modal,setModal]=useState(false),[bookingRoom,setBookingRoom]=useState('line-1'),[selected,setSelected]=useState<Booking|null>(null),[error,setError]=useState(''),[toast,setToast]=useState(''),[busy,setBusy]=useState(false),[filter,setFilter]=useState('all'),[search,setSearch]=useState(''),[now,setNow]=useState(Date.now()),[mobile,setMobile]=useState(false);
- async function load(){try{const r=await fetch('/api/club',{cache:'no-store'});const v=await r.json() as Data & {error?:string};if(!r.ok)throw new Error(v.error||'Không tải được dữ liệu');setData(v);setError('');}catch(e){setError(String(e instanceof Error?e.message:e));}}
- useEffect(()=>{load();const id=setInterval(()=>{load();setNow(Date.now());},15000);return()=>clearInterval(id);},[]);
- useEffect(()=>{if(toast){const id=setTimeout(()=>setToast(''),4500);return()=>clearTimeout(id);}},[toast]);
- async function mutate(value:Record<string,unknown>){setBusy(true);try{const payment=value.action==='pay';const body=payment?{action:'pay',bookingId:value.id,method:value.method,requestId:value.requestId,expectedAmount:value.expectedAmount}:value;const r=await fetch(payment?'/api/finance':'/api/club',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await r.json() as {error?:string;replayed?:boolean};if(!r.ok)throw new Error(result.error);await load();setToast(result.replayed?'Đã ghi nhận trước đó; không ghi trùng.':'Đã lưu thay đổi');return true;}catch(e){await load();setToast(e instanceof Error?e.message:String(e));return false;}finally{setBusy(false);}}
- const c=data?.config??defaults,b=data?.bookings??[],active=b.filter(x=>['playing','paused'].includes(x.status)),pending=data?.requests.filter(x=>x.status!=='done')??[];
- const today=new Date(now+7*3600000).toISOString().slice(0,10),todayBookings=b.filter(x=>new Date(x.start+7*3600000).toISOString().slice(0,10)===today);
- const revenue=data?.todayReceipts??0;
- const navigation=[['overview','Tổng quan',LayoutDashboard],['rooms','Sơ đồ phòng',Grid2X2],['bookings','Lịch đặt',CalendarDays],['invoices','Hóa đơn',ReceiptText],['finance','Ca & sổ tiền',Wallet],['fnb','Thực đơn & bếp',UtensilsCrossed],['stock','Kho F&B',Grid2X2],['support','Yêu cầu hỗ trợ',Headphones],['roadmap','Lộ trình hệ thống',BookOpen],['settings','Cài đặt cơ sở',Settings]] as const;
- const titles:Record<string,string>={overview:'Một ngày chơi tốt lành.',rooms:'Không gian & phiên chơi',bookings:'Lịch đặt sân',invoices:'Hóa đơn & thanh toán',finance:'Đối soát rõ ràng, bàn giao an tâm.',fnb:'Món ngon, phục vụ đúng lúc.',stock:'Kho rõ ràng, phục vụ an tâm.',support:'Trung tâm hỗ trợ',roadmap:'Lộ trình phát triển',settings:'Thiết lập cơ sở'};
- function go(v:string){setView(v);setMobile(false);}
- const openBooking=()=>{setBookingRoom('line-1');setModal(true);};
- const chosen=selected?b.find(x=>x.id===selected.id)??selected:null;
- return <div className="app-shell">
- <aside className={'sidebar '+(mobile?'mobile-open':'')}><a className="brand" href="/" aria-label="Golf3D trang chủ"><span className="brand-mark"><Flag size={23}/></span><span>GOLF<span className="gold">3D</span><small>CLUB MANAGEMENT</small></span></a><button className="location-switch" onClick={()=>go('settings')}><span className="location-icon"><MapPin size={17}/></span><span>Bình Trưng<small>Cơ sở đầu tiên</small></span><ChevronDown size={15}/></button><div className="nav-label">KHÔNG GIAN LÀM VIỆC</div><nav>{navigation.map(([key,label,Icon])=><button key={key} className={view===key?'nav-item selected':'nav-item'} onClick={()=>go(key)}><Icon size={19}/><span>{label}</span>{key==='support'&&pending.length>0&&<b className="count">{pending.length}</b>}</button>)}</nav><div className="sidebar-bottom"><div className="club-note"><Flag size={21}/><p>Chơi tốt hơn.<br/>Vận hành thông minh hơn.</p><span>GOLF3D WORKSPACE · V0.5.4</span></div><button className="nav-item" onClick={()=>{setMode(mode==='staff'?'customer':'staff');go('overview');}}><ArrowUpRight size={18}/>{mode==='staff'?'Trải nghiệm khách hàng':'Về trang quản lý'}</button><div className="profile"><span className="avatar">D</span><div><strong>{data?.user?.split('@')[0]||'Chủ cơ sở'}</strong><small>Không gian riêng tư</small></div><ShieldCheck size={17}/></div></div></aside>
- <div className="workspace"><header className="topbar"><div className="breadcrumb"><button className="icon-btn mobile-menu" aria-label="Mở menu" onClick={()=>setMobile(!mobile)}><Menu size={22}/></button><span>Golf3D</span><ChevronRight size={14}/><strong>{mode==='customer'?'Trải nghiệm khách hàng':navigation.find(x=>x[0]===view)?.[1]}</strong></div><div className="top-actions"><span className="connection"><i/>{error?'Cần kiểm tra kết nối':data?'Đồng bộ trực tuyến':'Đang kết nối…'}</span><button className="icon-btn" aria-label="Tải lại" onClick={load}><RefreshCw size={18}/></button><button className="icon-btn notification" aria-label="Yêu cầu hỗ trợ" onClick={()=>go('support')}><Bell size={19}/>{pending.length>0&&<i/>}</button><span className="avatar small">D</span></div></header>
- <div className="pilot"><span><ShieldCheck size={14}/> BẢN THỬ NỘI BỘ</span><p>Dữ liệu được lưu trên máy chủ. Chưa mở nhận khách công khai.</p><button onClick={()=>go('roadmap')}>Xem tiến độ <ArrowUpRight size={13}/></button></div>
- <main>
- {error&&<div className="error-box" role="alert">{error}<button onClick={load}>Thử lại</button>{error.includes('đăng nhập')&&<a href="/signin-with-chatgpt?return_to=%2F" target="_top">Đăng nhập</a>}</div>}
- {!data&&!error?<div className="loading">Đang tải không gian Golf3D…</div>:<>
- {mode==='customer'?<><CustomerHome onBook={openBooking} onSession={()=>{setMode('staff');go('rooms');}} config={c}/></>:<>
- <div className="page-heading"><div><div className="eyebrow">{view==='overview'?'GOLF3D / CLUB OPERATIONS':'GOLF3D / WORKSPACE'}</div><h1>{titles[view]}</h1><p>{view==='overview'?'Mọi hoạt động tại cơ sở, trong một tầm nhìn.':view==='settings'?'Thiết lập chính sách trước khi mở cửa đón khách.':'Quản lý liền mạch, phục vụ trọn vẹn.'}</p></div><div className="heading-actions"><span className="date-display"><CalendarDays size={16}/>{new Date(now).toLocaleDateString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'})}</span><button className="primary" onClick={openBooking}><Plus size={18}/>Tạo lịch đặt</button></div></div>
- {view==='overview'&&<><div className="stats"><Stat title="Thực thu hôm nay" value={money(revenue)} sub="Theo thời điểm thu · sổ tiền v0.3" icon={<Wallet size={20}/>}/><Stat title="Phòng đang sử dụng" value={`${active.length}`} suffix="/ 12" sub={`${12-active.length} phòng / line chưa chạy phiên`} icon={<Grid2X2 size={20}/>}/><Stat title="Lịch đặt hôm nay" value={`${todayBookings.filter(x=>x.status!=='cancelled').length}`} sub="Tổng lượt đã ghi nhận" icon={<CalendarDays size={20}/>}/><Stat title="Yêu cầu đang chờ" value={`${pending.length}`} sub="Hỗ trợ khách tại cơ sở" icon={<Headphones size={20}/>}/></div>
- <div className="overview-grid"><div><div className="section-heading"><h2>Sơ đồ phòng & line tập <span>12</span></h2><button onClick={()=>go('rooms')}>Xem tất cả <ArrowRight size={15}/></button></div><div className="legend"><span><i className="free"/>Trống</span><span><i className="inplay"/>Đang chơi</span><span><i className="reserved"/>Đã đặt</span><span><i className="cleaning"/>Đang dọn</span></div><RoomGrid bookings={b} filter="all" now={now} onSelect={x=>setSelected(x)} onBook={r=>{setBookingRoom(r);setModal(true);}}/></div><aside className="right-column"><div className="daily-card"><span className="eyebrow">YOUR NEXT GREAT SHOT</span><h2>Mỗi cú swing.<br/>Một trải nghiệm.</h2><div className="golf-art"><div className="orbit o1"/><div className="orbit o2"/><div className="green"/><span className="pole"/><span className="flag"/><span className="ball"/></div><span className="art-caption">GOLF3D · BÌNH TRƯNG</span></div><div className="quick-card"><h3>Sẵn sàng đón khách?</h3><p>Hoàn tất giờ hoạt động, sức chứa và thuế/phí để bắt đầu đặt thử.</p><button onClick={()=>go('settings')}>Thiết lập cơ sở <ArrowUpRight size={16}/></button></div></aside></div>
- <div className="section-heading"><h2>Lịch sắp tới</h2><button onClick={()=>go('bookings')}>Quản lý lịch đặt <ArrowRight size={15}/></button></div><BookingTable bookings={b.filter(x=>x.status==='booked').sort((a,b)=>a.start-b.start).slice(0,5)} onSelect={setSelected}/></>}
- {view==='rooms'&&<><div className="toolbar"><div className="tabs">{[['all','Tất cả · 12'],['standard','Line thường · 10'],['vip','Phòng VIP · 2']].map(([v,t])=><button key={v} className={filter===v?'active':''} onClick={()=>setFilter(v)}>{t}</button>)}</div><span className="muted">Cập nhật mỗi 15 giây</span></div><RoomGrid bookings={b} filter={filter} now={now} onSelect={setSelected} onBook={r=>{setBookingRoom(r);setModal(true);}}/></>}
- {view==='bookings'&&<><div className="toolbar"><div className="search"><Search size={17}/><input aria-label="Tìm lịch đặt" placeholder="Tìm tên, điện thoại…" value={search} onChange={e=>setSearch(e.target.value)}/></div><span className="muted">{b.length} lượt đặt</span></div><BookingTable bookings={b.filter(x=>(x.customer+' '+x.phone).toLowerCase().includes(search.toLowerCase()))} onSelect={setSelected}/></>}
- {view==='invoices'&&<><div className="info-strip">Phiếu thanh toán nội bộ · Kết nối hóa đơn điện tử chưa được cấu hình.</div><BookingTable bookings={b.filter(x=>['finished','paid'].includes(x.status))} onSelect={setSelected}/></>}
- {view==='support'&&<div className="support-list">{data?.requests.length?data.requests.map(r=>{const booking=b.find(x=>x.id===r.booking);return <article className="support-card" key={r.id}><span className="support-icon"><Bell size={23}/></span><div><h3>{r.kind}</h3><p>{rooms.find(x=>x.id===booking?.room)?.name} · {booking?.customer} · {time(r.created)}</p><span className={'badge '+r.status}>{r.status==='new'?'Chờ tiếp nhận':r.status==='received'?'Đang xử lý':'Hoàn thành'}</span></div>{r.status!=='done'&&<button className="primary" disabled={busy} onClick={()=>mutate({action:'request-update',id:r.id,status:r.status==='new'?'received':'done'})}>{r.status==='new'?'Tiếp nhận':'Hoàn thành'}</button>}</article>}):<Empty title="Mọi yêu cầu đã được chăm sóc" text="Yêu cầu hỗ trợ từ phiên chơi sẽ xuất hiện tại đây."/>}</div>}
- {view==='stock'&&<StockPanel/>}
- {view==='fnb'&&<FnbPanel onChanged={load}/>}
- {view==='finance'&&<FinancePanel onChanged={load}/>}
- {view==='settings'&&<SettingsForm config={c} busy={busy} onSave={v=>mutate({action:'settings',value:v})}/>}
- {view==='roadmap'&&<Roadmap audit={data?.audit??[]}/>}
- </>}
- </>}
- <footer><span>GOLF3D <i/> Play. Connect. Repeat.</span><span>250 Lương Đình Của · Bình Trưng, TP.HCM</span></footer>
- </main>
- <nav className="bottom-nav">{[['overview','Trang chủ',LayoutDashboard],['bookings','Lịch đặt',CalendarDays],['rooms','Đang chơi',Flag],['support','Hỗ trợ',Headphones],['finance','Ca & quỹ',Wallet]].map(([v,t,I])=>{const Icon=I as typeof Flag;return <button key={String(v)} className={view===v?'active':''} onClick={()=>{setMode('staff');go(String(v));}}><Icon size={21}/><span>{String(t)}</span></button>})}</nav>
- </div>
- {modal&&<BookingForm initialRoom={bookingRoom} config={c} busy={busy} onClose={()=>setModal(false)} onSave={async v=>{if(await mutate({action:'book',...v}))setModal(false);}}/>}
- {chosen&&<SessionPanel onRefresh={load} canPay={!!data?.activeShift} onOpenShift={()=>{setSelected(null);go('finance');}} booking={chosen} now={now} busy={busy} onClose={()=>setSelected(null)} onAction={async(action,extra={})=>{await mutate({action,id:chosen.id,...extra});}}/>}
- {toast&&<div className="toast" role="status"><Check size={18}/>{toast}<button onClick={()=>setToast('')} aria-label="Đóng thông báo"><X size={16}/></button></div>}
- </div>;
+import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
+import { operationKey } from '../../lib/finance';
+import type { Bill } from '../../lib/pricing';
+type RequestRow = { id: string; booking: string; kind: string; status: string; created: number };
+type Data = {
+  activeShift: { id: string; name: string; opened_at: number } | null;
+  todayReceipts: number;
+  config: Config;
+  bookings: Booking[];
+  requests: RequestRow[];
+  audit: { id: string; action: string; detail: string; created: number }[];
+  user: string;
+};
+export const labels: Record<string, string> = {
+  booked: 'Đã đặt',
+  playing: 'Đang chơi',
+  paused: 'Tạm dừng',
+  finished: 'Chờ thanh toán',
+  paid: 'Đã thanh toán',
+  cancelled: 'Đã hủy',
+};
+export function time(ms: number) {
+  return new Date(ms).toLocaleTimeString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
-function Stat({title,value,sub,icon,suffix}:{title:string;value:string;sub:string;icon:React.ReactNode;suffix?:string}){return <article className="stat"><div><span>{title}</span><span className="stat-icon">{icon}</span></div><strong>{value}<small>{suffix}</small></strong><p>{sub}</p></article>}
-function RoomGrid({bookings,filter,now,onSelect,onBook}:{bookings:Booking[];filter:string;now:number;onSelect:(b:Booking)=>void;onBook:(room:string)=>void}){return <div className="room-grid">{rooms.filter(r=>filter==='all'||(filter==='vip'?r.vip:!r.vip)).map(r=>{const live=bookings.find(b=>b.room===r.id&&['playing','paused'].includes(b.status));const clean=bookings.find(b=>b.room===r.id&&['finished','paid'].includes(b.status)&&b.end>now);const next=bookings.filter(b=>b.room===r.id&&b.status==='booked'&&b.end>now).sort((a,b)=>a.start-b.start)[0];const item=live??next;return <button className={'room-card '+(live?'occupied':clean?'clean':next?'has-booking':'')+(r.vip?' vip':'')} key={r.id} onClick={()=>item?onSelect(item):onBook(r.id)}><div className="room-top"><span className="room-type">{r.vip?'PRIVATE ROOM':r.left?'LEFT-HANDED':'GDR PRACTICE'}</span>{r.vip?<Flag size={17}/>:<span className="room-number">{r.id.split('-')[1].padStart(2,'0')}</span>}</div><h3>{r.name}</h3><span className="room-status"><i/>{live?labels[live.status]:clean?'Đang dọn':next?'Đã đặt':'Sẵn sàng'}</span><div className="room-bottom">{live?<><span>{live.customer}</span><span>{time(live.start)}</span></>:next?<><span>{date(next.start)} · {time(next.start)}</span><ArrowUpRight size={14}/></>:<><span>{r.vip?'Không gian riêng tư':r.left?'Dành cho golfer tay trái':'Chọn để đặt lịch'}</span><Plus size={15}/></>}</div></button>})}</div>}
-function BookingTable({bookings,onSelect}:{bookings:Booking[];onSelect:(b:Booking)=>void}){if(!bookings.length)return <Empty title="Chưa có lịch trong danh sách" text="Tạo lịch đặt đầu tiên để bắt đầu quản lý trải nghiệm tại Golf3D."/>;return <div className="table-wrap"><table><thead><tr><th>Khách hàng</th><th>Phòng / Line</th><th>Ngày & giờ</th><th>Dịch vụ</th><th>Trạng thái</th><th>Thành tiền</th><th/></tr></thead><tbody>{bookings.map(b=><tr key={b.id}><td><button className="customer-name" onClick={()=>onSelect(b)}>{b.customer}</button><small>{b.phone}</small></td><td>{rooms.find(r=>r.id===b.room)?.name}</td><td>{date(b.start)} · {time(b.start)}</td><td>{b.service==='gdr'?'GDR':b.service+' hố'} · {b.people} người</td><td><span className={'badge '+b.status}>{labels[b.status]}</span></td><td>{b.amount==null?'—':money(b.amount)}</td><td><button className="icon-btn" aria-label="Mở chi tiết" onClick={()=>onSelect(b)}><ChevronRight size={17}/></button></td></tr>)}</tbody></table></div>}
-function Empty({title,text}:{title:string;text:string}){return <div className="empty"><CalendarDays size={29}/><h3>{title}</h3><p>{text}</p></div>}
-function CustomerHome({onBook,onSession,config}:{onBook:()=>void;onSession:()=>void;config:Config}){return <><div className="customer-hero"><div><span className="eyebrow">GOLF3D · INDOOR GOLF CLUB</span><h1>Sân chơi của bạn.<br/><em>Ngay giữa thành phố.</em></h1><p>10 line luyện tập. 2 phòng VIP.<br/>Một không gian để kết nối cùng đam mê.</p><button className="gold-button" onClick={onBook}>Đặt lịch chơi <ArrowUpRight size={18}/></button><span className="hero-location"><MapPin size={15}/>{config.address}</span></div><div className="hero-art golf-art"><div className="orbit o1"/><div className="orbit o2"/><div className="green"/><span className="pole"/><span className="flag"/><span className="ball"/></div></div><div className="customer-services"><button onClick={onBook}><Flag/><strong>Đặt line / phòng</strong><span>Chọn giờ chơi của bạn</span><ArrowUpRight/></button><button onClick={onSession}><Activity/><strong>Phiên đang chơi</strong><span>Gọi hỗ trợ · Xem tạm tính</span><ArrowUpRight/></button></div><div className="info-strip">Chế độ xem khách hàng trong bản thử của chủ cơ sở. Đăng nhập golfer bằng OTP sẽ triển khai khi kết nối nhà cung cấp.</div><div className="section-heading"><h2>Bảng giá dịch vụ</h2><span className="muted">Giá gốc · VAT và phí được tách trong báo giá</span></div><TariffPreview config={config}/></>}
+export function date(ms: number) {
+  return new Date(ms).toLocaleDateString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+export default function ClubApp() {
+  const [data, setData] = useState<Data | null>(null),
+    [view, setView] = useState('overview'),
+    [mode, setMode] = useState('staff'),
+    [modal, setModal] = useState(false),
+    [bookingRoom, setBookingRoom] = useState('line-1'),
+    [selected, setSelected] = useState<Booking | null>(null),
+    [error, setError] = useState(''),
+    [toast, setToast] = useState(''),
+    [busy, setBusy] = useState(false),
+    [filter, setFilter] = useState('all'),
+    [search, setSearch] = useState(''),
+    [now, setNow] = useState(Date.now()),
+    [mobile, setMobile] = useState(false);
+  async function load() {
+    try {
+      const r = await fetch('/api/club', { cache: 'no-store' });
+      const v = (await r.json()) as Data & { error?: string };
+      if (!r.ok) throw new Error(v.error || 'Không tải được dữ liệu');
+      setData(v);
+      setError('');
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    }
+  }
+  useEffect(() => {
+    load();
+    const id = setInterval(() => {
+      load();
+      setNow(Date.now());
+    }, 15000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    if (toast) {
+      const id = setTimeout(() => setToast(''), 4500);
+      return () => clearTimeout(id);
+    }
+  }, [toast]);
+  async function mutate(value: Record<string, unknown>) {
+    setBusy(true);
+    try {
+      const payment = value.action === 'pay';
+      const body = payment
+        ? {
+            action: 'pay',
+            bookingId: value.id,
+            method: value.method,
+            requestId: value.requestId,
+            expectedAmount: value.expectedAmount,
+          }
+        : value;
+      const r = await fetch(payment ? '/api/finance' : '/api/club', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const result = (await r.json()) as { error?: string; replayed?: boolean };
+      if (!r.ok) throw new Error(result.error);
+      await load();
+      setToast(result.replayed ? 'Đã ghi nhận trước đó; không ghi trùng.' : 'Đã lưu thay đổi');
+      return true;
+    } catch (e) {
+      await load();
+      setToast(e instanceof Error ? e.message : String(e));
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+  const c = data?.config ?? defaults,
+    b = data?.bookings ?? [],
+    active = b.filter((x) => ['playing', 'paused'].includes(x.status)),
+    pending = data?.requests.filter((x) => x.status !== 'done') ?? [];
+  const today = new Date(now + 7 * 3600000).toISOString().slice(0, 10),
+    todayBookings = b.filter(
+      (x) => new Date(x.start + 7 * 3600000).toISOString().slice(0, 10) === today,
+    );
+  const revenue = data?.todayReceipts ?? 0;
+  const navigation = [
+    ['overview', 'Tổng quan', LayoutDashboard],
+    ['rooms', 'Sơ đồ phòng', Grid2X2],
+    ['bookings', 'Lịch đặt', CalendarDays],
+    ['invoices', 'Hóa đơn', ReceiptText],
+    ['finance', 'Ca & sổ tiền', Wallet],
+    ['fnb', 'Thực đơn & bếp', UtensilsCrossed],
+    ['stock', 'Kho F&B', Grid2X2],
+    ['support', 'Yêu cầu hỗ trợ', Headphones],
+    ['roadmap', 'Lộ trình hệ thống', BookOpen],
+    ['settings', 'Cài đặt cơ sở', Settings],
+  ] as const;
+  const titles: Record<string, string> = {
+    overview: 'Một ngày chơi tốt lành.',
+    rooms: 'Không gian & phiên chơi',
+    bookings: 'Lịch đặt sân',
+    invoices: 'Hóa đơn & thanh toán',
+    finance: 'Đối soát rõ ràng, bàn giao an tâm.',
+    fnb: 'Món ngon, phục vụ đúng lúc.',
+    stock: 'Kho rõ ràng, phục vụ an tâm.',
+    support: 'Trung tâm hỗ trợ',
+    roadmap: 'Lộ trình phát triển',
+    settings: 'Thiết lập cơ sở',
+  };
+  function go(v: string) {
+    setView(v);
+    setMobile(false);
+  }
+  const openBooking = () => {
+    setBookingRoom('line-1');
+    setModal(true);
+  };
+  const chosen = selected ? (b.find((x) => x.id === selected.id) ?? selected) : null;
+  return (
+    <div className="app-shell">
+      <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
+        <a className="brand" href="/" aria-label="Golf3D trang chủ">
+          <span className="brand-mark">
+            <Flag size={23} />
+          </span>
+          <span>
+            GOLF<span className="gold">3D</span>
+            <small>CLUB MANAGEMENT</small>
+          </span>
+        </a>
+        <button className="location-switch" onClick={() => go('settings')}>
+          <span className="location-icon">
+            <MapPin size={17} />
+          </span>
+          <span>
+            Bình Trưng<small>Cơ sở đầu tiên</small>
+          </span>
+          <ChevronDown size={15} />
+        </button>
+        <div className="nav-label">KHÔNG GIAN LÀM VIỆC</div>
+        <nav>
+          {navigation.map(([key, label, Icon]) => (
+            <button
+              key={key}
+              className={view === key ? 'nav-item selected' : 'nav-item'}
+              onClick={() => go(key)}
+            >
+              <Icon size={19} />
+              <span>{label}</span>
+              {key === 'support' && pending.length > 0 && <b className="count">{pending.length}</b>}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-bottom">
+          <div className="club-note">
+            <Flag size={21} />
+            <p>
+              Chơi tốt hơn.
+              <br />
+              Vận hành thông minh hơn.
+            </p>
+            <span>GOLF3D WORKSPACE · V0.5.4</span>
+          </div>
+          <button
+            className="nav-item"
+            onClick={() => {
+              setMode(mode === 'staff' ? 'customer' : 'staff');
+              go('overview');
+            }}
+          >
+            <ArrowUpRight size={18} />
+            {mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}
+          </button>
+          <div className="profile">
+            <span className="avatar">D</span>
+            <div>
+              <strong>{data?.user?.split('@')[0] || 'Chủ cơ sở'}</strong>
+              <small>Không gian riêng tư</small>
+            </div>
+            <ShieldCheck size={17} />
+          </div>
+        </div>
+      </aside>
+      <div className="workspace">
+        <header className="topbar">
+          <div className="breadcrumb">
+            <button
+              className="icon-btn mobile-menu"
+              aria-label="Mở menu"
+              onClick={() => setMobile(!mobile)}
+            >
+              <Menu size={22} />
+            </button>
+            <span>Golf3D</span>
+            <ChevronRight size={14} />
+            <strong>
+              {mode === 'customer'
+                ? 'Trải nghiệm khách hàng'
+                : navigation.find((x) => x[0] === view)?.[1]}
+            </strong>
+          </div>
+          <div className="top-actions">
+            <span className="connection">
+              <i />
+              {error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'}
+            </span>
+            <button className="icon-btn" aria-label="Tải lại" onClick={load}>
+              <RefreshCw size={18} />
+            </button>
+            <button
+              className="icon-btn notification"
+              aria-label="Yêu cầu hỗ trợ"
+              onClick={() => go('support')}
+            >
+              <Bell size={19} />
+              {pending.length > 0 && <i />}
+            </button>
+            <span className="avatar small">D</span>
+          </div>
+        </header>
+        <div className="pilot">
+          <span>
+            <ShieldCheck size={14} /> BẢN THỬ NỘI BỘ
+          </span>
+          <p>Dữ liệu được lưu trên máy chủ. Chưa mở nhận khách công khai.</p>
+          <button onClick={() => go('roadmap')}>
+            Xem tiến độ <ArrowUpRight size={13} />
+          </button>
+        </div>
+        <main>
+          {error && (
+            <div className="error-box" role="alert">
+              {error}
+              <button onClick={load}>Thử lại</button>
+              {error.includes('đăng nhập') && (
+                <a href="/signin-with-chatgpt?return_to=%2F" target="_top">
+                  Đăng nhập
+                </a>
+              )}
+            </div>
+          )}
+          {!data && !error ? (
+            <div className="loading">Đang tải không gian Golf3D…</div>
+          ) : (
+            <>
+              {mode === 'customer' ? (
+                <>
+                  <CustomerHome
+                    onBook={openBooking}
+                    onSession={() => {
+                      setMode('staff');
+                      go('rooms');
+                    }}
+                    config={c}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="page-heading">
+                    <div>
+                      <div className="eyebrow">
+                        {view === 'overview' ? 'GOLF3D / CLUB OPERATIONS' : 'GOLF3D / WORKSPACE'}
+                      </div>
+                      <h1>{titles[view]}</h1>
+                      <p>
+                        {view === 'overview'
+                          ? 'Mọi hoạt động tại cơ sở, trong một tầm nhìn.'
+                          : view === 'settings'
+                            ? 'Thiết lập chính sách trước khi mở cửa đón khách.'
+                            : 'Quản lý liền mạch, phục vụ trọn vẹn.'}
+                      </p>
+                    </div>
+                    <div className="heading-actions">
+                      <span className="date-display">
+                        <CalendarDays size={16} />
+                        {new Date(now).toLocaleDateString('vi-VN', {
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                          weekday: 'short',
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </span>
+                      <button className="primary" onClick={openBooking}>
+                        <Plus size={18} />
+                        Tạo lịch đặt
+                      </button>
+                    </div>
+                  </div>
+                  {view === 'overview' && (
+                    <>
+                      <div className="stats">
+                        <Stat
+                          title="Thực thu hôm nay"
+                          value={money(revenue)}
+                          sub="Theo thời điểm thu · sổ tiền v0.3"
+                          icon={<Wallet size={20} />}
+                        />
+                        <Stat
+                          title="Phòng đang sử dụng"
+                          value={`${active.length}`}
+                          suffix="/ 12"
+                          sub={`${12 - active.length} phòng / line chưa chạy phiên`}
+                          icon={<Grid2X2 size={20} />}
+                        />
+                        <Stat
+                          title="Lịch đặt hôm nay"
+                          value={`${todayBookings.filter((x) => x.status !== 'cancelled').length}`}
+                          sub="Tổng lượt đã ghi nhận"
+                          icon={<CalendarDays size={20} />}
+                        />
+                        <Stat
+                          title="Yêu cầu đang chờ"
+                          value={`${pending.length}`}
+                          sub="Hỗ trợ khách tại cơ sở"
+                          icon={<Headphones size={20} />}
+                        />
+                      </div>
+                      <div className="overview-grid">
+                        <div>
+                          <div className="section-heading">
+                            <h2>
+                              Sơ đồ phòng & line tập <span>12</span>
+                            </h2>
+                            <button onClick={() => go('rooms')}>
+                              Xem tất cả <ArrowRight size={15} />
+                            </button>
+                          </div>
+                          <div className="legend">
+                            <span>
+                              <i className="free" />
+                              Trống
+                            </span>
+                            <span>
+                              <i className="inplay" />
+                              Đang chơi
+                            </span>
+                            <span>
+                              <i className="reserved" />
+                              Đã đặt
+                            </span>
+                            <span>
+                              <i className="cleaning" />
+                              Đang dọn
+                            </span>
+                          </div>
+                          <RoomGrid
+                            bookings={b}
+                            filter="all"
+                            now={now}
+                            onSelect={(x) => setSelected(x)}
+                            onBook={(r) => {
+                              setBookingRoom(r);
+                              setModal(true);
+                            }}
+                          />
+                        </div>
+                        <aside className="right-column">
+                          <div className="daily-card">
+                            <span className="eyebrow">YOUR NEXT GREAT SHOT</span>
+                            <h2>
+                              Mỗi cú swing.
+                              <br />
+                              Một trải nghiệm.
+                            </h2>
+                            <div className="golf-art">
+                              <div className="orbit o1" />
+                              <div className="orbit o2" />
+                              <div className="green" />
+                              <span className="pole" />
+                              <span className="flag" />
+                              <span className="ball" />
+                            </div>
+                            <span className="art-caption">GOLF3D · BÌNH TRƯNG</span>
+                          </div>
+                          <div className="quick-card">
+                            <h3>Sẵn sàng đón khách?</h3>
+                            <p>Hoàn tất giờ hoạt động, sức chứa và thuế/phí để bắt đầu đặt thử.</p>
+                            <button onClick={() => go('settings')}>
+                              Thiết lập cơ sở <ArrowUpRight size={16} />
+                            </button>
+                          </div>
+                        </aside>
+                      </div>
+                      <div className="section-heading">
+                        <h2>Lịch sắp tới</h2>
+                        <button onClick={() => go('bookings')}>
+                          Quản lý lịch đặt <ArrowRight size={15} />
+                        </button>
+                      </div>
+                      <BookingTable
+                        bookings={b
+                          .filter((x) => x.status === 'booked')
+                          .sort((a, b) => a.start - b.start)
+                          .slice(0, 5)}
+                        onSelect={setSelected}
+                      />
+                    </>
+                  )}
+                  {view === 'rooms' && (
+                    <>
+                      <div className="toolbar">
+                        <div className="tabs">
+                          {[
+                            ['all', 'Tất cả · 12'],
+                            ['standard', 'Line thường · 10'],
+                            ['vip', 'Phòng VIP · 2'],
+                          ].map(([v, t]) => (
+                            <button
+                              key={v}
+                              className={filter === v ? 'active' : ''}
+                              onClick={() => setFilter(v)}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                        <span className="muted">Cập nhật mỗi 15 giây</span>
+                      </div>
+                      <RoomGrid
+                        bookings={b}
+                        filter={filter}
+                        now={now}
+                        onSelect={setSelected}
+                        onBook={(r) => {
+                          setBookingRoom(r);
+                          setModal(true);
+                        }}
+                      />
+                    </>
+                  )}
+                  {view === 'bookings' && (
+                    <>
+                      <div className="toolbar">
+                        <div className="search">
+                          <Search size={17} />
+                          <input
+                            aria-label="Tìm lịch đặt"
+                            placeholder="Tìm tên, điện thoại…"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                          />
+                        </div>
+                        <span className="muted">{b.length} lượt đặt</span>
+                      </div>
+                      <BookingTable
+                        bookings={b.filter((x) =>
+                          (x.customer + ' ' + x.phone).toLowerCase().includes(search.toLowerCase()),
+                        )}
+                        onSelect={setSelected}
+                      />
+                    </>
+                  )}
+                  {view === 'invoices' && (
+                    <>
+                      <div className="info-strip">
+                        Phiếu thanh toán nội bộ · Kết nối hóa đơn điện tử chưa được cấu hình.
+                      </div>
+                      <BookingTable
+                        bookings={b.filter((x) => ['finished', 'paid'].includes(x.status))}
+                        onSelect={setSelected}
+                      />
+                    </>
+                  )}
+                  {view === 'support' && (
+                    <div className="support-list">
+                      {data?.requests.length ? (
+                        data.requests.map((r) => {
+                          const booking = b.find((x) => x.id === r.booking);
+                          return (
+                            <article className="support-card" key={r.id}>
+                              <span className="support-icon">
+                                <Bell size={23} />
+                              </span>
+                              <div>
+                                <h3>{r.kind}</h3>
+                                <p>
+                                  {rooms.find((x) => x.id === booking?.room)?.name} ·{' '}
+                                  {booking?.customer} · {time(r.created)}
+                                </p>
+                                <span className={'badge ' + r.status}>
+                                  {r.status === 'new'
+                                    ? 'Chờ tiếp nhận'
+                                    : r.status === 'received'
+                                      ? 'Đang xử lý'
+                                      : 'Hoàn thành'}
+                                </span>
+                              </div>
+                              {r.status !== 'done' && (
+                                <button
+                                  className="primary"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    mutate({
+                                      action: 'request-update',
+                                      id: r.id,
+                                      status: r.status === 'new' ? 'received' : 'done',
+                                    })
+                                  }
+                                >
+                                  {r.status === 'new' ? 'Tiếp nhận' : 'Hoàn thành'}
+                                </button>
+                              )}
+                            </article>
+                          );
+                        })
+                      ) : (
+                        <Empty
+                          title="Mọi yêu cầu đã được chăm sóc"
+                          text="Yêu cầu hỗ trợ từ phiên chơi sẽ xuất hiện tại đây."
+                        />
+                      )}
+                    </div>
+                  )}
+                  {view === 'stock' && <StockPanel />}
+                  {view === 'fnb' && <FnbPanel onChanged={load} />}
+                  {view === 'finance' && <FinancePanel onChanged={load} />}
+                  {view === 'settings' && (
+                    <SettingsForm
+                      config={c}
+                      busy={busy}
+                      onSave={(v) => mutate({ action: 'settings', value: v })}
+                    />
+                  )}
+                  {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
+                </>
+              )}
+            </>
+          )}
+          <footer>
+            <span>
+              GOLF3D <i /> Play. Connect. Repeat.
+            </span>
+            <span>250 Lương Đình Của · Bình Trưng, TP.HCM</span>
+          </footer>
+        </main>
+        <nav className="bottom-nav">
+          {[
+            ['overview', 'Trang chủ', LayoutDashboard],
+            ['bookings', 'Lịch đặt', CalendarDays],
+            ['rooms', 'Đang chơi', Flag],
+            ['support', 'Hỗ trợ', Headphones],
+            ['finance', 'Ca & quỹ', Wallet],
+          ].map(([v, t, I]) => {
+            const Icon = I as typeof Flag;
+            return (
+              <button
+                key={String(v)}
+                className={view === v ? 'active' : ''}
+                onClick={() => {
+                  setMode('staff');
+                  go(String(v));
+                }}
+              >
+                <Icon size={21} />
+                <span>{String(t)}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+      {modal && (
+        <BookingForm
+          initialRoom={bookingRoom}
+          config={c}
+          busy={busy}
+          onClose={() => setModal(false)}
+          onSave={async (v) => {
+            if (await mutate({ action: 'book', ...v })) setModal(false);
+          }}
+        />
+      )}
+      {chosen && (
+        <SessionPanel
+          onRefresh={load}
+          canPay={!!data?.activeShift}
+          onOpenShift={() => {
+            setSelected(null);
+            go('finance');
+          }}
+          booking={chosen}
+          now={now}
+          busy={busy}
+          onClose={() => setSelected(null)}
+          onAction={async (action, extra = {}) => {
+            await mutate({ action, id: chosen.id, ...extra });
+          }}
+        />
+      )}
+      {toast && (
+        <div className="toast" role="status">
+          <Check size={18} />
+          {toast}
+          <button onClick={() => setToast('')} aria-label="Đóng thông báo">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+function Stat({
+  title,
+  value,
+  sub,
+  icon,
+  suffix,
+}: {
+  title: string;
+  value: string;
+  sub: string;
+  icon: React.ReactNode;
+  suffix?: string;
+}) {
+  return (
+    <article className="stat">
+      <div>
+        <span>{title}</span>
+        <span className="stat-icon">{icon}</span>
+      </div>
+      <strong>
+        {value}
+        <small>{suffix}</small>
+      </strong>
+      <p>{sub}</p>
+    </article>
+  );
+}
+function RoomGrid({
+  bookings,
+  filter,
+  now,
+  onSelect,
+  onBook,
+}: {
+  bookings: Booking[];
+  filter: string;
+  now: number;
+  onSelect: (b: Booking) => void;
+  onBook: (room: string) => void;
+}) {
+  return (
+    <div className="room-grid">
+      {rooms
+        .filter((r) => filter === 'all' || (filter === 'vip' ? r.vip : !r.vip))
+        .map((r) => {
+          const live = bookings.find(
+            (b) => b.room === r.id && ['playing', 'paused'].includes(b.status),
+          );
+          const clean = bookings.find(
+            (b) => b.room === r.id && ['finished', 'paid'].includes(b.status) && b.end > now,
+          );
+          const next = bookings
+            .filter((b) => b.room === r.id && b.status === 'booked' && b.end > now)
+            .sort((a, b) => a.start - b.start)[0];
+          const item = live ?? next;
+          return (
+            <button
+              className={
+                'room-card ' +
+                (live ? 'occupied' : clean ? 'clean' : next ? 'has-booking' : '') +
+                (r.vip ? ' vip' : '')
+              }
+              key={r.id}
+              onClick={() => (item ? onSelect(item) : onBook(r.id))}
+            >
+              <div className="room-top">
+                <span className="room-type">
+                  {r.vip ? 'PRIVATE ROOM' : r.left ? 'LEFT-HANDED' : 'GDR PRACTICE'}
+                </span>
+                {r.vip ? (
+                  <Flag size={17} />
+                ) : (
+                  <span className="room-number">{r.id.split('-')[1].padStart(2, '0')}</span>
+                )}
+              </div>
+              <h3>{r.name}</h3>
+              <span className="room-status">
+                <i />
+                {live ? labels[live.status] : clean ? 'Đang dọn' : next ? 'Đã đặt' : 'Sẵn sàng'}
+              </span>
+              <div className="room-bottom">
+                {live ? (
+                  <>
+                    <span>{live.customer}</span>
+                    <span>{time(live.start)}</span>
+                  </>
+                ) : next ? (
+                  <>
+                    <span>
+                      {date(next.start)} · {time(next.start)}
+                    </span>
+                    <ArrowUpRight size={14} />
+                  </>
+                ) : (
+                  <>
+                    <span>
+                      {r.vip
+                        ? 'Không gian riêng tư'
+                        : r.left
+                          ? 'Dành cho golfer tay trái'
+                          : 'Chọn để đặt lịch'}
+                    </span>
+                    <Plus size={15} />
+                  </>
+                )}
+              </div>
+            </button>
+          );
+        })}
+    </div>
+  );
+}
+function BookingTable({
+  bookings,
+  onSelect,
+}: {
+  bookings: Booking[];
+  onSelect: (b: Booking) => void;
+}) {
+  if (!bookings.length)
+    return (
+      <Empty
+        title="Chưa có lịch trong danh sách"
+        text="Tạo lịch đặt đầu tiên để bắt đầu quản lý trải nghiệm tại Golf3D."
+      />
+    );
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Khách hàng</th>
+            <th>Phòng / Line</th>
+            <th>Ngày & giờ</th>
+            <th>Dịch vụ</th>
+            <th>Trạng thái</th>
+            <th>Thành tiền</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {bookings.map((b) => (
+            <tr key={b.id}>
+              <td>
+                <button className="customer-name" onClick={() => onSelect(b)}>
+                  {b.customer}
+                </button>
+                <small>{b.phone}</small>
+              </td>
+              <td>{rooms.find((r) => r.id === b.room)?.name}</td>
+              <td>
+                {date(b.start)} · {time(b.start)}
+              </td>
+              <td>
+                {b.service === 'gdr' ? 'GDR' : b.service + ' hố'} · {b.people} người
+              </td>
+              <td>
+                <span className={'badge ' + b.status}>{labels[b.status]}</span>
+              </td>
+              <td>{b.amount == null ? '—' : money(b.amount)}</td>
+              <td>
+                <button className="icon-btn" aria-label="Mở chi tiết" onClick={() => onSelect(b)}>
+                  <ChevronRight size={17} />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+function Empty({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="empty">
+      <CalendarDays size={29} />
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </div>
+  );
+}
+function CustomerHome({
+  onBook,
+  onSession,
+  config,
+}: {
+  onBook: () => void;
+  onSession: () => void;
+  config: Config;
+}) {
+  return (
+    <>
+      <div className="customer-hero">
+        <div>
+          <span className="eyebrow">GOLF3D · INDOOR GOLF CLUB</span>
+          <h1>
+            Sân chơi của bạn.
+            <br />
+            <em>Ngay giữa thành phố.</em>
+          </h1>
+          <p>
+            10 line luyện tập. 2 phòng VIP.
+            <br />
+            Một không gian để kết nối cùng đam mê.
+          </p>
+          <button className="gold-button" onClick={onBook}>
+            Đặt lịch chơi <ArrowUpRight size={18} />
+          </button>
+          <span className="hero-location">
+            <MapPin size={15} />
+            {config.address}
+          </span>
+        </div>
+        <div className="hero-art golf-art">
+          <div className="orbit o1" />
+          <div className="orbit o2" />
+          <div className="green" />
+          <span className="pole" />
+          <span className="flag" />
+          <span className="ball" />
+        </div>
+      </div>
+      <div className="customer-services">
+        <button onClick={onBook}>
+          <Flag />
+          <strong>Đặt line / phòng</strong>
+          <span>Chọn giờ chơi của bạn</span>
+          <ArrowUpRight />
+        </button>
+        <button onClick={onSession}>
+          <Activity />
+          <strong>Phiên đang chơi</strong>
+          <span>Gọi hỗ trợ · Xem tạm tính</span>
+          <ArrowUpRight />
+        </button>
+      </div>
+      <div className="info-strip">
+        Chế độ xem khách hàng trong bản thử của chủ cơ sở. Đăng nhập golfer bằng OTP sẽ triển khai
+        khi kết nối nhà cung cấp.
+      </div>
+      <div className="section-heading">
+        <h2>Bảng giá dịch vụ</h2>
+        <span className="muted">Giá gốc · VAT và phí được tách trong báo giá</span>
+      </div>
+      <TariffPreview config={config} />
+    </>
+  );
+}
 
-function SessionPanel({booking:b,now,busy,onClose,onAction,canPay,onOpenShift,onRefresh}:{onRefresh:()=>Promise<void>;canPay:boolean;onOpenShift:()=>void;booking:Booking;now:number;busy:boolean;onClose:()=>void;onAction:(action:string,extra?:Record<string,string|number>)=>Promise<void>}){
- const food=useFood(b.id);
- const pendingFood=food.data?.orders.filter(o=>['new','preparing','ready'].includes(o.status)).length??0;
- const servedFood=food.data?.orders.filter(o=>o.status==='served').reduce((sum,o)=>sum+o.total,0)??0;
- const foodVerified=!!food.data&&!food.error&&servedFood===(b.food_total??0);
- const paymentKey=useRef(operationKey());
- const dialogRef=useRef<HTMLDialogElement>(null);useEffect(()=>{dialogRef.current?.showModal();},[]);
- const snap=JSON.parse(b.price);const seg:Segment[]=JSON.parse(b.segments);if(b.status==='playing'&&b.started)seg.push({start:b.started,end:now});let q:Bill={lines:[],subtotal:0,fee:0,vat:0,total:0},quoteError='';
- try{q=b.status==='booked'&&snap.estimated?snap.estimated:b.service==='gdr'?quote(seg,snap.config,snap.vip):wholeQuote(snap.base,snap.config,b.service as '9'|'18');}catch(e){quoteError=e instanceof Error?e.message:'Chưa tính được tiền';}
- const minutes=seg.reduce((s,x)=>s+(x.end-x.start)/60000,0);
- return <dialog className="native-dialog" ref={dialogRef} onCancel={onClose} aria-label="Chi tiết phiên chơi"><section className="modal session"><div className="modal-heading"><div><span className="eyebrow">CHI TIẾT PHIÊN CHƠI</span><h2>{rooms.find(r=>r.id===b.room)?.name} <span className={'badge '+b.status}>{labels[b.status]}</span></h2></div><button className="icon-btn" onClick={onClose} aria-label="Đóng"><X/></button></div><div className="session-customer"><span className="avatar">{b.customer[0]}</span><div><h3>{b.customer}</h3><p>{b.phone} · {b.people} người · {b.service==='gdr'?'Luyện tập GDR':b.service+' hố'}</p></div></div><div className="session-time"><span>Lịch hẹn<strong>{date(b.start)} · {time(b.start)}</strong></span><span>Thực tế chơi<strong>{minutes.toFixed(1)} <small>phút</small></strong></span></div>{quoteError?<div className="info-strip" role="alert">{quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến khi giá được xử lý.</div>:<div className="bill"><h3>{b.status==='paid'?'PHIẾU THANH TOÁN':'CHI TIẾT TẠM TÍNH'}</h3>{q.lines.map((l,i)=><div key={i}><span>{l.label}<small>{l.from!=null&&l.to!=null?`${date(l.from)} ${time(l.from)}–${time(l.to)} · `:''}{l.minutes.toFixed(2)} phút × {money(l.rate)}/giờ</small></span><strong>{money(Math.round(l.amount))}</strong></div>)}{b.service!=='gdr'&&<div><span>Trọn lượt {b.service} hố</span><strong>{money(q.subtotal)}</strong></div>}<div><span>Tiền dịch vụ</span><strong>{money(q.subtotal)}</strong></div><div><span>Phí dịch vụ ({snap.config.feeMode==='fixed'?money(snap.config.fee??0):`${snap.config.fee??0}%`})</span><strong>{money(q.fee)}</strong></div><div><span>VAT ({snap.config.vat}%)</span><strong>{money(q.vat)}</strong></div><div><span>Tổng tiền chơi</span><strong>{money(q.total)}</strong></div>{food.data&&<FoodReceipt data={food.data}/>}<div className="bill-total"><span>Tổng cộng</span><strong>{money(b.amount??q.total+(b.food_total??0))}</strong></div><p>Giá được lưu tại thời điểm đặt. {snap.config.feeMode==='fixed'?'Phí cố định tính một lần mỗi phiên.':'Phí theo tỷ lệ tiền dịch vụ.'} VAT tính trên tiền dịch vụ cộng phí. Chưa kết nối hóa đơn điện tử.</p></div>}{food.error&&<div className="info-strip" role="alert">{food.error}</div>}{!foodVerified&&<div className="info-strip">Đang kiểm tra chi tiết đơn món trước khi thanh toán/in phiếu.<button className="secondary" onClick={food.reload}>Tải lại đơn món</button></div>}{food.data&&<SessionOrdering booking={b} data={food.data} onRefresh={async()=>{await food.reload();await onRefresh();}}/>}{pendingFood>0&&<div className="info-strip">Còn {pendingFood} đơn chưa phục vụ hoặc hủy; chưa thể thanh toán.</div>}<div className="session-buttons">{b.status==='booked'&&<><button className="primary" disabled={busy} onClick={()=>onAction('start')}><Play size={17}/>Bắt đầu chơi</button><button className="secondary" disabled={busy} onClick={()=>onAction('cancel')}>Hủy lịch</button></>}{b.status==='playing'&&<button className="secondary" disabled={busy} onClick={()=>onAction('pause')}><Pause size={16}/>Tạm dừng do sự cố</button>}{b.status==='paused'&&<button className="primary" disabled={busy} onClick={()=>onAction('resume')}><Play size={16}/>Tiếp tục</button>}{['playing','paused'].includes(b.status)&&<button className="primary" disabled={busy} onClick={()=>onAction('finish')}><Square size={16}/>Kết thúc chơi</button>}{b.status==='finished'&&!canPay&&<div className="info-strip">Cần mở ca trước khi thu tiền.<button className="secondary" onClick={onOpenShift}>Đi đến mở ca</button></div>}{b.status==='finished'&&canPay&&<><p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>{[['cash','Tiền mặt'],['transfer','Chuyển khoản đã đối soát'],['card','Thẻ tại quầy']].map(([method,t])=><button className="primary" disabled={busy||b.amount==null||!!quoteError||!foodVerified||pendingFood>0} key={method} onClick={()=>onAction('pay',{method,requestId:paymentKey.current,expectedAmount:b.amount!})}>{t}</button>)}</>}{['finished','paid'].includes(b.status)&&<button className="secondary" disabled={!!quoteError||!foodVerified} onClick={()=>window.print()}><Printer size={16}/>In phiếu</button>}</div>{['playing','paused'].includes(b.status)&&<div className="support-actions"><h3>Gửi yêu cầu hỗ trợ</h3>{['Nhân viên hỗ trợ','Hỗ trợ thiết bị','Yêu cầu khác'].map(kind=><button disabled={busy} className="secondary" key={kind} onClick={()=>onAction('support',{kind})}><Bell size={16}/>{kind}</button>)}</div>}</section></dialog>
+function SessionPanel({
+  booking: b,
+  now,
+  busy,
+  onClose,
+  onAction,
+  canPay,
+  onOpenShift,
+  onRefresh,
+}: {
+  onRefresh: () => Promise<void>;
+  canPay: boolean;
+  onOpenShift: () => void;
+  booking: Booking;
+  now: number;
+  busy: boolean;
+  onClose: () => void;
+  onAction: (action: string, extra?: Record<string, string | number>) => Promise<void>;
+}) {
+  const food = useFood(b.id);
+  const pendingFood =
+    food.data?.orders.filter((o) => ['new', 'preparing', 'ready'].includes(o.status)).length ?? 0;
+  const servedFood =
+    food.data?.orders.filter((o) => o.status === 'served').reduce((sum, o) => sum + o.total, 0) ??
+    0;
+  const foodVerified = !!food.data && !food.error && servedFood === (b.food_total ?? 0);
+  const paymentKey = useRef(operationKey());
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+  const snap = JSON.parse(b.price);
+  const seg: Segment[] = JSON.parse(b.segments);
+  if (b.status === 'playing' && b.started) seg.push({ start: b.started, end: now });
+  let q: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 },
+    quoteError = '';
+  try {
+    q =
+      b.status === 'booked' && snap.estimated
+        ? snap.estimated
+        : b.service === 'gdr'
+          ? quote(seg, snap.config, snap.vip)
+          : wholeQuote(snap.base, snap.config, b.service as '9' | '18');
+  } catch (e) {
+    quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
+  }
+  const minutes = seg.reduce((s, x) => s + (x.end - x.start) / 60000, 0);
+  return (
+    <dialog
+      className="native-dialog"
+      ref={dialogRef}
+      onCancel={onClose}
+      aria-label="Chi tiết phiên chơi"
+    >
+      <section className="modal session">
+        <div className="modal-heading">
+          <div>
+            <span className="eyebrow">CHI TIẾT PHIÊN CHƠI</span>
+            <h2>
+              {rooms.find((r) => r.id === b.room)?.name}{' '}
+              <span className={'badge ' + b.status}>{labels[b.status]}</span>
+            </h2>
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Đóng">
+            <X />
+          </button>
+        </div>
+        <div className="session-customer">
+          <span className="avatar">{b.customer[0]}</span>
+          <div>
+            <h3>{b.customer}</h3>
+            <p>
+              {b.phone} · {b.people} người ·{' '}
+              {b.service === 'gdr' ? 'Luyện tập GDR' : b.service + ' hố'}
+            </p>
+          </div>
+        </div>
+        <div className="session-time">
+          <span>
+            Lịch hẹn
+            <strong>
+              {date(b.start)} · {time(b.start)}
+            </strong>
+          </span>
+          <span>
+            Thực tế chơi
+            <strong>
+              {minutes.toFixed(1)} <small>phút</small>
+            </strong>
+          </span>
+        </div>
+        {quoteError ? (
+          <div className="info-strip" role="alert">
+            {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến
+            khi giá được xử lý.
+          </div>
+        ) : (
+          <div className="bill">
+            <h3>{b.status === 'paid' ? 'PHIẾU THANH TOÁN' : 'CHI TIẾT TẠM TÍNH'}</h3>
+            {q.lines.map((l, i) => (
+              <div key={i}>
+                <span>
+                  {l.label}
+                  <small>
+                    {l.from != null && l.to != null
+                      ? `${date(l.from)} ${time(l.from)}–${time(l.to)} · `
+                      : ''}
+                    {l.minutes.toFixed(2)} phút × {money(l.rate)}/giờ
+                  </small>
+                </span>
+                <strong>{money(Math.round(l.amount))}</strong>
+              </div>
+            ))}
+            {b.service !== 'gdr' && (
+              <div>
+                <span>Trọn lượt {b.service} hố</span>
+                <strong>{money(q.subtotal)}</strong>
+              </div>
+            )}
+            <div>
+              <span>Tiền dịch vụ</span>
+              <strong>{money(q.subtotal)}</strong>
+            </div>
+            <div>
+              <span>
+                Phí dịch vụ (
+                {snap.config.feeMode === 'fixed'
+                  ? money(snap.config.fee ?? 0)
+                  : `${snap.config.fee ?? 0}%`}
+                )
+              </span>
+              <strong>{money(q.fee)}</strong>
+            </div>
+            <div>
+              <span>VAT ({snap.config.vat}%)</span>
+              <strong>{money(q.vat)}</strong>
+            </div>
+            <div>
+              <span>Tổng tiền chơi</span>
+              <strong>{money(q.total)}</strong>
+            </div>
+            {food.data && <FoodReceipt data={food.data} />}
+            <div className="bill-total">
+              <span>Tổng cộng</span>
+              <strong>{money(b.amount ?? q.total + (b.food_total ?? 0))}</strong>
+            </div>
+            <p>
+              Giá được lưu tại thời điểm đặt.{' '}
+              {snap.config.feeMode === 'fixed'
+                ? 'Phí cố định tính một lần mỗi phiên.'
+                : 'Phí theo tỷ lệ tiền dịch vụ.'}{' '}
+              VAT tính trên tiền dịch vụ cộng phí. Chưa kết nối hóa đơn điện tử.
+            </p>
+          </div>
+        )}
+        {food.error && (
+          <div className="info-strip" role="alert">
+            {food.error}
+          </div>
+        )}
+        {!foodVerified && (
+          <div className="info-strip">
+            Đang kiểm tra chi tiết đơn món trước khi thanh toán/in phiếu.
+            <button className="secondary" onClick={food.reload}>
+              Tải lại đơn món
+            </button>
+          </div>
+        )}
+        {food.data && (
+          <SessionOrdering
+            booking={b}
+            data={food.data}
+            onRefresh={async () => {
+              await food.reload();
+              await onRefresh();
+            }}
+          />
+        )}
+        {pendingFood > 0 && (
+          <div className="info-strip">
+            Còn {pendingFood} đơn chưa phục vụ hoặc hủy; chưa thể thanh toán.
+          </div>
+        )}
+        <div className="session-buttons">
+          {b.status === 'booked' && (
+            <>
+              <button className="primary" disabled={busy} onClick={() => onAction('start')}>
+                <Play size={17} />
+                Bắt đầu chơi
+              </button>
+              <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
+                Hủy lịch
+              </button>
+            </>
+          )}
+          {b.status === 'playing' && (
+            <button className="secondary" disabled={busy} onClick={() => onAction('pause')}>
+              <Pause size={16} />
+              Tạm dừng do sự cố
+            </button>
+          )}
+          {b.status === 'paused' && (
+            <button className="primary" disabled={busy} onClick={() => onAction('resume')}>
+              <Play size={16} />
+              Tiếp tục
+            </button>
+          )}
+          {['playing', 'paused'].includes(b.status) && (
+            <button className="primary" disabled={busy} onClick={() => onAction('finish')}>
+              <Square size={16} />
+              Kết thúc chơi
+            </button>
+          )}
+          {b.status === 'finished' && !canPay && (
+            <div className="info-strip">
+              Cần mở ca trước khi thu tiền.
+              <button className="secondary" onClick={onOpenShift}>
+                Đi đến mở ca
+              </button>
+            </div>
+          )}
+          {b.status === 'finished' && canPay && (
+            <>
+              <p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>
+              {[
+                ['cash', 'Tiền mặt'],
+                ['transfer', 'Chuyển khoản đã đối soát'],
+                ['card', 'Thẻ tại quầy'],
+              ].map(([method, t]) => (
+                <button
+                  className="primary"
+                  disabled={
+                    busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
+                  }
+                  key={method}
+                  onClick={() =>
+                    onAction('pay', {
+                      method,
+                      requestId: paymentKey.current,
+                      expectedAmount: b.amount!,
+                    })
+                  }
+                >
+                  {t}
+                </button>
+              ))}
+            </>
+          )}
+          {['finished', 'paid'].includes(b.status) && (
+            <button
+              className="secondary"
+              disabled={!!quoteError || !foodVerified}
+              onClick={() => window.print()}
+            >
+              <Printer size={16} />
+              In phiếu
+            </button>
+          )}
+        </div>
+        {['playing', 'paused'].includes(b.status) && (
+          <div className="support-actions">
+            <h3>Gửi yêu cầu hỗ trợ</h3>
+            {['Nhân viên hỗ trợ', 'Hỗ trợ thiết bị', 'Yêu cầu khác'].map((kind) => (
+              <button
+                disabled={busy}
+                className="secondary"
+                key={kind}
+                onClick={() => onAction('support', { kind })}
+              >
+                <Bell size={16} />
+                {kind}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </dialog>
+  );
 }
-function Roadmap({audit}:{audit:Data['audit']}){return <><div className="info-strip">Bản 0.4 · Chạy thử nội bộ bằng danh tính Sites. Chưa thay thế phần mềm vận hành chính thức.</div><div className="roadmap-grid">{[
- ['01','Đặt lịch & phiên chơi','Đang chạy thử','Lịch đặt lưu D1, chống trùng, phiên chơi, bảng giá ngày/giờ/lễ, gói theo nhóm, phí cố định/%, báo giá trước đặt, thanh toán thủ công và hỗ trợ cơ bản.'],
- ['02','Vận hành tại cơ sở','Đang triển khai','Đã có mở/đóng ca, sổ tiền và đối soát. Đã có gọi món tại phiên và bếp/bar. Còn phân quyền chi tiết, QR gọi món khách hàng, kho, nhà cung cấp, luân chuyển hàng, chuyển phòng và quy trình duyệt tài chính.'],
- ['03','Khách hàng & kinh doanh','Chưa triển khai','OTP golfer, hội viên, ví, gói giờ/lượt, HLV, CRM, giải đấu, báo cáo lợi nhuận, Zalo/email/SMS và hóa đơn điện tử.'],
- ['04','Nền tảng SaaS','Chưa triển khai','Chủ cơ sở tự đăng ký, phân quyền tổ chức/chi nhánh, thương hiệu riêng, gói thuê bao, tên miền, onboarding và kiểm thử cách ly dữ liệu.']
- ].map(([n,t,s,d])=><article key={n} className="roadmap-card"><span>{n}</span><div><small>{s}</small><h2>{t}</h2><p>{d}</p></div></article>)}</div><h2 className="audit-title">Nhật ký gần đây</h2><div className="audit-list">{audit.length?audit.map(a=><div key={a.id}><span>{date(a.created)} · {time(a.created)}</span><strong>{a.action}</strong><small>{a.detail}</small></div>):<p className="muted">Chưa có thao tác được ghi nhận.</p>}</div></>}
+function Roadmap({ audit }: { audit: Data['audit'] }) {
+  return (
+    <>
+      <div className="info-strip">
+        Bản 0.4 · Chạy thử nội bộ bằng danh tính Sites. Chưa thay thế phần mềm vận hành chính thức.
+      </div>
+      <div className="roadmap-grid">
+        {[
+          [
+            '01',
+            'Đặt lịch & phiên chơi',
+            'Đang chạy thử',
+            'Lịch đặt lưu D1, chống trùng, phiên chơi, bảng giá ngày/giờ/lễ, gói theo nhóm, phí cố định/%, báo giá trước đặt, thanh toán thủ công và hỗ trợ cơ bản.',
+          ],
+          [
+            '02',
+            'Vận hành tại cơ sở',
+            'Đang triển khai',
+            'Đã có mở/đóng ca, sổ tiền và đối soát. Đã có gọi món tại phiên và bếp/bar. Còn phân quyền chi tiết, QR gọi món khách hàng, kho, nhà cung cấp, luân chuyển hàng, chuyển phòng và quy trình duyệt tài chính.',
+          ],
+          [
+            '03',
+            'Khách hàng & kinh doanh',
+            'Chưa triển khai',
+            'OTP golfer, hội viên, ví, gói giờ/lượt, HLV, CRM, giải đấu, báo cáo lợi nhuận, Zalo/email/SMS và hóa đơn điện tử.',
+          ],
+          [
+            '04',
+            'Nền tảng SaaS',
+            'Chưa triển khai',
+            'Chủ cơ sở tự đăng ký, phân quyền tổ chức/chi nhánh, thương hiệu riêng, gói thuê bao, tên miền, onboarding và kiểm thử cách ly dữ liệu.',
+          ],
+        ].map(([n, t, s, d]) => (
+          <article key={n} className="roadmap-card">
+            <span>{n}</span>
+            <div>
+              <small>{s}</small>
+              <h2>{t}</h2>
+              <p>{d}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <h2 className="audit-title">Nhật ký gần đây</h2>
+      <div className="audit-list">
+        {audit.length ? (
+          audit.map((a) => (
+            <div key={a.id}>
+              <span>
+                {date(a.created)} · {time(a.created)}
+              </span>
+              <strong>{a.action}</strong>
+              <small>{a.detail}</small>
+            </div>
+          ))
+        ) : (
+          <p className="muted">Chưa có thao tác được ghi nhận.</p>
+        )}
+      </div>
+    </>
+  );
+}

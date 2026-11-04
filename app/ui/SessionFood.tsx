@@ -1,32 +1,338 @@
 'use client';
-import {useCallback,useEffect,useRef,useState} from 'react';
-import {Plus,X,UtensilsCrossed,RefreshCw} from 'lucide-react';
-import {money,type Booking} from '../../lib/club';
-import {operationKey} from '../../lib/finance';
-import {lineQuote,orderQuote,foodLabels,type FoodData,type FoodLine,type MenuItem} from '../../lib/fnb';
-export function useFood(booking?:string){
- const [data,setData]=useState<FoodData|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),sequence=useRef(0);
- const reload=useCallback(async()=>{const n=++sequence.current;setLoading(true);try{const r=await fetch('/api/fnb'+(booking?'?booking='+encodeURIComponent(booking):''),{cache:'no-store'});const v=await r.json() as FoodData&{error?:string};if(!r.ok)throw Error(v.error??'Không tải được đơn món');if(n===sequence.current){setData(v);setError('');}return v;}catch(e){if(n===sequence.current)setError(e instanceof Error?e.message:'Không tải được đơn món');return null;}finally{if(n===sequence.current)setLoading(false);}},[booking]);
- useEffect(()=>{reload();const timer=setInterval(reload,15000);return()=>{clearInterval(timer);sequence.current++;};},[reload]);
- return {data,error,loading,reload};
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Plus, X, UtensilsCrossed, RefreshCw } from 'lucide-react';
+import { money, type Booking } from '../../lib/club';
+import { operationKey } from '../../lib/finance';
+import {
+  lineQuote,
+  orderQuote,
+  foodLabels,
+  type FoodData,
+  type FoodLine,
+  type MenuItem,
+} from '../../lib/fnb';
+export function useFood(booking?: string) {
+  const [data, setData] = useState<FoodData | null>(null),
+    [error, setError] = useState(''),
+    [loading, setLoading] = useState(false),
+    sequence = useRef(0);
+  const reload = useCallback(async () => {
+    const n = ++sequence.current;
+    setLoading(true);
+    try {
+      const r = await fetch(
+        '/api/fnb' + (booking ? '?booking=' + encodeURIComponent(booking) : ''),
+        { cache: 'no-store' },
+      );
+      const v = (await r.json()) as FoodData & { error?: string };
+      if (!r.ok) throw Error(v.error ?? 'Không tải được đơn món');
+      if (n === sequence.current) {
+        setData(v);
+        setError('');
+      }
+      return v;
+    } catch (e) {
+      if (n === sequence.current)
+        setError(e instanceof Error ? e.message : 'Không tải được đơn món');
+      return null;
+    } finally {
+      if (n === sequence.current) setLoading(false);
+    }
+  }, [booking]);
+  useEffect(() => {
+    reload();
+    const timer = setInterval(reload, 15000);
+    return () => {
+      clearInterval(timer);
+      sequence.current++;
+    };
+  }, [reload]);
+  return { data, error, loading, reload };
 }
-export function FoodReceipt({data}:{data:FoodData}){
- const served=data.orders.filter(o=>o.status==='served');if(!served.length)return null;
- const totals=served.reduce((s,o)=>({subtotal:s.subtotal+o.subtotal,fee:s.fee+o.fee,vat:s.vat+o.vat,total:s.total+o.total}),{subtotal:0,fee:0,vat:0,total:0});
- return <section className="bill-food"><h3>ẨM THỰC ĐÃ PHỤC VỤ</h3>{served.flatMap(o=>(JSON.parse(o.items) as FoodLine[]).map((l,i)=><div className="food-bill-line" key={o.id+'-'+i}><span>{l.name}<small>{l.qty} {l.unit} × {money(l.price)} · Phí {l.feeBps/100}% · VAT {l.vatBps/100}%</small></span><strong>{money(l.total)}</strong></div>))}<div><span>Tiền món trước thuế/phí</span><strong>{money(totals.subtotal)}</strong></div><div><span>Phí phục vụ F&B</span><strong>{money(totals.fee)}</strong></div><div><span>VAT F&B</span><strong>{money(totals.vat)}</strong></div><div><span>Tổng ẩm thực</span><strong>{money(totals.total)}</strong></div></section>;
+export function FoodReceipt({ data }: { data: FoodData }) {
+  const served = data.orders.filter((o) => o.status === 'served');
+  if (!served.length) return null;
+  const totals = served.reduce(
+    (s, o) => ({
+      subtotal: s.subtotal + o.subtotal,
+      fee: s.fee + o.fee,
+      vat: s.vat + o.vat,
+      total: s.total + o.total,
+    }),
+    { subtotal: 0, fee: 0, vat: 0, total: 0 },
+  );
+  return (
+    <section className="bill-food">
+      <h3>ẨM THỰC ĐÃ PHỤC VỤ</h3>
+      {served.flatMap((o) =>
+        (JSON.parse(o.items) as FoodLine[]).map((l, i) => (
+          <div className="food-bill-line" key={o.id + '-' + i}>
+            <span>
+              {l.name}
+              <small>
+                {l.qty} {l.unit} × {money(l.price)} · Phí {l.feeBps / 100}% · VAT {l.vatBps / 100}%
+              </small>
+            </span>
+            <strong>{money(l.total)}</strong>
+          </div>
+        )),
+      )}
+      <div>
+        <span>Tiền món trước thuế/phí</span>
+        <strong>{money(totals.subtotal)}</strong>
+      </div>
+      <div>
+        <span>Phí phục vụ F&B</span>
+        <strong>{money(totals.fee)}</strong>
+      </div>
+      <div>
+        <span>VAT F&B</span>
+        <strong>{money(totals.vat)}</strong>
+      </div>
+      <div>
+        <span>Tổng ẩm thực</span>
+        <strong>{money(totals.total)}</strong>
+      </div>
+    </section>
+  );
 }
-export function SessionOrdering({booking,data,onRefresh}:{booking:Booking;data:FoodData;onRefresh:()=>Promise<unknown>}){
- const [cart,setCart]=useState<{item:MenuItem;qty:number}[]>([]),[choice,setChoice]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState('');const requestId=useRef(operationKey());
- const q=cart.length?orderQuote(cart.map(l=>({price:l.item.price,qty:l.qty,feeBps:l.item.fee_bps,vatBps:l.item.vat_bps}))):null;
- const shortage=cart.some(l=>{const m=data.menu.find(m=>m.id===l.item.id);return m?.stock_enabled&&(m.available??0)<l.qty;});
- const stale=cart.some(l=>!data.menu.some(m=>m.id===l.item.id&&m.version===l.item.version&&m.active));
- async function submit(){if(!cart.length||shortage||stale)return;setBusy(true);try{const r=await fetch('/api/fnb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'order',requestId:requestId.current,bookingId:booking.id,note,lines:cart.map(l=>({itemId:l.item.id,qty:l.qty,expectedVersion:l.item.version}))})});const result=await r.json() as {error?:string;replayed?:boolean};if(!r.ok)throw Error(result.error??'Chưa xác nhận được đơn');setCart([]);setNote('');requestId.current=operationKey();setNotice(result.replayed?'Đơn đã ghi trước đó, không tạo trùng.':'Đã gửi đơn đến bếp/bar.');await onRefresh();}catch(e){setNotice(e instanceof Error?e.message:'Chưa xác nhận được đơn');await onRefresh();}finally{setBusy(false);}}
- function add(){const item=data.menu.find(m=>m.id===choice&&m.active);if(!item)return;const existing=cart.find(l=>l.item.id===item.id);if(existing)setCart(cart.map(l=>l.item.id===item.id?{...l,qty:Math.min(99,l.qty+1)}:l));else if(cart.length<10)setCart([...cart,{item,qty:1}]);}
- return <section className="session-food"><div className="section-heading"><h3><UtensilsCrossed size={16}/>Đồ ăn & thức uống</h3><span>{data.orders.length} đơn</span></div>{notice&&<div className="info-strip" role="status">{notice}</div>}
- {['playing','paused'].includes(booking.status)&&<><div className="food-picker"><label>Chọn món<select value={choice} disabled={busy} onChange={e=>setChoice(e.target.value)}><option value="">Chọn từ thực đơn</option>{data.menu.filter(m=>m.active).map(m=><option value={m.id} key={m.id} disabled={!!m.stock_enabled&&(m.available??0)<1}>{m.name}{m.stock_enabled?` · Còn ${m.available} ${m.unit}`:''} · {money(m.price)} / {m.unit} (chưa thuế/phí)</option>)}</select></label><button className="secondary" disabled={!choice||busy||cart.length>=10&&!cart.some(l=>l.item.id===choice)} onClick={add}><Plus size={16}/>Thêm</button></div>{!data.menu.some(m=>m.active)&&<p className="form-note">Chưa có món đang bán. Chủ cơ sở thêm món trong Thực đơn & bếp.</p>}
- {cart.map(l=><div className="cart-line" key={l.item.id}><span>{l.item.name}<small>{money(lineQuote(l.item.price,l.qty,l.item.fee_bps,l.item.vat_bps).total)} gồm phí/VAT</small></span><input type="number" aria-label={'Số lượng '+l.item.name} min="1" max="99" step="1" value={l.qty} disabled={busy} onChange={e=>setCart(cart.map(row=>row.item.id===l.item.id?{...row,qty:Math.max(1,Math.min(99,Math.floor(Number(e.target.value)||1)))}:row))}/><button className="icon-btn" disabled={busy} aria-label={'Bỏ '+l.item.name} onClick={()=>setCart(cart.filter(row=>row.item.id!==l.item.id))}><X size={15}/></button></div>)}
- {q&&<><label className="order-note">Ghi chú bếp/bar<input value={note} onChange={e=>setNote(e.target.value)} maxLength={300} placeholder="Ví dụ: ít đá, không đường" disabled={busy}/></label><div className="cart-summary"><span>Tiền món: {money(q.subtotal)}</span><span>Phí: {money(q.fee)}</span><span>VAT: {money(q.vat)}</span><strong>Tổng đơn: {money(q.total)}</strong></div>{stale&&<div className="info-strip">Thực đơn vừa thay đổi.<button className="secondary" onClick={()=>setCart(cart.flatMap(l=>{const item=data.menu.find(m=>m.id===l.item.id&&m.active);return item?[{item,qty:l.qty}]:[]}))}><RefreshCw size={14}/>Xem lại giá mới</button></div>}<div role="status">{shortage?'Không đủ hàng khả dụng cho số lượng đã chọn.':''}</div><button className="primary" disabled={busy||stale||shortage} onClick={submit}>{busy?'Đang gửi…':'Xác nhận & gửi đơn'}</button><p className="form-note">Đơn chỉ cộng vào phiếu khi đã phục vụ. Món chốt giá và VAT/phí riêng tại lúc gửi; không thu lại phí giờ chơi trên tiền món.</p></>}
- </>}
- <div className="session-order-list">{data.orders.map(o=><article key={o.id}><div><strong>Đơn #{o.id.slice(-6)}</strong><span className={'badge '+o.status}>{foodLabels[o.status]}</span></div><p>{(JSON.parse(o.items) as FoodLine[]).map(l=>`${l.name} × ${l.qty}`).join(' · ')}</p><small>{money(o.total)}{o.status==='cancelled'?` · Lý do: ${o.reason}`:''}</small></article>)}</div>
- </section>;
+export function SessionOrdering({
+  booking,
+  data,
+  onRefresh,
+}: {
+  booking: Booking;
+  data: FoodData;
+  onRefresh: () => Promise<unknown>;
+}) {
+  const [cart, setCart] = useState<{ item: MenuItem; qty: number }[]>([]),
+    [choice, setChoice] = useState(''),
+    [note, setNote] = useState(''),
+    [busy, setBusy] = useState(false),
+    [notice, setNotice] = useState('');
+  const requestId = useRef(operationKey());
+  const q = cart.length
+    ? orderQuote(
+        cart.map((l) => ({
+          price: l.item.price,
+          qty: l.qty,
+          feeBps: l.item.fee_bps,
+          vatBps: l.item.vat_bps,
+        })),
+      )
+    : null;
+  const shortage = cart.some((l) => {
+    const m = data.menu.find((m) => m.id === l.item.id);
+    return m?.stock_enabled && (m.available ?? 0) < l.qty;
+  });
+  const stale = cart.some(
+    (l) => !data.menu.some((m) => m.id === l.item.id && m.version === l.item.version && m.active),
+  );
+  async function submit() {
+    if (!cart.length || shortage || stale) return;
+    setBusy(true);
+    try {
+      const r = await fetch('/api/fnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'order',
+          requestId: requestId.current,
+          bookingId: booking.id,
+          note,
+          lines: cart.map((l) => ({
+            itemId: l.item.id,
+            qty: l.qty,
+            expectedVersion: l.item.version,
+          })),
+        }),
+      });
+      const result = (await r.json()) as { error?: string; replayed?: boolean };
+      if (!r.ok) throw Error(result.error ?? 'Chưa xác nhận được đơn');
+      setCart([]);
+      setNote('');
+      requestId.current = operationKey();
+      setNotice(
+        result.replayed ? 'Đơn đã ghi trước đó, không tạo trùng.' : 'Đã gửi đơn đến bếp/bar.',
+      );
+      await onRefresh();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Chưa xác nhận được đơn');
+      await onRefresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+  function add() {
+    const item = data.menu.find((m) => m.id === choice && m.active);
+    if (!item) return;
+    const existing = cart.find((l) => l.item.id === item.id);
+    if (existing)
+      setCart(
+        cart.map((l) => (l.item.id === item.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l)),
+      );
+    else if (cart.length < 10) setCart([...cart, { item, qty: 1 }]);
+  }
+  return (
+    <section className="session-food">
+      <div className="section-heading">
+        <h3>
+          <UtensilsCrossed size={16} />
+          Đồ ăn & thức uống
+        </h3>
+        <span>{data.orders.length} đơn</span>
+      </div>
+      {notice && (
+        <div className="info-strip" role="status">
+          {notice}
+        </div>
+      )}
+      {['playing', 'paused'].includes(booking.status) && (
+        <>
+          <div className="food-picker">
+            <label>
+              Chọn món
+              <select value={choice} disabled={busy} onChange={(e) => setChoice(e.target.value)}>
+                <option value="">Chọn từ thực đơn</option>
+                {data.menu
+                  .filter((m) => m.active)
+                  .map((m) => (
+                    <option
+                      value={m.id}
+                      key={m.id}
+                      disabled={!!m.stock_enabled && (m.available ?? 0) < 1}
+                    >
+                      {m.name}
+                      {m.stock_enabled ? ` · Còn ${m.available} ${m.unit}` : ''} · {money(m.price)}{' '}
+                      / {m.unit} (chưa thuế/phí)
+                    </option>
+                  ))}
+              </select>
+            </label>
+            <button
+              className="secondary"
+              disabled={
+                !choice || busy || (cart.length >= 10 && !cart.some((l) => l.item.id === choice))
+              }
+              onClick={add}
+            >
+              <Plus size={16} />
+              Thêm
+            </button>
+          </div>
+          {!data.menu.some((m) => m.active) && (
+            <p className="form-note">
+              Chưa có món đang bán. Chủ cơ sở thêm món trong Thực đơn & bếp.
+            </p>
+          )}
+          {cart.map((l) => (
+            <div className="cart-line" key={l.item.id}>
+              <span>
+                {l.item.name}
+                <small>
+                  {money(lineQuote(l.item.price, l.qty, l.item.fee_bps, l.item.vat_bps).total)} gồm
+                  phí/VAT
+                </small>
+              </span>
+              <input
+                type="number"
+                aria-label={'Số lượng ' + l.item.name}
+                min="1"
+                max="99"
+                step="1"
+                value={l.qty}
+                disabled={busy}
+                onChange={(e) =>
+                  setCart(
+                    cart.map((row) =>
+                      row.item.id === l.item.id
+                        ? {
+                            ...row,
+                            qty: Math.max(1, Math.min(99, Math.floor(Number(e.target.value) || 1))),
+                          }
+                        : row,
+                    ),
+                  )
+                }
+              />
+              <button
+                className="icon-btn"
+                disabled={busy}
+                aria-label={'Bỏ ' + l.item.name}
+                onClick={() => setCart(cart.filter((row) => row.item.id !== l.item.id))}
+              >
+                <X size={15} />
+              </button>
+            </div>
+          ))}
+          {q && (
+            <>
+              <label className="order-note">
+                Ghi chú bếp/bar
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  maxLength={300}
+                  placeholder="Ví dụ: ít đá, không đường"
+                  disabled={busy}
+                />
+              </label>
+              <div className="cart-summary">
+                <span>Tiền món: {money(q.subtotal)}</span>
+                <span>Phí: {money(q.fee)}</span>
+                <span>VAT: {money(q.vat)}</span>
+                <strong>Tổng đơn: {money(q.total)}</strong>
+              </div>
+              {stale && (
+                <div className="info-strip">
+                  Thực đơn vừa thay đổi.
+                  <button
+                    className="secondary"
+                    onClick={() =>
+                      setCart(
+                        cart.flatMap((l) => {
+                          const item = data.menu.find((m) => m.id === l.item.id && m.active);
+                          return item ? [{ item, qty: l.qty }] : [];
+                        }),
+                      )
+                    }
+                  >
+                    <RefreshCw size={14} />
+                    Xem lại giá mới
+                  </button>
+                </div>
+              )}
+              <div role="status">
+                {shortage ? 'Không đủ hàng khả dụng cho số lượng đã chọn.' : ''}
+              </div>
+              <button className="primary" disabled={busy || stale || shortage} onClick={submit}>
+                {busy ? 'Đang gửi…' : 'Xác nhận & gửi đơn'}
+              </button>
+              <p className="form-note">
+                Đơn chỉ cộng vào phiếu khi đã phục vụ. Món chốt giá và VAT/phí riêng tại lúc gửi;
+                không thu lại phí giờ chơi trên tiền món.
+              </p>
+            </>
+          )}
+        </>
+      )}
+      <div className="session-order-list">
+        {data.orders.map((o) => (
+          <article key={o.id}>
+            <div>
+              <strong>Đơn #{o.id.slice(-6)}</strong>
+              <span className={'badge ' + o.status}>{foodLabels[o.status]}</span>
+            </div>
+            <p>
+              {(JSON.parse(o.items) as FoodLine[]).map((l) => `${l.name} × ${l.qty}`).join(' · ')}
+            </p>
+            <small>
+              {money(o.total)}
+              {o.status === 'cancelled' ? ` · Lý do: ${o.reason}` : ''}
+            </small>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }

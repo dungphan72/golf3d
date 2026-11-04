@@ -56,6 +56,15 @@ export const configSchema = z
     grace: minutes,
     cancelHours: z.number().min(0).max(2160),
     published: z.boolean(),
+    bankBin: z
+      .string()
+      .regex(/^(\d{6})?$/, 'Mã BIN ngân hàng gồm 6 chữ số')
+      .default(''),
+    bankAccount: z
+      .string()
+      .regex(/^(\d{6,20})?$/, 'Số tài khoản gồm 6–20 chữ số')
+      .default(''),
+    bankHolder: z.string().trim().max(60).default(''),
     onlineEnabled: z.boolean().default(false),
     onlineSlug: z
       .string()

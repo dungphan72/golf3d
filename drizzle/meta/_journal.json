@@ -57,6 +57,13 @@
       "when": 1793798552000,
       "tag": "0007_greedy_gabe_jones",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793800395716,
+      "tag": "0008_curious_vance_astro",
+      "breakpoints": true
     }
   ]
 }

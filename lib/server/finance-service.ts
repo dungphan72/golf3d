@@ -15,6 +15,7 @@ import {
   CLOSE_SHIFT_SQL,
   SHIFT_SUMMARY_SQL,
 } from '../finance-sql';
+import { USE_BANK_TX_SQL } from '../bank-sql';
 import type { z } from 'zod';
 type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
@@ -181,7 +182,8 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     // Golf already settled with a package use is not collected again (see package_redemptions).
     const covered = await coveredByPackage(booking.id);
     if (covered >= booking.amount) return error('Phiếu đã được trả đủ bằng gói', 409);
-    await db
+    const due = booking.amount - covered;
+    const entry = db
       .prepare(INSERT_ENTRY_SQL)
       .bind(
         crypto.randomUUID(),
@@ -189,14 +191,30 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         shift.id,
         'payment',
         input.method,
-        booking.amount - covered,
+        due,
         booking.id,
         input.requestId,
         'Thanh toán phiếu ' + booking.id,
         actor,
         now,
-      )
-      .run();
+      );
+    if (input.bankTxId) {
+      // Staff confirm a transfer that the bank already reported: the entry and the transaction's
+      // "used" mark are one atomic batch, and the amount must match exactly.
+      if (input.method !== 'transfer')
+        return error('Giao dịch ngân hàng chỉ dùng cho thanh toán chuyển khoản', 400);
+      const tx = await db
+        .prepare('SELECT amount,status FROM bank_transactions WHERE tenant=? AND id=?')
+        .bind(tenant, input.bankTxId)
+        .first<{ amount: number; status: string }>();
+      if (!tx || tx.status !== 'received')
+        return error('Giao dịch ngân hàng không còn khả dụng', 409);
+      if (tx.amount !== due)
+        return error(`Số tiền chuyển khoản (${tx.amount}) khác số phải thu (${due})`, 409);
+      await db.batch([entry, db.prepare(USE_BANK_TX_SQL).bind(booking.id, tenant, input.bankTxId)]);
+    } else {
+      await entry.run();
+    }
     return reply({ ok: true });
   } catch (e) {
     // A parallel identical request may have committed after replay() first checked.

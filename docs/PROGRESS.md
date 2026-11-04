@@ -91,3 +91,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Đăng nhập mật khẩu + 6 vai trò (migration 0004); hội viên, gói trả trước, thẻ VIP, tích điểm, trả phiên bằng lượt gói (0005, xem MEMBERSHIP-DESIGN.md); yêu cầu đặt online khách gửi / nhân viên xác nhận (0006); HLV và lịch dạy chống trùng lịch (0007).
 - Chạy trên Cloudflare riêng (Workers + D1) — xem DEPLOY-CLOUDFLARE.md. Có Playwright E2E và CI GitHub Actions.
 - Chưa có: thu học phí HLV vào sổ ca, giảm F&B theo thẻ, thông báo Zalo/SMS, CAPTCHA, hóa đơn MISA, SePay, GC3, giao diện mới, Postgres/Supabase.
+
+## v0.6.1 — chuyển khoản QR + SePay (migration 0008)
+- Cài đặt: BIN, số tài khoản, tên chủ tài khoản; khóa webhook SePay (chỉ lưu bản băm). Webhook: `POST /api/webhooks/sepay` với `Authorization: Apikey <khóa>`.
+- Hộp thanh toán hiện mã VietQR đúng số tiền + nội dung `SGG<mã>`; tiền báo có tự hiện, nhân viên bấm xác nhận để ghi sổ ca (không tự ghi sổ). Mỗi giao dịch chỉ dùng một lần, đúng số tiền, đúng phiếu.
+- Chưa thử với SePay thật (cần tài khoản/khóa của anh): kiểm thử dùng webhook mô phỏng theo tài liệu SePay.

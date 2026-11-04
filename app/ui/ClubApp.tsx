@@ -46,6 +46,7 @@ import { LoginScreen } from './LoginScreen';
 import { AccountPanel } from './AccountPanel';
 import { StaffPanel } from './StaffPanel';
 import { MembersPanel } from './MembersPanel';
+import { SepaySettings } from './SepaySettings';
 import { OnlineRequests } from './OnlineRequests';
 import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
@@ -110,6 +111,7 @@ export default function ClubApp() {
             method: value.method,
             requestId: value.requestId,
             expectedAmount: value.expectedAmount,
+            ...(value.bankTxId ? { bankTxId: value.bankTxId } : {}),
           }
         : value;
       const r = await fetch(payment ? '/api/finance' : '/api/club', {
@@ -612,11 +614,14 @@ export default function ClubApp() {
                   {view === 'fnb' && <FnbPanel onChanged={load} />}
                   {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
                   {view === 'settings' && allowed('settings') && (
-                    <SettingsForm
-                      config={c}
-                      busy={busy}
-                      onSave={(v) => mutate({ action: 'settings', value: v })}
-                    />
+                    <>
+                      <SettingsForm
+                        config={c}
+                        busy={busy}
+                        onSave={(v) => mutate({ action: 'settings', value: v })}
+                      />
+                      <SepaySettings />
+                    </>
                   )}
                   {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
                   {view === 'online' && allowed('online') && <OnlineRequests onChanged={load} />}
@@ -680,6 +685,7 @@ export default function ClubApp() {
       {chosen && (
         <SessionPanel
           onRefresh={load}
+          bank={{ bin: c.bankBin ?? '', account: c.bankAccount ?? '', holder: c.bankHolder ?? '' }}
           canPay={!!data?.activeShift}
           onOpenShift={() => {
             setSelected(null);

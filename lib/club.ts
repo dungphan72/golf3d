@@ -32,6 +32,9 @@ export type Config = {
   published: boolean;
   onlineEnabled?: boolean;
   onlineSlug?: string;
+  bankBin?: string;
+  bankAccount?: string;
+  bankHolder?: string;
 };
 export const defaults: Config = {
   name: 'Saigon Golf 3D Club',

@@ -7,7 +7,7 @@ from online_sql_test import submit
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TABLES = ['settings', 'bookings', 'requests', 'audit', 'shifts', 'finance_entries', 'menu_items', 'food_orders',
           'stock_items', 'stock_movements', 'customers', 'package_types', 'customer_packages', 'package_ledger',
-          'package_redemptions', 'loyalty_ledger', 'booking_requests', 'coaches', 'lessons']
+          'package_redemptions', 'loyalty_ledger', 'booking_requests', 'coaches', 'lessons', 'bank_transactions']
 
 
 def export(c, tenant='t1'):

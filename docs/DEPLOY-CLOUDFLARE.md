@@ -50,6 +50,8 @@ pnpm exec wrangler d1 execute golf3d --remote --file owner.sql
 - `--tenant` phải đúng giá trị trong backup, nếu không dữ liệu cũ sẽ không hiện cho tài khoản mới.
 - Xóa `import.sql`, `owner.sql` và lịch sử lệnh có mật khẩu sau khi xong.
 
+> Khóa SePay và tài khoản đăng nhập không nằm trong backup (chỉ lưu bản băm). Sau khi nhập dữ liệu, tạo lại tài khoản chủ và nhập lại khóa SePay trong Cài đặt.
+
 ## 6. Kiểm tra trước khi cho nhân viên dùng
 1. Mở địa chỉ Worker → đăng nhập bằng tài khoản chủ vừa tạo.
 2. Đối chiếu: số booking, ca, sổ tiền, thực đơn, kho khớp với bản Sites (so với cột đếm in ra ở bước 5).

@@ -16,12 +16,12 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - name: Unit tests
-        run: node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts tests/official-pricing.test.ts tests/auth.test.ts tests/member.test.ts tests/online.test.ts
+        run: node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts tests/official-pricing.test.ts tests/auth.test.ts tests/member.test.ts tests/online.test.ts tests/bank.test.ts
       - name: Lint
         run: pnpm lint
       - name: SQL tests
         run: |
-          for t in booking finance fnb stock package online coaching; do python tests/${t}_sql_test.py; done
+          for t in booking finance fnb stock package online coaching bank; do python tests/${t}_sql_test.py; done
           python tests/migration_splitter_test.py
           python tests/import_backup_test.py
   e2e:

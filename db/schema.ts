@@ -404,3 +404,42 @@ export const lessons = sqliteTable(
     uniqueIndex('lesson_request_once').on(t.tenant, t.requestId),
   ],
 );
+
+// ---- Bank transfers (SePay webhook) ----
+export const integrations = sqliteTable(
+  'integrations',
+  {
+    tenant: text('tenant').notNull(),
+    provider: text('provider').notNull(), // sepay
+    keyHash: text('key_hash').notNull(), // SHA-256 of the API key SePay sends; the key itself is never stored
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    uniqueIndex('integration_tenant_provider').on(t.tenant, t.provider),
+    uniqueIndex('integration_key').on(t.provider, t.keyHash),
+  ],
+);
+export const bankTransactions = sqliteTable(
+  'bank_transactions',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    externalId: text('external_id').notNull(), // SePay transaction id, unique per tenant (webhook retries)
+    amount: integer('amount').notNull(),
+    content: text('content').notNull(),
+    account: text('account').notNull(),
+    reference: text('reference').notNull().default(''),
+    txTime: integer('tx_time').notNull(),
+    code: text('code'), // payment code found in the content
+    status: text('status').notNull(), // received | used | ignored
+    bookingId: text('booking_id'),
+    received: integer('received').notNull(),
+  },
+  (t) => [
+    uniqueIndex('bank_tx_external').on(t.tenant, t.externalId),
+    index('bank_tx_code').on(t.tenant, t.code),
+    uniqueIndex('bank_tx_booking_once')
+      .on(t.tenant, t.bookingId)
+      .where(sql`${t.bookingId} IS NOT NULL`),
+  ],
+);

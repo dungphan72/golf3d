@@ -32,6 +32,8 @@ export const financeInput = z.discriminatedUnion('action', [
       bookingId: id,
       method: z.enum(['cash', 'transfer', 'card']),
       expectedAmount: money,
+      // A bank transfer already received through SePay that this payment consumes (transfer only).
+      bankTxId: id.optional(),
     })
     .strict(),
   z

@@ -34,6 +34,7 @@ export const IMPORT_ORDER = [
   'booking_requests',
   'coaches',
   'lessons',
+  'bank_transactions',
 ];
 
 export function triggerDefinitions(root = resolve(import.meta.dirname, '..')) {

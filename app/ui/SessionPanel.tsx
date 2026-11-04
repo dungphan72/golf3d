@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Bell, X, Play, Pause, Square, Printer } from 'lucide-react';
 import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
+import { vietQrUrl } from '../../lib/bank';
 import type { Bill } from '../../lib/pricing';
 import { labels, time, date } from './shared';
 function PackageRedeem({
@@ -75,6 +76,77 @@ function PackageRedeem({
     </div>
   );
 }
+type Bank = { bin: string; account: string; holder: string };
+function TransferPanel({
+  booking,
+  bank,
+  busy,
+  onUse,
+}: {
+  booking: Booking;
+  bank: Bank;
+  busy: boolean;
+  onUse: (txId: string) => void;
+}) {
+  type Overview = {
+    configured: boolean;
+    code: string;
+    due: number | null;
+    transactions: { id: string; amount: number; tx_time: number }[];
+  };
+  const [data, setData] = useState<Overview | null>(null);
+  useEffect(() => {
+    let live = true;
+    const load = () =>
+      fetch('/api/bank?booking=' + encodeURIComponent(booking.id), { cache: 'no-store' })
+        .then((r) => (r.ok ? (r.json() as Promise<Overview>) : null))
+        .then((v) => live && setData(v));
+    load();
+    const id = setInterval(load, 5000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [booking.id]);
+  const hasBank = !!bank.bin && !!bank.account;
+  if (!data || !hasBank || data.due == null) return null;
+  const exact = data.transactions.filter((t) => t.amount === data.due);
+  const other = data.transactions.filter((t) => t.amount !== data.due);
+  return (
+    <div className="info-strip transfer-panel">
+      <p>
+        <strong>Chuyển khoản {money(data.due)}</strong> · nội dung: <code>{data.code}</code>
+      </p>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        alt="Mã QR chuyển khoản"
+        width={220}
+        height={220}
+        src={vietQrUrl({
+          bin: bank.bin,
+          account: bank.account,
+          holder: bank.holder,
+          amount: data.due,
+          note: data.code,
+        })}
+      />
+      {exact.map((t) => (
+        <button key={t.id} className="primary" disabled={busy} onClick={() => onUse(t.id)}>
+          Đã nhận {money(t.amount)} lúc {time(t.tx_time)} — xác nhận thanh toán
+        </button>
+      ))}
+      {other.map((t) => (
+        <p key={t.id} role="status">
+          Có giao dịch {money(t.amount)} nhưng khác số phải thu {money(data.due!)}; hãy kiểm tra
+          lại.
+        </p>
+      ))}
+      {data.configured && !data.transactions.length && (
+        <p className="muted">Đang chờ ngân hàng báo có… (tự cập nhật)</p>
+      )}
+    </div>
+  );
+}
 export function SessionPanel({
   booking: b,
   now,
@@ -84,8 +156,10 @@ export function SessionPanel({
   canPay,
   onOpenShift,
   onRefresh,
+  bank,
 }: {
   onRefresh: () => Promise<void>;
+  bank: Bank;
   canPay: boolean;
   onOpenShift: () => void;
   booking: Booking;
@@ -299,6 +373,19 @@ export function SessionPanel({
           {b.status === 'finished' && canPay && (
             <>
               <PackageRedeem booking={b} money={money} onChanged={onRefresh} />
+              <TransferPanel
+                booking={b}
+                bank={bank}
+                busy={busy}
+                onUse={(txId) =>
+                  onAction('pay', {
+                    method: 'transfer',
+                    requestId: paymentKey.current,
+                    expectedAmount: b.amount!,
+                    bankTxId: txId,
+                  })
+                }
+              />
               <p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>
               {[
                 ['cash', 'Tiền mặt'],

@@ -453,6 +453,32 @@ export function SettingsForm({
           {numberField('grace', 'Giữ chỗ khách muộn (phút)')}
           {numberField('cancelHours', 'Đổi/hủy trước giờ chơi (giờ)')}
           <label>
+            Mã BIN ngân hàng nhận tiền (6 số, vd 970436 = Vietcombank)
+            <input
+              value={c.bankBin ?? ''}
+              inputMode="numeric"
+              pattern="(\d{6})?"
+              onChange={(e) => setC({ ...c, bankBin: e.target.value.trim() })}
+            />
+          </label>
+          <label>
+            Số tài khoản nhận tiền
+            <input
+              value={c.bankAccount ?? ''}
+              inputMode="numeric"
+              pattern="(\d{6,20})?"
+              onChange={(e) => setC({ ...c, bankAccount: e.target.value.trim() })}
+            />
+          </label>
+          <label>
+            Tên chủ tài khoản (hiện trên mã QR)
+            <input
+              value={c.bankHolder ?? ''}
+              maxLength={60}
+              onChange={(e) => setC({ ...c, bankHolder: e.target.value })}
+            />
+          </label>
+          <label>
             <span>Nhận yêu cầu đặt lịch online</span>
             <input
               type="checkbox"

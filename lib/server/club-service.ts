@@ -3,7 +3,7 @@ import { quote, wholeQuote, type Config, type Booking, type Segment } from '../c
 import { configSchema } from '../config';
 import { planBooking } from '../booking';
 import { FINISH_SESSION_SQL } from '../fnb-sql';
-import { db, audit, loadConfig, ok, fail, type ServiceResult } from './common';
+import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 
 export const MAX_BODY = 100000;
 export const clubInput = z.object({
@@ -71,6 +71,7 @@ export async function loadDashboard(tenant: string, displayName: string) {
     audit: a.results,
     activeShift,
     todayReceipts: receipts?.total ?? 0,
+    onlinePending: await pendingCount(tenant),
     user: displayName,
     auth: 'Sites owner-private',
     stage: 'internal-pilot',
@@ -86,6 +87,17 @@ export async function runClubAction(tenant: string, input: ClubInput): Promise<S
       return fail('Cấu hình đã thay đổi ở thiết bị khác. Hãy tải lại trước khi lưu.', 409);
     const parsed = configSchema.safeParse({ ...c, ...input.value });
     if (!parsed.success) return fail(parsed.error.issues.map((i) => i.message).join(' · '));
+    if (parsed.data.onlineEnabled && !parsed.data.onlineSlug)
+      return fail('Hãy nhập mã đường dẫn để bật nhận đặt lịch online');
+    if (parsed.data.onlineSlug) {
+      const taken = await db()
+        .prepare(
+          "SELECT 1 AS x FROM settings WHERE tenant<>? AND json_extract(value,'$.onlineSlug')=?",
+        )
+        .bind(tenant, parsed.data.onlineSlug)
+        .first();
+      if (taken) return fail('Mã đường dẫn đã được cơ sở khác sử dụng', 409);
+    }
     const v: Config = { ...parsed.data, pricingRevision: crypto.randomUUID(), published: false };
     v.published = false;
     const saved = await db()

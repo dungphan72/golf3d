@@ -30,6 +30,8 @@ export type Config = {
   grace: number;
   cancelHours: number;
   published: boolean;
+  onlineEnabled?: boolean;
+  onlineSlug?: string;
 };
 export const defaults: Config = {
   name: 'Golf3D',

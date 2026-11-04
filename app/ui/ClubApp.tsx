@@ -28,6 +28,7 @@ import {
   Users,
   LogOut,
   Award,
+  Globe,
 } from 'lucide-react';
 import { rooms, defaults, money, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
@@ -44,6 +45,7 @@ import { LoginScreen } from './LoginScreen';
 import { AccountPanel } from './AccountPanel';
 import { StaffPanel } from './StaffPanel';
 import { MembersPanel } from './MembersPanel';
+import { OnlineRequests } from './OnlineRequests';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     [view, setView] = useState('overview'),
@@ -142,6 +144,7 @@ export default function ClubApp() {
     ['finance', 'Ca & sổ tiền', Wallet],
     ['fnb', 'Thực đơn & bếp', UtensilsCrossed],
     ['stock', 'Kho F&B', Grid2X2],
+    ['online', 'Đặt online', Globe],
     ['members', 'Hội viên', Award],
     ['support', 'Yêu cầu hỗ trợ', Headphones],
     ['roadmap', 'Lộ trình hệ thống', BookOpen],
@@ -154,6 +157,7 @@ export default function ClubApp() {
     settings: 'settings.manage',
     staff: 'staff.manage',
     members: 'member.view',
+    online: 'booking.create',
   };
   const allowed = (key: string) =>
     !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
@@ -170,6 +174,7 @@ export default function ClubApp() {
     finance: 'Đối soát rõ ràng, bàn giao an tâm.',
     fnb: 'Món ngon, phục vụ đúng lúc.',
     stock: 'Kho rõ ràng, phục vụ an tâm.',
+    online: 'Yêu cầu đặt lịch từ khách',
     members: 'Hội viên, gói và điểm thưởng',
     support: 'Trung tâm hỗ trợ',
     roadmap: 'Lộ trình phát triển',
@@ -228,6 +233,9 @@ export default function ClubApp() {
                 <span>{label}</span>
                 {key === 'support' && pending.length > 0 && (
                   <b className="count">{pending.length}</b>
+                )}
+                {key === 'online' && (data?.onlinePending ?? 0) > 0 && (
+                  <b className="count">{data?.onlinePending}</b>
                 )}
               </button>
             ))}
@@ -604,6 +612,7 @@ export default function ClubApp() {
                     />
                   )}
                   {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
+                  {view === 'online' && allowed('online') && <OnlineRequests onChanged={load} />}
                   {view === 'members' && allowed('members') && (
                     <MembersPanel permissions={data?.permissions ?? []} />
                   )}

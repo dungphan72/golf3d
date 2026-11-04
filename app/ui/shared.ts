@@ -15,6 +15,7 @@ export type Data = {
   audit: { id: string; action: string; detail: string; created: number }[];
   user: string;
   role?: string;
+  onlinePending?: number;
   permissions?: string[];
 };
 export const labels: Record<string, string> = {

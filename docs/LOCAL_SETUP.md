@@ -74,3 +74,8 @@ Chỉ áp dụng migration mới `drizzle/0003_minor_lady_deathstrike.sql` qua c
 - Chủ cơ sở hiện đăng nhập qua nền tảng Sites: vào **Tài khoản** → "Tạo đăng nhập bằng mật khẩu" để gắn email + mật khẩu vào đúng cơ sở hiện tại (dữ liệu cũ giữ nguyên). Sau đó thêm nhân viên ở **Nhân viên**; mật khẩu tạm hiển thị một lần và buộc đổi khi đăng nhập lần đầu.
 - Vai trò: Chủ, Quản lý, Thu ngân, HLV, CSKH, Sale (ma trận quyền ở `lib/auth/permissions.ts`). Sai mật khẩu 5 lần khóa tài khoản 15 phút.
 - **Bắt buộc khi chuyển khỏi Sites (Vercel...):** đặt biến môi trường `DISABLE_SITES_IDENTITY=1`. Ngoài nền tảng Sites, header danh tính `oai-authenticated-user-*` do client tự gửi được, nếu không tắt thì ai cũng giả mạo được chủ cơ sở.
+
+## 6. Đặt lịch online (migration 0006)
+Áp dụng `drizzle/0006_crazy_spot.sql` (bảng `booking_requests`). Trong **Cài đặt cơ sở → Đặt lịch**, bật "Nhận yêu cầu đặt lịch online" và đặt mã đường dẫn (vd `golf3d-binhtrung`); khách vào `/book/<mã>`. Khách chỉ gửi **yêu cầu**; nhân viên xử lý ở mục **Đặt online** (chọn phòng trống rồi Xác nhận, hoặc Từ chối kèm lý do) và gọi lại khách. Giới hạn: tối đa 3 yêu cầu chờ/số điện thoại, 10 yêu cầu/giờ/IP, 300 yêu cầu chờ/cơ sở.
+
+Lưu ý: trang `/book/...` và `/api/public/*` cần truy cập công khai. Bản Sites hiện chỉ owner-private nên khách bên ngoài chưa vào được; sau khi chuyển hạ tầng (Vercel) mới mở thật. Đã có honeypot chống bot cơ bản; chưa có CAPTCHA và chưa có thông báo Zalo/SMS (khách xem trạng thái trên chính trang đặt lịch).

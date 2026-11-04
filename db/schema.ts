@@ -330,3 +330,35 @@ export const loyaltyLedger = sqliteTable(
       .where(sql`${t.reason} = 'earn'`),
   ],
 );
+
+// ---- Online booking requests (customer submits, staff confirms) ----
+export const bookingRequests = sqliteTable(
+  'booking_requests',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    codeHash: text('code_hash').notNull(), // SHA-256 of the status code given to the customer
+    name: text('name').notNull(),
+    phone: text('phone').notNull(), // normalised
+    service: text('service').notNull(),
+    vip: integer('vip').notNull().default(0),
+    people: integer('people').notNull(),
+    start: integer('start').notNull(),
+    minutes: integer('minutes').notNull().default(0),
+    note: text('note').notNull().default(''),
+    quote: text('quote').notNull(), // indicative bill JSON at request time
+    status: text('status').notNull(), // pending | confirmed | rejected | cancelled
+    room: text('room'),
+    bookingId: text('booking_id'),
+    reason: text('reason').notNull().default(''),
+    handledBy: text('handled_by'),
+    handledAt: integer('handled_at'),
+    ipHash: text('ip_hash').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    uniqueIndex('booking_request_code').on(t.codeHash),
+    index('booking_request_tenant').on(t.tenant, t.status, t.created),
+    index('booking_request_ip').on(t.ipHash, t.created),
+  ],
+);

@@ -28,3 +28,12 @@ export async function audit(tenant: string, action: string, detail: string) {
     .bind(crypto.randomUUID(), tenant, action, detail, Date.now())
     .run();
 }
+
+export async function pendingCount(tenant: string) {
+  const row = await db()
+    .prepare("SELECT COUNT(*) AS n FROM booking_requests WHERE tenant=? AND status='pending'")
+    .bind(tenant)
+    .first<{ n: number }>()
+    .catch(() => null); // dashboard keeps working before migration 0006 is applied
+  return row?.n ?? 0;
+}

@@ -452,6 +452,23 @@ export function SettingsForm({
           {numberField('days', 'Khách online đặt trước (ngày)')}
           {numberField('grace', 'Giữ chỗ khách muộn (phút)')}
           {numberField('cancelHours', 'Đổi/hủy trước giờ chơi (giờ)')}
+          <label>
+            <span>Nhận yêu cầu đặt lịch online</span>
+            <input
+              type="checkbox"
+              checked={!!c.onlineEnabled}
+              onChange={(e) => setC({ ...c, onlineEnabled: e.target.checked })}
+            />
+          </label>
+          <label>
+            Mã đường dẫn trang đặt lịch (/book/mã)
+            <input
+              value={c.onlineSlug ?? ''}
+              pattern="[a-z0-9][a-z0-9\-]{2,39}"
+              placeholder="vd: golf3d-binhtrung"
+              onChange={(e) => setC({ ...c, onlineSlug: e.target.value.trim().toLowerCase() })}
+            />
+          </label>
         </div>
       </section>
       <div className="form-footer sticky-save">

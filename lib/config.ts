@@ -56,6 +56,11 @@ export const configSchema = z
     grace: minutes,
     cancelHours: z.number().min(0).max(2160),
     published: z.boolean(),
+    onlineEnabled: z.boolean().default(false),
+    onlineSlug: z
+      .string()
+      .regex(/^([a-z0-9][a-z0-9-]{2,39})?$/, 'Mã đường dẫn gồm 3–40 ký tự a-z, 0-9, dấu gạch ngang')
+      .default(''),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),
   })

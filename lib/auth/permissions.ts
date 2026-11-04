@@ -19,6 +19,10 @@ export const PERMISSIONS = [
   'member.view',
   'member.sell',
   'member.adjust',
+  'coach.view',
+  'coach.schedule',
+  'coach.manage',
+  'coach.own',
   'data.export',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
@@ -32,7 +36,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   sale: 'Sale',
 };
 
-const MANAGER = PERMISSIONS.filter((p) => p !== 'data.export');
+const MANAGER = PERMISSIONS.filter((p) => p !== 'data.export' && p !== 'coach.own');
 const GRANTS: Record<Role, readonly Permission[]> = {
   owner: PERMISSIONS,
   manager: MANAGER,
@@ -49,8 +53,9 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'fnb.kitchen',
     'member.view',
     'member.sell',
+    'coach.view',
   ],
-  coach: ['view', 'support.handle', 'member.view'],
+  coach: ['view', 'support.handle', 'member.view', 'coach.view', 'coach.own'],
   cskh: [
     'view',
     'booking.create',
@@ -59,8 +64,10 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'fnb.order',
     'member.view',
     'member.sell',
+    'coach.view',
+    'coach.schedule',
   ],
-  sale: ['view', 'booking.create', 'member.view', 'member.sell'],
+  sale: ['view', 'booking.create', 'member.view', 'member.sell', 'coach.view', 'coach.schedule'],
 };
 
 export const isRole = (value: unknown): value is Role =>

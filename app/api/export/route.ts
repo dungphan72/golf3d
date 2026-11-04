@@ -22,6 +22,8 @@ const TABLES = [
   'package_redemptions',
   'loyalty_ledger',
   'booking_requests',
+  'coaches',
+  'lessons',
 ] as const;
 // Tables added by later migrations may not exist yet on an older database.
 const OPTIONAL = new Set([
@@ -32,6 +34,8 @@ const OPTIONAL = new Set([
   'package_redemptions',
   'loyalty_ledger',
   'booking_requests',
+  'coaches',
+  'lessons',
 ]);
 const LIMIT = 200_000;
 

@@ -7,7 +7,7 @@ from online_sql_test import submit
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TABLES = ['settings', 'bookings', 'requests', 'audit', 'shifts', 'finance_entries', 'menu_items', 'food_orders',
           'stock_items', 'stock_movements', 'customers', 'package_types', 'customer_packages', 'package_ledger',
-          'package_redemptions', 'loyalty_ledger', 'booking_requests']
+          'package_redemptions', 'loyalty_ledger', 'booking_requests', 'coaches', 'lessons']
 
 
 def export(c, tenant='t1'):
@@ -36,6 +36,8 @@ class ImportBackup(unittest.TestCase):
         booking(c, id='b2', amount=300000)
         entry(c, id='e2', book='b2', amount=300000, method='cash')
         submit(c, id='r1', phone='0933444555')
+        c.execute("INSERT INTO coaches(id,tenant,user_id,name,phone,active,created) VALUES ('k1','t1',NULL,'HLV Một','0900000001',1,1)")
+        c.execute("INSERT INTO lessons(id,tenant,coach_id,customer_id,customer_name,phone,start,minutes,room,status,price,note,coach_note,actor,request_id,created) VALUES ('l1','t1','k1',NULL,'Học viên','0912345678',3000000000000,60,NULL,'scheduled',500000,'','','u','r-l1',1)")
         c.commit()
         return c
 

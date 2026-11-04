@@ -362,3 +362,45 @@ export const bookingRequests = sqliteTable(
     index('booking_request_ip').on(t.ipHash, t.created),
   ],
 );
+
+// ---- Coaching: coaches and scheduled lessons ----
+export const coaches = sqliteTable(
+  'coaches',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    userId: text('user_id'), // optional link to a staff login (role coach) so they see their own lessons
+    name: text('name').notNull(),
+    phone: text('phone').notNull().default(''),
+    active: integer('active').notNull().default(1),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('coach_tenant').on(t.tenant)],
+);
+export const lessons = sqliteTable(
+  'lessons',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    coachId: text('coach_id')
+      .notNull()
+      .references(() => coaches.id),
+    customerId: text('customer_id'),
+    customerName: text('customer_name').notNull(),
+    phone: text('phone').notNull(),
+    start: integer('start').notNull(),
+    minutes: integer('minutes').notNull(),
+    room: text('room'),
+    status: text('status').notNull(), // scheduled | done | cancelled | no_show
+    price: integer('price'), // informational; collected through normal payment flows
+    note: text('note').notNull().default(''),
+    coachNote: text('coach_note').notNull().default(''),
+    actor: text('actor').notNull(),
+    requestId: text('request_id').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    index('lesson_coach_time').on(t.tenant, t.coachId, t.start),
+    uniqueIndex('lesson_request_once').on(t.tenant, t.requestId),
+  ],
+);

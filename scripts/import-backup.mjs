@@ -32,6 +32,8 @@ export const IMPORT_ORDER = [
   'package_redemptions',
   'loyalty_ledger',
   'booking_requests',
+  'coaches',
+  'lessons',
 ];
 
 export function triggerDefinitions(root = resolve(import.meta.dirname, '..')) {

@@ -252,3 +252,95 @@ test('thông tin đăng nhập giả mạo từ nền tảng cũ không có tác
   });
   expect(forged.status()).toBe(401);
 });
+
+test('huấn luyện: xếp lịch chống trùng, HLV chỉ thấy và đánh dấu buổi của mình', async ({
+  browser,
+  page,
+}) => {
+  const owner = page.request;
+  await loginApi(owner);
+  const staff = await post(owner, '/api/staff', {
+    action: 'create',
+    email: 'hlv@e2e.test',
+    name: 'HLV Một',
+    role: 'coach',
+  });
+  const mine = await post(owner, '/api/coaching', {
+    action: 'coach-save',
+    name: 'HLV Một',
+    phone: '0900000001',
+    userId: staff.id,
+    active: true,
+  });
+  const other = await post(owner, '/api/coaching', {
+    action: 'coach-save',
+    name: 'HLV Hai',
+    phone: '',
+    userId: null,
+    active: true,
+  });
+
+  const start = Date.parse(`${vnDay(2)}T09:00:00+07:00`);
+  const lesson = (coachId: string, at: number, customerName: string) => ({
+    action: 'lesson-create',
+    requestId: key(),
+    coachId,
+    customerName,
+    phone: '0912000111',
+    start: at,
+    minutes: 60,
+    price: 500000,
+    note: '',
+  });
+  const first = await post(owner, '/api/coaching', lesson(mine.id, start, 'Học viên A'));
+  expect(first.customerLinked).toBe(true); // matched the member created earlier by phone
+  await post(owner, '/api/coaching', lesson(mine.id, start + 30 * 60_000, 'Học viên B'), 409);
+  await post(owner, '/api/coaching', lesson(other.id, start, 'Học viên C'));
+
+  const ctx = await browser.newContext({ locale: 'vi-VN', timezoneId: 'Asia/Ho_Chi_Minh' });
+  const coach = ctx.request;
+  const temporary = staff.temporaryPassword as string;
+  await loginApi(coach, { email: 'hlv@e2e.test', password: temporary });
+  await post(coach, '/api/auth/password', {
+    action: 'change',
+    current: temporary,
+    next: 'hlv-e2e-2026',
+  });
+  const own = await (await coach.get('/api/coaching')).json();
+  expect(own.lessons.map((l: { customer_name: string }) => l.customer_name)).toEqual([
+    'Học viên A',
+  ]);
+  await post(coach, '/api/coaching', lesson(mine.id, start + 4 * 3600_000, 'Học viên D'), 403);
+  await post(
+    coach,
+    '/api/coaching',
+    { action: 'lesson-status', id: first.id, status: 'cancelled' },
+    403,
+  );
+  await post(
+    coach,
+    '/api/coaching',
+    { action: 'lesson-status', id: first.id, status: 'done' },
+    409,
+  );
+  await post(coach, '/api/coaching', {
+    action: 'lesson-note',
+    id: first.id,
+    coachNote: 'Cần tập grip',
+  });
+
+  const view = await ctx.newPage();
+  await view.goto('/');
+  await nav(view, /Huấn luyện/).click();
+  await expect(view.getByText('Học viên A')).toBeVisible();
+  await expect(view.getByText('Ghi chú HLV: Cần tập grip')).toBeVisible();
+  await expect(view.getByText('Học viên C')).toHaveCount(0);
+  await ctx.close();
+
+  await post(owner, '/api/coaching', {
+    action: 'lesson-status',
+    id: first.id,
+    status: 'cancelled',
+  });
+  await post(owner, '/api/coaching', lesson(mine.id, start, 'Học viên E')); // slot freed by the cancellation
+});

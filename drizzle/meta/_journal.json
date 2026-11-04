@@ -50,6 +50,13 @@
       "when": 1793795047925,
       "tag": "0006_crazy_spot",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1793798552000,
+      "tag": "0007_greedy_gabe_jones",
+      "breakpoints": true
     }
   ]
 }

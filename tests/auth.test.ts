@@ -12,11 +12,11 @@ import {
   temporaryPassword,
 } from '../lib/auth/password.ts';
 
-test('owner has every permission; manager lacks only data export', () => {
+test('owner has every permission; manager lacks only data export and HLV-own', () => {
   for (const p of PERMISSIONS) assert.ok(can('owner', p));
   assert.deepEqual(
     PERMISSIONS.filter((p) => !can('manager', p)),
-    ['data.export'],
+    ['coach.own', 'data.export'], // coach.own is only for HLV accounts
   );
 });
 test('cashier handles money and sessions but cannot change settings or staff', () => {

@@ -86,3 +86,8 @@ Scoped override Miniflare → undici 7.30.1, chỉ đổi một package family. 
 ## v0.5.4 — Bộ đọc cấu hình và mẫu tên tệp
 
 Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package records thay đổi. Thêm 3 kiểm tra: mở rộng mẫu thông thường, lồng sâu 4.000 cấp và merge YAML rỗng vượt budget. Tổng 130 tests, typecheck/build qua. Native audit: 0 critical / 8 high / 16 moderate / 5 low. REVIEW-v054.md ghi giới hạn và blocker còn lại; chưa mở công khai.
+
+## v0.6 — hội viên, đặt online, HLV, hạ tầng riêng
+- Đăng nhập mật khẩu + 6 vai trò (migration 0004); hội viên, gói trả trước, thẻ VIP, tích điểm, trả phiên bằng lượt gói (0005, xem MEMBERSHIP-DESIGN.md); yêu cầu đặt online khách gửi / nhân viên xác nhận (0006); HLV và lịch dạy chống trùng lịch (0007).
+- Chạy trên Cloudflare riêng (Workers + D1) — xem DEPLOY-CLOUDFLARE.md. Có Playwright E2E và CI GitHub Actions.
+- Chưa có: thu học phí HLV vào sổ ca, giảm F&B theo thẻ, thông báo Zalo/SMS, CAPTCHA, hóa đơn MISA, SePay, GC3, giao diện mới, Postgres/Supabase.

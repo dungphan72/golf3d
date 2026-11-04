@@ -2,9 +2,9 @@
 import sqlite3, pathlib, re, unittest, tempfile, concurrent.futures
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SOURCE=(ROOT/'app/api/club/route.ts').read_text()
-SQL=re.search(r'prepare\("(INSERT INTO bookings.*?)"\)',SOURCE).group(1)
-SETTINGS=re.search(r'prepare\("(INSERT INTO settings.*?)"\)',SOURCE).group(1)
-UPDATE=re.search(r"prepare\('(UPDATE bookings SET status=\?,segments=.*?)'\)",SOURCE).group(1)
+SQL=re.search(r'prepare\(\s*"(INSERT INTO bookings.*?)",?\s*\)',SOURCE).group(1)
+SETTINGS=re.search(r'prepare\(\s*"(INSERT INTO settings.*?)",?\s*\)',SOURCE).group(1)
+UPDATE=re.search(r"prepare\(\s*['\"](UPDATE bookings SET status=\?,segments=.*?)['\"],?\s*\)",SOURCE).group(1)
 DDL=(ROOT/'drizzle/0000_amazing_dreadnoughts.sql').read_text().replace('--> statement-breakpoint','')
 def insert(conn,id,tenant='t1',room='line-1',start=1000000,end=2000000,status='booked',now=0):
  return conn.execute(SQL,(id,tenant,room,'Test user','0900000000','gdr',1,start,end,status,'{}',now,tenant,room,end,start,tenant,room,start,now+300000)).rowcount

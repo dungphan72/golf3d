@@ -64,3 +64,6 @@ Sau git pull/pnpm install --frozen-lockfile/pnpm build, chỉ chạy migration 0
 ### Nâng cấp v0.4 → v0.5
 
 Chỉ áp dụng migration mới `drizzle/0003_minor_lady_deathstrike.sql` qua cùng lệnh D1 ở trên (thay đường dẫn file). Không chạy lại migration cũ đã áp dụng. Kho ban đầu chưa theo dõi món nào; bật từng món rồi nhập tồn thực tế. Chạy thêm `python tests/stock_sql_test.py` khi kiểm tra.
+
+## 4. Sao lưu dữ liệu thật
+Đăng nhập app đang chạy rồi mở `/api/export` (trình duyệt tải về `golf3d-backup-YYYY-MM-DD.json`). File gồm toàn bộ bảng của cơ sở (booking, ca, sổ tiền, món, kho, nhật ký, cài đặt). Làm trước mỗi lần nâng cấp hoặc chuyển hạ tầng; lưu file ở nơi an toàn, không đưa vào Git (có tên/SĐT khách).

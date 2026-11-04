@@ -47,3 +47,4 @@ yarn-error.log*
 # Python test runtime
 __pycache__/
 *.py[cod]
+golf3d-backup-*.json

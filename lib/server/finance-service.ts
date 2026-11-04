@@ -53,7 +53,7 @@ export async function loadFinance(tenant: string, selectedId: string | null): Pr
     return error('Không tải được sổ ca. Kiểm tra database đã áp dụng migration mới.', 503);
   }
 }
-export async function applyFinance(tenant: string, input: FinanceInput): Promise<R> {
+export async function applyFinance(tenant: string, actor: string, input: FinanceInput): Promise<R> {
   const now = Date.now(),
     db = database();
   const openingId = input.action === 'open' ? await scopedShiftId(tenant, input.requestId) : null;
@@ -86,7 +86,7 @@ export async function applyFinance(tenant: string, input: FinanceInput): Promise
     if (input.action === 'open') {
       await db
         .prepare(OPEN_SHIFT_SQL)
-        .bind(openingId, tenant, input.name, tenant, now, input.openingCash)
+        .bind(openingId, tenant, input.name, actor, now, input.openingCash)
         .run();
       return reply({ ok: true });
     }
@@ -119,7 +119,7 @@ export async function applyFinance(tenant: string, input: FinanceInput): Promise
       const updated = await db
         .prepare(CLOSE_SHIFT_SQL)
         .bind(
-          tenant,
+          actor,
           now,
           input.countedCash,
           input.countedTransfer,
@@ -150,7 +150,7 @@ export async function applyFinance(tenant: string, input: FinanceInput): Promise
           null,
           input.requestId,
           input.note,
-          tenant,
+          actor,
           now,
         )
         .run();
@@ -182,7 +182,7 @@ export async function applyFinance(tenant: string, input: FinanceInput): Promise
         booking.id,
         input.requestId,
         'Thanh toán phiếu ' + booking.id,
-        tenant,
+        actor,
         now,
       )
       .run();

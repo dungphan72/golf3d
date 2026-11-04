@@ -62,7 +62,7 @@ export async function loadFnb(tenant: string, booking: string | null): Promise<R
     return error('Chưa tải được thực đơn và đơn món. Kiểm tra migration mới.', 503);
   }
 }
-export async function applyFnb(tenant: string, input: FnbInput): Promise<R> {
+export async function applyFnb(tenant: string, actor: string, input: FnbInput): Promise<R> {
   const now = Date.now();
   const replay = async () => {
     if (input.action === 'order') {
@@ -174,7 +174,7 @@ export async function applyFnb(tenant: string, input: FnbInput): Promise<R> {
           q.vat,
           q.total,
           input.note,
-          tenant,
+          actor,
           now,
           now,
         )

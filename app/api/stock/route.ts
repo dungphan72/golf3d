@@ -1,18 +1,16 @@
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { authorize, sendResult, httpError, sameOrigin } from '../../auth-session';
 import { stockInput } from '../../../lib/stock';
 import { loadStock, applyStock } from '../../../lib/server/stock-service';
-import { sendResult, httpError } from '../../../lib/server/http';
 export const dynamic = 'force-dynamic';
 export async function GET() {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  return sendResult(await loadStock(user.userId));
+  const { auth, response } = await authorize('view');
+  if (response) return response;
+  return sendResult(await loadStock(auth.tenant));
 }
 export async function POST(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  if (req.headers.get('origin') && req.headers.get('origin') !== new URL(req.url).origin)
-    return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  const { auth, response } = await authorize('stock.manage');
+  if (response) return response;
   let input;
   try {
     const raw = await req.text();
@@ -23,5 +21,5 @@ export async function POST(req: Request) {
   } catch {
     return httpError('Dữ liệu không hợp lệ');
   }
-  return sendResult(await applyStock(user.userId, input));
+  return sendResult(await applyStock(auth.tenant, auth.userId, input));
 }

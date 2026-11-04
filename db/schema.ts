@@ -178,3 +178,48 @@ export const stockMovements = sqliteTable(
     index('stock_item_time').on(t.tenant, t.itemId, t.created),
   ],
 );
+
+// ---- Authentication & staff access ----
+export const users = sqliteTable(
+  'users',
+  {
+    id: text('id').primaryKey(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    mustChange: integer('must_change').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+    lockedUntil: integer('locked_until').notNull().default(0),
+    active: integer('active').notNull().default(1),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('users_email').on(t.email)],
+);
+export const memberships = sqliteTable(
+  'memberships',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    tenant: text('tenant').notNull(),
+    role: text('role').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    uniqueIndex('membership_user_tenant').on(t.userId, t.tenant),
+    index('membership_tenant').on(t.tenant),
+  ],
+);
+export const sessions = sqliteTable(
+  'sessions',
+  {
+    id: text('id').primaryKey(), // SHA-256 of the cookie token; the raw token is never stored
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    tenant: text('tenant').notNull(),
+    expires: integer('expires').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('sessions_user').on(t.userId)],
+);

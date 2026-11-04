@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { authorize } from '../../auth-session';
 export const dynamic = 'force-dynamic';
 
 // Full per-tenant data export (backup and migration source). Read-only; tenant comes from the
@@ -19,8 +19,8 @@ const TABLES = [
 const LIMIT = 200_000;
 
 export async function GET() {
-  const user = await getChatGPTUser();
-  if (!user) return Response.json({ error: 'Vui lòng đăng nhập' }, { status: 401 });
+  const { auth, response } = await authorize('data.export');
+  if (response) return response;
   try {
     const db = env.DB!;
     const data: Record<string, unknown[]> = {};
@@ -28,7 +28,7 @@ export async function GET() {
       data[table] = (
         await db
           .prepare(`SELECT * FROM ${table} WHERE tenant=? LIMIT ${LIMIT}`)
-          .bind(user.userId)
+          .bind(auth.tenant)
           .all()
       ).results;
     }

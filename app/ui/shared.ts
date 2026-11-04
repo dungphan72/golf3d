@@ -14,6 +14,8 @@ export type Data = {
   requests: RequestRow[];
   audit: { id: string; action: string; detail: string; created: number }[];
   user: string;
+  role?: string;
+  permissions?: string[];
 };
 export const labels: Record<string, string> = {
   booked: 'Đã đặt',

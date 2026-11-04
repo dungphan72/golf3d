@@ -30,7 +30,7 @@ export async function loadStock(tenant: string): Promise<R> {
     return reply({ error: 'Chưa tải được kho. Kiểm tra migration.' }, 503);
   }
 }
-export async function applyStock(tenant: string, input: StockInput): Promise<R> {
+export async function applyStock(tenant: string, actor: string, input: StockInput): Promise<R> {
   const db = dbc(),
     now = Date.now();
   const replay = async () => {
@@ -75,7 +75,7 @@ export async function applyStock(tenant: string, input: StockInput): Promise<R> 
         input.requestId,
         movementSignature(input),
         input.note,
-        tenant,
+        actor,
         now,
         input.itemId,
         tenant,

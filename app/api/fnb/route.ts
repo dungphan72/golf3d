@@ -1,18 +1,17 @@
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { authorize, sendResult, httpError, sameOrigin } from '../../auth-session';
 import { fnbInput } from '../../../lib/fnb';
 import { loadFnb, applyFnb } from '../../../lib/server/fnb-service';
-import { sendResult, httpError } from '../../../lib/server/http';
+import { can } from '../../../lib/auth/permissions';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  return sendResult(await loadFnb(user.userId, new URL(req.url).searchParams.get('booking')));
+  const { auth, response } = await authorize('view');
+  if (response) return response;
+  return sendResult(await loadFnb(auth.tenant, new URL(req.url).searchParams.get('booking')));
 }
 export async function POST(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  if (req.headers.get('origin') && req.headers.get('origin') !== new URL(req.url).origin)
-    return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  const { auth, response } = await authorize('view');
+  if (response) return response;
   let input;
   try {
     const raw = await req.text();
@@ -23,5 +22,12 @@ export async function POST(req: Request) {
   } catch {
     return httpError('Dữ liệu không hợp lệ');
   }
-  return sendResult(await applyFnb(user.userId, input));
+  const needed =
+    input.action === 'order'
+      ? 'fnb.order'
+      : input.action === 'transition'
+        ? 'fnb.kitchen'
+        : 'menu.manage';
+  if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  return sendResult(await applyFnb(auth.tenant, auth.userId, input));
 }

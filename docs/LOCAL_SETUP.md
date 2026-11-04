@@ -67,3 +67,10 @@ Chỉ áp dụng migration mới `drizzle/0003_minor_lady_deathstrike.sql` qua c
 
 ## 4. Sao lưu dữ liệu thật
 Đăng nhập app đang chạy rồi mở `/api/export` (trình duyệt tải về `golf3d-backup-YYYY-MM-DD.json`). File gồm toàn bộ bảng của cơ sở (booking, ca, sổ tiền, món, kho, nhật ký, cài đặt). Làm trước mỗi lần nâng cấp hoặc chuyển hạ tầng; lưu file ở nơi an toàn, không đưa vào Git (có tên/SĐT khách).
+
+## 5. Đăng nhập bằng mật khẩu và phân quyền (migration 0004)
+Áp dụng `drizzle/0004_sturdy_ultimo.sql` (thêm bảng users, memberships, sessions; không đụng dữ liệu cũ) bằng cùng lệnh D1 ở mục 2.
+
+- Chủ cơ sở hiện đăng nhập qua nền tảng Sites: vào **Tài khoản** → "Tạo đăng nhập bằng mật khẩu" để gắn email + mật khẩu vào đúng cơ sở hiện tại (dữ liệu cũ giữ nguyên). Sau đó thêm nhân viên ở **Nhân viên**; mật khẩu tạm hiển thị một lần và buộc đổi khi đăng nhập lần đầu.
+- Vai trò: Chủ, Quản lý, Thu ngân, HLV, CSKH, Sale (ma trận quyền ở `lib/auth/permissions.ts`). Sai mật khẩu 5 lần khóa tài khoản 15 phút.
+- **Bắt buộc khi chuyển khỏi Sites (Vercel...):** đặt biến môi trường `DISABLE_SITES_IDENTITY=1`. Ngoài nền tảng Sites, header danh tính `oai-authenticated-user-*` do client tự gửi được, nếu không tắt thì ai cũng giả mạo được chủ cơ sở.

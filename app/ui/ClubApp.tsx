@@ -25,6 +25,8 @@ import {
   BookOpen,
   Play,
   ChevronRight,
+  Users,
+  LogOut,
 } from 'lucide-react';
 import { rooms, defaults, money, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
@@ -37,6 +39,9 @@ import { time, date, type Data } from './shared';
 import { Stat, RoomGrid, BookingTable, Empty, Roadmap } from './widgets';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
+import { LoginScreen } from './LoginScreen';
+import { AccountPanel } from './AccountPanel';
+import { StaffPanel } from './StaffPanel';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     [view, setView] = useState('overview'),
@@ -51,11 +56,21 @@ export default function ClubApp() {
     [search, setSearch] = useState(''),
     [now, setNow] = useState(() => Date.now()),
     [mobile, setMobile] = useState(false);
+  const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
       const r = await fetch('/api/club', { cache: 'no-store' });
       const v = (await r.json()) as Data & { error?: string };
+      if (r.status === 401) {
+        setAuthState('login');
+        return;
+      }
+      if (r.status === 403 && v.error?.includes('mật khẩu tạm thời')) {
+        setAuthState('change');
+        return;
+      }
       if (!r.ok) throw new Error(v.error || 'Không tải được dữ liệu');
+      setAuthState('ok');
       setData(v);
       setError('');
     } catch (e) {
@@ -128,7 +143,21 @@ export default function ClubApp() {
     ['support', 'Yêu cầu hỗ trợ', Headphones],
     ['roadmap', 'Lộ trình hệ thống', BookOpen],
     ['settings', 'Cài đặt cơ sở', Settings],
+    ['staff', 'Nhân viên', Users],
+    ['account', 'Tài khoản', ShieldCheck],
   ] as const;
+  const needs: Record<string, string> = {
+    finance: 'finance.view',
+    settings: 'settings.manage',
+    staff: 'staff.manage',
+  };
+  const allowed = (key: string) =>
+    !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
+  async function signOut() {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    setData(null);
+    setAuthState('login');
+  }
   const titles: Record<string, string> = {
     overview: 'Một ngày chơi tốt lành.',
     rooms: 'Không gian & phiên chơi',
@@ -140,6 +169,8 @@ export default function ClubApp() {
     support: 'Trung tâm hỗ trợ',
     roadmap: 'Lộ trình phát triển',
     settings: 'Thiết lập cơ sở',
+    staff: 'Nhân viên & phân quyền',
+    account: 'Tài khoản của bạn',
   };
   function go(v: string) {
     setView(v);
@@ -150,6 +181,13 @@ export default function ClubApp() {
     setModal(true);
   };
   const chosen = selected ? (b.find((x) => x.id === selected.id) ?? selected) : null;
+  if (authState === 'login') return <LoginScreen onDone={load} />;
+  if (authState === 'change')
+    return (
+      <div className="auth-screen">
+        <AccountPanel forced onChanged={load} onLogout={signOut} />
+      </div>
+    );
   return (
     <div className="app-shell">
       <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
@@ -173,17 +211,21 @@ export default function ClubApp() {
         </button>
         <div className="nav-label">KHÔNG GIAN LÀM VIỆC</div>
         <nav>
-          {navigation.map(([key, label, Icon]) => (
-            <button
-              key={key}
-              className={view === key ? 'nav-item selected' : 'nav-item'}
-              onClick={() => go(key)}
-            >
-              <Icon size={19} />
-              <span>{label}</span>
-              {key === 'support' && pending.length > 0 && <b className="count">{pending.length}</b>}
-            </button>
-          ))}
+          {navigation
+            .filter(([key]) => allowed(key))
+            .map(([key, label, Icon]) => (
+              <button
+                key={key}
+                className={view === key ? 'nav-item selected' : 'nav-item'}
+                onClick={() => go(key)}
+              >
+                <Icon size={19} />
+                <span>{label}</span>
+                {key === 'support' && pending.length > 0 && (
+                  <b className="count">{pending.length}</b>
+                )}
+              </button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="club-note">
@@ -548,8 +590,8 @@ export default function ClubApp() {
                   )}
                   {view === 'stock' && <StockPanel />}
                   {view === 'fnb' && <FnbPanel onChanged={load} />}
-                  {view === 'finance' && <FinancePanel onChanged={load} />}
-                  {view === 'settings' && (
+                  {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
+                  {view === 'settings' && allowed('settings') && (
                     <SettingsForm
                       config={c}
                       busy={busy}
@@ -557,6 +599,10 @@ export default function ClubApp() {
                     />
                   )}
                   {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
+                  {view === 'staff' && allowed('staff') && (
+                    <StaffPanel actorRole={data?.role ?? ''} />
+                  )}
+                  {view === 'account' && <AccountPanel onChanged={load} onLogout={signOut} />}
                 </>
               )}
             </>

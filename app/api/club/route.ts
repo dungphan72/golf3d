@@ -1,39 +1,54 @@
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { authorize, sendResult, httpError, sameOrigin } from '../../auth-session';
 import {
   clubInput,
   loadDashboard,
   runClubAction,
   MAX_BODY,
 } from '../../../lib/server/club-service';
-import { fail } from '../../../lib/server/common';
+import { can, permissionsOf, type Permission } from '../../../lib/auth/permissions';
 export const dynamic = 'force-dynamic';
-const send = (r: { status: number; body: Record<string, unknown> }) =>
-  Response.json(r.body, { status: r.status });
+
+const ACTION_PERMISSION: Record<string, Permission> = {
+  settings: 'settings.manage',
+  book: 'booking.create',
+  cancel: 'booking.cancel',
+  start: 'session.operate',
+  pause: 'session.operate',
+  resume: 'session.operate',
+  finish: 'session.operate',
+  pay: 'finance.operate',
+  support: 'support.handle',
+  'request-update': 'support.handle',
+};
+
 export async function GET() {
-  const user = await getChatGPTUser();
-  if (!user) return send(fail('Vui lòng đăng nhập', 401));
-  return Response.json(await loadDashboard(user.userId, user.displayName), {
-    headers: { 'Cache-Control': 'no-store' },
-  });
+  const { auth, response } = await authorize('view');
+  if (response) return response;
+  const data = await loadDashboard(auth.tenant, auth.name);
+  return Response.json(
+    { ...data, role: auth.role, permissions: permissionsOf(auth.role) },
+    { headers: { 'Cache-Control': 'no-store' } },
+  );
 }
 export async function POST(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return send(fail('Vui lòng đăng nhập', 401));
-  const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin)
-    return send(fail('Nguồn yêu cầu không hợp lệ', 403));
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  const { auth, response } = await authorize('view');
+  if (response) return response;
   let input;
   try {
     const raw = await req.text();
-    if (raw.length > MAX_BODY) return send(fail('Yêu cầu quá lớn', 413));
+    if (raw.length > MAX_BODY) return httpError('Yêu cầu quá lớn', 413);
     input = clubInput.parse(JSON.parse(raw));
   } catch {
-    return send(fail('Dữ liệu không hợp lệ'));
+    return httpError('Dữ liệu không hợp lệ');
   }
+  const needed = ACTION_PERMISSION[input.action];
+  if (!needed || !can(auth.role, needed))
+    return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   try {
-    return send(await runClubAction(user.userId, input));
+    return sendResult(await runClubAction(auth.tenant, input));
   } catch (e) {
     console.error(e);
-    return send(fail(e instanceof Error ? e.message : 'Không thể xử lý yêu cầu', 500));
+    return httpError(e instanceof Error ? e.message : 'Không thể xử lý yêu cầu', 500);
   }
 }

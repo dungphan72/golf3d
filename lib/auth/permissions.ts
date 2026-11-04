@@ -1,0 +1,63 @@
+export const ROLES = ['owner', 'manager', 'cashier', 'coach', 'cskh', 'sale'] as const;
+export type Role = (typeof ROLES)[number];
+
+export const PERMISSIONS = [
+  'view',
+  'booking.create',
+  'booking.cancel',
+  'session.operate',
+  'support.handle',
+  'finance.view',
+  'finance.operate',
+  'finance.shift',
+  'menu.manage',
+  'fnb.order',
+  'fnb.kitchen',
+  'stock.manage',
+  'settings.manage',
+  'staff.manage',
+  'data.export',
+] as const;
+export type Permission = (typeof PERMISSIONS)[number];
+
+export const ROLE_LABELS: Record<Role, string> = {
+  owner: 'Chủ cơ sở',
+  manager: 'Quản lý',
+  cashier: 'Thu ngân',
+  coach: 'HLV',
+  cskh: 'CSKH',
+  sale: 'Sale',
+};
+
+const MANAGER = PERMISSIONS.filter((p) => p !== 'data.export');
+const GRANTS: Record<Role, readonly Permission[]> = {
+  owner: PERMISSIONS,
+  manager: MANAGER,
+  cashier: [
+    'view',
+    'booking.create',
+    'booking.cancel',
+    'session.operate',
+    'support.handle',
+    'finance.view',
+    'finance.operate',
+    'finance.shift',
+    'fnb.order',
+    'fnb.kitchen',
+  ],
+  coach: ['view', 'support.handle'],
+  cskh: ['view', 'booking.create', 'booking.cancel', 'support.handle', 'fnb.order'],
+  sale: ['view', 'booking.create'],
+};
+
+export const isRole = (value: unknown): value is Role =>
+  typeof value === 'string' && (ROLES as readonly string[]).includes(value);
+
+export const can = (role: Role, permission: Permission) => GRANTS[role].includes(permission);
+export const permissionsOf = (role: Role): Permission[] => [...GRANTS[role]];
+
+/** Managers may manage staff but never create, change or remove owners. */
+export function canAssignRole(actor: Role, target: Role) {
+  if (!can(actor, 'staff.manage')) return false;
+  return actor === 'owner' || target !== 'owner';
+}

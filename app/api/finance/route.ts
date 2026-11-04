@@ -1,19 +1,17 @@
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { authorize, sendResult, httpError, sameOrigin } from '../../auth-session';
 import { financeInput } from '../../../lib/finance';
 import { loadFinance, applyFinance } from '../../../lib/server/finance-service';
-import { sendResult, httpError } from '../../../lib/server/http';
+import { can } from '../../../lib/auth/permissions';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  return sendResult(await loadFinance(user.userId, new URL(req.url).searchParams.get('shift')));
+  const { auth, response } = await authorize('finance.view');
+  if (response) return response;
+  return sendResult(await loadFinance(auth.tenant, new URL(req.url).searchParams.get('shift')));
 }
 export async function POST(req: Request) {
-  const user = await getChatGPTUser();
-  if (!user) return httpError('Vui lòng đăng nhập', 401);
-  const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin)
-    return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  const { auth, response } = await authorize('view');
+  if (response) return response;
   let json: unknown;
   try {
     const raw = await req.text();
@@ -24,5 +22,10 @@ export async function POST(req: Request) {
   }
   const parsed = financeInput.safeParse(json);
   if (!parsed.success) return httpError(parsed.error.issues.map((i) => i.message).join(' · '));
-  return sendResult(await applyFinance(user.userId, parsed.data));
+  const needed =
+    parsed.data.action === 'open' || parsed.data.action === 'close'
+      ? 'finance.shift'
+      : 'finance.operate';
+  if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  return sendResult(await applyFinance(auth.tenant, auth.userId, parsed.data));
 }

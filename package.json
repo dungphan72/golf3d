@@ -13,7 +13,7 @@
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts && node --conditions=react-server --test tests/rsc-transport.test.mjs && node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs && node --test tests/tooling-parsers.test.mjs",
+    "test": "node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts tests/official-pricing.test.ts && node --conditions=react-server --test tests/rsc-transport.test.mjs && node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs && node --test tests/tooling-parsers.test.mjs",
     "test:migrations": "python tests/migration_splitter_test.py",
     "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs",
     "test:runtime": "node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs",

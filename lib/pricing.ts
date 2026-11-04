@@ -1,4 +1,5 @@
 import type { Config, Segment } from './club.ts';
+import { officialPriceRules } from './official-pricing.ts';
 
 export type Service = 'gdr' | '9' | '18';
 export type DayType = 'weekday' | 'weekend' | 'holiday';
@@ -323,7 +324,9 @@ export function upgradeConfig(value: Partial<Config>, fallback: Config): Config 
   const c = { ...fallback, ...value };
   return {
     ...c,
-    priceRules: c.priceRules ?? seedPriceRules(c, Object.keys(value).length === 0),
+    priceRules:
+      c.priceRules ??
+      (Object.keys(value).length === 0 ? officialPriceRules() : seedPriceRules(c, false)),
     holidays: c.holidays ?? [],
     feeMode: c.feeMode ?? 'percent',
     feeServices: c.feeServices ?? ['gdr', '9', '18'],

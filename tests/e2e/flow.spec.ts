@@ -17,6 +17,8 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   expect(response.status(), `${url} ${JSON.stringify(data)} -> ${await response.text()}`).toBe(
     status,
   );
+  // Test helper: response shapes differ per endpoint and are asserted at the call sites.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (await response.json()) as Record<string, any>;
 }
 const nav = (page: Page, name: RegExp | string) =>

@@ -46,6 +46,7 @@ OWNER_PASSWORD='mat-khau-manh-cua-anh' node scripts/create-owner.mjs --tenant <t
 pnpm exec wrangler d1 execute golf3d --remote --file owner.sql
 ```
 - `import.sql` tạm gỡ trigger, nạp nguyên văn các dòng, rồi tạo lại đúng trigger từ migration (đã kiểm tra khôi phục đủ 60 trigger và các ràng buộc sổ tiền hoạt động lại).
+- Chưa có dữ liệu cũ thì bỏ bước nhập và dùng `--tenant <tên-tùy-ý> --generate` (không cần `OWNER_PASSWORD`): script in một mật khẩu tạm thời một lần, buộc đổi khi đăng nhập lần đầu.
 - `--tenant` phải đúng giá trị trong backup, nếu không dữ liệu cũ sẽ không hiện cho tài khoản mới.
 - Xóa `import.sql`, `owner.sql` và lịch sử lệnh có mật khẩu sau khi xong.
 

@@ -18,7 +18,8 @@
     "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs",
     "test:runtime": "node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs",
     "test:tooling": "node --test tests/tooling-parsers.test.mjs",
-    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
@@ -49,6 +50,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.37.1",
     "@cloudflare/workers-types": "4.20260515.1",
+    "@playwright/test": "^1.64.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
     "@types/react": "19.2.14",

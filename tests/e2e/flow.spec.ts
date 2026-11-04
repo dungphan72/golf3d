@@ -1,0 +1,252 @@
+import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
+
+test.describe.configure({ mode: 'serial' });
+
+const OWNER = { email: 'owner@e2e.test', password: 'e2e-owner-password' };
+const key = () => crypto.randomUUID().replaceAll('-', '') + 'xy';
+const vnDay = (offsetDays: number) =>
+  new Date(Date.now() + 7 * 3600_000 + offsetDays * 86_400_000).toISOString().slice(0, 10);
+
+async function loginApi(request: APIRequestContext, creds = OWNER) {
+  const response = await request.post('/api/auth/login', { data: creds });
+  expect(response.status()).toBe(200);
+  return (await response.json()) as { mustChange: boolean };
+}
+async function post(request: APIRequestContext, url: string, data: unknown, status = 200) {
+  const response = await request.post(url, { data });
+  expect(response.status(), `${url} ${JSON.stringify(data)} -> ${await response.text()}`).toBe(
+    status,
+  );
+  return (await response.json()) as Record<string, any>;
+}
+const nav = (page: Page, name: RegExp | string) =>
+  page.locator('aside').getByRole('button', { name });
+
+/** All-day prices so the tests do not depend on the time of day they run. */
+function allDayRules() {
+  const rules: Record<string, unknown>[] = [];
+  const days = ['weekday', 'weekend', 'holiday'];
+  for (const room of ['standard', 'vip'])
+    for (const day of days) {
+      rules.push({
+        id: `${room}-gdr-${day}`,
+        label: 'GDR',
+        service: 'gdr',
+        room,
+        day,
+        from: '00:00',
+        to: '24:00',
+        people: null,
+        amount: 100000,
+        enabled: true,
+      });
+      for (const [service, unit] of [
+        ['9', 300000],
+        ['18', 400000],
+      ] as const)
+        for (let people = 1; people <= 4; people++)
+          rules.push({
+            id: `${room}-${service}-${people}-${day}`,
+            label: 'Trọn lượt',
+            service,
+            room,
+            day,
+            from: '00:00',
+            to: '24:00',
+            people,
+            amount: unit * people,
+            enabled: true,
+          });
+    }
+  return rules;
+}
+
+test('đăng nhập: sai mật khẩu bị từ chối, đúng thì vào được', async ({ page }) => {
+  await page.goto('/');
+  await page.getByLabel('Email').fill(OWNER.email);
+  await page.getByLabel('Mật khẩu').fill('sai-mat-khau');
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await expect(page.getByText('Email hoặc mật khẩu không đúng')).toBeVisible();
+  await page.getByLabel('Mật khẩu').fill(OWNER.password);
+  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
+  await expect(page.getByText('Một ngày chơi tốt lành.')).toBeVisible();
+});
+
+test('cấu hình cơ sở và nạp danh mục gói', async ({ request }) => {
+  await loginApi(request);
+  const { config } = await (await request.get('/api/club')).json();
+  await post(request, '/api/club', {
+    action: 'settings',
+    value: {
+      ...config,
+      open: '00:00',
+      close: '00:00',
+      capacity: 8,
+      vipCapacity: 2,
+      vat: 8,
+      fee: 5,
+      feeMode: 'percent',
+      holeMinutes9: [75, 75, 75, 75],
+      holeMinutes18: [150, 150, 150, 150],
+      priceRules: allDayRules(),
+      onlineEnabled: true,
+      onlineSlug: 'e2e-golf',
+    },
+  });
+  const seeded = await post(request, '/api/members', { action: 'types-seed' });
+  expect(seeded.created).toBe(13);
+  await post(request, '/api/members', { action: 'types-seed' }, 409);
+});
+
+test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', async ({ page }) => {
+  const request = page.request;
+  await loginApi(request);
+  await post(request, '/api/finance', {
+    action: 'open',
+    requestId: key(),
+    name: 'Ca E2E',
+    openingCash: 500000,
+  });
+
+  const customer = await post(request, '/api/members', {
+    action: 'customer-create',
+    name: 'Khách Gói',
+    phone: '0912000111',
+    note: '',
+  });
+  const list = await (await request.get('/api/members')).json();
+  const type = list.types.find((t: { name: string }) => t.name.startsWith('Combo 18 hố · 10'));
+  await post(request, '/api/members', {
+    action: 'sell',
+    requestId: key(),
+    customerId: customer.id,
+    typeId: type.id,
+    method: 'transfer',
+  });
+  const finance = await (await request.get('/api/finance')).json();
+  expect(finance.shifts[0].transfer_received).toBe(5_000_000);
+
+  // A round starting within 15 minutes so it can be started immediately.
+  const start = Math.ceil((Date.now() + 60_000) / 900_000) * 900_000;
+  const { config } = await (await request.get('/api/club')).json();
+  const booked = await post(request, '/api/club', {
+    action: 'book',
+    room: 'line-1',
+    service: '18',
+    start,
+    people: 1,
+    minutes: 0,
+    customer: 'Khách Gói',
+    phone: '+84 912 000 111',
+    expectedRevision: config.pricingRevision,
+  });
+  await post(request, '/api/club', { action: 'start', id: booked.id });
+  await post(request, '/api/club', { action: 'finish', id: booked.id });
+
+  const usable = await (await request.get(`/api/members?usableFor=${booked.id}`)).json();
+  expect(usable.packages).toHaveLength(1);
+  const redeemed = await post(request, '/api/members', {
+    action: 'redeem',
+    bookingId: booked.id,
+    packageId: usable.packages[0].id,
+  });
+  expect(redeemed).toMatchObject({ paid: true, remainingDue: 0 });
+  const club = await (await request.get('/api/club')).json();
+  const paid = club.bookings.find((b: { id: string }) => b.id === booked.id);
+  expect([paid.status, paid.payment]).toEqual(['paid', 'package']);
+
+  await page.goto('/');
+  await nav(page, /Hội viên/).click();
+  await page.getByRole('button', { name: /Khách Gói/ }).click();
+  await expect(page.getByText('Điểm tích lũy:')).toBeVisible();
+  await expect(page.getByText(/10 Lượt 18 hố/)).toBeVisible();
+});
+
+test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách thấy kết quả', async ({
+  browser,
+  page,
+}) => {
+  await loginApi(page.request);
+  const guest = await browser.newContext({ locale: 'vi-VN', timezoneId: 'Asia/Ho_Chi_Minh' });
+  const customer = await guest.newPage();
+  await customer.goto('/book/e2e-golf');
+  await customer.getByLabel('Dịch vụ').selectOption('18');
+  await customer.getByLabel(/Ngày, giờ bắt đầu/).fill(`${vnDay(1)}T10:00`);
+  await customer.getByLabel('Họ và tên').fill('Khách Online');
+  await customer.getByLabel('Số điện thoại').fill('0933444555');
+  await customer.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
+  await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
+
+  await page.goto('/');
+  await nav(page, /Đặt online/).click();
+  const row = page.getByRole('row', { name: /Khách Online/ });
+  await expect(row).toBeVisible();
+  await row.getByRole('button', { name: 'Xác nhận' }).click();
+  await expect(row.getByText('Đã xác nhận lịch')).toBeVisible();
+
+  await customer.reload();
+  await expect(customer.getByText('Đã xác nhận lịch')).toBeVisible();
+  await guest.close();
+});
+
+test('phân quyền: thu ngân chỉ làm được việc của thu ngân', async ({ browser, page }) => {
+  await loginApi(page.request);
+  const created = await post(page.request, '/api/staff', {
+    action: 'create',
+    email: 'thungan@e2e.test',
+    name: 'Thu Ngân',
+    role: 'cashier',
+  });
+  const temporary = created.temporaryPassword as string;
+
+  const ctx = await browser.newContext({ locale: 'vi-VN' });
+  const cashier = ctx.request;
+  expect(
+    (await loginApi(cashier, { email: 'thungan@e2e.test', password: temporary })).mustChange,
+  ).toBe(true);
+  expect((await cashier.get('/api/club')).status()).toBe(403); // must change the temporary password first
+  await post(cashier, '/api/auth/password', {
+    action: 'change',
+    current: temporary,
+    next: 'thungan-e2e-2026',
+  });
+
+  expect((await cashier.get('/api/club')).status()).toBe(200);
+  expect((await cashier.get('/api/finance')).status()).toBe(200);
+  for (const url of ['/api/staff', '/api/export'])
+    expect((await cashier.get(url)).status(), url).toBe(403);
+  await post(cashier, '/api/club', { action: 'settings', value: {} }, 403);
+  await post(
+    cashier,
+    '/api/members',
+    {
+      action: 'type-save',
+      requestId: key(),
+      name: 'Gói thử',
+      price: 1000,
+      grants: [{ kind: 'gdr', qty: 1 }],
+      validDays: 1,
+      perks: '',
+      active: true,
+    },
+    403,
+  );
+
+  const view = await ctx.newPage();
+  await view.goto('/');
+  await expect(view.getByText('Một ngày chơi tốt lành.')).toBeVisible();
+  await expect(nav(view, /Cài đặt cơ sở/)).toHaveCount(0);
+  await expect(nav(view, /Nhân viên/)).toHaveCount(0);
+  await expect(nav(view, /Hội viên/)).toBeVisible();
+  await ctx.close();
+});
+
+test('thông tin đăng nhập giả mạo từ nền tảng cũ không có tác dụng', async ({ request }) => {
+  const forged = await request.get('/api/club', {
+    headers: {
+      'oai-authenticated-user-id': 'e2e-tenant',
+      'oai-authenticated-user-email': 'owner@e2e.test',
+    },
+  });
+  expect(forged.status()).toBe(401);
+});

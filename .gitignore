@@ -48,3 +48,8 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 golf3d-backup-*.json
+
+# E2E
+/.e2e-state/
+/test-results/
+/playwright-report/

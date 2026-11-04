@@ -1,7 +1,7 @@
 """Exercise the actual parameterized SQLite statements used by the D1 route."""
 import sqlite3, pathlib, re, unittest, tempfile, concurrent.futures
 ROOT=pathlib.Path(__file__).resolve().parents[1]
-SOURCE=(ROOT/'app/api/club/route.ts').read_text()
+SOURCE=(ROOT/'lib/server/club-service.ts').read_text()
 SQL=re.search(r'prepare\(\s*"(INSERT INTO bookings.*?)",?\s*\)',SOURCE).group(1)
 SETTINGS=re.search(r'prepare\(\s*"(INSERT INTO settings.*?)",?\s*\)',SOURCE).group(1)
 UPDATE=re.search(r"prepare\(\s*['\"](UPDATE bookings SET status=\?,segments=.*?)['\"],?\s*\)",SOURCE).group(1)

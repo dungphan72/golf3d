@@ -14,7 +14,7 @@ import { sendResult, httpError } from '../lib/server/http';
  * While hosted on OpenAI Sites the platform injects a trusted identity header. Anywhere else that
  * header is attacker-controlled, so a deployment MUST set DISABLE_SITES_IDENTITY=1.
  */
-function sitesIdentityEnabled() {
+export function sitesIdentityEnabled() {
   const flag = (env as unknown as Record<string, unknown>).DISABLE_SITES_IDENTITY;
   return !(flag === '1' || flag === 1 || flag === 'true' || flag === true);
 }

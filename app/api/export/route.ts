@@ -15,7 +15,24 @@ const TABLES = [
   'food_orders',
   'stock_items',
   'stock_movements',
+  'customers',
+  'package_types',
+  'customer_packages',
+  'package_ledger',
+  'package_redemptions',
+  'loyalty_ledger',
+  'booking_requests',
 ] as const;
+// Tables added by later migrations may not exist yet on an older database.
+const OPTIONAL = new Set([
+  'customers',
+  'package_types',
+  'customer_packages',
+  'package_ledger',
+  'package_redemptions',
+  'loyalty_ledger',
+  'booking_requests',
+]);
 const LIMIT = 200_000;
 
 export async function GET() {
@@ -25,12 +42,17 @@ export async function GET() {
     const db = env.DB!;
     const data: Record<string, unknown[]> = {};
     for (const table of TABLES) {
-      data[table] = (
-        await db
-          .prepare(`SELECT * FROM ${table} WHERE tenant=? LIMIT ${LIMIT}`)
-          .bind(auth.tenant)
-          .all()
-      ).results;
+      try {
+        data[table] = (
+          await db
+            .prepare(`SELECT * FROM ${table} WHERE tenant=? LIMIT ${LIMIT}`)
+            .bind(auth.tenant)
+            .all()
+        ).results;
+      } catch (e) {
+        if (!OPTIONAL.has(table)) throw e;
+        data[table] = [];
+      }
     }
     const body = JSON.stringify({ format: 'golf3d-export/1', exportedAt: Date.now(), data });
     return new Response(body, {

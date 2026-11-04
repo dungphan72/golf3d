@@ -17,7 +17,8 @@
     "test:migrations": "python tests/migration_splitter_test.py",
     "test:rsc": "node --conditions=react-server --test tests/rsc-transport.test.mjs",
     "test:runtime": "node --import ./scripts/sites-env.mjs --test tests/worker-runtime.test.mjs",
-    "test:tooling": "node --test tests/tooling-parsers.test.mjs"
+    "test:tooling": "node --test tests/tooling-parsers.test.mjs",
+    "deploy:cloudflare": "node scripts/deploy-cloudflare.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

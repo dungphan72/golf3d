@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Flag } from 'lucide-react';
 
 export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: string }) {
@@ -7,6 +7,13 @@ export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: s
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [sitesLogin, setSitesLogin] = useState(false);
+  useEffect(() => {
+    fetch('/api/auth/login')
+      .then((r) => r.json() as Promise<{ sitesLogin?: boolean }>)
+      .then((v) => setSitesLogin(!!v.sitesLogin))
+      .catch(() => {});
+  }, []);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -66,9 +73,11 @@ export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: s
         <button className="primary" disabled={busy}>
           {busy ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
-        <a className="auth-alt" href="/signin-with-chatgpt?return_to=%2F" target="_top">
-          Đăng nhập bằng tài khoản nền tảng (chủ cơ sở)
-        </a>
+        {sitesLogin && (
+          <a className="auth-alt" href="/signin-with-chatgpt?return_to=%2F" target="_top">
+            Đăng nhập bằng tài khoản nền tảng (chủ cơ sở)
+          </a>
+        )}
       </form>
     </div>
   );

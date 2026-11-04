@@ -1,9 +1,19 @@
 import { z } from 'zod';
 import { login } from '../../../../lib/server/auth-service';
-import { sendResult, httpError, sameOrigin, sessionCookie } from '../../../auth-session';
+import {
+  sendResult,
+  httpError,
+  sameOrigin,
+  sessionCookie,
+  sitesIdentityEnabled,
+} from '../../../auth-session';
 export const dynamic = 'force-dynamic';
 
 const input = z.object({ email: z.string().max(200), password: z.string().min(1).max(200) });
+
+export async function GET() {
+  return sendResult({ status: 200, body: { sitesLogin: sitesIdentityEnabled() } });
+}
 
 export async function POST(req: Request) {
   if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);

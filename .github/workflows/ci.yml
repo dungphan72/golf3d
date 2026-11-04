@@ -11,7 +11,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22.13.0
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
@@ -23,3 +23,4 @@ jobs:
         run: |
           for t in booking finance fnb stock package online; do python tests/${t}_sql_test.py; done
           python tests/migration_splitter_test.py
+          python tests/import_backup_test.py

@@ -402,7 +402,7 @@ function FinanceDialog({
       <section className="modal">
         <div className="modal-heading">
           <div>
-            <span className="eyebrow">GOLF3D / CASH DESK</span>
+            <span className="eyebrow">SAIGON GOLF / CASH DESK</span>
             <h2>
               {kind === 'open'
                 ? 'Mở ca mới'

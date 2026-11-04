@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Flag } from 'lucide-react';
+import { BRAND } from '../../lib/brand';
 
 export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: string }) {
   const [email, setEmail] = useState('');
@@ -37,12 +37,9 @@ export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: s
   return (
     <div className="auth-screen">
       <form className="auth-card" onSubmit={submit}>
-        <div className="brand-mark">
-          <Flag size={23} />
-        </div>
-        <h1>
-          GOLF<span className="gold">3D</span>
-        </h1>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img className="brand-logo" src={BRAND.logo} alt={BRAND.name} width={88} height={88} />
+        <h1>{BRAND.name}</h1>
         <p>Đăng nhập để vào không gian làm việc</p>
         {notice && <p className="form-note">{notice}</p>}
         <label>

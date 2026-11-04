@@ -125,7 +125,7 @@ export function BookingTable({
     return (
       <Empty
         title="Chưa có lịch trong danh sách"
-        text="Tạo lịch đặt đầu tiên để bắt đầu quản lý trải nghiệm tại Golf3D."
+        text="Tạo lịch đặt đầu tiên để bắt đầu quản lý trải nghiệm tại Saigon Golf 3D Club."
       />
     );
   return (

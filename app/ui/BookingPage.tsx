@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
+import { BRAND } from '../../lib/brand';
 
 type Info = {
   name: string;
@@ -139,172 +140,185 @@ export default function BookingPage({ slug }: { slug: string }) {
     return (
       <div className="auth-screen">
         <div className="auth-card">
-          <h1>Golf3D</h1>
+          <h1>{BRAND.name}</h1>
           <p>{loadError}</p>
+          <p className="hotline">
+            Hotline: <a href={'tel:' + BRAND.hotline}>{BRAND.hotline}</a>
+          </p>
         </div>
       </div>
     );
   if (!info) return <div className="auth-screen">Đang tải…</div>;
   return (
     <div className="auth-screen">
-      {code && status ? (
-        <div className="auth-card">
-          <h1>{info.name}</h1>
-          <p>
-            <strong>{REQUEST_STATUS_LABELS[status.status] ?? status.status}</strong>
-          </p>
-          <p>
-            {SERVICE[status.service]} · {status.vip ? 'phòng VIP' : 'line thường'} · {status.people}{' '}
-            người
-            <br />
-            {when(status.start)}
-            {status.total != null && (
-              <>
-                <br />
-                Tạm tính: {money(status.total)} (chưa gồm F&B)
-              </>
-            )}
-          </p>
-          {status.status === 'pending' && (
-            <p className="form-note">
-              Nhân viên sẽ liên hệ qua số điện thoại bạn đã nhập để xác nhận. Trang này tự cập nhật.
-            </p>
-          )}
-          {status.status === 'confirmed' && (
-            <p className="form-note">Hẹn gặp bạn tại {info.address}.</p>
-          )}
-          {status.status === 'rejected' && status.reason && <p>Lý do: {status.reason}</p>}
-          {error && (
-            <div className="error-box" role="alert">
-              {error}
-            </div>
-          )}
-          {status.status === 'pending' && (
-            <button className="secondary" onClick={cancel}>
-              Hủy yêu cầu
-            </button>
-          )}
-          {status.status !== 'pending' && (
-            <button className="primary" onClick={again}>
-              Đặt lịch khác
-            </button>
-          )}
+      <div className="booking-wrap">
+        <div className="banner-card">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={BRAND.banner} alt={BRAND.name} width={1600} height={640} />
         </div>
-      ) : (
-        <form className="auth-card" onSubmit={submit}>
-          <h1>{info.name}</h1>
-          <p>
-            {info.address} · mở cửa {info.open}–{info.close}
-          </p>
-          <label>
-            Dịch vụ
-            <select
-              value={form.service}
-              onChange={(e) => setForm({ ...form, service: e.target.value })}
-            >
-              <option value="18">Chơi 18 hố</option>
-              <option value="9">Chơi 9 hố</option>
-              <option value="gdr">Luyện tập GDR</option>
-            </select>
-          </label>
-          <label>
-            Ngày, giờ bắt đầu (giờ Việt Nam)
-            <input
-              type="datetime-local"
-              step={900}
-              value={form.start}
-              onChange={(e) => setForm({ ...form, start: e.target.value })}
-              required
-            />
-          </label>
-          {form.service === 'gdr' && (
+        {code && status ? (
+          <div className="auth-card">
+            <h1>{info.name}</h1>
+            <p>
+              <strong>{REQUEST_STATUS_LABELS[status.status] ?? status.status}</strong>
+            </p>
+            <p>
+              {SERVICE[status.service]} · {status.vip ? 'phòng VIP' : 'line thường'} ·{' '}
+              {status.people} người
+              <br />
+              {when(status.start)}
+              {status.total != null && (
+                <>
+                  <br />
+                  Tạm tính: {money(status.total)} (chưa gồm F&B)
+                </>
+              )}
+            </p>
+            {status.status === 'pending' && (
+              <p className="form-note">
+                Nhân viên sẽ liên hệ qua số điện thoại bạn đã nhập để xác nhận. Trang này tự cập
+                nhật.
+              </p>
+            )}
+            {status.status === 'confirmed' && (
+              <p className="form-note">Hẹn gặp bạn tại {info.address}.</p>
+            )}
+            {status.status === 'rejected' && status.reason && <p>Lý do: {status.reason}</p>}
+            {error && (
+              <div className="error-box" role="alert">
+                {error}
+              </div>
+            )}
+            {status.status === 'pending' && (
+              <button className="secondary" onClick={cancel}>
+                Hủy yêu cầu
+              </button>
+            )}
+            {status.status !== 'pending' && (
+              <button className="primary" onClick={again}>
+                Đặt lịch khác
+              </button>
+            )}
+          </div>
+        ) : (
+          <form className="auth-card" onSubmit={submit}>
+            <h1>{info.name}</h1>
+            <p>
+              {info.address} · mở cửa {info.open}–{info.close}
+            </p>
             <label>
-              Thời lượng
+              Dịch vụ
               <select
-                value={form.minutes}
-                onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
+                value={form.service}
+                onChange={(e) => setForm({ ...form, service: e.target.value })}
               >
-                {[60, 90, 120, 150, 180].map((n) => (
+                <option value="18">Chơi 18 hố</option>
+                <option value="9">Chơi 9 hố</option>
+                <option value="gdr">Luyện tập GDR</option>
+              </select>
+            </label>
+            <label>
+              Ngày, giờ bắt đầu (giờ Việt Nam)
+              <input
+                type="datetime-local"
+                step={900}
+                value={form.start}
+                onChange={(e) => setForm({ ...form, start: e.target.value })}
+                required
+              />
+            </label>
+            {form.service === 'gdr' && (
+              <label>
+                Thời lượng
+                <select
+                  value={form.minutes}
+                  onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
+                >
+                  {[60, 90, 120, 150, 180].map((n) => (
+                    <option key={n} value={n}>
+                      {n} phút
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label>
+              Số người
+              <select
+                value={form.people}
+                onChange={(e) => setForm({ ...form, people: Number(e.target.value) })}
+              >
+                {Array.from({ length: info.maxPeople }, (_, i) => i + 1).map((n) => (
                   <option key={n} value={n}>
-                    {n} phút
+                    {n} người
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          <label>
-            Số người
-            <select
-              value={form.people}
-              onChange={(e) => setForm({ ...form, people: Number(e.target.value) })}
-            >
-              {Array.from({ length: info.maxPeople }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n} người
-                </option>
-              ))}
-            </select>
-          </label>
-          {info.vip && (
+            {info.vip && (
+              <label>
+                <span>Phòng VIP riêng tư</span>
+                <input
+                  type="checkbox"
+                  checked={form.vip}
+                  onChange={(e) => setForm({ ...form, vip: e.target.checked })}
+                />
+              </label>
+            )}
             <label>
-              <span>Phòng VIP riêng tư</span>
+              Họ và tên
               <input
-                type="checkbox"
-                checked={form.vip}
-                onChange={(e) => setForm({ ...form, vip: e.target.checked })}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                minLength={2}
+                maxLength={100}
+                required
               />
             </label>
-          )}
-          <label>
-            Họ và tên
+            <label>
+              Số điện thoại
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                required
+              />
+            </label>
+            <label>
+              Ghi chú (không bắt buộc)
+              <input
+                value={form.note}
+                maxLength={300}
+                onChange={(e) => setForm({ ...form, note: e.target.value })}
+              />
+            </label>
+            {/* Honeypot: invisible to people, tempting to bots. */}
             <input
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-              minLength={2}
-              maxLength={100}
-              required
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px' }}
+              value={form.website}
+              onChange={(e) => setForm({ ...form, website: e.target.value })}
             />
-          </label>
-          <label>
-            Số điện thoại
-            <input
-              type="tel"
-              value={form.phone}
-              onChange={(e) => setForm({ ...form, phone: e.target.value })}
-              required
-            />
-          </label>
-          <label>
-            Ghi chú (không bắt buộc)
-            <input
-              value={form.note}
-              maxLength={300}
-              onChange={(e) => setForm({ ...form, note: e.target.value })}
-            />
-          </label>
-          {/* Honeypot: invisible to people, tempting to bots. */}
-          <input
-            tabIndex={-1}
-            autoComplete="off"
-            aria-hidden="true"
-            style={{ position: 'absolute', left: '-9999px' }}
-            value={form.website}
-            onChange={(e) => setForm({ ...form, website: e.target.value })}
-          />
-          {error && (
-            <div className="error-box" role="alert">
-              {error}
-            </div>
-          )}
-          <p className="form-note">
-            Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
-            {info.minLeadMinutes} phút, tối đa {info.days} ngày.
-          </p>
-          <button className="primary" disabled={busy}>
-            {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}
-          </button>
-        </form>
-      )}
+            {error && (
+              <div className="error-box" role="alert">
+                {error}
+              </div>
+            )}
+            <p className="form-note">
+              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
+              {info.minLeadMinutes} phút, tối đa {info.days} ngày.
+            </p>
+            <button className="primary" disabled={busy}>
+              {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}
+            </button>
+          </form>
+        )}
+        <p className="hotline">
+          Hotline: <a href={'tel:' + BRAND.hotline}>{BRAND.hotline}</a> · Đặt lịch: {BRAND.website}
+        </p>
+      </div>
     </div>
   );
 }

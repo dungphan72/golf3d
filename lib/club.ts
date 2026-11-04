@@ -34,7 +34,7 @@ export type Config = {
   onlineSlug?: string;
 };
 export const defaults: Config = {
-  name: 'Golf3D',
+  name: 'Saigon Golf 3D Club',
   address: '250 Lương Đình Của, Phường Bình Trưng, TP.HCM',
   open: '',
   close: '',

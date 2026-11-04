@@ -1,13 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;450;500;550;600;650;700;750;800&display=swap');
 @import 'tailwindcss';
 :root {
-  --green: #153f32;
-  --accent: #e4c17b;
-  --ink: #243e33;
+  --green: #0b4d14;
+  --accent: #f5b50a;
+  --ink: #1b3a22;
   --muted: #839087;
   --border: #e5e9e2;
-  --surface: #f6f7f3;
-  --light: #edf3ed;
+  --surface: #f4f7f1;
+  --light: #e8f3e8;
   --white: #fff;
 }
 * {
@@ -114,7 +114,7 @@ h3 {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #214b3e;
+  background: #0b4d14;
   border: 1px solid #3a5a4a;
   border-radius: 9px;
   margin: 35px 0 29px;
@@ -162,11 +162,11 @@ h3 {
   font-size: 12px;
 }
 .nav-item:hover {
-  background: #244f3f;
+  background: #0b4d14;
 }
 .nav-item.selected {
-  background: #e8c98a;
-  color: #233f30;
+  background: #f5b50a;
+  color: #0b4d14;
   font-weight: 650;
 }
 .count {
@@ -389,7 +389,7 @@ h3 {
   color: white;
 }
 .primary:hover {
-  background: #295a40;
+  background: #0f6a1a;
 }
 .secondary {
   background: #fff;
@@ -496,10 +496,10 @@ h3 {
   background: #8caa85;
 }
 .inplay {
-  background: #1e6648;
+  background: #0f6a1a;
 }
 .reserved {
-  background: #cfb66d;
+  background: #f5b50a;
 }
 .cleaning {
   background: #a3abb3;
@@ -589,16 +589,16 @@ h3 {
   border-color: #afc7aa;
 }
 .room-card.occupied .room-status {
-  color: #28673d;
+  color: #0f6a1a;
 }
 .room-card.occupied .room-status i {
-  background: #28673d;
+  background: #0f6a1a;
 }
 .room-card.has-booking .room-status {
   color: #a28a3f;
 }
 .room-card.has-booking .room-status i {
-  background: #c8af5d;
+  background: #f5b50a;
 }
 .room-card.clean .room-status {
   color: #8898a3;
@@ -607,7 +607,7 @@ h3 {
   padding-top: 2px;
 }
 .daily-card {
-  background: #183e30;
+  background: #0b4d14;
   border-radius: 10px;
   overflow: hidden;
   color: #faf6e8;
@@ -680,7 +680,7 @@ h3 {
   top: 36px;
   width: 38px;
   height: 24px;
-  background: #dfbf78;
+  background: #f5b50a;
   clip-path: polygon(0 0, 100% 50%, 0 100%);
   z-index: 3;
 }
@@ -1236,7 +1236,7 @@ select:focus {
   padding: 15px 20px;
   border: 1px solid #496b41;
   border-radius: 8px;
-  background: #183d2e;
+  background: #0b4d14;
   color: white;
   box-shadow: 0 8px 30px #0002;
   font-size: 12px;
@@ -1298,7 +1298,7 @@ select:focus {
   color: #8e9b80;
 }
 .customer-hero {
-  background: #183e30;
+  background: #0b4d14;
   border-radius: 14px;
   color: #f6f3e6;
   display: grid;
@@ -1313,7 +1313,7 @@ select:focus {
 }
 .customer-hero h1 em {
   font-style: normal;
-  color: #d8bd7b;
+  color: #f5b50a;
 }
 .customer-hero .eyebrow {
   color: #adc19c;
@@ -2194,7 +2194,7 @@ select:focus {
   min-height: 17px;
   height: 17px;
   padding: 0;
-  accent-color: #153f32;
+  accent-color: #0b4d14;
 }
 /* Shift cashbook */
 .finance-toolbar {
@@ -2620,7 +2620,7 @@ select:focus {
   font-size: 9px;
 }
 .kitchen-card blockquote {
-  border-left: 2px solid #d9bc7a;
+  border-left: 2px solid #f5b50a;
   background: #f8f4e9;
   padding: 10px;
   margin: 15px 0;
@@ -2661,7 +2661,7 @@ select:focus {
   width: 17px;
   min-height: 17px;
   height: 17px;
-  accent-color: #153f32;
+  accent-color: #0b4d14;
 }
 .session-food {
   border-top: 1px solid var(--border);
@@ -2962,7 +2962,7 @@ select:focus {
 .auth-alt {
   font-size: 13px;
   text-align: center;
-  color: #2f6b4f;
+  color: #0f6a1a;
 }
 .staff-panel,
 .account-panel.inline {
@@ -3010,7 +3010,7 @@ select:focus {
   background: #fff;
 }
 .customer-list button.selected {
-  border-color: #2f6b4f;
+  border-color: #0f6a1a;
   background: #eef5f1;
 }
 .members-panel table {
@@ -3023,4 +3023,84 @@ select:focus {
   text-align: left;
   border-bottom: 1px solid #e3e8e5;
   vertical-align: top;
+}
+
+/* ---- Saigon Golf 3D Club brand ---- */
+.brand-logo {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: block;
+  background: #fff;
+  box-shadow: 0 0 0 2px #f5b50a;
+}
+.auth-card .brand-logo {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto;
+}
+.auth-card h1 {
+  text-align: center;
+  color: #0b4d14;
+}
+.auth-card p {
+  text-align: center;
+}
+.banner-card {
+  width: min(560px, 100%);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(11, 77, 20, 0.25);
+}
+.banner-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hotline {
+  font-size: 13px;
+  text-align: center;
+  color: #0b4d14;
+}
+.hotline a {
+  color: #0b4d14;
+  font-weight: 700;
+}
+.primary {
+  background: #0b4d14;
+  color: #fff;
+}
+.booking-wrap {
+  display: grid;
+  gap: 16px;
+  justify-items: center;
+  width: 100%;
+  padding: 12px 0 28px;
+}
+.booking-wrap .auth-card {
+  width: min(560px, 100%);
+}
+.sidebar .brand {
+  font-size: 16px;
+  letter-spacing: 0.5px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+.sidebar .brand small {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  margin-top: 4px;
+  color: #f5b50a;
+}
+.auth-card label:has(> input[type='checkbox']),
+.booking-wrap label:has(> input[type='checkbox']) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.auth-card input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  padding: 0;
 }

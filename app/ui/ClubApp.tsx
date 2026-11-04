@@ -47,6 +47,7 @@ import { AccountPanel } from './AccountPanel';
 import { StaffPanel } from './StaffPanel';
 import { MembersPanel } from './MembersPanel';
 import { OnlineRequests } from './OnlineRequests';
+import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
@@ -206,13 +207,12 @@ export default function ClubApp() {
   return (
     <div className="app-shell">
       <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
-        <Link className="brand" href="/" aria-label="Golf3D trang chủ">
-          <span className="brand-mark">
-            <Flag size={23} />
-          </span>
+        <Link className="brand" href="/" aria-label={BRAND.name + ' — trang chủ'}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="brand-logo" src={BRAND.logo} alt="" width={46} height={46} />
           <span>
-            GOLF<span className="gold">3D</span>
-            <small>CLUB MANAGEMENT</small>
+            {BRAND.short}
+            <small className="gold">{BRAND.sub}</small>
           </span>
         </Link>
         <button className="location-switch" onClick={() => go('settings')}>
@@ -253,7 +253,7 @@ export default function ClubApp() {
               <br />
               Vận hành thông minh hơn.
             </p>
-            <span>GOLF3D WORKSPACE · V0.5.4</span>
+            <span>SAIGON GOLF 3D CLUB · V0.6</span>
           </div>
           <button
             className="nav-item"
@@ -285,7 +285,7 @@ export default function ClubApp() {
             >
               <Menu size={22} />
             </button>
-            <span>Golf3D</span>
+            <span>{BRAND.name}</span>
             <ChevronRight size={14} />
             <strong>
               {mode === 'customer'
@@ -334,7 +334,7 @@ export default function ClubApp() {
             </div>
           )}
           {!data && !error ? (
-            <div className="loading">Đang tải không gian Golf3D…</div>
+            <div className="loading">Đang tải không gian Saigon Golf 3D Club…</div>
           ) : (
             <>
               {mode === 'customer' ? (
@@ -353,7 +353,9 @@ export default function ClubApp() {
                   <div className="page-heading">
                     <div>
                       <div className="eyebrow">
-                        {view === 'overview' ? 'GOLF3D / CLUB OPERATIONS' : 'GOLF3D / WORKSPACE'}
+                        {view === 'overview'
+                          ? 'SAIGON GOLF / CLUB OPERATIONS'
+                          : 'SAIGON GOLF / WORKSPACE'}
                       </div>
                       <h1>{titles[view]}</h1>
                       <p>
@@ -465,7 +467,7 @@ export default function ClubApp() {
                               <span className="flag" />
                               <span className="ball" />
                             </div>
-                            <span className="art-caption">GOLF3D · BÌNH TRƯNG</span>
+                            <span className="art-caption">SAIGON GOLF 3D CLUB · BÌNH TRƯNG</span>
                           </div>
                           <div className="quick-card">
                             <h3>Sẵn sàng đón khách?</h3>
@@ -634,7 +636,7 @@ export default function ClubApp() {
           )}
           <footer>
             <span>
-              GOLF3D <i /> Play. Connect. Repeat.
+              SAIGON GOLF 3D CLUB <i /> Play. Connect. Repeat.
             </span>
             <span>250 Lương Đình Của · Bình Trưng, TP.HCM</span>
           </footer>

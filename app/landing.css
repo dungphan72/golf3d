@@ -22,6 +22,17 @@
   --muted: #55657d;
   --line: #d9e3ee;
   --edge: max(16px, calc((100% - 76rem) / 2));
+  /* Type scale (one set of sizes for the whole page) */
+  --t-2xs: 0.75rem;
+  --t-xs: 0.8125rem;
+  --t-sm: 0.875rem;
+  --t-base: 1rem;
+  --t-lg: 1.125rem;
+  --t-h3: 1.25rem;
+  --t-h2: clamp(1.75rem, 1rem + 2.2vw, 2.5rem);
+  --t-num: clamp(1.5rem, 1rem + 1.6vw, 2.25rem);
+  --t-h1a: clamp(1.5rem, 0.9rem + 1.8vw, 2.5rem);
+  --t-h1b: clamp(2.75rem, 1rem + 4.2vw, 4.5rem);
   font-family: 'Lexend', 'Be Vietnam Pro', system-ui, sans-serif;
   color: var(--navy);
   background: var(--bg);
@@ -105,7 +116,7 @@ html:has(.fw) {
 }
 .fw-nav .fw-brand {
   color: #fff;
-  font-size: 1.35rem;
+  font-size: var(--t-lg);
   font-weight: 600;
   letter-spacing: 0.02em;
 }
@@ -115,7 +126,7 @@ html:has(.fw) {
 .fw-nav nav {
   display: flex;
   gap: clamp(1.2rem, 3vw, 3rem);
-  font-size: 0.92rem;
+  font-size: var(--t-sm);
   font-weight: 450;
 }
 .fw-nav nav a {
@@ -140,7 +151,7 @@ html:has(.fw) {
   padding: 0.8rem 0.8rem 0.8rem 2.1rem;
   border-bottom-left-radius: 32px;
   font-weight: 500;
-  font-size: 1rem;
+  font-size: var(--t-base);
 }
 .fw-top-right::before {
   content: '';
@@ -192,7 +203,7 @@ a:hover > .fw-arrow-dot {
 .fw-headline h1 span {
   display: block;
   padding-right: 0.16em;
-  font-size: clamp(2.1rem, 5.2vw, 4.7rem);
+  font-size: var(--t-h1a);
   font-weight: 300;
   letter-spacing: -0.05em;
   color: rgba(233, 243, 255, 0.92);
@@ -201,7 +212,7 @@ a:hover > .fw-arrow-dot {
   display: block;
   margin-top: 0.02em;
   font-weight: 300;
-  font-size: clamp(3.6rem, 12vw, 11rem);
+  font-size: var(--t-h1b);
   font-weight: 250;
   letter-spacing: -0.06em;
   line-height: 1.04;
@@ -212,7 +223,7 @@ a:hover > .fw-arrow-dot {
   max-width: 17.5rem;
   margin: 0.4rem 0 0 auto;
   padding-right: 0.2rem;
-  font-size: clamp(0.85rem, 1vw, 0.95rem);
+  font-size: var(--t-sm);
   line-height: 1.55;
   color: rgba(255, 255, 255, 0.88);
   text-shadow:
@@ -230,7 +241,7 @@ a:hover > .fw-arrow-dot {
   color: var(--navy);
   border-radius: 18px;
   padding: 0.65rem 1rem;
-  font-size: 0.86rem;
+  font-size: var(--t-sm);
   font-weight: 450;
   max-width: 11rem;
   line-height: 1.4;
@@ -268,14 +279,14 @@ a:hover > .fw-arrow-dot {
   color: var(--navy);
 }
 .fw-side-time span {
-  font-size: 1.85rem;
+  font-size: var(--t-h3);
   font-weight: 300;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
 .fw-side-time small {
   color: #7f8da3;
-  font-size: 1rem;
+  font-size: var(--t-sm);
   font-weight: 400;
 }
 
@@ -296,13 +307,13 @@ a:hover > .fw-arrow-dot {
 .fw-card b {
   display: block;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: var(--t-base);
   line-height: 1.25;
 }
 .fw-card small {
   display: block;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--t-xs);
   line-height: 1.4;
   margin-top: 3px;
 }
@@ -331,7 +342,7 @@ a:hover > .fw-arrow-dot {
   border-radius: 50%;
   border: 2px solid #fff;
   font-style: normal;
-  font-size: 0.72rem;
+  font-size: var(--t-2xs);
   font-weight: 700;
   color: #fff;
 }
@@ -354,7 +365,7 @@ a:hover > .fw-arrow-dot {
   background: #dff1e1;
   color: #1d5f2c;
   font-style: normal;
-  font-size: 0.8rem;
+  font-size: var(--t-xs);
   font-weight: 600;
 }
 .fw-card-discover {
@@ -411,7 +422,7 @@ a:hover > .fw-arrow-dot {
 .fw-fixed nav {
   display: flex;
   gap: clamp(0.7rem, 1.6vw, 1.4rem);
-  font-size: 0.85rem;
+  font-size: var(--t-sm);
   font-weight: 500;
 }
 .fw-fixed nav a:hover {
@@ -426,7 +437,7 @@ a:hover > .fw-arrow-dot {
   padding: 0.55rem 1.1rem;
   border-radius: 999px;
   font-weight: 600;
-  font-size: 0.88rem;
+  font-size: var(--t-sm);
 }
 
 /* ---------- Sections ---------- */
@@ -447,7 +458,7 @@ a:hover > .fw-arrow-dot {
   max-width: 44rem;
 }
 .fw-kicker {
-  font-size: 0.8rem;
+  font-size: var(--t-xs);
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -458,7 +469,7 @@ a:hover > .fw-arrow-dot {
 .fw-booking h2,
 .fw-contact h2 {
   font-weight: 300;
-  font-size: clamp(2.1rem, 4.8vw, 3.9rem);
+  font-size: var(--t-h2);
   line-height: 1.05;
   letter-spacing: -0.04em;
   text-wrap: balance;
@@ -466,7 +477,7 @@ a:hover > .fw-arrow-dot {
 .fw-sub {
   margin-top: 1rem;
   color: var(--muted);
-  font-size: 1.05rem;
+  font-size: var(--t-base);
   max-width: 38rem;
   text-wrap: pretty;
 }
@@ -478,14 +489,14 @@ a:hover > .fw-arrow-dot {
 }
 .fw-tile h3 {
   font-weight: 600;
-  font-size: 1.2rem;
+  font-size: var(--t-h3);
   letter-spacing: -0.02em;
   margin: 1rem 0 0.4rem;
   line-height: 1.2;
 }
 .fw-tile p {
   color: var(--muted);
-  font-size: 0.97rem;
+  font-size: var(--t-base);
 }
 .fw-steps {
   list-style: none;
@@ -537,7 +548,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-gold-panel h2 {
   font-weight: 300;
-  font-size: clamp(1.9rem, 4vw, 3.2rem);
+  font-size: var(--t-h2);
   line-height: 1.05;
   letter-spacing: -0.04em;
   text-wrap: balance;
@@ -563,13 +574,13 @@ a:hover > .fw-arrow-dot {
 .fw-figs strong {
   display: block;
   font-weight: 300;
-  font-size: clamp(1.7rem, 3.2vw, 2.7rem);
+  font-size: var(--t-num);
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 .fw-figs > div > span {
-  font-size: 0.88rem;
+  font-size: var(--t-sm);
   color: rgba(255, 255, 255, 0.85);
 }
 
@@ -587,7 +598,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-table-card th {
   text-align: left;
-  font-size: 0.82rem;
+  font-size: var(--t-xs);
   font-weight: 600;
   color: var(--muted);
   padding: 1.1rem 1.5rem;
@@ -607,7 +618,7 @@ a:hover > .fw-arrow-dot {
   display: inline-block;
   margin-left: 0.6rem;
   font-style: normal;
-  font-size: 0.74rem;
+  font-size: var(--t-2xs);
   font-weight: 600;
   padding: 0.15rem 0.55rem;
   border-radius: 999px;
@@ -628,7 +639,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-pk-group h3 {
   font-weight: 600;
-  font-size: 1.15rem;
+  font-size: var(--t-lg);
   margin-bottom: 0.9rem;
   letter-spacing: -0.02em;
 }
@@ -655,24 +666,24 @@ a:hover > .fw-arrow-dot {
 }
 .fw-pk h4 {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--t-base);
   font-weight: 600;
   line-height: 1.3;
 }
 .fw-pk strong {
   font-weight: 300;
-  font-size: 1.9rem;
+  font-size: var(--t-num);
   letter-spacing: -0.04em;
   color: var(--blue);
   line-height: 1.15;
 }
 .fw-pk p {
-  font-size: 0.92rem;
+  font-size: var(--t-sm);
   font-weight: 500;
 }
 .fw-pk small {
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--t-xs);
   line-height: 1.5;
 }
 .fw-pk.vip {
@@ -688,7 +699,7 @@ a:hover > .fw-arrow-dot {
 .fw-note {
   margin-top: 1.5rem;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: var(--t-sm);
 }
 .fw-note a {
   text-decoration: underline;
@@ -717,12 +728,12 @@ a:hover > .fw-arrow-dot {
   cursor: pointer;
   padding: 1rem 0;
   font-weight: 600;
-  font-size: 0.98rem;
+  font-size: var(--t-base);
 }
 .fw-faq p {
   padding-bottom: 1rem;
   color: var(--muted);
-  font-size: 0.95rem;
+  font-size: var(--t-base);
 }
 .fw-form {
   background: var(--card);
@@ -740,7 +751,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-call h3 {
   font-weight: 600;
-  font-size: 1.4rem;
+  font-size: var(--t-h3);
 }
 .fw-call p {
   color: var(--muted);
@@ -780,7 +791,7 @@ a:hover > .fw-arrow-dot {
 }
 .booking-embed .auth-card h1 {
   text-align: left;
-  font-size: 1.35rem;
+  font-size: var(--t-h3);
   color: var(--navy);
 }
 .booking-embed .auth-card p,
@@ -788,7 +799,7 @@ a:hover > .fw-arrow-dot {
   text-align: left;
 }
 .booking-embed label {
-  font-size: 0.9rem;
+  font-size: var(--t-sm);
   color: var(--muted);
 }
 .booking-embed input,
@@ -846,7 +857,7 @@ a:hover > .fw-arrow-dot {
   gap: 0.5rem;
   padding: 1.5rem var(--edge) 2rem;
   color: var(--muted);
-  font-size: 0.85rem;
+  font-size: var(--t-sm);
 }
 .fw-footer a {
   text-decoration: underline;
@@ -890,7 +901,7 @@ a:hover > .fw-arrow-dot {
     display: none;
   }
   .fw-nav .fw-brand span {
-    font-size: 1.05rem;
+    font-size: var(--t-base);
   }
   .fw-top-right {
     padding-left: 1.2rem;
@@ -986,7 +997,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-gc3 h3 {
   font-weight: 300;
-  font-size: clamp(1.7rem, 3.4vw, 2.8rem);
+  font-size: var(--t-h2);
   line-height: 1.08;
   letter-spacing: -0.04em;
   margin: 0.2rem 0 1rem;
@@ -998,7 +1009,7 @@ a:hover > .fw-arrow-dot {
   display: block;
   margin-top: 1.25rem;
   color: rgba(255, 255, 255, 0.55);
-  font-size: 0.78rem;
+  font-size: var(--t-xs);
 }
 .fw-gc3 img {
   width: 100%;
@@ -1042,9 +1053,30 @@ a:hover > .fw-arrow-dot {
   color: #fff;
 }
 .fw-side-time span {
-  font-size: 1.5rem;
+  font-size: var(--t-h3);
 }
 .fw-side-time small {
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: var(--t-sm);
+}
+
+/* embedded booking form follows the same type scale */
+.fw .booking-embed input,
+.fw .booking-embed select,
+.fw .booking-embed .primary {
+  font-size: var(--t-base);
+}
+.fw .booking-embed .form-note,
+.fw .booking-embed .error-box {
+  font-size: var(--t-xs);
+  line-height: 1.5;
+}
+.fw .booking-embed .auth-card p {
+  font-size: var(--t-sm);
+}
+
+/* package prices stay on one line, one size step below the stat numbers */
+.fw .fw-pk strong {
+  font-size: 1.625rem;
+  white-space: nowrap;
 }

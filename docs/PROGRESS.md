@@ -179,3 +179,7 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 
 - Trang chủ đổi sang font **Lexend** (hình học, nét mảnh, chữ "a" một tầng như mẫu; hỗ trợ đầy đủ tiếng Việt). Tiêu đề lớn dùng độ mảnh 250/300, chữ nhỏ 400–500; Be Vietnam Pro làm dự phòng. Font nạp từ Google Fonts trong `app/page.tsx`.
 - Mẫu dùng font không có bộ dấu tiếng Việt (nhiều font hình học như Outfit, Urbanist chỉ có Latin) nên em chọn Lexend vì giống nhất mà vẫn đủ dấu.
+
+## v0.9.10 — Thang cỡ chữ thống nhất
+
+- Mọi cỡ chữ của trang chủ dùng một thang biến (`--t-2xs … --t-h1b` đầu `app/landing.css`): chữ nhỏ 12–14px, nội dung 16px, tiêu đề phụ 18–20px, tiêu đề mục tối đa 40px, số liệu tối đa 36px, tiêu đề hero tối đa 72px (trước đó tới ~176px). Muốn đổi cỡ toàn trang chỉ sửa các biến này.

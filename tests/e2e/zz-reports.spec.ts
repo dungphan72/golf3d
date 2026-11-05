@@ -31,4 +31,11 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
     .click();
   await expect(page.getByText('Doanh thu theo ngày')).toBeVisible();
   await expect(page.getByRole('rowheader', { name: 'Tổng thu' })).toBeVisible();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Tải file CSV' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(
+    /^bao-cao-doanh-thu_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.csv$/,
+  );
 });

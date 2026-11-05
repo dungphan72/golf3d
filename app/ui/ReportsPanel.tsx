@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
 import { money } from '../../lib/club';
+import { toCsv } from '../../lib/csv';
 
 type Day = {
   day: string;
@@ -55,6 +56,40 @@ export function ReportsPanel() {
   }, [report]);
   const received = totals.cash + totals.transfer + totals.card;
   const peak = Math.max(1, ...(report?.days ?? []).map((d) => d.cash + d.transfer + d.card));
+  function download() {
+    if (!report) return;
+    const rows: (string | number)[][] = [
+      [
+        'Ngày',
+        'Tiền mặt',
+        'Chuyển khoản',
+        'Thẻ',
+        'Tổng thu',
+        'Bán gói',
+        'Chi tiền mặt',
+        'Lượt thanh toán',
+      ],
+      ...report.days.map((d) => [
+        d.day,
+        d.cash,
+        d.transfer,
+        d.card,
+        d.cash + d.transfer + d.card,
+        d.packages,
+        d.expenses,
+        d.payments,
+      ]),
+      [],
+      ['Dịch vụ', 'Số lượt', 'Doanh thu phiếu', 'F&B'],
+      ...report.services.map((s) => [SERVICE[s.service] ?? s.service, s.rounds, s.revenue, s.food]),
+    ];
+    const url = URL.createObjectURL(new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bao-cao-doanh-thu_${from}_${to}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
   const chart = [...(report?.days ?? [])].reverse();
 
   return (
@@ -68,6 +103,9 @@ export function ReportsPanel() {
           Đến ngày
           <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
         </label>
+        <button type="button" className="secondary" disabled={!report} onClick={download}>
+          Tải file CSV
+        </button>
       </div>
       {error && (
         <div className="error-box" role="alert">

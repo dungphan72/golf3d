@@ -169,3 +169,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Thay bộ ảnh theo 4 ảnh mới (banner chỉ có logo, ảnh vuông quả bóng, poster dọc, banner có khu ghế chờ). Nền hero là ảnh phòng chơi (ghế chờ, màn hình, túi gậy) cắt từ banner khu ghế chờ, đã loại phần chữ; banner dùng bản chỉ có logo; ảnh xem trước khi chia sẻ cắt từ banner logo.
 - Thêm khối "Foresight GC3 đo từng cú đánh" dùng ảnh thiết bị GC3 (3 góc nhìn) lấy từ https://www.foresightsports.asia, ghi nguồn "Ảnh thiết bị: Foresight Sports". Không dùng ảnh có huy hiệu giải thưởng Golf Monthly. Chủ cơ sở xác nhận (05/11/2026) đã được Foresight Sports Asia cho phép dùng ảnh trên website của cơ sở.
 - Poster dọc chưa dùng (có logo lớn, hợp làm ảnh story/áp phích hơn).
+
+## v0.9.8 — Phần đầu trang bám sát mẫu Fairway
+
+- Dựng lại hero theo ảnh mẫu ở độ phân giải cao: khung viền trắng bo góc trên nền cảnh mờ tối, menu nằm thẳng trên ảnh (không có tab), tab trắng khoét góc "Đặt chỗ" kèm nút tròn xanh nhạt, tiêu đề "Nâng tầm" mảnh nhỏ + "cú đánh" cực lớn lệch nhau như mẫu, đoạn mô tả nhỏ bên dưới, bong bóng lời thoại bo vuông, tab dọc giờ mở cửa ở góc dưới trái, thẻ "Giờ vàng" (thay cho thẻ "thành viên mới"), thẻ "Khám phá phòng chơi" có ảnh trên, nút tròn cuộn xuống.
+- Khác mẫu có chủ ý: ảnh nền là phòng chơi thật (không có người chơi chụp ngoài trời), chuỗi huy hiệu 9/18/GDR/VIP thay cho ảnh avatar (không dùng ảnh người giả).

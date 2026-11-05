@@ -1,5 +1,15 @@
 import type { Metadata } from 'next';
-import { ArrowDown, ArrowUpRight, Clock, Crown, Flag, MapPin, Phone, Target } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Clock,
+  Crown,
+  Flag,
+  MapPin,
+  Phone,
+  Target,
+} from 'lucide-react';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import { OFFICIAL_PACKAGES } from '../lib/official-packages';
@@ -185,10 +195,10 @@ export default async function LandingPage() {
             </picture>
             <div className="fw-shade" aria-hidden="true" />
 
-            <div className="fw-top-left">
+            <div className="fw-nav">
               <a className="fw-brand" href="#top">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={BRAND.logo} alt="" width={34} height={34} />
+                <img src={BRAND.logo} alt="" width={36} height={36} />
                 <span>{BRAND.short}</span>
               </a>
               <nav>
@@ -202,7 +212,7 @@ export default async function LandingPage() {
             <a className="fw-top-right" href={bookHref}>
               {bookLabel}{' '}
               <span className="fw-arrow-dot">
-                <ArrowUpRight size={15} />
+                <ArrowUpRight size={17} />
               </span>
             </a>
 
@@ -212,8 +222,8 @@ export default async function LandingPage() {
                 <strong>cú đánh</strong>
               </h1>
               <p>
-                Golf 3D mô phỏng Foresight GC3 giữa lòng thành phố. Nắng mưa đều chơi, phòng riêng
-                cho bạn bè, mở cửa mỗi ngày 08:00–23:00.
+                Golf 3D mô phỏng Foresight GC3, trải nghiệm khó quên và một cộng đồng cùng chung đam
+                mê, giữa lòng thành phố.
               </p>
             </div>
 
@@ -225,32 +235,40 @@ export default async function LandingPage() {
             </div>
 
             <a className="fw-card fw-card-gold" href="#gio-vang">
-              <span className="fw-card-icon">
-                <Clock size={20} />
-              </span>
-              <span>
-                <b>Giờ vàng</b>
-                <small>T2–T6 · 08:00–11:00 · GDR từ 100.000đ</small>
-              </span>
-              <span className="fw-arrow-dot">
-                <ArrowUpRight size={15} />
-              </span>
+              <div className="fw-chips" aria-hidden="true">
+                <i>9</i>
+                <i>18</i>
+                <i>GDR</i>
+                <i>VIP</i>
+                <em>10 line</em>
+              </div>
+              <div className="fw-card-foot">
+                <span>
+                  <b>Giờ vàng miễn phí đồ uống</b>
+                  <small>T2–T6 · 08:00–11:00 · GDR từ 100.000đ</small>
+                </span>
+                <span className="fw-arrow-dot">
+                  <ArrowRight size={18} />
+                </span>
+              </div>
             </a>
 
             <a className="fw-card fw-card-discover" href="#dich-vu">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={BRAND.banner} alt="Phòng chơi Foresight GC3" />
-              <span>
-                <b>Khám phá phòng chơi</b>
-                <small>10 line, trong đó 2 phòng VIP riêng tư.</small>
-              </span>
-              <span className="fw-arrow-dot">
-                <ArrowUpRight size={15} />
-              </span>
+              <img src="/img/space-wide.webp" alt="Khu vực chờ và line chơi" />
+              <div className="fw-card-foot">
+                <span>
+                  <b>Khám phá phòng chơi của bạn.</b>
+                  <small>10 line, trong đó 2 phòng VIP riêng tư.</small>
+                </span>
+                <span className="fw-arrow-dot">
+                  <ArrowRight size={18} />
+                </span>
+              </div>
             </a>
 
             <a className="fw-scroll" href="#dich-vu" aria-label="Cuộn xuống">
-              <ArrowDown size={18} />
+              <ArrowDown size={20} />
             </a>
           </div>
         </section>

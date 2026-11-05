@@ -278,8 +278,8 @@ export default function BookingPage({
               {info.address} · mở cửa {info.open}–{info.close}
             </p>
             <label>
-              Dịch vụ
               <select
+                aria-label="Dịch vụ"
                 value={form.service}
                 onChange={(e) => setForm({ ...form, service: e.target.value })}
               >
@@ -289,8 +289,9 @@ export default function BookingPage({
               </select>
             </label>
             <label>
-              Ngày, giờ bắt đầu (giờ Việt Nam)
               <input
+                aria-label="Ngày, giờ bắt đầu (giờ Việt Nam)"
+                title="Ngày, giờ bắt đầu (giờ Việt Nam)"
                 type="datetime-local"
                 step={900}
                 value={form.start}
@@ -314,8 +315,8 @@ export default function BookingPage({
               </label>
             )}
             <label>
-              Số người
               <select
+                aria-label="Số người"
                 value={form.people}
                 onChange={(e) => setForm({ ...form, people: Number(e.target.value) })}
               >
@@ -337,8 +338,9 @@ export default function BookingPage({
               </label>
             )}
             <label>
-              Họ và tên
               <input
+                aria-label="Họ và tên"
+                placeholder="Họ và tên"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 minLength={2}
@@ -347,8 +349,9 @@ export default function BookingPage({
               />
             </label>
             <label>
-              Số điện thoại
               <input
+                aria-label="Số điện thoại"
+                placeholder="Số điện thoại"
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -356,8 +359,9 @@ export default function BookingPage({
               />
             </label>
             <label>
-              Ghi chú (không bắt buộc)
               <input
+                aria-label="Ghi chú (không bắt buộc)"
+                placeholder="Ghi chú (không bắt buộc)"
                 value={form.note}
                 maxLength={300}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}

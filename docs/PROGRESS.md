@@ -209,5 +209,5 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 ## v0.10.3 — Trang thẻ hội viên `/thanh-vien`
 
 - Trang công khai mới: quyền lợi hội viên (chơi mỗi ngày, đặt trước 4 tuần, gửi gậy miễn phí, bảo lưu một lần tối đa 6 tháng, đặt thêm giảm 10%), các thẻ hội viên và gói giờ. Thẻ và gói lấy từ danh mục gói trong admin (nhóm có tên bắt đầu bằng "Thẻ" hiện ở mục thẻ, còn lại ở mục gói giờ), nên sửa giá trong admin là trang đổi theo.
-- Danh sách quyền lợi viết cố định trong `app/thanh-vien/page.tsx` (tham khảo saigonswing.com/indoor-golf-membership); câu lạc bộ cần xác nhận lại từng điều.
+- Quyền lợi sửa trong Cài đặt (ô "Quyền lợi hội viên", mỗi dòng "Tiêu đề | Mô tả", tối đa 12; để trống thì ẩn mục). Chưa lưu gì thì hiện danh sách mặc định trong `lib/member-benefits.ts`.
 - Có liên kết từ trang chủ và `/bang-gia`. Kiểm thử: `tests/e2e/zy-membership-page.spec.ts`.

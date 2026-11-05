@@ -1,5 +1,6 @@
 import { db, loadConfig } from './common';
 import { officialPriceRules } from '../official-pricing';
+import { DEFAULT_BENEFITS } from '../member-benefits';
 import { OFFICIAL_PACKAGES } from '../official-packages';
 import {
   buildPriceTable,
@@ -20,6 +21,7 @@ export type PublicPricing = {
   open: string;
   close: string;
   offers: string[];
+  benefits: string[];
   source: 'admin' | 'default';
 };
 
@@ -88,6 +90,7 @@ export async function publicPricing(): Promise<PublicPricing> {
         open: config.open,
         close: config.close,
         offers: config.offers ?? [],
+        benefits: config.memberBenefits ?? DEFAULT_BENEFITS,
         source: 'admin',
       };
     }
@@ -104,6 +107,7 @@ export async function publicPricing(): Promise<PublicPricing> {
     open: '08:00',
     close: '23:00',
     offers: [],
+    benefits: DEFAULT_BENEFITS,
     source: 'default',
   };
 }

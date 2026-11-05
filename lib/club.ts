@@ -37,6 +37,8 @@ export type Config = {
   bankHolder?: string;
   /** Promotions shown on the price page, one per line: Tiêu đề | Giá hoặc mức giảm | Điều kiện. */
   offers?: string[];
+  /** Perks on the membership page, one per line: Tiêu đề | Mô tả. Unset = the standard list. */
+  memberBenefits?: string[];
 };
 export const defaults: Config = {
   name: 'Saigon Golf 3D Club',

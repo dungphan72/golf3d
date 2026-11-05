@@ -1,9 +1,20 @@
 import type { Metadata } from 'next';
-import { ArrowUpRight, CalendarCheck, Check, Crown, Package, Pause, Percent, Phone, Sun } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CalendarCheck,
+  Check,
+  Crown,
+  Package,
+  Pause,
+  Percent,
+  Phone,
+  Sun,
+} from 'lucide-react';
 import '../landing.css';
 import '../bang-gia/pricing.css';
 import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
+import { parseBenefit } from '../../lib/member-benefits';
 import { packageBullets, type PackageGroup } from '../../lib/price-table';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
@@ -23,14 +34,7 @@ export const metadata: Metadata = {
   },
 };
 
-// Quyền lợi chung của thẻ hội viên (theo chính sách câu lạc bộ).
-const BENEFITS = [
-  { icon: Sun, title: 'Chơi mỗi ngày', text: 'Mở cửa cả năm, mỗi ngày có sẵn giờ chơi theo loại thẻ.' },
-  { icon: CalendarCheck, title: 'Đặt trước 4 tuần', text: 'Hội viên được giữ chỗ sớm hơn khách lẻ.' },
-  { icon: Package, title: 'Gửi gậy miễn phí', text: 'Gửi bộ gậy tại câu lạc bộ, không tính phí.' },
-  { icon: Pause, title: 'Bảo lưu một lần', text: 'Tạm dừng thẻ một lần, tối đa 6 tháng.' },
-  { icon: Percent, title: 'Đặt thêm giảm 10%', text: 'Mọi giờ đặt thêm ngoài quyền lợi của thẻ được giảm 10%.' },
-];
+const ICONS = [Sun, CalendarCheck, Package, Pause, Percent, Check];
 
 const isCard = (g: PackageGroup) => /^thẻ/i.test(g.title);
 
@@ -65,6 +69,7 @@ export default async function MembershipPage() {
   const [pricing, slug] = await Promise.all([publicPricing(), bookingSlug()]);
   const bookHref = slug ? '/#dat-cho' : `tel:${BRAND.hotline}`;
   const bookLabel = slug ? 'Đặt chỗ' : 'Gọi đặt chỗ';
+  const benefits = pricing.benefits.map(parseBenefit).filter((b) => b.title);
   const cards = pricing.groups.filter(isCard);
   const hourly = pricing.groups.filter((g) => !isCard(g));
   const cheapest = Math.min(...cards.flatMap((g) => g.items.map((p) => p.price)));
@@ -89,7 +94,7 @@ export default async function MembershipPage() {
           <a href="/">Trang chủ</a>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/bang-gia">Bảng giá</a>
-          <a href="#quyen-loi">Quyền lợi</a>
+          {benefits.length > 0 && <a href="#quyen-loi">Quyền lợi</a>}
           {cards.length > 0 && <a href="#the">Thẻ hội viên</a>}
           {hourly.length > 0 && <a href="#goi-gio">Gói giờ</a>}
         </nav>
@@ -104,8 +109,8 @@ export default async function MembershipPage() {
             <p className="fw-kicker fw-kicker-light">Hội viên</p>
             <h1>Chơi golf mỗi ngày, trả một lần</h1>
             <p className="pp-hero-sub">
-              Thẻ hội viên cho người chơi đều đặn và gói giờ trả trước dùng lúc nào cũng được.
-              Phòng tiêu chuẩn hoặc phòng VIP, bạn chọn theo cách chơi của mình.
+              Thẻ hội viên cho người chơi đều đặn và gói giờ trả trước dùng lúc nào cũng được. Phòng
+              tiêu chuẩn hoặc phòng VIP, bạn chọn theo cách chơi của mình.
             </p>
             <ul className="pp-chips">
               {Number.isFinite(cheapest) && (
@@ -129,21 +134,26 @@ export default async function MembershipPage() {
           </div>
         </section>
 
-        <section id="quyen-loi" className="pp-section">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Quyền lợi</p>
-            <h2>Hội viên nhận được gì</h2>
-          </div>
-          <div className="pp-benefits" data-sc-in data-sc-stagger="70">
-            {BENEFITS.map(({ icon: Icon, title, text }) => (
-              <article key={title}>
-                <Icon size={22} />
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
+        {benefits.length > 0 && (
+          <section id="quyen-loi" className="pp-section">
+            <div className="fw-head" data-sc-in data-sc-stagger="70">
+              <p className="fw-kicker">Quyền lợi</p>
+              <h2>Hội viên nhận được gì</h2>
+            </div>
+            <div className="pp-benefits" data-sc-in data-sc-stagger="70">
+              {benefits.map(({ title, text }, i) => {
+                const Icon = ICONS[i % ICONS.length];
+                return (
+                  <article key={title + i}>
+                    <Icon size={22} />
+                    <h3>{title}</h3>
+                    {text && <p>{text}</p>}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {cards.length > 0 && (
           <section id="the" className="pp-section pp-tint">
@@ -166,7 +176,9 @@ export default async function MembershipPage() {
             <div className="fw-head" data-sc-in data-sc-stagger="70">
               <p className="fw-kicker">Gói giờ</p>
               <h2>Mua giờ trước, dùng lúc nào cũng được</h2>
-              <p className="fw-sub">Giờ trong gói không có hạn dùng và có thể chuyển cho người khác.</p>
+              <p className="fw-sub">
+                Giờ trong gói không có hạn dùng và có thể chuyển cho người khác.
+              </p>
             </div>
             {hourly.map((g) => (
               <Cards key={g.id} group={g} />
@@ -178,7 +190,10 @@ export default async function MembershipPage() {
           <div className="pp-cta" data-sc-in data-sc-stagger="80">
             <div>
               <h2>Đăng ký hội viên</h2>
-              <p>Đến câu lạc bộ hoặc gọi {BRAND.hotline}, nhân viên sẽ tư vấn thẻ phù hợp và làm thẻ ngay.</p>
+              <p>
+                Đến câu lạc bộ hoặc gọi {BRAND.hotline}, nhân viên sẽ tư vấn thẻ phù hợp và làm thẻ
+                ngay.
+              </p>
             </div>
             <div className="pp-hero-actions">
               <a className="fw-btn fw-btn-light" href={`tel:${BRAND.hotline}`}>

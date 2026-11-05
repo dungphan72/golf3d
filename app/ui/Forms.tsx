@@ -4,6 +4,7 @@ import { X, Flag, Check, ArrowRight, Save, Info } from 'lucide-react';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
 import { OffersField } from './OffersField';
+import { DEFAULT_BENEFITS } from '../../lib/member-benefits';
 import { type Service } from '../../lib/pricing';
 import { rooms, ready, money, type Config } from '../../lib/club';
 /** What still blocks online booking (the public page quotes prices with VAT and service fee). */
@@ -411,6 +412,14 @@ export function SettingsForm({
           onChange={(priceRules) => setC({ ...c, priceRules })}
         />
         <OffersField offers={c.offers ?? []} onChange={(offers) => setC({ ...c, offers })} />
+        <OffersField
+          offers={c.memberBenefits ?? DEFAULT_BENEFITS}
+          onChange={(memberBenefits) => setC({ ...c, memberBenefits })}
+          label="Quyền lợi hội viên (hiện trên trang thẻ hội viên)"
+          placeholder="Mỗi dòng một quyền lợi: Tiêu đề | Mô tả"
+          hint="Ví dụ: Gửi gậy miễn phí | Gửi bộ gậy tại câu lạc bộ, không tính phí. Để trống nếu không muốn hiện mục này."
+          max={12}
+        />
       </section>
       <section className="settings-section">
         <div>

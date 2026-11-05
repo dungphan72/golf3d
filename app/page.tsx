@@ -178,8 +178,8 @@ export default async function LandingPage() {
                 className="fw-scene"
                 src="/img/hero-room.webp"
                 alt="Phòng chơi Saigon Golf 3D Club với màn hình mô phỏng sân golf"
-                width={1506}
-                height={805}
+                width={1458}
+                height={1201}
                 fetchPriority="high"
               />
             </picture>
@@ -296,23 +296,32 @@ export default async function LandingPage() {
             ))}
           </div>
 
-          <div className="fw-gallery" data-sc-in data-sc-stagger="90">
+          <div className="fw-gallery" data-sc-in>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="fw-gal-a"
               src="/img/space-wide.webp"
-              alt="Không gian Saigon Golf 3D Club: quả bóng trên thảm cỏ và màn hình mô phỏng"
-              width={1672}
-              height={941}
+              alt="Khu vực chờ và line chơi với màn hình mô phỏng tại Saigon Golf 3D Club"
+              width={2000}
+              height={667}
               loading="lazy"
             />
+          </div>
+          <div className="fw-gc3" data-sc-in data-sc-stagger="90">
+            <div>
+              <p className="fw-kicker fw-kicker-light">Công nghệ</p>
+              <h3>Foresight GC3 đo từng cú đánh</h3>
+              <p>
+                Thiết bị theo dõi bóng với ba camera, ghi lại tốc độ, góc phóng, độ xoáy và quỹ đạo
+                của từng cú đánh rồi hiển thị ngay trên màn hình mô phỏng để bạn chỉnh swing.
+              </p>
+              <small>Ảnh thiết bị: Foresight Sports.</small>
+            </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="fw-gal-b"
-              src="/img/space-ball.webp"
-              alt="Saigon Golf 3D Club, 250 Lương Đình Của, Bình Trưng"
-              width={900}
-              height={900}
+              src="/img/gc3.webp"
+              alt="Thiết bị Foresight GC3 nhìn từ phía trước, bên cạnh và phía sau"
+              width={1200}
+              height={1019}
               loading="lazy"
             />
           </div>
@@ -486,10 +495,10 @@ export default async function LandingPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               className="fw-contact-img"
-              src="/banner.webp"
-              alt="Saigon Golf 3D Club"
-              width={1600}
-              height={640}
+              src="/img/space-ball.webp"
+              alt="Quả bóng golf trên thảm cỏ trong phòng chơi Saigon Golf 3D Club"
+              width={900}
+              height={900}
               loading="lazy"
             />
             <div className="fw-contact-actions">

@@ -65,7 +65,7 @@ html:has(.fw) {
   height: 100%;
   max-width: none;
   object-fit: cover;
-  object-position: 62% 50%;
+  object-position: 50% 58%;
   z-index: -2;
 }
 .fw-shade {
@@ -888,33 +888,60 @@ a:hover > .fw-arrow-dot {
 
 /* gallery */
 .fw-gallery {
-  display: grid;
-  grid-template-columns: 1.7fr 1fr;
-  gap: 16px;
   margin-top: 16px;
 }
 .fw-gallery img {
   display: block;
   width: 100%;
-  height: 100%;
-  min-height: 18rem;
-  max-height: 30rem;
+  aspect-ratio: 3 / 1;
   object-fit: cover;
   border-radius: 28px;
-  box-shadow: 0 1px 2px rgba(12, 36, 71, 0.05);
+}
+.fw-gc3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.25rem, 4vw, 3.5rem);
+  align-items: center;
+  margin-top: 16px;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border-radius: 34px;
+  color: #fff;
+  background: linear-gradient(140deg, #06142b, #0c2f66);
+}
+.fw-gc3 h3 {
+  font-weight: 300;
+  font-size: clamp(1.7rem, 3.4vw, 2.8rem);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  margin: 0.2rem 0 1rem;
+}
+.fw-gc3 p {
+  color: rgba(255, 255, 255, 0.82);
+}
+.fw-gc3 small {
+  display: block;
+  margin-top: 1.25rem;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+}
+.fw-gc3 img {
+  width: 100%;
+  height: auto;
+  border-radius: 22px;
+  display: block;
 }
 .fw-contact-img {
-  width: min(22rem, 100%);
+  width: min(15rem, 100%);
   border-radius: 22px;
   align-self: center;
   order: 2;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.3);
 }
 @media (max-width: 860px) {
-  .fw-gallery {
-    grid-template-columns: 1fr;
-  }
   .fw-gallery img {
-    max-height: 22rem;
+    aspect-ratio: 16 / 9;
+  }
+  .fw-gc3 {
+    grid-template-columns: 1fr;
   }
 }

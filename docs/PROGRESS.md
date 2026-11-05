@@ -163,3 +163,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - `public/banner.webp` thay bằng banner ngang mới (dùng ở trang `/book/<mã>`, thẻ "Khám phá phòng chơi" và phần liên hệ). Mục "không gian" dùng banner 16:9 và ảnh vuông (`public/img/space-*.webp`). Ảnh xem trước khi chia sẻ là `public/og.jpg`.
 - Các ảnh banner có logo, địa chỉ, hotline in sẵn nên chỉ dùng làm ảnh minh họa, không đặt chữ chồng lên.
 - Ảnh gốc nằm ngoài dự án (thư mục tạm của phiên làm việc); các bản đã nén nằm trong `public/`. Nên giữ bản gốc độ phân giải cao ở nơi khác để làm lại khi cần.
+
+## v0.9.7 — Bộ ảnh mới + ảnh thiết bị Foresight GC3
+
+- Thay bộ ảnh theo 4 ảnh mới (banner chỉ có logo, ảnh vuông quả bóng, poster dọc, banner có khu ghế chờ). Nền hero là ảnh phòng chơi (ghế chờ, màn hình, túi gậy) cắt từ banner khu ghế chờ, đã loại phần chữ; banner dùng bản chỉ có logo; ảnh xem trước khi chia sẻ cắt từ banner logo.
+- Thêm khối "Foresight GC3 đo từng cú đánh" dùng ảnh thiết bị GC3 (3 góc nhìn) lấy từ https://www.foresightsports.asia, ghi nguồn "Ảnh thiết bị: Foresight Sports". Không dùng ảnh có huy hiệu giải thưởng Golf Monthly. **Cần xác nhận với Foresight Sports Asia (nhà phân phối) được phép dùng ảnh trên website của cơ sở.**
+- Poster dọc chưa dùng (có logo lớn, hợp làm ảnh story/áp phích hơn).

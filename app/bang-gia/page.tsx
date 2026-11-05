@@ -18,6 +18,7 @@ import { packageBullets, type PackageGroup, type PriceRow } from '../../lib/pric
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
 import LandingFx from '../ui/LandingFx';
+import { PromoCards } from '../ui/PromoCards';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,7 +125,7 @@ export default async function PricingPage() {
   );
   const nav = [
     ['#gia-theo-gio', 'Giá theo giờ'],
-    ...(pricing.offers.length ? [['#uu-dai', 'Ưu đãi']] : []),
+    ...(pricing.offers.length || pricing.promotions.length ? [['#uu-dai', 'Khuyến mãi']] : []),
     ['#goi', 'Gói trả trước'],
     ['/thanh-vien', 'Thẻ hội viên'],
     ['#luu-y', 'Lưu ý'],
@@ -263,12 +264,13 @@ export default async function PricingPage() {
           )}
         </section>
 
-        {pricing.offers.length > 0 && (
+        {(pricing.offers.length > 0 || pricing.promotions.length > 0) && (
           <section id="uu-dai" className="pp-section pp-offers-wrap">
             <div className="fw-head" data-sc-in data-sc-stagger="70">
-              <p className="fw-kicker">Ưu đãi</p>
-              <h2>Ưu đãi theo ngày</h2>
+              <p className="fw-kicker">Khuyến mãi</p>
+              <h2>Chương trình khuyến mãi</h2>
             </div>
+            <PromoCards promotions={pricing.promotions} />
             <div className="pp-offers" data-sc-in data-sc-stagger="70">
               {pricing.offers.map(parseOffer).map((o) => (
                 <article key={o.title + o.value}>

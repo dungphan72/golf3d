@@ -49,7 +49,9 @@ export function planBooking(input: BookingInput, c: Config, now: number) {
   let end: number,
     base = 0,
     ruleId: string | null = null,
-    ruleLabel: string | null = null;
+    ruleLabel: string | null = null,
+    listBase = 0,
+    promo: { id: string; name: string } | null = null;
   if (service === 'gdr') {
     if (!Number.isInteger(minutes) || minutes < 60 || minutes > 720 || (minutes - 60) % 30 !== 0)
       throw new Error('GDR tối thiểu 60 phút, tăng mỗi 30 phút.');
@@ -57,6 +59,8 @@ export function planBooking(input: BookingInput, c: Config, now: number) {
   } else {
     const price = packagePrice(start, c, service, room.vip, people);
     base = price.base;
+    listBase = price.listBase;
+    promo = price.promo;
     ruleId = price.ruleId;
     ruleLabel = price.label;
     const time = (service === '9' ? c.holeMinutes9 : c.holeMinutes18)[people - 1];
@@ -70,6 +74,8 @@ export function planBooking(input: BookingInput, c: Config, now: number) {
   return {
     room,
     base,
+    listBase,
+    promo,
     end,
     reservedUntil: end + (room.vip ? c.vipClean : c.clean) * 60000,
     bill,

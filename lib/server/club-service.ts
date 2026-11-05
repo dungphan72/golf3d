@@ -132,7 +132,7 @@ export async function runClubAction(tenant: string, input: ClubInput): Promise<S
     } catch (e) {
       return fail(e instanceof Error ? e.message : 'Lịch đặt không hợp lệ');
     }
-    const { room, base } = plan;
+    const { room, base, listBase, promo } = plan;
     const start = Number(input.start),
       people = Number(input.people),
       service = input.service ?? 'gdr';
@@ -150,6 +150,8 @@ export async function runClubAction(tenant: string, input: ClubInput): Promise<S
     const price = JSON.stringify({
       config: c,
       base,
+      listBase,
+      promo,
       vip: room.vip,
       version: 2,
       ruleId: plan.ruleId,

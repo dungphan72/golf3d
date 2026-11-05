@@ -1,3 +1,4 @@
+import type { Promotion } from './promotions.ts';
 import { ruleQuote, billTotals, type PriceRule, type Service, type Bill } from './pricing.ts';
 export type Config = {
   priceRules?: PriceRule[];
@@ -37,6 +38,8 @@ export type Config = {
   bankHolder?: string;
   /** Promotions shown on the price page, one per line: Tiêu đề | Giá hoặc mức giảm | Điều kiện. */
   offers?: string[];
+  /** Promotions entered in the admin; applied automatically by the price engine (see promotions.ts). */
+  promotions?: Promotion[];
   /** Perks on the membership page, one per line: Tiêu đề | Mô tả. Unset = the standard list. */
   memberBenefits?: string[];
 };

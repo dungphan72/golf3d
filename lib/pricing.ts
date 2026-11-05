@@ -1,5 +1,6 @@
 import type { Config, Segment } from './club.ts';
 import { officialPriceRules } from './official-pricing.ts';
+import { bestPromo } from './promotions.ts';
 
 export type Service = 'gdr' | '9' | '18';
 export type DayType = 'weekday' | 'weekend' | 'holiday';
@@ -24,6 +25,8 @@ export type PriceLine = {
   from?: number;
   to?: number;
   ruleId?: string;
+  /** Promotion that lowered this line's hourly rate, if any. */
+  promoId?: string;
 };
 export type Bill = {
   lines: PriceLine[];
@@ -132,6 +135,7 @@ export function ruleQuote(segments: Segment[], c: Config, vip = false): Bill {
   if (segments.length > 1000) throw new Error('Quá nhiều đoạn thời gian');
   const lines: PriceLine[] = [];
   const numerators: bigint[] = [];
+  const keys: string[] = [];
   let previousEnd = -Infinity,
     totalDuration = 0;
   for (const s of segments) {
@@ -152,23 +156,29 @@ export function ruleQuote(segments: Segment[], c: Config, vip = false): Bill {
         r = selectRule(t, c, 'gdr', vip);
       if (!Number.isSafeInteger(r.amount) || r.amount <= 0) throw new Error('Đơn giá không hợp lệ');
       const end = Math.min(s.end, (Math.floor(t / MINUTE) + 1) * MINUTE);
-      const numerator = BigInt(r.amount) * BigInt(end - t);
+      // The best automatic promotion running at this minute lowers the hourly rate.
+      const promo = bestPromo(c.promotions, t, 'gdr', vip, r.amount);
+      const rate = promo ? promo.amount : r.amount;
+      const key = promo ? r.id + '|' + promo.promo.id : r.id;
+      const numerator = BigInt(rate) * BigInt(end - t);
       const last = lines.at(-1);
-      if (last && last.ruleId === r.id && last.date === p.date && last.to === t) {
+      if (last && keys.at(-1) === key && last.date === p.date && last.to === t) {
         last.minutes += (end - t) / MINUTE;
         last.to = end;
         numerators[numerators.length - 1] += numerator;
       } else {
         lines.push({
           date: p.date,
-          label: r.label,
+          label: promo ? `${r.label} · KM ${promo.promo.name}` : r.label,
           minutes: (end - t) / MINUTE,
-          rate: r.amount,
+          rate,
           amount: 0,
           from: t,
           to: end,
           ruleId: r.id,
+          ...(promo ? { promoId: promo.promo.id } : {}),
         });
+        keys.push(key);
         numerators.push(numerator);
       }
       t = end;
@@ -198,13 +208,21 @@ export function packagePrice(
 ) {
   if (c.priceRules !== undefined) {
     const rule = selectRule(start, c, service, vip, people);
-    return { base: rule.amount, ruleId: rule.id, label: rule.label };
+    // Whole-round prices are per group of `people`; per-person promotions scale with the group.
+    const promo = bestPromo(c.promotions, start, service, vip, rule.amount, people);
+    return {
+      base: promo ? promo.amount : rule.amount,
+      listBase: rule.amount,
+      promo: promo ? { id: promo.promo.id, name: promo.promo.name } : null,
+      ruleId: rule.id,
+      label: rule.label,
+    };
   }
   // Only immutable v0.1 snapshots use legacy flat package prices.
   const prices = service === '9' ? (vip ? c.vip9 : c.hole9) : vip ? c.vip18 : c.hole18;
   const base = prices[people - 1];
   if (!base) throw new Error('Chưa cấu hình giá trọn lượt');
-  return { base, ruleId: 'legacy', label: 'Giá trọn lượt v0.1' };
+  return { base, listBase: base, promo: null, ruleId: 'legacy', label: 'Giá trọn lượt v0.1' };
 }
 export function seedPriceRules(c: Config, reference = false): PriceRule[] {
   const result: PriceRule[] = [];
@@ -329,6 +347,7 @@ export function upgradeConfig(value: Partial<Config>, fallback: Config): Config 
       (Object.keys(value).length === 0 ? officialPriceRules() : seedPriceRules(c, false)),
     holidays: c.holidays ?? [],
     offers: c.offers ?? [],
+    promotions: c.promotions ?? [],
     feeMode: c.feeMode ?? 'percent',
     feeServices: c.feeServices ?? ['gdr', '9', '18'],
     pricingRevision: c.pricingRevision ?? 'v01-upgrade',

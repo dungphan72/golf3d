@@ -15,6 +15,7 @@ import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import BookingPage from './ui/BookingPage';
 import LandingFx from './ui/LandingFx';
+import { PromoCards } from './ui/PromoCards';
 import { grantLine, validityText, type PriceTable } from '../lib/price-table';
 import { publicPricing } from '../lib/server/pricing-service';
 import { bookingSlug } from '../lib/server/online-service';
@@ -196,6 +197,7 @@ export default async function LandingPage() {
     ['#dich-vu', 'Trải nghiệm'],
     ['#gio-vang', 'Giờ vàng'],
     ['#bang-gia', 'Bảng giá'],
+    ...(pricing.promotions.length ? [['#khuyen-mai', 'Khuyến mãi']] : []),
     ['#goi', 'Gói hội viên'],
     ['#lien-he', 'Liên hệ'],
   ];
@@ -590,6 +592,19 @@ export default async function LandingPage() {
             <a href="/tai-khoan">Tài khoản hội viên</a>
           </p>
         </section>
+
+        {pricing.promotions.length > 0 && (
+          <section id="khuyen-mai" className="fw-section fw-tight">
+            <div className="fw-head" data-sc-in data-sc-stagger="70">
+              <p className="fw-kicker">Khuyến mãi</p>
+              <h2>Đang có ưu đãi</h2>
+              <p className="fw-sub">
+                Giá khuyến mãi tự áp dụng khi đặt và tính tiền, không cần nhập mã.
+              </p>
+            </div>
+            <PromoCards promotions={pricing.promotions} />
+          </section>
+        )}
 
         <section id="goi" className="fw-section fw-tint">
           <div className="fw-head" data-sc-in data-sc-stagger="70">

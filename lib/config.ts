@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { validateRules } from './pricing.ts';
+import { validatePromotions, type Promotion } from './promotions.ts';
 const money = z.number().int().min(0).max(100_000_000);
 const minutes = z.number().int().min(0).max(1440);
 const capacity = z.number().int().min(1).max(100).nullable();
@@ -15,6 +16,22 @@ const ruleSchema = z.object({
   to: z.string().max(5),
   people: z.number().int().min(1).max(4).nullable(),
   amount: money.refine((n) => n > 0, 'Đơn giá phải lớn hơn 0'),
+  enabled: z.boolean(),
+});
+const promotionSchema = z.object({
+  id: z.string().min(1).max(60),
+  name: z.string().trim().min(1).max(80),
+  description: z.string().trim().max(300).default(''),
+  kind: z.enum(['percent', 'amount', 'price']),
+  value: z.number().int().min(1).max(100_000_000),
+  services: z.array(z.enum(['gdr', '9', '18'])).max(3),
+  rooms: z.array(z.enum(['standard', 'vip'])).max(2),
+  weekdays: z.array(z.number().int().min(0).max(6)).max(7),
+  from: z.string().max(5),
+  to: z.string().max(5),
+  startDate: z.string().max(10),
+  endDate: z.string().max(10),
+  auto: z.boolean(),
   enabled: z.boolean(),
 });
 const holiday = z
@@ -71,6 +88,7 @@ export const configSchema = z
       .regex(/^([a-z0-9][a-z0-9-]{2,39})?$/, 'Mã đường dẫn gồm 3–40 ký tự a-z, 0-9, dấu gạch ngang')
       .default(''),
     offers: z.array(z.string().trim().min(1).max(400)).max(20).default([]),
+    promotions: z.array(promotionSchema).max(50).default([]),
     memberBenefits: z.array(z.string().trim().min(1).max(300)).max(12).optional(),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),
@@ -100,6 +118,15 @@ export const configSchema = z
         path: ['feeServices'],
         message: 'Dịch vụ áp phí bị trùng',
       });
+    try {
+      validatePromotions(c.promotions as Promotion[]);
+    } catch (e) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['promotions'],
+        message: e instanceof Error ? e.message : 'Khuyến mãi không hợp lệ',
+      });
+    }
     try {
       validateRules(c.priceRules);
     } catch (e) {

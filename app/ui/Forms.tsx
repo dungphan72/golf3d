@@ -4,6 +4,7 @@ import { X, Flag, Check, ArrowRight, Save, Info } from 'lucide-react';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
 import { OffersField } from './OffersField';
+import { PromotionsEditor } from './PromotionsEditor';
 import { DEFAULT_BENEFITS } from '../../lib/member-benefits';
 import { type Service } from '../../lib/pricing';
 import { rooms, ready, money, type Config } from '../../lib/club';
@@ -411,7 +412,10 @@ export function SettingsForm({
           rules={c.priceRules ?? []}
           onChange={(priceRules) => setC({ ...c, priceRules })}
         />
-        <OffersField offers={c.offers ?? []} onChange={(offers) => setC({ ...c, offers })} />
+        <PromotionsEditor
+          promotions={c.promotions ?? []}
+          onChange={(promotions) => setC({ ...c, promotions })}
+        />
         <OffersField
           offers={c.memberBenefits ?? DEFAULT_BENEFITS}
           onChange={(memberBenefits) => setC({ ...c, memberBenefits })}

@@ -265,3 +265,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Báo cáo doanh thu theo dịch vụ đã trừ hoàn tiền (trước đó chỉ báo cáo theo ngày trừ).
 - Phiếu trả bằng gói: hiện hướng dẫn hoàn giờ/lượt qua "Điều chỉnh" trong Hội viên.
 - Còn chờ anh gửi: bảng giá mới của các gói giờ và thẻ (hiện đắt hơn hoặc bằng giá lẻ).
+
+## v0.13.0 — Khuyến mãi quản lý trong admin, một bảng giá cho mọi nơi
+
+- **Một nguồn giá**: bảng giá nhập ở Cài đặt (thêm/sửa/xóa khung giá), gói/thẻ ở Hội viên; trang chủ, `/bang-gia`, form đặt chỗ, báo giá và phiếu tính tiền đều đọc cùng dữ liệu đó, không còn giá viết cứng ở trang công khai.
+- **Khuyến mãi** (Cài đặt → Khuyến mãi, thêm/sửa/bật tắt/xóa; bấm lưu cài đặt để áp dụng): giảm phần trăm (1–90%), giảm số tiền mỗi giờ/mỗi người, hoặc giá ưu đãi cố định. Điều kiện: dịch vụ, phòng, ngày trong tuần, khung giờ, từ ngày–đến ngày. Chạy **tự động** trong báo giá, đặt lịch online, đặt lịch quầy và tính tiền khi kết thúc (Luyện tập tính từng phút nên phiên đi qua lúc khuyến mãi bắt đầu/kết thúc tách thành hai dòng; Game 9/18 hố tính theo giờ bắt đầu, giảm theo từng người). Mỗi lần chỉ áp dụng một chương trình có giá thấp nhất, không cộng dồn; giá không xuống dưới 1.000đ. Phiếu hiện dòng "Khuyến mãi" (trọn lượt) hoặc nhãn "KM tên chương trình" (theo giờ).
+- Chương trình bỏ chọn "Tự động áp dụng" chỉ hiển thị (điều kiện như độ tuổi, nhân viên xác nhận tại quầy và dùng Giảm giá phiếu).
+- Website: mục "Khuyến mãi" ở trang chủ và `/bang-gia` hiện các chương trình đang bật và chưa hết hạn, kèm mức giảm, điều kiện, trạng thái tự động/tại quầy. Khuyến mãi tắt hoặc hết hạn tự ẩn.
+- Mã: `lib/promotions.ts` (engine + kiểm tra), tích hợp trong `lib/pricing.ts`; kiểm thử `tests/promotions.test.ts`, `tests/e2e/zy-promotions.spec.ts` (API và giao diện). Cài đặt cũ không cần chuyển đổi (danh sách khuyến mãi mặc định rỗng); ô "Ưu đãi" dạng chữ cũ được thay bằng mục Khuyến mãi (dòng ưu đãi chữ có sẵn vẫn hiện nếu còn dữ liệu).

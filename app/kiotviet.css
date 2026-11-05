@@ -683,3 +683,59 @@ body:has(.app-shell) {
     box-shadow: inset 3px 0 0 var(--kv-blue);
   }
 }
+
+/* ---------- Promotions editor (Cài đặt) ---------- */
+.app-shell .promo-editor {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--kv-line);
+}
+.app-shell .promo-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+}
+.app-shell .promo-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--kv-line);
+}
+.app-shell .promo-list li.off {
+  opacity: 0.6;
+}
+.app-shell .promo-list small {
+  color: var(--kv-muted);
+}
+.app-shell .promo-form {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+}
+.app-shell .promo-form fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.app-shell .promo-form legend {
+  font-size: 12px;
+  color: var(--kv-muted);
+  padding: 0 4px;
+}
+.app-shell .promo-form .check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.app-shell .promo-form .check input {
+  width: auto;
+}

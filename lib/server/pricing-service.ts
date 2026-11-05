@@ -1,5 +1,6 @@
 import { db, loadConfig } from './common';
 import { officialPriceRules } from '../official-pricing';
+import { benefitText, conditionText, vnParts, type Promotion } from '../promotions';
 import { DEFAULT_BENEFITS } from '../member-benefits';
 import { OFFICIAL_PACKAGES } from '../official-packages';
 import {
@@ -12,6 +13,30 @@ import {
   type PriceTable,
 } from '../price-table';
 
+export type PublicPromotion = {
+  id: string;
+  name: string;
+  description: string;
+  benefit: string;
+  condition: string;
+  auto: boolean;
+};
+
+/** Promotions the site shows: enabled and not past their end date. */
+function livePromotions(list: Promotion[] | undefined, now = Date.now()): PublicPromotion[] {
+  const today = vnParts(now).date;
+  return (list ?? [])
+    .filter((p) => p.enabled && (!p.endDate || p.endDate >= today))
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      benefit: benefitText(p),
+      condition: conditionText(p),
+      auto: p.auto,
+    }));
+}
+
 export type PublicPricing = {
   standard: PriceTable;
   vip: PriceTable | null; // null = the VIP room shares the standard prices
@@ -21,6 +46,7 @@ export type PublicPricing = {
   open: string;
   close: string;
   offers: string[];
+  promotions: PublicPromotion[];
   benefits: string[];
   source: 'admin' | 'default';
 };
@@ -90,6 +116,7 @@ export async function publicPricing(): Promise<PublicPricing> {
         open: config.open,
         close: config.close,
         offers: config.offers ?? [],
+        promotions: livePromotions(config.promotions),
         benefits: config.memberBenefits ?? DEFAULT_BENEFITS,
         source: 'admin',
       };
@@ -107,6 +134,7 @@ export async function publicPricing(): Promise<PublicPricing> {
     open: '08:00',
     close: '23:00',
     offers: [],
+    promotions: [],
     benefits: DEFAULT_BENEFITS,
     source: 'default',
   };

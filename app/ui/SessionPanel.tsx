@@ -416,11 +416,24 @@ export function SessionPanel({
                 <strong>{money(Math.round(l.amount))}</strong>
               </div>
             ))}
-            {b.service !== 'gdr' && (
-              <div>
-                <span>Trọn lượt {b.service} hố</span>
-                <strong>{money(q.subtotal)}</strong>
-              </div>
+            {b.service !== 'gdr' && snap.promo && snap.listBase > snap.base ? (
+              <>
+                <div>
+                  <span>Trọn lượt {b.service} hố (giá niêm yết)</span>
+                  <strong>{money(snap.listBase)}</strong>
+                </div>
+                <div>
+                  <span>Khuyến mãi: {snap.promo.name}</span>
+                  <strong>−{money(snap.listBase - snap.base)}</strong>
+                </div>
+              </>
+            ) : (
+              b.service !== 'gdr' && (
+                <div>
+                  <span>Trọn lượt {b.service} hố</span>
+                  <strong>{money(q.subtotal)}</strong>
+                </div>
+              )
             )}
             <div>
               <span>Tiền dịch vụ</span>

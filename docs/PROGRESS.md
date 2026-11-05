@@ -167,5 +167,5 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 ## v0.9.7 — Bộ ảnh mới + ảnh thiết bị Foresight GC3
 
 - Thay bộ ảnh theo 4 ảnh mới (banner chỉ có logo, ảnh vuông quả bóng, poster dọc, banner có khu ghế chờ). Nền hero là ảnh phòng chơi (ghế chờ, màn hình, túi gậy) cắt từ banner khu ghế chờ, đã loại phần chữ; banner dùng bản chỉ có logo; ảnh xem trước khi chia sẻ cắt từ banner logo.
-- Thêm khối "Foresight GC3 đo từng cú đánh" dùng ảnh thiết bị GC3 (3 góc nhìn) lấy từ https://www.foresightsports.asia, ghi nguồn "Ảnh thiết bị: Foresight Sports". Không dùng ảnh có huy hiệu giải thưởng Golf Monthly. **Cần xác nhận với Foresight Sports Asia (nhà phân phối) được phép dùng ảnh trên website của cơ sở.**
+- Thêm khối "Foresight GC3 đo từng cú đánh" dùng ảnh thiết bị GC3 (3 góc nhìn) lấy từ https://www.foresightsports.asia, ghi nguồn "Ảnh thiết bị: Foresight Sports". Không dùng ảnh có huy hiệu giải thưởng Golf Monthly. Chủ cơ sở xác nhận (05/11/2026) đã được Foresight Sports Asia cho phép dùng ảnh trên website của cơ sở.
 - Poster dọc chưa dùng (có logo lớn, hợp làm ảnh story/áp phích hơn).

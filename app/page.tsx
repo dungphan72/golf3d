@@ -427,6 +427,29 @@ export default async function LandingPage() {
               loading="lazy"
             />
           </div>
+          <div className="fw-fs" data-sc-in data-sc-stagger="80">
+            <div className="fw-fs-head">
+              <p className="fw-kicker">Golf mô phỏng</p>
+              <h3>Chơi như trên sân thật, ngay trong phòng</h3>
+            </div>
+            <ul>
+              {[
+                ['/img/fs-lounge.webp', 'Phòng chơi golf mô phỏng rộng rãi với khu ghế ngồi nghỉ'],
+                [
+                  '/img/fs-ferrari.webp',
+                  'Phòng golf mô phỏng tông tối với màn hình lớn nhìn ra sân',
+                ],
+                ['/img/fs-loft.webp', 'Không gian golf mô phỏng với màn hình chiếu sân golf'],
+                ['/img/fs-lodge.webp', 'Phòng golf mô phỏng nhìn ra khung cảnh thiên nhiên'],
+              ].map(([src, alt]) => (
+                <li key={src}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={alt} width={1200} height={797} loading="lazy" />
+                </li>
+              ))}
+            </ul>
+            <small>Ảnh minh họa: Foresight Sports.</small>
+          </div>
         </section>
 
         <section id="gio-vang" className="fw-section fw-tight">

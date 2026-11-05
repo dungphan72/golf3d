@@ -9,6 +9,7 @@ import {
   MapPin,
   Phone,
   Target,
+  UserRound,
 } from 'lucide-react';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
@@ -224,6 +225,15 @@ export default async function LandingPage() {
             </a>
           ))}
         </nav>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          className="fw-acct"
+          href="/tai-khoan"
+          aria-label="Đăng nhập / Đăng ký hội viên"
+          title="Đăng nhập / Đăng ký"
+        >
+          <UserRound size={18} />
+        </a>
         <a className="fw-pill-cta" href={bookHref}>
           {bookLabel} <ArrowUpRight size={16} />
         </a>
@@ -260,12 +270,23 @@ export default async function LandingPage() {
                 ))}
               </nav>
             </div>
-            <a className="fw-top-right" href={bookHref}>
-              {bookLabel}{' '}
-              <span className="fw-arrow-dot">
-                <ArrowUpRight size={17} />
-              </span>
-            </a>
+            <div className="fw-top-right">
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              <a
+                className="fw-arrow-dot fw-acct-hero"
+                href="/tai-khoan"
+                aria-label="Đăng nhập / Đăng ký hội viên"
+                title="Đăng nhập / Đăng ký"
+              >
+                <UserRound size={19} />
+              </a>
+              <a className="fw-top-book" href={bookHref}>
+                {bookLabel}{' '}
+                <span className="fw-arrow-dot">
+                  <ArrowUpRight size={17} />
+                </span>
+              </a>
+            </div>
 
             <div className="fw-headline">
               <h1>

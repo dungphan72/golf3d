@@ -4,6 +4,9 @@ test('trang giới thiệu công khai: giá, gói, liên hệ và lối vào qu�
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('cú đánh');
+  await expect(
+    page.getByRole('link', { name: 'Đăng nhập / Đăng ký hội viên' }).first(),
+  ).toHaveAttribute('href', '/tai-khoan');
   await expect(page.getByRole('heading', { name: /Một buổi chơi, bốn bước/ })).toBeAttached();
   // Prices come from the official list (the price rail is wider than the viewport, so check the DOM).
   await expect(page.getByText('650.000đ / VND').first()).toBeAttached();

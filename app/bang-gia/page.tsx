@@ -1,5 +1,15 @@
 import type { Metadata } from 'next';
-import { ArrowUpRight, Check, Clock, Crown, Gift, Phone, Receipt, Users } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Check,
+  Clock,
+  Crown,
+  Gift,
+  Phone,
+  Receipt,
+  Users,
+  UserRound,
+} from 'lucide-react';
 import '../landing.css';
 import './pricing.css';
 import { BRAND } from '../../lib/brand';
@@ -144,6 +154,15 @@ export default async function PricingPage() {
             </a>
           ))}
         </nav>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          className="fw-acct"
+          href="/tai-khoan"
+          aria-label="Đăng nhập / Đăng ký hội viên"
+          title="Đăng nhập / Đăng ký"
+        >
+          <UserRound size={18} />
+        </a>
         <a className="fw-pill-cta" href={bookHref}>
           {bookLabel} <ArrowUpRight size={16} />
         </a>

@@ -9,6 +9,7 @@ import {
   Percent,
   Phone,
   Sun,
+  UserRound,
 } from 'lucide-react';
 import '../landing.css';
 import '../bang-gia/pricing.css';
@@ -100,6 +101,15 @@ export default async function MembershipPage() {
           {cards.length > 0 && <a href="#the">Thẻ hội viên</a>}
           {hourly.length > 0 && <a href="#goi-gio">Gói giờ</a>}
         </nav>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a
+          className="fw-acct"
+          href="/tai-khoan"
+          aria-label="Đăng nhập / Đăng ký hội viên"
+          title="Đăng nhập / Đăng ký"
+        >
+          <UserRound size={18} />
+        </a>
         <a className="fw-pill-cta" href={bookHref}>
           {bookLabel} <ArrowUpRight size={16} />
         </a>

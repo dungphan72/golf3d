@@ -53,3 +53,6 @@ golf3d-backup-*.json
 /.e2e-state/
 /test-results/
 /playwright-report/
+
+# ScrollCraft workspace: keep the briefs and score, not local tooling
+/scrollcraft/builds/*/node_modules/

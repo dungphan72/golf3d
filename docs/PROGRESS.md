@@ -142,3 +142,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Thiết kế lại trang chủ theo hướng cuộn trang có chuyển động, tự viết bằng CSS + một component nhỏ (`app/ui/ScrollFx.tsx`), không dùng thư viện hay skill ngoài: cảnh sân golf nhiều lớp có parallax ở phần đầu, thanh tiến độ cuộn, menu đổi nền khi cuộn, các khối hiện dần, số liệu đếm lên, phần "Một buổi chơi, bốn bước" được ghim lại và bóng golf bay theo thanh cuộn.
 - Tôn trọng chế độ giảm chuyển động của hệ điều hành (hiện tĩnh, không chuyển động). Điện thoại có thanh Đặt chỗ cố định ở dưới.
 - Skill "ScrollCraft" (bài MindStudio) không có nguồn tải công khai nên không được cài; xem thông tin ở lịch sử trò chuyện.
+
+## v0.9.4 — Trang chủ dựng bằng skill ScrollCraft
+
+- Skill ScrollCraft (https://github.com/nateherkai/scroll-craft, MIT) đã cài vào `~/.claude/skills/scroll-craft` sau khi đọc mã nguồn (script chỉ gọi kie.ai khi có khóa, máy chủ cục bộ, Chrome ẩn danh và ffmpeg).
+- Trang chủ `/` dựng theo ngữ pháp "chaptered editorial" (trang in tạp chí): bìa chữ trên giấy kem, chương I "Một buổi chơi" ghim lại và bóng golf bay theo thanh cuộn (đỉnh cao của trang), chương II giờ vàng (số liệu thật đếm lên), chương III bảng giá và gói trên băng cuộn ngang, chương IV đặt chỗ (form nhúng) kèm hỏi đáp, trang cuối dạng colophon.
+- Nét riêng của trang: **thanh quỹ đạo cú đánh** cố định ở đáy; cả trang là một cú đánh, bóng là vị trí cuộn, mỗi chương đi qua cắm một lá cờ, bấm lá cờ để nhảy chương.
+- Engine ở `public/scrollcraft/` (không sửa), mã trang ở `app/page.tsx`, `app/landing.css`, `app/ui/ScrollCraftMount.tsx`. Brief, bảng điểm và sổ dấu vân tay ở `scrollcraft/`.
+- Kiểm tra bằng harness của skill ở 3 chế độ (máy tính, điện thoại, giảm chuyển động): không có đoạn cuộn chết, mọi dòng chữ đạt tương phản 4.5:1. Chưa kiểm tra trên điện thoại thật. Không có ảnh thật của cơ sở nên không tạo ảnh/video (không có khóa kie.ai).

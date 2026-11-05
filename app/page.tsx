@@ -484,7 +484,7 @@ export default async function LandingPage() {
             </table>
           </div>
           <p className="fw-note">
-            <a href="/bang-gia">Xem bảng giá đầy đủ và các gói hội viên</a>
+            <a href="/bang-gia">Xem bảng giá đầy đủ</a> · <a href="/thanh-vien">Thẻ hội viên</a>
           </p>
         </section>
 

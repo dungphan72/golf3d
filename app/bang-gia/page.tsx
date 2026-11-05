@@ -115,7 +115,8 @@ export default async function PricingPage() {
   const nav = [
     ['#gia-theo-gio', 'Giá theo giờ'],
     ...(pricing.offers.length ? [['#uu-dai', 'Ưu đãi']] : []),
-    ['#goi', 'Gói hội viên'],
+    ['#goi', 'Gói trả trước'],
+    ['/thanh-vien', 'Thẻ hội viên'],
     ['#luu-y', 'Lưu ý'],
   ];
   return (

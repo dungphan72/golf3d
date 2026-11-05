@@ -446,3 +446,33 @@
   font-size: var(--t-sm);
   color: #6b5a2a;
 }
+
+/* membership benefits */
+.pp-benefits {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 16px;
+}
+.pp-benefits article {
+  background: var(--card);
+  border-radius: 26px;
+  padding: 1.5rem;
+}
+.pp-benefits svg {
+  color: var(--green);
+  width: 46px;
+  height: 46px;
+  padding: 12px;
+  background: #e1f1e6;
+  border-radius: 14px;
+}
+.pp-benefits h3 {
+  margin: 1rem 0 0.4rem;
+  font-weight: 600;
+  font-size: var(--t-h3);
+}
+.pp-benefits p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--t-base);
+}

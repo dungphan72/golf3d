@@ -205,3 +205,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - **Gói gắn với loại phòng**: `tiêu chuẩn` không trả được phòng VIP; `VIP` trả được cả hai; gói cũ (`tất cả phòng`) dùng mọi nơi. Chọn ở form Thêm/Sửa gói ("Áp dụng cho phòng"); trang giá ghi rõ phòng áp dụng.
 - Đổi cách gọi: "phòng/line/gói thường" thành **"tiêu chuẩn"** trên toàn giao diện, tên 16 gói trong dữ liệu thật (Gói tiêu chuẩn 10 giờ (+2 giờ tặng), Gói VIP …, Thẻ tiêu chuẩn …, Thẻ VIP …) và các dòng ưu đãi. "Giờ thường"/"ngày thường" giữ nguyên vì chỉ khung giờ/loại ngày.
 - Nhãn lượt GDR đổi thành "Giờ chơi".
+
+## v0.10.3 — Trang thẻ hội viên `/thanh-vien`
+
+- Trang công khai mới: quyền lợi hội viên (chơi mỗi ngày, đặt trước 4 tuần, gửi gậy miễn phí, bảo lưu một lần tối đa 6 tháng, đặt thêm giảm 10%), các thẻ hội viên và gói giờ. Thẻ và gói lấy từ danh mục gói trong admin (nhóm có tên bắt đầu bằng "Thẻ" hiện ở mục thẻ, còn lại ở mục gói giờ), nên sửa giá trong admin là trang đổi theo.
+- Danh sách quyền lợi viết cố định trong `app/thanh-vien/page.tsx` (tham khảo saigonswing.com/indoor-golf-membership); câu lạc bộ cần xác nhận lại từng điều.
+- Có liên kết từ trang chủ và `/bang-gia`. Kiểm thử: `tests/e2e/zy-membership-page.spec.ts`.

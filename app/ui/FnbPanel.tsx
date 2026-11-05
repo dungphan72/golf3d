@@ -60,9 +60,15 @@ export default function FnbPanel({ onChanged }: { onChanged: () => Promise<void>
           </p>
         </div>
         <div className="heading-actions">
-          <button className="secondary" onClick={food.reload} disabled={busy || food.loading}>
+          <button
+            data-tip="Tải lại"
+            aria-label="Tải lại"
+            className="secondary icon-only"
+            onClick={food.reload}
+            disabled={busy || food.loading}
+          >
             <RefreshCw size={15} />
-            Tải lại
+            <span className="btn-label">Tải lại</span>
           </button>
           <button
             className="primary"

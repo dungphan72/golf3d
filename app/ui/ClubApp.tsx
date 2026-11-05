@@ -337,11 +337,18 @@ export default function ClubApp() {
             </strong>
           </div>
           <div className="top-actions">
-            <span className="connection">
+            <span
+              className="connection"
+              data-tip={
+                error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'
+              }
+            >
               <i />
-              {error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'}
+              <span className="btn-label">
+                {error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'}
+              </span>
             </span>
-            <button className="icon-btn" aria-label="Tải lại" onClick={load}>
+            <button className="icon-btn" aria-label="Tải lại" data-tip="Tải lại" onClick={load}>
               <RefreshCw size={18} />
             </button>
             <button

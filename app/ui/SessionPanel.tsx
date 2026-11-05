@@ -1,7 +1,7 @@
 'use client';
 import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
 import { useEffect, useRef, useState } from 'react';
-import { Bell, X, Play, Pause, Square, Printer } from 'lucide-react';
+import { Bell, X, Play, Pause, Square, Printer, Split } from 'lucide-react';
 import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { vietQrUrl } from '../../lib/bank';
@@ -218,8 +218,15 @@ function SplitPay({
   }
   if (!open)
     return (
-      <button className="secondary" disabled={disabled} onClick={() => setOpen(true)}>
-        Chia nhiều hình thức thanh toán
+      <button
+        data-tip="Chia nhiều hình thức thanh toán"
+        aria-label="Chia nhiều hình thức thanh toán"
+        className="secondary icon-only"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        <Split size={16} />
+        <span className="btn-label">Chia nhiều hình thức thanh toán</span>
       </button>
     );
   return (
@@ -463,9 +470,15 @@ export function SessionPanel({
             </>
           )}
           {b.status === 'playing' && (
-            <button className="secondary" disabled={busy} onClick={() => onAction('pause')}>
+            <button
+              data-tip="Tạm dừng do sự cố"
+              aria-label="Tạm dừng do sự cố"
+              className="secondary icon-only"
+              disabled={busy}
+              onClick={() => onAction('pause')}
+            >
               <Pause size={16} />
-              Tạm dừng do sự cố
+              <span className="btn-label">Tạm dừng do sự cố</span>
             </button>
           )}
           {b.status === 'paused' && (
@@ -538,12 +551,14 @@ export function SessionPanel({
           )}
           {['finished', 'paid'].includes(b.status) && (
             <button
-              className="secondary"
+              data-tip="In phiếu"
+              aria-label="In phiếu"
+              className="secondary icon-only"
               disabled={!!quoteError || !foodVerified}
               onClick={() => window.print()}
             >
               <Printer size={16} />
-              In phiếu
+              <span className="btn-label">In phiếu</span>
             </button>
           )}
         </div>

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
+import { Download } from 'lucide-react';
 import { money } from '../../lib/club';
 import { toCsv } from '../../lib/csv';
 
@@ -103,8 +104,16 @@ export function ReportsPanel() {
           Đến ngày
           <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <button type="button" className="secondary" disabled={!report} onClick={download}>
-          Tải file CSV
+        <button
+          data-tip="Tải file CSV"
+          aria-label="Tải file CSV"
+          type="button"
+          className="secondary icon-only"
+          disabled={!report}
+          onClick={download}
+        >
+          <Download size={16} />
+          <span className="btn-label">Tải file CSV</span>
         </button>
       </div>
       {error && (

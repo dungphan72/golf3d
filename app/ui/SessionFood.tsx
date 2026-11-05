@@ -288,7 +288,9 @@ export function SessionOrdering({
                 <div className="info-strip">
                   Thực đơn vừa thay đổi.
                   <button
-                    className="secondary"
+                    data-tip="Xem lại giá mới"
+                    aria-label="Xem lại giá mới"
+                    className="secondary icon-only"
                     onClick={() =>
                       setCart(
                         cart.flatMap((l) => {
@@ -299,7 +301,7 @@ export function SessionOrdering({
                     }
                   >
                     <RefreshCw size={14} />
-                    Xem lại giá mới
+                    <span className="btn-label">Xem lại giá mới</span>
                   </button>
                 </div>
               )}

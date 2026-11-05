@@ -5,20 +5,20 @@
  * Saigon Golf 3D Club brand look.
  */
 .app-shell {
-  --kv-blue: #0b6fd0;
-  --kv-blue-dark: #0959a8;
-  --kv-blue-soft: #e8f2fd;
-  --kv-line: #dfe4ea;
-  --kv-text: #2a3441;
-  --kv-muted: #6b7684;
-  --kv-canvas: #eef1f5;
-  --kv-green: #1f9d55;
-  --kv-orange: #f08a1c;
+  --kv-blue: #1f7a4d;
+  --kv-blue-dark: #17623d;
+  --kv-blue-soft: #e6f3eb;
+  --kv-line: #dde5de;
+  --kv-text: #24332b;
+  --kv-muted: #66756c;
+  --kv-canvas: #f3f6f2;
+  --kv-green: #2e9e5b;
+  --kv-orange: #e8a900;
   background: var(--kv-canvas);
   color: var(--kv-text);
 }
 body:has(.app-shell) {
-  background: #eef1f5;
+  background: #f3f6f2;
 }
 
 /* ---------- Top navigation (desktop) ---------- */
@@ -33,9 +33,9 @@ body:has(.app-shell) {
     align-items: center;
     gap: 6px;
     overflow: visible;
-    background: var(--kv-blue);
+    background: #165a3c;
     color: #fff;
-    box-shadow: 0 1px 3px rgba(9, 60, 120, 0.35);
+    box-shadow: 0 1px 3px rgba(10, 50, 30, 0.35);
   }
   .app-shell .sidebar .brand {
     padding: 0 12px 0 0;
@@ -94,7 +94,7 @@ body:has(.app-shell) {
     background: rgba(255, 255, 255, 0.2);
     color: #fff;
     font-weight: 600;
-    box-shadow: inset 0 -3px 0 #fff;
+    box-shadow: inset 0 -3px 0 #f5b50a;
   }
   .app-shell .nav-item .count {
     margin-left: 2px;
@@ -147,7 +147,7 @@ body:has(.app-shell) {
 /* ---------- Mobile: same palette, existing drawer layout ---------- */
 @media (max-width: 1024px) {
   .app-shell .sidebar {
-    background: var(--kv-blue);
+    background: #165a3c;
   }
   .app-shell .nav-item {
     color: #e3efff;
@@ -221,7 +221,7 @@ body:has(.app-shell) {
 .app-shell .secondary {
   background: #fff;
   color: var(--kv-blue);
-  border: 1px solid #b9d3ee;
+  border: 1px solid #b7d6c3;
 }
 .app-shell .secondary:hover:not(:disabled) {
   background: var(--kv-blue-soft);
@@ -233,7 +233,7 @@ body:has(.app-shell) {
 .app-shell input,
 .app-shell select,
 .app-shell textarea {
-  border: 1px solid #c8d0da;
+  border: 1px solid #c5d0c8;
   border-radius: 4px;
   background: #fff;
   color: var(--kv-text);
@@ -244,7 +244,7 @@ body:has(.app-shell) {
 .app-shell textarea:focus {
   outline: none;
   border-color: var(--kv-blue);
-  box-shadow: 0 0 0 2px rgba(11, 111, 208, 0.18);
+  box-shadow: 0 0 0 2px rgba(31, 122, 77, 0.18);
 }
 .app-shell label {
   color: var(--kv-muted);
@@ -302,8 +302,8 @@ body:has(.app-shell) {
   color: var(--kv-blue);
 }
 .app-shell .info-strip {
-  background: #f3f8fe;
-  border: 1px solid #cfe2f6;
+  background: #f2f8f4;
+  border: 1px solid #cde3d5;
   color: var(--kv-text);
 }
 .app-shell .error-box {
@@ -320,13 +320,13 @@ body:has(.app-shell) {
   width: 100%;
 }
 .app-shell th {
-  background: #eaf1fa;
-  color: #243447;
+  background: #e8f1ea;
+  color: #1f3a2c;
   font-size: 12.5px;
   font-weight: 650;
   text-align: left;
   padding: 9px 10px;
-  border-bottom: 1px solid #cddbeb;
+  border-bottom: 1px solid #c9dccd;
   letter-spacing: 0;
   text-transform: none;
 }
@@ -336,7 +336,7 @@ body:has(.app-shell) {
   color: var(--kv-text);
 }
 .app-shell tbody tr:hover td {
-  background: #f5f9fe;
+  background: #f4f9f5;
 }
 .app-shell tr[aria-selected='true'] td,
 .app-shell tr.selected td {
@@ -353,7 +353,7 @@ body:has(.app-shell) {
 }
 .app-shell .room-card:hover {
   border-color: var(--kv-blue);
-  box-shadow: 0 2px 8px rgba(11, 111, 208, 0.15);
+  box-shadow: 0 2px 8px rgba(31, 122, 77, 0.15);
 }
 .app-shell .room-card.occupied {
   border-color: var(--kv-green);
@@ -394,7 +394,7 @@ body:has(.app-shell) {
     background: #fff;
     border: 1px solid var(--kv-line);
     border-radius: 0 0 4px 4px;
-    box-shadow: 0 8px 20px rgba(20, 40, 70, 0.18);
+    box-shadow: 0 8px 20px rgba(20, 50, 35, 0.18);
     z-index: 50;
     padding: 4px 0;
   }
@@ -462,5 +462,93 @@ body:has(.app-shell) {
 @media (max-width: 640px) {
   .app-shell .page-heading {
     flex-wrap: wrap;
+  }
+}
+
+/* ---------- Palette refinements (calm green + gold, easy on the eyes) ---------- */
+.app-shell .nav-item .count {
+  background: #f5b50a;
+  color: #17331f;
+}
+.app-shell .profile .avatar {
+  background: #f5b50a;
+  color: #17331f;
+}
+@media (max-width: 1024px) {
+  .app-shell .nav-item.selected {
+    background: #fff;
+    color: #165a3c;
+  }
+}
+.app-shell .room-card.occupied {
+  border-color: #2e9e5b;
+}
+.app-shell .stat > strong {
+  color: #165a3c;
+}
+.app-shell .page-heading h1 {
+  color: #1c3326;
+}
+
+/* ---------- Icon buttons with tooltips ---------- */
+.app-shell [data-tip] {
+  position: relative;
+}
+.app-shell [data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2d27;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  padding: 5px 9px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease 0.25s;
+}
+.app-shell [data-tip]:hover::after,
+.app-shell [data-tip]:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
+}
+.app-shell .heading-actions [data-tip]::after,
+.app-shell .top-actions [data-tip]::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+.app-shell .icon-only {
+  width: 36px;
+  min-width: 36px;
+  padding: 0;
+  gap: 0;
+}
+.app-shell .icon-only .btn-label {
+  display: none;
+}
+.app-shell .connection .btn-label {
+  display: none;
+}
+/* Touch screens have no hover: keep the words visible there. */
+@media (hover: none), (max-width: 640px) {
+  .app-shell .icon-only {
+    width: auto;
+    padding: 7px 12px;
+    gap: 8px;
+  }
+  .app-shell .icon-only .btn-label,
+  .app-shell .connection .btn-label {
+    display: inline;
+  }
+  .app-shell [data-tip]::after {
+    display: none;
   }
 }

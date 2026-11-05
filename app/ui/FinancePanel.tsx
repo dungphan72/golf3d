@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Wallet,
   Plus,
+  Banknote,
   ArrowDownLeft,
   ArrowUpRight,
   LockKeyhole,
@@ -126,9 +127,15 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
           </p>
         </div>
         <div className="heading-actions">
-          <button className="secondary" onClick={load} disabled={loading || busy}>
+          <button
+            data-tip="Tải lại"
+            aria-label="Tải lại"
+            className="secondary icon-only"
+            onClick={load}
+            disabled={loading || busy}
+          >
             <RefreshCw size={15} />
-            Tải lại
+            <span className="btn-label">Tải lại</span>
           </button>
           <button
             className="primary"
@@ -199,20 +206,24 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                 {shift.status === 'open' ? (
                   <div className="heading-actions">
                     <button
-                      className="secondary"
+                      data-tip="Thu / chi tiền mặt"
+                      aria-label="Thu / chi tiền mặt"
+                      className="secondary icon-only"
                       disabled={busy || loading}
                       onClick={() => setForm('cash')}
                     >
-                      <Plus size={16} />
-                      Thu / chi tiền mặt
+                      <Banknote size={16} />
+                      <span className="btn-label">Thu / chi tiền mặt</span>
                     </button>
                     <button
-                      className="primary"
+                      data-tip="Đối soát & đóng ca"
+                      aria-label="Đối soát & đóng ca"
+                      className="primary icon-only"
                       disabled={busy || loading}
                       onClick={() => setForm('close')}
                     >
                       <LockKeyhole size={16} />
-                      Đối soát & đóng ca
+                      <span className="btn-label">Đối soát & đóng ca</span>
                     </button>
                   </div>
                 ) : (

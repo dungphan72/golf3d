@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/member';
+import { PackageEditor } from './PackageEditor';
 
 type Customer = { id: string; name: string; phone: string; note: string; points: number };
 type PackageType = {
@@ -95,6 +96,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
       setBusy(false);
     }
   }
+  const [editing, setEditing] = useState<PackageType | 'new' | null>(null);
   const current = data?.customers.find((c) => c.id === selected) ?? null;
   const activeTypes = data?.types.filter((t) => t.active) ?? [];
   return (
@@ -294,6 +296,31 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
         </div>
       </div>
       <h2>Danh mục gói</h2>
+      {canAdjust && (
+        <p className="form-note">
+          Giá và quyền lợi ở đây hiện trực tiếp trên trang <a href="/bang-gia">/bang-gia</a> và
+          trang chủ. Giá theo giờ, theo lượt sửa ở Cài đặt cơ sở → bảng giá.
+        </p>
+      )}
+      {canAdjust && editing && (
+        <PackageEditor
+          key={editing === 'new' ? 'new' : editing.id}
+          initial={editing === 'new' ? null : editing}
+          busy={busy}
+          onCancel={() => setEditing(null)}
+          onSave={(body) =>
+            act(
+              () => post({ action: 'type-save', requestId: operationKey(), ...body }),
+              body.id ? 'Đã lưu gói' : 'Đã thêm gói',
+            ).then(() => setEditing(null))
+          }
+        />
+      )}
+      {canAdjust && !editing && (
+        <button className="secondary" disabled={busy} onClick={() => setEditing('new')}>
+          Thêm gói
+        </button>
+      )}
       {canAdjust && data && !data.types.length && (
         <button
           className="primary"
@@ -332,6 +359,9 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
               <td>{t.active ? 'Đang bán' : 'Ngừng bán'}</td>
               {canAdjust && (
                 <td>
+                  <button disabled={busy} onClick={() => setEditing(t)}>
+                    Sửa
+                  </button>{' '}
                   <button
                     disabled={busy}
                     onClick={() =>

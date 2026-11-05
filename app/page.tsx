@@ -12,10 +12,10 @@ import {
 } from 'lucide-react';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
-import { OFFICIAL_PACKAGES } from '../lib/official-packages';
-import { KIND_LABELS, UNLIMITED } from '../lib/member';
 import BookingPage from './ui/BookingPage';
 import LandingFx from './ui/LandingFx';
+import { grantLine, validityText } from '../lib/price-table';
+import { publicPricing } from '../lib/server/pricing-service';
 import { bookingSlug } from '../lib/server/online-service';
 import './landing.css';
 
@@ -37,30 +37,6 @@ export const metadata: Metadata = {
   },
 };
 
-const PRICES = [
-  {
-    when: 'Thứ 2 – Thứ 6 · 08:00–11:00',
-    note: 'Giờ vàng',
-    gdr: 100_000,
-    h9: 300_000,
-    h18: 400_000,
-  },
-  { when: 'Thứ 2 – Thứ 6 · 11:00–23:00', note: '', gdr: 250_000, h9: 500_000, h18: 650_000 },
-  {
-    when: 'Thứ 7, Chủ nhật & ngày lễ · 08:00–23:00',
-    note: '',
-    gdr: 250_000,
-    h9: 500_000,
-    h18: 650_000,
-  },
-];
-
-const grantsText = (grants: (typeof OFFICIAL_PACKAGES)[number]['grants']) =>
-  grants
-    .map((g) => `${g.qty >= UNLIMITED ? 'Không giới hạn' : g.qty} ${KIND_LABELS[g.kind]}`)
-    .join(' + ');
-const validText = (days: number) => (days % 30 === 0 ? `${days / 30} tháng` : `${days} ngày`);
-
 const STEPS = [
   {
     t: 'Chọn line và giờ',
@@ -80,14 +56,14 @@ const STEPS = [
   },
 ];
 
-const FAQ = [
+const faqFor = (group: string, tax: string) => [
   {
     q: 'Giá 9 hố, 18 hố tính thế nào?',
-    a: 'Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm: 900.000đ (9 hố) hoặc 1.000.000đ (18 hố) cho cả buổi, áp dụng cả ngày.',
+    a: `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`,
   },
   {
     q: 'Giá niêm yết đã gồm thuế chưa?',
-    a: 'Giá niêm yết chưa gồm VAT; thuế được cộng thêm trên hóa đơn khi thanh toán.',
+    a: `Giá niêm yết chưa gồm VAT${tax}; thuế được cộng thêm trên hóa đơn khi thanh toán.`,
   },
   {
     q: 'Giờ vàng là gì?',
@@ -107,8 +83,28 @@ const FAQ = [
   },
 ];
 
+// Counting animation only when the price is a round thousand (it renders as N.000đ).
+function Count({ v }: { v: number | null }) {
+  if (v == null) return <>—</>;
+  if (v % 1000 !== 0) return <>{money(v)}</>;
+  return (
+    <>
+      <span data-sc-count={`0 ${v / 1000}`}>{v / 1000}</span>.000đ
+    </>
+  );
+}
+
 export default async function LandingPage() {
-  const slug = await bookingSlug();
+  const [slug, pricing] = await Promise.all([bookingSlug(), publicPricing()]);
+  const rows = pricing.standard.rows;
+  const group = pricing.standard.group;
+  const gold = rows.find((r) => r.gold) ?? rows[0];
+  const lowestGdr = Math.min(...rows.map((r) => r.gdr ?? Infinity));
+  const groupText =
+    group.h9 != null && group.h18 != null
+      ? `: ${money(group.h9)} (9 hố) hoặc ${money(group.h18)} (18 hố)`
+      : '';
+  const faq = faqFor(groupText, pricing.vat != null ? ` ${pricing.vat}%` : '');
   const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
   const bookLabel = slug ? 'Đặt chỗ' : 'Gọi đặt chỗ';
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BRAND.address)}`;
@@ -140,12 +136,6 @@ export default async function LandingPage() {
     ['#bang-gia', 'Bảng giá'],
     ['#goi', 'Gói hội viên'],
     ['#lien-he', 'Liên hệ'],
-  ];
-  const groups = [
-    { title: 'Combo 9 hố', filter: (k: string) => k.startsWith('h9-') },
-    { title: 'Combo 18 hố', filter: (k: string) => k.startsWith('h18-') },
-    { title: 'Luyện tập GDR', filter: (k: string) => k.startsWith('gdr-') },
-    { title: 'Thẻ VIP', filter: (k: string) => k.startsWith('vip-') },
   ];
   return (
     <div className="fw">
@@ -245,7 +235,9 @@ export default async function LandingPage() {
               <div className="fw-card-foot">
                 <span>
                   <b>Giờ vàng miễn phí đồ uống</b>
-                  <small>T2–T6 · 08:00–11:00 · GDR từ 100.000đ</small>
+                  <small>
+                    T2–T6 · {gold.from}–{gold.to} · GDR từ {money(lowestGdr)}
+                  </small>
                 </span>
                 <span className="fw-arrow-dot">
                   <ArrowRight size={18} />
@@ -298,7 +290,7 @@ export default async function LandingPage() {
               {
                 Icon: Target,
                 t: 'Luyện tập GDR',
-                p: 'Đặt line theo giờ để tập swing. Gói buổi tập 90 phút, giờ vàng từ 100.000đ.',
+                p: `Đặt line theo giờ để tập swing. Gói buổi tập 90 phút, giờ vàng từ ${money(lowestGdr)}.`,
               },
               {
                 Icon: Crown,
@@ -351,25 +343,26 @@ export default async function LandingPage() {
               <p className="fw-kicker fw-kicker-light">Thứ 2 – Thứ 6 · 08:00–11:00</p>
               <h2>Giờ vàng, đồ ăn và thức uống miễn phí</h2>
               <p className="fw-sub fw-sub-light">
-                Không áp dụng cuối tuần và ngày lễ. Giá chưa gồm VAT.
+                Không áp dụng cuối tuần và ngày lễ. Giá chưa gồm VAT
+                {pricing.vat != null ? ` ${pricing.vat}%` : ''}.
               </p>
             </div>
             <div className="fw-figs">
               <div>
                 <strong>
-                  <span data-sc-count="0 100">100</span>.000đ
+                  <Count v={gold.gdr} />
                 </strong>
                 <span>luyện tập GDR / giờ</span>
               </div>
               <div>
                 <strong>
-                  <span data-sc-count="0 300">300</span>.000đ
+                  <Count v={gold.h9} />
                 </strong>
                 <span>9 hố / người</span>
               </div>
               <div>
                 <strong>
-                  <span data-sc-count="0 400">400</span>.000đ
+                  <Count v={gold.h18} />
                 </strong>
                 <span>18 hố / người</span>
               </div>
@@ -382,8 +375,10 @@ export default async function LandingPage() {
             <p className="fw-kicker">Bảng giá</p>
             <h2>Giá niêm yết, không phụ phí ẩn</h2>
             <p className="fw-sub">
-              Giá chưa gồm VAT. Nhóm 4 người dùng giá nhóm cả ngày: {money(900_000)} cho 9 hố,{' '}
-              {money(1_000_000)} cho 18 hố.
+              Giá chưa gồm VAT{pricing.vat != null ? ` ${pricing.vat}%` : ''}.
+              {group.h9 != null && group.h18 != null
+                ? ` Nhóm 4 người dùng giá nhóm cả ngày: ${money(group.h9)} cho 9 hố, ${money(group.h18)} cho 18 hố.`
+                : ''}
             </p>
           </div>
           <div className="fw-table-card" data-sc-in>
@@ -397,26 +392,31 @@ export default async function LandingPage() {
                 </tr>
               </thead>
               <tbody>
-                {PRICES.map((p) => (
-                  <tr key={p.when}>
+                {rows.map((r) => (
+                  <tr key={r.key}>
                     <td>
-                      {p.when}
-                      {p.note && <em>{p.note}</em>}
+                      {r.days} · {r.from}–{r.to}
+                      {r.gold && <em>Giờ vàng</em>}
                     </td>
-                    <td>{money(p.gdr)}</td>
-                    <td>{money(p.h9)}</td>
-                    <td>{money(p.h18)}</td>
+                    <td>{r.gdr == null ? '—' : money(r.gdr)}</td>
+                    <td>{r.h9 == null ? '—' : money(r.h9)}</td>
+                    <td>{r.h18 == null ? '—' : money(r.h18)}</td>
                   </tr>
                 ))}
-                <tr className="fw-group">
-                  <td>Nhóm 4 người (cả ngày)</td>
-                  <td>—</td>
-                  <td>{money(900_000)} / nhóm</td>
-                  <td>{money(1_000_000)} / nhóm</td>
-                </tr>
+                {(group.h9 != null || group.h18 != null) && (
+                  <tr className="fw-group">
+                    <td>Nhóm 4 người (cả ngày)</td>
+                    <td>—</td>
+                    <td>{group.h9 == null ? '—' : `${money(group.h9)} / nhóm`}</td>
+                    <td>{group.h18 == null ? '—' : `${money(group.h18)} / nhóm`}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <p className="fw-note">
+            <a href="/bang-gia">Xem bảng giá đầy đủ và các gói hội viên</a>
+          </p>
         </section>
 
         <section id="goi" className="fw-section fw-tint">
@@ -429,20 +429,17 @@ export default async function LandingPage() {
             </p>
           </div>
           <div className="fw-pk-groups">
-            {groups.map((g) => (
-              <div key={g.title} className="fw-pk-group" data-sc-in data-sc-stagger="60">
+            {pricing.groups.map((g) => (
+              <div key={g.id} className="fw-pk-group" data-sc-in data-sc-stagger="60">
                 <h3>{g.title}</h3>
                 <div className="fw-pk-grid">
-                  {OFFICIAL_PACKAGES.filter((p) => g.filter(p.key)).map((p) => (
-                    <article
-                      key={p.key}
-                      className={'fw-pk' + (p.key.startsWith('vip') ? ' vip' : '')}
-                    >
+                  {g.items.map((p) => (
+                    <article key={p.id} className={'fw-pk' + (g.vip ? ' vip' : '')}>
                       <h4>{p.name}</h4>
                       <strong>{money(p.price)}</strong>
-                      <p>{grantsText(p.grants)}</p>
+                      <p>{p.grants.map(grantLine).join(' + ')}</p>
                       <small>
-                        Hiệu lực {validText(p.validDays)}
+                        {validityText(p.validDays)}
                         {p.perks ? ` · ${p.perks}` : ''}
                       </small>
                     </article>
@@ -466,7 +463,7 @@ export default async function LandingPage() {
                 thanh toán trước. Trạng thái yêu cầu tự cập nhật ngay trên trang.
               </p>
               <div className="fw-faq">
-                {FAQ.map((f) => (
+                {faq.map((f) => (
                   <details key={f.q}>
                     <summary>{f.q}</summary>
                     <p>{f.a}</p>

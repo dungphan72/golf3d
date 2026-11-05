@@ -3,8 +3,8 @@ import { test, expect } from '@playwright/test';
 test('trang giới thiệu công khai: giá, gói, liên hệ và lối vào quản lý', async ({ page }) => {
   const response = await page.goto('/');
   expect(response?.status()).toBe(200);
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Play.');
-  await expect(page.getByRole('heading', { name: /Một buổi chơi/ })).toBeAttached();
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('cú đánh');
+  await expect(page.getByRole('heading', { name: /Một buổi chơi, bốn bước/ })).toBeAttached();
   // Prices come from the official list (the price rail is wider than the viewport, so check the DOM).
   await expect(page.getByText('650.000 ₫').first()).toBeAttached();
   await expect(page.getByText('Thẻ VIP Diamond')).toBeAttached();

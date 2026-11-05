@@ -150,3 +150,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Nét riêng của trang: **thanh quỹ đạo cú đánh** cố định ở đáy; cả trang là một cú đánh, bóng là vị trí cuộn, mỗi chương đi qua cắm một lá cờ, bấm lá cờ để nhảy chương.
 - Engine ở `public/scrollcraft/` (không sửa), mã trang ở `app/page.tsx`, `app/landing.css`, `app/ui/ScrollCraftMount.tsx`. Brief, bảng điểm và sổ dấu vân tay ở `scrollcraft/`.
 - Kiểm tra bằng harness của skill ở 3 chế độ (máy tính, điện thoại, giảm chuyển động): không có đoạn cuộn chết, mọi dòng chữ đạt tương phản 4.5:1. Chưa kiểm tra trên điện thoại thật. Không có ảnh thật của cơ sở nên không tạo ảnh/video (không có khóa kie.ai).
+
+## v0.9.5 — Trang chủ theo mẫu "Fairway" (Dribbble, NICKELFOX)
+
+- Dựa trên bố cục mẫu Fairway Premium Golf Club: khung hero bo góc lớn, thanh điều hướng trắng khoét góc ở trên trái, tab "Đặt chỗ ↗" khoét góc ở trên phải, tiêu đề chữ mảnh cỡ rất lớn ("Nâng tầm cú đánh"), thẻ nổi bo tròn (giờ vàng, khám phá phòng chơi), bong bóng lời thoại, tab dọc giờ mở cửa. Phối màu xanh trời, xanh cỏ, trắng; điểm nhấn vàng của thương hiệu.
+- Chỉ tham khảo bố cục và phong cách, không dùng ảnh hay chữ của tác giả. Cảnh sân golf (người chơi, núi, hồ, cờ) là **hình vẽ SVG** do mình dựng; khi có ảnh thật của cơ sở thì thay vào `CourseScene` trong `app/page.tsx`.
+- Các phần dưới dùng cùng ngôn ngữ thẻ trắng bo tròn: bốn bước, giờ vàng (số đếm lên), bảng giá, gói hội viên theo nhóm, đặt chỗ (form nhúng) + hỏi đáp, liên hệ. Menu thu gọn cố định hiện sau khi cuộn qua hero. Engine ScrollCraft chỉ còn dùng cho hiện dần và đếm số.

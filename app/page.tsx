@@ -1,10 +1,11 @@
 import type { Metadata } from 'next';
+import { ArrowDown, ArrowUpRight, Clock, Crown, Flag, MapPin, Phone, Target } from 'lucide-react';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import { OFFICIAL_PACKAGES } from '../lib/official-packages';
 import { KIND_LABELS, UNLIMITED } from '../lib/member';
 import BookingPage from './ui/BookingPage';
-import ScrollCraftMount from './ui/ScrollCraftMount';
+import LandingFx from './ui/LandingFx';
 import { bookingSlug } from '../lib/server/online-service';
 import './landing.css';
 
@@ -29,23 +30,19 @@ export const metadata: Metadata = {
 const PRICES = [
   {
     when: 'Thứ 2 – Thứ 6 · 08:00–11:00',
-    note: 'giờ vàng',
+    note: 'Giờ vàng',
     gdr: 100_000,
     h9: 300_000,
     h18: 400_000,
   },
   { when: 'Thứ 2 – Thứ 6 · 11:00–23:00', note: '', gdr: 250_000, h9: 500_000, h18: 650_000 },
-  { when: 'Thứ 7, Chủ nhật & lễ · 08:00–23:00', note: '', gdr: 250_000, h9: 500_000, h18: 650_000 },
-];
-
-const GROUPS: { title: string; keys: string[]; note?: string }[] = [
-  { title: 'Chơi 9 hố', keys: ['h9-10', 'h9-20'] },
-  { title: 'Chơi 18 hố', keys: ['h18-10', 'h18-20'] },
   {
-    title: 'Luyện tập GDR',
-    keys: ['gdr-peak-10', 'gdr-10', 'gdr-20', 'gdr-1m', 'gdr-3m', 'gdr-6m', 'gdr-12m'],
+    when: 'Thứ 7, Chủ nhật & ngày lễ · 08:00–23:00',
+    note: '',
+    gdr: 250_000,
+    h9: 500_000,
+    h18: 650_000,
   },
-  { title: 'Thẻ VIP', keys: ['vip-platinum', 'vip-diamond'] },
 ];
 
 const grantsText = (grants: (typeof OFFICIAL_PACKAGES)[number]['grants']) =>
@@ -56,19 +53,19 @@ const validText = (days: number) => (days % 30 === 0 ? `${days / 30} tháng` : `
 
 const STEPS = [
   {
-    t: 'Chọn line và giờ chơi.',
-    p: 'Đặt online ngay trên trang này hoặc gọi hotline. Nhân viên xác nhận line phù hợp.',
+    t: 'Chọn line và giờ',
+    p: 'Đặt online ngay trên trang này hoặc gọi hotline; nhân viên xác nhận line phù hợp.',
   },
   {
-    t: 'Vào line riêng, vung gậy.',
-    p: 'Mỗi line là một không gian riêng, hướng tới màn hình mô phỏng sân. Nắng mưa đều chơi được.',
+    t: 'Vào line riêng, vung gậy',
+    p: 'Mỗi line là một không gian riêng hướng tới màn hình mô phỏng sân. Nắng mưa đều chơi được.',
   },
   {
-    t: 'Foresight GC3 đo từng cú đánh.',
+    t: 'Foresight GC3 đo từng cú',
     p: 'Tốc độ, góc phóng, độ xoáy và quỹ đạo bóng hiện ngay trên màn hình để bạn chỉnh swing.',
   },
   {
-    t: 'Chơi tiếp, thanh toán sau.',
+    t: 'Chơi tiếp, thanh toán sau',
     p: 'Chơi 9 hoặc 18 hố, gọi đồ uống tại line. Trả tiền mặt, thẻ hoặc quét mã QR.',
   },
 ];
@@ -100,6 +97,132 @@ const FAQ = [
   },
 ];
 
+// A row of pines: [x, base y, height]
+const PINES: [number, number, number][] = [
+  [30, 640, 150],
+  [90, 650, 190],
+  [150, 645, 130],
+  [210, 655, 170],
+  [270, 650, 120],
+  [1180, 640, 140],
+  [1240, 650, 200],
+  [1300, 645, 150],
+  [1360, 655, 185],
+  [1420, 648, 130],
+  [1480, 652, 175],
+  [1550, 646, 145],
+];
+
+/** Stylised course scene for the hero: sky, clouds, mountains, lake, fairway, flag and a golfer. */
+function CourseScene() {
+  return (
+    <svg
+      className="fw-scene"
+      viewBox="0 0 1600 900"
+      preserveAspectRatio="xMidYMid slice"
+      role="img"
+      aria-label="Sân golf với núi và hồ nước"
+    >
+      <defs>
+        <linearGradient id="fwSky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#1d5cae" />
+          <stop offset="0.5" stopColor="#4f9be0" />
+          <stop offset="0.78" stopColor="#a9d3f1" />
+          <stop offset="1" stopColor="#dcecf6" />
+        </linearGradient>
+        <linearGradient id="fwLake" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#8cc0e0" />
+          <stop offset="1" stopColor="#5f9cc6" />
+        </linearGradient>
+        <linearGradient id="fwFair" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#6db35a" />
+          <stop offset="1" stopColor="#2f7d32" />
+        </linearGradient>
+        <linearGradient id="fwFair2" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#3f9140" />
+          <stop offset="1" stopColor="#1d5f2c" />
+        </linearGradient>
+        <filter id="fwBlur" x="-20%" y="-50%" width="140%" height="200%">
+          <feGaussianBlur stdDeviation="14" />
+        </filter>
+      </defs>
+      <rect width="1600" height="900" fill="url(#fwSky)" />
+      <g fill="#fff" filter="url(#fwBlur)" opacity="0.95">
+        <ellipse cx="260" cy="170" rx="210" ry="48" />
+        <ellipse cx="380" cy="145" rx="150" ry="52" />
+        <ellipse cx="1180" cy="120" rx="230" ry="42" />
+        <ellipse cx="1330" cy="150" rx="150" ry="40" />
+        <ellipse cx="760" cy="250" rx="180" ry="30" opacity="0.8" />
+        <ellipse cx="60" cy="330" rx="150" ry="34" opacity="0.8" />
+      </g>
+      <path
+        d="M0 470 L120 395 L230 440 L370 340 L520 430 L640 385 L790 455 V560 H0 Z"
+        fill="#7d9bc2"
+      />
+      <path
+        d="M640 470 L800 380 L930 430 L1070 340 L1200 420 L1340 360 L1480 430 L1600 395 V560 H640 Z"
+        fill="#6384ad"
+      />
+      <path
+        d="M0 520 L160 470 L300 505 L470 455 L640 510 L820 475 L1000 520 L1180 470 L1360 510 L1600 475 V600 H0 Z"
+        fill="#3e6f56"
+      />
+      <rect y="560" width="1600" height="70" fill="url(#fwLake)" />
+      <path
+        d="M180 585 H520 M700 600 H1080 M1180 580 H1500"
+        stroke="#fff"
+        strokeOpacity="0.35"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+      <g fill="#1c4a2b">
+        {PINES.map(([x, y, h]) => (
+          <path key={x} d={`M${x} ${y - h} L${x + 34} ${y} L${x - 34} ${y} Z`} />
+        ))}
+      </g>
+      <path
+        d="M0 640 C 260 600, 600 640, 900 650 C 1150 660, 1400 630, 1600 650 V900 H0 Z"
+        fill="url(#fwFair)"
+      />
+      <path
+        d="M0 720 C 300 690, 700 740, 1100 730 C 1350 724, 1500 710, 1600 720 V900 H0 Z"
+        fill="url(#fwFair2)"
+      />
+      <ellipse cx="1180" cy="690" rx="118" ry="16" fill="#8ccf78" />
+      <ellipse cx="560" cy="676" rx="70" ry="9" fill="#e9dcb4" opacity="0.95" />
+      <line x1="1180" y1="690" x2="1180" y2="560" stroke="#fff" strokeWidth="4" />
+      <path d="M1180 560 L1240 578 L1180 596 Z" fill="#fff" />
+      <g
+        transform="translate(500 396) scale(1.18)"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      >
+        <path d="M-14 128 L-2 206 L-16 276" stroke="#e9e2d2" strokeWidth="30" />
+        <path d="M-4 128 L30 204 L48 274" stroke="#d9d1bf" strokeWidth="30" />
+        <path d="M22 34 L-18 128" stroke="#215c36" strokeWidth="50" />
+        <path d="M26 50 L66 150" stroke="#d7a483" strokeWidth="13" />
+        <path d="M66 150 L158 284" stroke="#2a2f38" strokeWidth="4" />
+        <ellipse cx="-18" cy="282" rx="24" ry="8" fill="#242a33" stroke="none" />
+        <ellipse cx="52" cy="280" rx="24" ry="8" fill="#242a33" stroke="none" />
+        <rect
+          x="150"
+          y="278"
+          width="22"
+          height="9"
+          rx="3"
+          fill="#2a2f38"
+          stroke="none"
+          transform="rotate(30 158 284)"
+        />
+        <circle cx="178" cy="289" r="6" fill="#fff" stroke="none" />
+        <circle cx="30" cy="2" r="22" fill="#d9a888" stroke="none" />
+        <path d="M8 -2 A22 22 0 0 1 52 -2 L72 0 L52 8 L8 8 Z" fill="#fff" stroke="none" />
+      </g>
+    </svg>
+  );
+}
+
 export default async function LandingPage() {
   const slug = await bookingSlug();
   const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
@@ -127,231 +250,289 @@ export default async function LandingPage() {
       },
     ],
   };
-  const byKey = new Map(OFFICIAL_PACKAGES.map((p) => [p.key, p]));
+  const nav = [
+    ['#dich-vu', 'Trải nghiệm'],
+    ['#gio-vang', 'Giờ vàng'],
+    ['#bang-gia', 'Bảng giá'],
+    ['#goi', 'Gói hội viên'],
+    ['#lien-he', 'Liên hệ'],
+  ];
+  const groups = [
+    { title: 'Combo 9 hố', filter: (k: string) => k.startsWith('h9-') },
+    { title: 'Combo 18 hố', filter: (k: string) => k.startsWith('h18-') },
+    { title: 'Luyện tập GDR', filter: (k: string) => k.startsWith('gdr-') },
+    { title: 'Thẻ VIP', filter: (k: string) => k.startsWith('vip-') },
+  ];
   return (
-    <div className="sg">
+    <div className="fw">
       {/* eslint-disable-next-line @next/next/no-css-tags */}
       <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;300;400;500;600;700&display=swap"
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <span data-sc-progress aria-hidden="true" />
 
-      <div className="sg-folio">
-        <span className="sg-folio-title" data-folio>
-          {BRAND.name}
-        </span>
-        <a className="sg-folio-cta" href={bookHref}>
-          {bookLabel} →
+      <header className="fw-fixed" aria-label="Điều hướng nhanh">
+        <a className="fw-brand" href="#top">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={BRAND.logo} alt="" width={30} height={30} />
+          <span>{BRAND.short}</span>
         </a>
-      </div>
+        <nav>
+          {nav.map(([href, label]) => (
+            <a key={href} href={href}>
+              {label}
+            </a>
+          ))}
+        </nav>
+        <a className="fw-pill-cta" href={bookHref}>
+          {bookLabel} <ArrowUpRight size={16} />
+        </a>
+      </header>
 
       <main id="top">
-        {/* TITLE PAGE — quiet, type only, on bone paper */}
-        <section className="sg-title sg-bone" data-chapter="Trang bìa">
-          <div className="sg-wrap" data-sc-in data-sc-stagger="90">
-            <p className="sg-kicker">
-              {BRAND.name} · {BRAND.address.replace(', Phường', ' ·')}
-            </p>
-            <h1 className="sg-h1">
-              Play.
-              <br />
-              Connect.
-              <br />
-              <em>Repeat.</em>
-            </h1>
-            <p className="sg-lede">
-              Golf 3D mô phỏng Foresight GC3 giữa thành phố. Chơi 9 hố, 18 hố hay luyện tập, nắng
-              mưa đều được, mở cửa mỗi ngày từ 08:00 đến 23:00.
-            </p>
-            <p className="sg-links">
-              <a href={bookHref}>{slug ? 'Đặt chỗ online' : `Gọi ${BRAND.hotline}`}</a>
-              <span aria-hidden="true">/</span>
-              <a href={`tel:${BRAND.hotline}`}>Hotline {BRAND.hotline}</a>
-            </p>
-          </div>
-        </section>
+        <section className="fw-hero">
+          <div className="fw-stage">
+            <CourseScene />
+            <div className="fw-shade" aria-hidden="true" />
 
-        {/* CHAPTER I — the round. Pinned; the ball flight draws with scroll. PEAK. */}
-        <section
-          id="c1"
-          className="sg-forest"
-          data-chapter="I · Một buổi chơi"
-          data-sc-act="pin"
-          data-sc-span="5.2"
-        >
-          <div data-sc-stage className="sg-round">
-            <div className="sg-round-art" aria-hidden="true">
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path className="sg-ground" d="M0 84 C 25 78, 60 88, 100 80 L100 100 L0 100 Z" />
-                <path className="sg-ground2" d="M0 92 C 30 88, 70 96, 100 90 L100 100 L0 100 Z" />
-                <line
-                  className="sg-pole"
-                  x1="88"
-                  y1="80"
-                  x2="88"
-                  y2="62"
-                  vectorEffect="non-scaling-stroke"
-                />
-                <path className="sg-flag" d="M88 62 L96 65 L88 68 Z" />
-              </svg>
-              <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="sg-arc-svg">
-                <path
-                  className="sg-arc"
-                  d="M12 82 Q 50 -4 88 80"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </svg>
-              <span className="sg-ball" />
-              <div className="sg-gc3" data-sc-cue="0.46 0.9">
-                <strong>Foresight GC3</strong>
-                <span>tốc độ · góc phóng · độ xoáy</span>
-              </div>
-            </div>
-            <div className="sg-round-copy">
-              <h2 className="sg-h2">
-                Một buổi chơi, <em>bốn bước.</em>
-              </h2>
-              <div className="sg-steps">
-                {STEPS.map((s, i) => (
-                  <div
-                    key={s.t}
-                    className="sg-step"
-                    data-sc-cue={['0 0.3 0', '0.26 0.52', '0.48 0.74', '0.7 1'][i]}
-                  >
-                    <h3 className="sg-h3">{s.t}</h3>
-                    <p>{s.p}</p>
-                  </div>
+            <div className="fw-top-left">
+              <a className="fw-brand" href="#top">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={BRAND.logo} alt="" width={34} height={34} />
+                <span>{BRAND.short}</span>
+              </a>
+              <nav>
+                {nav.slice(0, 4).map(([href, label]) => (
+                  <a key={href} href={href}>
+                    {label}
+                  </a>
                 ))}
+              </nav>
+            </div>
+            <a className="fw-top-right" href={bookHref}>
+              {bookLabel}{' '}
+              <span className="fw-arrow-dot">
+                <ArrowUpRight size={15} />
+              </span>
+            </a>
+
+            <div className="fw-headline">
+              <h1>
+                <span>Nâng tầm</span>
+                <strong>cú đánh</strong>
+              </h1>
+              <p>
+                Golf 3D mô phỏng Foresight GC3 giữa lòng thành phố. Nắng mưa đều chơi, phòng riêng
+                cho bạn bè, mở cửa mỗi ngày 08:00–23:00.
+              </p>
+            </div>
+
+            <div className="fw-bubble">Hơn cả một buổi chơi, một phiên bản tốt hơn của bạn.</div>
+
+            <div className="fw-side-time" aria-label="Giờ mở cửa">
+              <span>08:00 – 23:00</span>
+              <small>Mỗi ngày</small>
+            </div>
+
+            <a className="fw-card fw-card-gold" href="#gio-vang">
+              <span className="fw-card-icon">
+                <Clock size={20} />
+              </span>
+              <span>
+                <b>Giờ vàng</b>
+                <small>T2–T6 · 08:00–11:00 · GDR từ 100.000đ</small>
+              </span>
+              <span className="fw-arrow-dot">
+                <ArrowUpRight size={15} />
+              </span>
+            </a>
+
+            <a className="fw-card fw-card-discover" href="#dich-vu">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BRAND.banner} alt="Phòng chơi Foresight GC3" />
+              <span>
+                <b>Khám phá phòng chơi</b>
+                <small>10 line, trong đó 2 phòng VIP riêng tư.</small>
+              </span>
+              <span className="fw-arrow-dot">
+                <ArrowUpRight size={15} />
+              </span>
+            </a>
+
+            <a className="fw-scroll" href="#dich-vu" aria-label="Cuộn xuống">
+              <ArrowDown size={18} />
+            </a>
+          </div>
+        </section>
+
+        <section id="dich-vu" className="fw-section">
+          <div className="fw-head" data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Trải nghiệm</p>
+            <h2>Một buổi chơi, bốn bước</h2>
+            <p className="fw-sub">Từ lúc đặt chỗ đến lúc thanh toán, mọi thứ gọn trong một buổi.</p>
+          </div>
+          <ol className="fw-steps" data-sc-in data-sc-stagger="80">
+            {STEPS.map((s, i) => (
+              <li key={s.t} className="fw-tile">
+                <span className="fw-num">{i + 1}</span>
+                <h3>{s.t}</h3>
+                <p>{s.p}</p>
+              </li>
+            ))}
+          </ol>
+          <div className="fw-three" data-sc-in data-sc-stagger="80">
+            {[
+              {
+                Icon: Flag,
+                t: 'Chơi 9 hố · 18 hố',
+                p: 'Mô phỏng sân thật. Giá theo đầu người cho nhóm 1–3 người, giá nhóm cho 4 người.',
+              },
+              {
+                Icon: Target,
+                t: 'Luyện tập GDR',
+                p: 'Đặt line theo giờ để tập swing. Gói buổi tập 90 phút, giờ vàng từ 100.000đ.',
+              },
+              {
+                Icon: Crown,
+                t: 'Phòng VIP riêng tư',
+                p: 'Không gian riêng cho nhóm bạn, gia đình, đối tác. Combo và thẻ VIP dùng được.',
+              },
+            ].map(({ Icon, t, p }) => (
+              <article key={t} className="fw-tile fw-tile-line">
+                <Icon size={22} />
+                <h3>{t}</h3>
+                <p>{p}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="gio-vang" className="fw-section fw-tight">
+          <div className="fw-gold-panel" data-sc-in data-sc-stagger="90">
+            <div>
+              <p className="fw-kicker fw-kicker-light">Thứ 2 – Thứ 6 · 08:00–11:00</p>
+              <h2>Giờ vàng, đồ ăn và thức uống miễn phí</h2>
+              <p className="fw-sub fw-sub-light">
+                Không áp dụng cuối tuần và ngày lễ. Giá chưa gồm VAT.
+              </p>
+            </div>
+            <div className="fw-figs">
+              <div>
+                <strong>
+                  <span data-sc-count="0 100">100</span>.000đ
+                </strong>
+                <span>luyện tập GDR / giờ</span>
+              </div>
+              <div>
+                <strong>
+                  <span data-sc-count="0 300">300</span>.000đ
+                </strong>
+                <span>9 hố / người</span>
+              </div>
+              <div>
+                <strong>
+                  <span data-sc-count="0 400">400</span>.000đ
+                </strong>
+                <span>18 hố / người</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* authored silence: the landing is felt */}
-        <div className="sg-silence sg-bone" aria-hidden="true" />
-
-        {/* CHAPTER II — golden hour. Real prices tick in; the figures are wiped on. */}
-        <section id="c2" className="sg-amber" data-chapter="II · Giờ vàng">
-          <div className="sg-wrap sg-gold">
-            <div data-sc-in data-sc-stagger="70">
-              <p className="sg-kicker">Thứ 2 – Thứ 6 · 08:00–11:00</p>
-              <h2 className="sg-h2">Giờ vàng, đồ ăn thức uống miễn phí.</h2>
-            </div>
-            <div className="sg-figures" data-sc-reveal="up" data-sc-reveal-at="0.1 0.5">
-              <div>
-                <span className="sg-fig">
-                  <span data-sc-count="0 100">100</span>.000đ
-                </span>
-                <span className="sg-cap">luyện tập GDR, mỗi giờ</span>
-              </div>
-              <div>
-                <span className="sg-fig">
-                  <span data-sc-count="0 300">300</span>.000đ
-                </span>
-                <span className="sg-cap">9 hố, mỗi người</span>
-              </div>
-              <div>
-                <span className="sg-fig">
-                  <span data-sc-count="0 400">400</span>.000đ
-                </span>
-                <span className="sg-cap">18 hố, mỗi người</span>
-              </div>
-            </div>
-            <p className="sg-note" data-sc-in>
-              Không áp dụng cuối tuần và ngày lễ. Giá chưa gồm VAT.
+        <section id="bang-gia" className="fw-section">
+          <div className="fw-head" data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Bảng giá</p>
+            <h2>Giá niêm yết, không phụ phí ẩn</h2>
+            <p className="fw-sub">
+              Giá chưa gồm VAT. Nhóm 4 người dùng giá nhóm cả ngày: {money(900_000)} cho 9 hố,{' '}
+              {money(1_000_000)} cho 18 hố.
             </p>
           </div>
-        </section>
-
-        {/* CHAPTER III — the price list, set as printed columns on a lateral rail */}
-        <section
-          id="c3"
-          className="sg-bone sg-pan"
-          data-chapter="III · Bảng giá & gói"
-          data-sc-act="pan"
-          data-sc-span="6"
-        >
-          <div data-sc-stage>
-            <div className="sg-rail" data-sc-pan="0.06">
-              <div className="sg-col sg-col-lead">
-                <p className="sg-kicker">Bảng giá</p>
-                <h2 className="sg-h2">Giá niêm yết, không phụ phí ẩn.</h2>
-                <p className="sg-body">
-                  Giá chưa gồm VAT. Nhóm 4 người dùng giá nhóm cả ngày: {money(900_000)} cho 9 hố,{' '}
-                  {money(1_000_000)} cho 18 hố.
-                </p>
-              </div>
-              <div className="sg-col">
-                <h3 className="sg-h3">Theo lượt và giờ</h3>
-                <dl className="sg-prices">
-                  {PRICES.map((p) => (
-                    <div key={p.when}>
-                      <dt>
-                        {p.when}
-                        {p.note && <em> · {p.note}</em>}
-                      </dt>
-                      <dd>
-                        <span>GDR / giờ</span>
-                        <b>{money(p.gdr)}</b>
-                        <span>9 hố</span>
-                        <b>{money(p.h9)}</b>
-                        <span>18 hố</span>
-                        <b>{money(p.h18)}</b>
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-              {GROUPS.map((g) => (
-                <div key={g.title} className="sg-col">
-                  <h3 className="sg-h3">{g.title}</h3>
-                  <ul className="sg-pk">
-                    {g.keys
-                      .map((k) => byKey.get(k))
-                      .filter((p): p is NonNullable<typeof p> => !!p)
-                      .map((p) => (
-                        <li key={p.key}>
-                          <div>
-                            <span>{p.name}</span>
-                            <b>{money(p.price)}</b>
-                          </div>
-                          <small>
-                            {grantsText(p.grants)} · hiệu lực {validText(p.validDays)}
-                            {p.perks ? ` · ${p.perks}` : ''}
-                          </small>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              ))}
-              <div className="sg-col sg-col-end">
-                <p className="sg-body">
-                  Mỗi lượt 9 hố hoặc 18 hố tích 1 điểm; đủ 10 điểm đổi 1 lượt miễn phí. Combo và thẻ
-                  VIP dùng được cho cả phòng VIP. Đăng ký gói tại quầy hoặc gọi{' '}
-                  <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
-                </p>
-              </div>
-            </div>
+          <div className="fw-table-card" data-sc-in>
+            <table>
+              <thead>
+                <tr>
+                  <th>Khung giờ</th>
+                  <th>Luyện tập GDR / giờ</th>
+                  <th>9 hố / người</th>
+                  <th>18 hố / người</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PRICES.map((p) => (
+                  <tr key={p.when}>
+                    <td>
+                      {p.when}
+                      {p.note && <em>{p.note}</em>}
+                    </td>
+                    <td>{money(p.gdr)}</td>
+                    <td>{money(p.h9)}</td>
+                    <td>{money(p.h18)}</td>
+                  </tr>
+                ))}
+                <tr className="fw-group">
+                  <td>Nhóm 4 người (cả ngày)</td>
+                  <td>—</td>
+                  <td>{money(900_000)} / nhóm</td>
+                  <td>{money(1_000_000)} / nhóm</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </section>
 
-        {/* CHAPTER IV — booking, on paper */}
-        <section id="dat-cho" className="sg-paper" data-chapter="IV · Đặt chỗ">
-          <div className="sg-wrap sg-booking">
+        <section id="goi" className="fw-section fw-tint">
+          <div className="fw-head" data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Gói hội viên</p>
+            <h2>Mua trước, chơi nhiều hơn</h2>
+            <p className="fw-sub">
+              Mỗi lượt 9 hố hoặc 18 hố tích 1 điểm; đủ 10 điểm đổi 1 lượt miễn phí. Combo và thẻ VIP
+              dùng được cho cả phòng VIP.
+            </p>
+          </div>
+          <div className="fw-pk-groups">
+            {groups.map((g) => (
+              <div key={g.title} className="fw-pk-group" data-sc-in data-sc-stagger="60">
+                <h3>{g.title}</h3>
+                <div className="fw-pk-grid">
+                  {OFFICIAL_PACKAGES.filter((p) => g.filter(p.key)).map((p) => (
+                    <article
+                      key={p.key}
+                      className={'fw-pk' + (p.key.startsWith('vip') ? ' vip' : '')}
+                    >
+                      <h4>{p.name}</h4>
+                      <strong>{money(p.price)}</strong>
+                      <p>{grantsText(p.grants)}</p>
+                      <small>
+                        Hiệu lực {validText(p.validDays)}
+                        {p.perks ? ` · ${p.perks}` : ''}
+                      </small>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="fw-note">
+            Đăng ký gói tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
+          </p>
+        </section>
+
+        <section id="dat-cho" className="fw-section">
+          <div className="fw-booking">
             <div data-sc-in data-sc-stagger="70">
-              <p className="sg-kicker">Đặt chỗ</p>
-              <h2 className="sg-h2">Chọn giờ, nhân viên xác nhận.</h2>
-              <p className="sg-body">
+              <p className="fw-kicker">Đặt chỗ</p>
+              <h2>Chọn giờ, nhân viên xác nhận</h2>
+              <p className="fw-sub">
                 Gửi yêu cầu chưa đầy một phút. Chúng tôi xếp line phù hợp và gọi xác nhận; không cần
                 thanh toán trước. Trạng thái yêu cầu tự cập nhật ngay trên trang.
               </p>
-              <div className="sg-faq">
+              <div className="fw-faq">
                 {FAQ.map((f) => (
                   <details key={f.q}>
                     <summary>{f.q}</summary>
@@ -360,17 +541,18 @@ export default async function LandingPage() {
                 ))}
               </div>
             </div>
-            <div className="sg-form" data-sc-in>
+            <div className="fw-form" data-sc-in>
               {slug ? (
                 <BookingPage slug={slug} embedded />
               ) : (
-                <div className="sg-callcard">
-                  <h3 className="sg-h3">Đặt chỗ qua hotline</h3>
-                  <p className="sg-body">
+                <div className="fw-call">
+                  <Phone size={26} />
+                  <h3>Đặt chỗ qua hotline</h3>
+                  <p>
                     Đặt lịch online sẽ mở trong thời gian tới. Hiện tại vui lòng gọi để được giữ
                     line và xác nhận ngay.
                   </p>
-                  <a className="sg-btn" href={`tel:${BRAND.hotline}`}>
+                  <a className="fw-btn" href={`tel:${BRAND.hotline}`}>
                     Gọi {BRAND.hotline}
                   </a>
                 </div>
@@ -379,39 +561,51 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* COLOPHON — the last element; the rail is complete */}
-        <section
-          id="c5"
-          className="sg-forest sg-colophon"
-          data-chapter="Cuối trang"
-          data-sc-act="pin"
-          data-sc-span="1.3"
-        >
-          <div data-sc-stage className="sg-close">
-            <div data-sc-cue="0 1 0 0">
-              <p className="sg-h2">
-                Hẹn gặp bạn ở <em>line số một.</em>
-              </p>
-              <p className="sg-colo">
-                {BRAND.name} · {BRAND.address}
-                <br />
-                Mở cửa mỗi ngày 08:00–23:00 ·{' '}
-                <a href={`tel:${BRAND.hotline}`}>Hotline {BRAND.hotline}</a> ·{' '}
-                <a href={mapHref} target="_blank" rel="noopener noreferrer">
-                  Chỉ đường
-                </a>{' '}
-                · <a href={bookHref}>{slug ? 'Đặt chỗ online' : 'Gọi đặt chỗ'}</a>
-              </p>
-              <p className="sg-colo sg-colo-small">
-                © {new Date().getFullYear()} {BRAND.name} · {BRAND.website} ·{' '}
-                <a href="/quan-ly">Dành cho nhân viên</a>
-              </p>
+        <section id="lien-he" className="fw-section fw-tight">
+          <div className="fw-contact" data-sc-in data-sc-stagger="70">
+            <div>
+              <h2>Ghé thăm chúng tôi</h2>
+              <ul>
+                <li>
+                  <MapPin size={18} /> {BRAND.address}
+                </li>
+                <li>
+                  <Clock size={18} /> Mở cửa mỗi ngày 08:00–23:00
+                </li>
+                <li>
+                  <Phone size={18} /> <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>
+                </li>
+              </ul>
+            </div>
+            <div className="fw-contact-actions">
+              <a className="fw-btn fw-btn-light" href={bookHref}>
+                {bookLabel} <ArrowUpRight size={16} />
+              </a>
+              <a
+                className="fw-btn fw-btn-ghost"
+                href={mapHref}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Chỉ đường
+              </a>
             </div>
           </div>
         </section>
       </main>
 
-      <ScrollCraftMount />
+      <footer className="fw-footer">
+        <span>
+          © {new Date().getFullYear()} {BRAND.name} · {BRAND.website}
+        </span>
+        <a href="/quan-ly">Dành cho nhân viên</a>
+      </footer>
+      <div className="fw-sticky">
+        <a className="fw-btn" href={bookHref}>
+          {bookLabel} <ArrowUpRight size={16} />
+        </a>
+      </div>
+      <LandingFx />
     </div>
   );
 }

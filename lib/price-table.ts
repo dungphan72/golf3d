@@ -200,7 +200,11 @@ export function groupPackages(items: PackageItem[]): PackageGroup[] {
 export const grantLine = (g: Grant) =>
   `${g.qty >= UNLIMITED ? 'Không giới hạn' : g.qty} ${KIND_LABELS[g.kind]}`;
 export const validityText = (days: number) =>
-  days % 30 === 0 ? `Hiệu lực ${days / 30} tháng` : `Hiệu lực ${days} ngày`;
+  days >= 3650
+    ? 'Không thời hạn'
+    : days % 30 === 0
+      ? `Hiệu lực ${days / 30} tháng`
+      : `Hiệu lực ${days} ngày`;
 /** Bullet list for a package card: what it contains, how long it lasts, then the perks. */
 export const packageBullets = (p: PackageItem) => [
   ...p.grants.map(grantLine),

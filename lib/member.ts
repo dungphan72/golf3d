@@ -17,7 +17,7 @@ export type GrantKind = (typeof GRANT_KINDS)[number];
 export const KIND_LABELS: Record<GrantKind, string> = {
   holes9: 'Lượt 9 hố',
   holes18: 'Lượt 18 hố',
-  gdr: 'Buổi GDR',
+  gdr: 'Giờ chơi',
 };
 export type Grant = { kind: GrantKind; qty: number };
 export const UNLIMITED = 99_999; // period passes: effectively unlimited uses within the validity

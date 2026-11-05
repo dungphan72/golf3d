@@ -191,3 +191,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Admin: tab Hội viên có nút **Thêm gói** và **Sửa** (tên, giá, hiệu lực, số lượt 9 hố/18 hố/GDR hoặc không giới hạn, quyền lợi, đang bán/ngừng bán). Gói mới tự vào nhóm phù hợp trên trang giá.
 - Tham khảo cấu trúc (giá theo giờ, gói trả trước, ưu đãi, hội viên) từ https://saigonswing.com/menu/ nhưng **không sao chép con số**: đó là bảng giá của đơn vị khác; giá hiển thị là giá của Saigon Golf 3D Club trong admin.
 - Sửa khoảng cách chữ toàn trang (lề của tiêu đề/đoạn văn bị reset nhầm).
+
+## v0.10.1 — Nhập bảng giá theo mẫu Saigon Swing (05/11/2026)
+
+- Theo yêu cầu của chủ cơ sở, bảng giá và gói của https://saigonswing.com/menu/ được nhập vào cơ sở: giá theo giờ phòng thường/VIP (Early Bird 07:00–11:00 hằng ngày 180.000/330.000đ; giờ thường 300.000/550.000đ), 4 gói giờ không thời hạn, 12 thẻ tháng/6 tháng/1 năm, 3 dòng "Ưu đãi theo ngày" (Ngày của phụ nữ Thứ Ba, trẻ em dưới 16 tuổi, giảm 40% gói Early Bird/Junior). Giờ mở cửa đổi thành 07:00–23:00.
+- Giá 9/18 hố và giá nhóm 4 người **được tắt (không xóa)** trong bảng giá; 13 gói cũ (combo 9/18 hố, GDR, thẻ VIP) chuyển sang "ngừng bán". Bản sao dữ liệu trước khi đổi: `docs/backups/settings-before-saigonswing.json`, `docs/backups/package-types-before-saigonswing.json` (bật lại giá 9/18 trong Cài đặt → bảng giá; bán lại gói cũ trong Hội viên → Bán lại).
+- Migration 0010: cột `section` (nhóm hiển thị trên trang giá) cho gói; form đặt chỗ chỉ hiện dịch vụ đang có giá.
+- Hạn chế đã biết: (1) gói giờ trừ **1 đơn vị mỗi phiên**, chưa trừ theo số giờ của phiên (nhân viên dùng "điều chỉnh" để trừ thêm giờ nếu phiên dài hơn 1 giờ); (2) gói chưa phân biệt phòng thường/VIP khi trừ; (3) "Ngày của phụ nữ" và "trẻ em dưới 16" chỉ hiển thị trên trang giá, hệ thống tính tiền chưa tự áp dụng; (4) dòng "TAKE 40% OF ALL PACKAGES" được hiểu là giảm 40%, chưa tạo gói Early Bird/Junior riêng.

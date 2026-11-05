@@ -121,7 +121,8 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
 
   // The same phone cannot register twice; another member's data is never returned to an anonymous call.
   const anon = await (await browser.newContext()).request.get('/api/member');
-  expect(anon.status()).toBe(401);
+  expect(anon.status()).toBe(200);
+  expect(await anon.json()).toEqual({ signedOut: true });
   await post(owner, '/api/members', { action: 'account-reset', customerId: customer.id });
   await me.reload();
   await expect(me.getByRole('tab', { name: 'Đăng nhập' })).toBeVisible(); // reset signs everyone out
@@ -135,4 +136,54 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
     },
   });
   expect(again.status()).toBe(409);
+});
+
+test('đăng nhập sai nhiều lần chỉ chặn đúng địa chỉ IP đó, không khóa chủ tài khoản', async ({
+  browser,
+}) => {
+  test.setTimeout(150_000);
+  const phone = '0977888999';
+  const password = 'matkhau-dung-123';
+  const owner = await browser.newContext();
+  const make = await owner.request.post('/api/member', {
+    headers: { 'x-forwarded-for': '10.0.0.1' },
+    data: { action: 'register', name: 'Chủ Tài Khoản', phone, email: '', password },
+  });
+  expect(make.status(), await make.text()).toBe(200);
+
+  const attacker = await browser.newContext();
+  const login = (ctx: typeof attacker, ip: string, pw: string) =>
+    ctx.request.post('/api/member', {
+      headers: { 'x-forwarded-for': ip },
+      data: { action: 'login', phone, password: pw },
+    });
+  for (let i = 0; i < 5; i++)
+    expect((await login(attacker, '10.9.9.9', 'sai-mat-khau-' + i)).status()).toBe(401);
+  // The attacker's address is now blocked, even with the right password...
+  expect((await login(attacker, '10.9.9.9', password)).status()).toBe(429);
+  // ...but the real member, from another address, still signs in.
+  const real = await browser.newContext();
+  const ok = await login(real, '10.0.0.2', password);
+  expect(ok.status(), await ok.text()).toBe(200);
+});
+
+test('một địa chỉ IP chỉ đăng ký được vài tài khoản mỗi giờ', async ({ browser }) => {
+  test.setTimeout(150_000);
+  const ctx = await browser.newContext();
+  const statuses: number[] = [];
+  for (let i = 0; i < 7; i++) {
+    const r = await ctx.request.post('/api/member', {
+      headers: { 'x-forwarded-for': '10.5.5.5' },
+      data: {
+        action: 'register',
+        name: 'Khách ' + i,
+        phone: `09123400${String(i).padStart(2, '0')}`,
+        email: '',
+        password: 'matkhau-an-toan-9',
+      },
+    });
+    statuses.push(r.status());
+  }
+  expect(statuses.filter((s) => s === 200)).toHaveLength(5);
+  expect(statuses.slice(5)).toEqual([429, 429]);
 });

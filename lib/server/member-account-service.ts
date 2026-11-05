@@ -19,8 +19,12 @@ type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
 const error = (message: string, status = 400): R => reply({ error: message }, status);
 
-const MAX_FAILURES = 5;
-const LOCK_MS = 15 * 60_000;
+// Per-IP limits (a stranger cannot lock someone else's account from another address).
+const WINDOW_MS = 15 * 60_000;
+const HOUR_MS = 3_600_000;
+const LOGIN_FAILS_PER_IP_PHONE = 5; // wrong passwords for one phone from one address in 15 minutes
+const LOGIN_FAILS_PER_PHONE = 30; // same, from all addresses together
+const REGISTERS_PER_IP_HOUR = 5;
 const DUMMY_HASH =
   'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
 const BAD_LOGIN = 'Số điện thoại hoặc mật khẩu không đúng';
@@ -57,12 +61,38 @@ async function openSession(accountId: string) {
 
 export type Outcome = { result: R; token?: string };
 
-export async function registerMember(input: {
-  name: string;
-  phone: string;
-  email: string;
-  password: string;
-}): Promise<Outcome> {
+async function attempts(
+  kind: string,
+  column: 'ip_hash' | 'subject',
+  value: string,
+  since: number,
+  extra?: [string, string],
+) {
+  const row = await db()
+    .prepare(
+      `SELECT COUNT(*) AS n FROM member_attempts WHERE kind=? AND ${column}=? AND created>?${extra ? ` AND ${extra[0]}=?` : ''}`,
+    )
+    .bind(...[kind, value, since, ...(extra ? [extra[1]] : [])])
+    .first<{ n: number }>();
+  return row?.n ?? 0;
+}
+async function record(kind: string, ipHash: string, subject: string) {
+  const now = Date.now();
+  await db()
+    .prepare('INSERT INTO member_attempts(id,kind,ip_hash,subject,created) VALUES (?,?,?,?,?)')
+    .bind(crypto.randomUUID(), kind, ipHash, subject, now)
+    .run();
+  // Opportunistic cleanup keeps the table small.
+  await db()
+    .prepare('DELETE FROM member_attempts WHERE created<?')
+    .bind(now - 24 * HOUR_MS)
+    .run();
+}
+
+export async function registerMember(
+  input: { name: string; phone: string; email: string; password: string },
+  ip = 'unknown',
+): Promise<Outcome> {
   const phone = normalizePhone(input.phone);
   if (!validPhone(phone)) return { result: error('Số điện thoại không hợp lệ') };
   const email = normalizeEmail(input.email);
@@ -70,6 +100,17 @@ export async function registerMember(input: {
   const problem = passwordProblem(input.password, email);
   if (problem) return { result: error(problem) };
   try {
+    const ipHash = await tokenId('ip:' + ip);
+    if (
+      (await attempts('register', 'ip_hash', ipHash, Date.now() - HOUR_MS)) >= REGISTERS_PER_IP_HOUR
+    )
+      return {
+        result: error(
+          'Bạn đã đăng ký quá nhiều lần. Vui lòng thử lại sau hoặc gọi câu lạc bộ.',
+          429,
+        ),
+      };
+    await record('register', ipHash, '');
     const tenant = await publicTenant();
     if (!tenant) return { result: error('Chưa mở đăng ký hội viên', 404) };
     const d = db();
@@ -104,48 +145,42 @@ export async function registerMember(input: {
   }
 }
 
-export async function loginMember(phoneInput: string, password: string): Promise<Outcome> {
+export async function loginMember(
+  phoneInput: string,
+  password: string,
+  ip = 'unknown',
+): Promise<Outcome> {
   const phone = normalizePhone(phoneInput);
   try {
+    const ipHash = await tokenId('ip:' + ip);
+    const subject = await tokenId('phone:' + phone);
+    const since = Date.now() - WINDOW_MS;
+    if (
+      (await attempts('login_fail', 'ip_hash', ipHash, since, ['subject', subject])) >=
+        LOGIN_FAILS_PER_IP_PHONE ||
+      (await attempts('login_fail', 'subject', subject, since)) >= LOGIN_FAILS_PER_PHONE
+    )
+      return { result: error('Nhập sai quá nhiều lần. Vui lòng thử lại sau ít phút.', 429) };
     const tenant = await publicTenant();
     const row =
       tenant && validPhone(phone)
         ? await db()
-            .prepare(
-              'SELECT id,password_hash,failed_count,locked_until FROM member_accounts WHERE tenant=? AND phone=?',
-            )
+            .prepare('SELECT id,password_hash FROM member_accounts WHERE tenant=? AND phone=?')
             .bind(tenant, phone)
-            .first<{
-              id: string;
-              password_hash: string;
-              failed_count: number;
-              locked_until: number;
-            }>()
+            .first<{ id: string; password_hash: string }>()
         : null;
-    const now = Date.now();
     if (!row) {
       await verifyPassword(password, DUMMY_HASH);
+      await record('login_fail', ipHash, subject);
       return { result: error(BAD_LOGIN, 401) };
     }
-    if (row.locked_until > now)
-      return {
-        result: error('Tài khoản tạm khóa do nhập sai nhiều lần. Thử lại sau ít phút.', 429),
-      };
     if (!(await verifyPassword(password, row.password_hash))) {
-      const failures = row.failed_count + 1;
-      await db()
-        .prepare('UPDATE member_accounts SET failed_count=?,locked_until=? WHERE id=?')
-        .bind(
-          failures >= MAX_FAILURES ? 0 : failures,
-          failures >= MAX_FAILURES ? now + LOCK_MS : 0,
-          row.id,
-        )
-        .run();
+      await record('login_fail', ipHash, subject);
       return { result: error(BAD_LOGIN, 401) };
     }
     await db()
-      .prepare('UPDATE member_accounts SET failed_count=0,locked_until=0 WHERE id=?')
-      .bind(row.id)
+      .prepare('DELETE FROM member_attempts WHERE kind=? AND ip_hash=? AND subject=?')
+      .bind('login_fail', ipHash, subject)
       .run();
     return { result: reply({ ok: true }), token: await openSession(row.id) };
   } catch (e) {

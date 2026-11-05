@@ -38,7 +38,8 @@ function clientIp(req: Request) {
 export async function GET() {
   const token = (await cookies()).get(MEMBER_COOKIE)?.value;
   const user = token ? await memberFromSession(token) : null;
-  if (!user) return sendResult({ status: 401, body: { error: 'Vui lòng đăng nhập' } });
+  // Signed out is a normal state of the public page, not an error (keeps the browser console clean).
+  if (!user) return sendResult({ status: 200, body: { signedOut: true } });
   try {
     return sendResult(await memberOverview(user));
   } catch (e) {
@@ -67,8 +68,8 @@ export async function POST(req: Request) {
       return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
     const outcome =
       input.action === 'register'
-        ? await registerMember(input)
-        : await loginMember(input.phone, input.password);
+        ? await registerMember(input, clientIp(req))
+        : await loginMember(input.phone, input.password, clientIp(req));
     const response = sendResult(outcome.result);
     if (outcome.token) response.headers.append('Set-Cookie', cookieFor(outcome.token, req));
     return response;

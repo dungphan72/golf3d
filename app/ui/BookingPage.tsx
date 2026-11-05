@@ -139,7 +139,7 @@ export default function BookingPage({
           setForm((f) => (v.services!.includes(f.service) ? f : { ...f, service: v.services![0] }));
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : String(e)));
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the last request on this device
+
     setCode(localStorage.getItem(storageKey + ':' + slug) ?? '');
   }, [slug]);
   useEffect(() => {

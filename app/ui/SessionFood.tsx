@@ -45,6 +45,8 @@ export function useFood(booking?: string) {
     const timer = setInterval(reload, 15000);
     return () => {
       clearInterval(timer);
+      // Bumping the counter (not reading a DOM ref) invalidates in-flight loads.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       sequence.current++;
     };
   }, [reload]);

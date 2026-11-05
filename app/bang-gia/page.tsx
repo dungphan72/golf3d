@@ -154,7 +154,7 @@ export default async function PricingPage() {
             </a>
           ))}
         </nav>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        {}
         <a
           className="fw-acct"
           href="/tai-khoan"

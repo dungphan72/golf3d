@@ -529,3 +529,19 @@ export const billDiscounts = sqliteTable(
   },
   (t) => [uniqueIndex('bill_discount_once').on(t.tenant, t.bookingId)],
 );
+
+// ---- Sign-up and sign-in attempts of the member page, for per-IP limits (rows older than a day are purged) ----
+export const memberAttempts = sqliteTable(
+  'member_attempts',
+  {
+    id: text('id').primaryKey(),
+    kind: text('kind').notNull(), // register | login_fail
+    ipHash: text('ip_hash').notNull(),
+    subject: text('subject').notNull().default(''), // hash of the phone number for logins
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    index('member_attempt_ip').on(t.kind, t.ipHash, t.created),
+    index('member_attempt_subject').on(t.kind, t.subject, t.created),
+  ],
+);

@@ -225,7 +225,7 @@ export default async function LandingPage() {
             </a>
           ))}
         </nav>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        {}
         <a
           className="fw-acct"
           href="/tai-khoan"
@@ -244,7 +244,7 @@ export default async function LandingPage() {
           <div className="fw-stage">
             <picture>
               <source media="(max-width: 860px)" srcSet="/img/hero-room-m.webp" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {}
               <img
                 className="fw-scene"
                 src="/img/hero-room.webp"
@@ -271,7 +271,7 @@ export default async function LandingPage() {
               </nav>
             </div>
             <div className="fw-top-right">
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              {}
               <a
                 className="fw-arrow-dot fw-acct-hero"
                 href="/tai-khoan"

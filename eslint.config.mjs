@@ -12,7 +12,14 @@ const eslintConfig = defineConfig([
     ".sites-runtime/**",
     "outputs/**",
     "work/**",
+    // Vendored ScrollCraft engine and its build copy.
+    "public/scrollcraft/**",
+    "scrollcraft/**",
   ]),
+  {
+    // Each public page loads its own fonts on purpose; this is the App Router, not pages/_document.
+    rules: { "@next/next/no-page-custom-font": "off" },
+  },
   {
     files: ["components/ui/**/*.{ts,tsx}", "hooks/use-mobile.ts"],
     rules: {

@@ -74,8 +74,12 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
     const timer = setInterval(load, 15000);
     return () => {
       clearInterval(timer);
+      // Bumping the counter (not reading a DOM ref) invalidates in-flight loads.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       generation.current++;
     };
+    // Reload when the selected shift changes; `load` is recreated on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected]);
   async function save(input: Record<string, unknown>) {
     setBusy(true);

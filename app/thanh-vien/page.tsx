@@ -93,15 +93,15 @@ export default async function MembershipPage() {
         <nav>
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a href="/">Trang chủ</a>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          {}
           <a href="/bang-gia">Bảng giá</a>
           {benefits.length > 0 && <a href="#quyen-loi">Quyền lợi</a>}
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+          {}
           <a href="/tai-khoan">Tài khoản</a>
           {cards.length > 0 && <a href="#the">Thẻ hội viên</a>}
           {hourly.length > 0 && <a href="#goi-gio">Gói giờ</a>}
         </nav>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        {}
         <a
           className="fw-acct"
           href="/tai-khoan"
@@ -138,11 +138,11 @@ export default async function MembershipPage() {
               <a className="fw-btn fw-btn-light" href={`tel:${BRAND.hotline}`}>
                 <Phone size={16} /> Đăng ký: {BRAND.hotline}
               </a>
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              {}
               <a className="fw-btn fw-btn-ghost" href="/tai-khoan?dang-ky">
                 Đăng ký tài khoản online
               </a>
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              {}
               <a className="fw-btn fw-btn-ghost" href="/bang-gia">
                 Xem bảng giá
               </a>

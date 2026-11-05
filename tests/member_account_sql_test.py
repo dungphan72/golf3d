@@ -44,13 +44,13 @@ class MemberAccountSQL(unittest.TestCase):
             account(self.c, 'a2')
 
     def test_registration_rate_limit(self):
-        for i in range(30):
+        for i in range(100):
             customer(self.c, f'x{i}', phone=f'09000000{i:02d}')
             account(self.c, f'r{i}', cust=f'x{i}', phone=f'09000000{i:02d}', created=NOW + i)
-        customer(self.c, 'x99', phone='0999999999')
+        customer(self.c, 'xz', phone='0988888888')
         with self.assertRaises(sqlite3.IntegrityError):
-            account(self.c, 'r99', cust='x99', phone='0999999999', created=NOW + 100)
-        self.assertEqual(account(self.c, 'r100', cust='x99', phone='0999999999', created=NOW + 2 * 3_600_000), 1)
+            account(self.c, 'rz', cust='xz', phone='0988888888', created=NOW + 100)
+        self.assertEqual(account(self.c, 'rz2', cust='xz', phone='0988888888', created=NOW + 2 * 3_600_000), 1)
 
     def test_identity_is_immutable_and_verification_one_way(self):
         account(self.c)

@@ -24,11 +24,9 @@ import {
   RefreshCw,
   ShieldCheck,
   BookOpen,
-  Play,
   ChevronRight,
   Users,
   ScrollText,
-  LogOut,
   Award,
   Globe,
   GraduationCap,
@@ -40,7 +38,7 @@ import StockPanel from './StockPanel';
 import { BookingForm } from './Forms';
 import { SettingsForm } from './Forms';
 import Link from 'next/link';
-import { time, date, type Data } from './shared';
+import { time, type Data } from './shared';
 import { Stat, RoomGrid, BookingTable, Empty, Roadmap } from './widgets';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';

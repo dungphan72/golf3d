@@ -2,13 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { withinOpening, planBooking } from '../lib/booking.ts';
 import { defaults, wholeQuote, type Config } from '../lib/club.ts';
-import {
-  packagePrice,
-  seedPriceRules,
-  upgradeConfig,
-  validateRules,
-  type PriceRule,
-} from '../lib/pricing.ts';
+import { packagePrice, seedPriceRules, upgradeConfig, validateRules } from '../lib/pricing.ts';
 import { configSchema } from '../lib/config.ts';
 const at = (s: string) => Date.parse(s + '+07:00');
 const c: Config = {

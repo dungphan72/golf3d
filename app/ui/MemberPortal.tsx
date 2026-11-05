@@ -415,25 +415,31 @@ function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
 export default function MemberPortal({ registerFirst = false }: { registerFirst?: boolean }) {
   const [data, setData] = useState<Overview | null>(null);
   const [state, setState] = useState<'loading' | 'out' | 'in'>('loading');
-  const [now] = useState(() => Date.now());
+  // Re-read every minute so expiry badges stay right when the page is left open.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
   const mounted = useRef(true);
   const [booking, setBooking] = useState(false);
   const load = useCallback(async () => {
     const r = await fetch('/api/member', { cache: 'no-store' });
     if (!mounted.current) return;
-    if (r.status === 401) {
+    if (!r.ok) return;
+    const v = (await r.json()) as Overview & { signedOut?: boolean };
+    if (!mounted.current) return;
+    if (v.signedOut) {
       setState('out');
       setData(null);
       return;
     }
-    if (r.ok) {
-      setData((await r.json()) as Overview);
-      setState('in');
-    }
+    setData(v);
+    setState('in');
   }, []);
   useEffect(() => {
     mounted.current = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- initial fetch on mount
+
     load();
     return () => {
       mounted.current = false;
@@ -614,7 +620,7 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
           <section className="mp-card" id="lich">
             <div className="mp-row">
               <h2>Lịch chơi sắp tới</h2>
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+              {}
               {data.booking?.enabled && data.booking.services.length > 0 && (
                 <button className="mp-primary" onClick={() => setBooking(!booking)}>
                   {booking ? 'Đóng' : 'Đặt lịch mới'}

@@ -19,7 +19,7 @@ export const clubInput = z.object({
     'cancel',
     'support',
   ]),
-  value: z.record(z.unknown()).optional(),
+  value: z.record(z.string(), z.unknown()).optional(),
   id: z.string().max(100).optional(),
   room: z.string().max(30).optional(),
   service: z.enum(['gdr', '9', '18']).optional(),

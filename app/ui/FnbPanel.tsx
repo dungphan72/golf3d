@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { Plus, X, UtensilsCrossed, ChefHat, Pencil, RefreshCw } from 'lucide-react';
+import { Plus, X, UtensilsCrossed, Pencil, RefreshCw } from 'lucide-react';
 import { money, rooms } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { foodLabels, type FoodOrder, type FoodLine, type MenuItem } from '../../lib/fnb';

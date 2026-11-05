@@ -250,3 +250,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 
 - Toàn bộ giao diện quản trị (`/quan-ly`, máy tính và điện thoại) dùng nền trắng: thanh điều hướng, tab, thanh thông báo, tiêu đề bảng, thẻ "Mỗi cú swing"; trạng thái chọn/hover dùng viền và màu chữ thay cho nền tô. Nút bấm và huy hiệu trạng thái giữ màu. Sửa luôn lỗi chữ tối trên nền xanh đậm ở thẻ Tổng quan.
 - Kết quả rà soát lỗi và kế hoạch fix theo đợt: `docs/BUG-PLAN.md`.
+
+## v0.12.2 — Fix đợt 1 (xem docs/BUG-PLAN.md)
+
+- Hội viên đăng nhập/đăng ký: giới hạn theo địa chỉ IP thay cho khóa theo số điện thoại. Sai mật khẩu 5 lần cho một số từ một IP thì chặn IP đó 15 phút (chủ tài khoản ở IP khác vẫn đăng nhập được); 30 lần sai từ mọi IP cho một số thì tạm dừng thử; mỗi IP đăng ký tối đa 5 tài khoản/giờ; trần toàn cơ sở nâng từ 30 lên 100/giờ. Bảng `member_attempts` + migration 0015.
+- Phụ thuộc: audit production từ 11 lỗ hổng về 0. Nâng `zod` 3 → 4.6.7 (sửa `z.record`), thêm override `browserslist`, `fast-uri (<4)`, `source-map-js`, `baseline-browser-mapping`, `@babel/core` trong `pnpm-workspace.yaml`.
+- `/api/member` khi chưa đăng nhập trả 200 `{signedOut:true}` thay cho 401 (hết lỗi đỏ trong console); trang cá nhân tự cập nhật mốc thời gian mỗi phút nên nhãn hết hạn luôn đúng.
+- ESLint: 0 cảnh báo (loại bản ScrollCraft chép sẵn khỏi lint, bỏ import thừa, ghi chú lý do cho cảnh báo hook).
+- Còn lại của đợt 1: kiểm tra CI trên GitHub (cần xem tab Actions).

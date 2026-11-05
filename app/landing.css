@@ -43,13 +43,14 @@ html:has(.fw) {
   scroll-behavior: smooth;
   scroll-padding-top: 84px;
 }
-.fw h1,
-.fw h2,
-.fw h3,
-.fw h4,
-.fw p,
-.fw ul,
-.fw ol {
+:where(.fw) h1,
+:where(.fw) h2,
+:where(.fw) h3,
+:where(.fw) h4,
+:where(.fw) p,
+:where(.fw) dl,
+:where(.fw) ul,
+:where(.fw) ol {
   margin: 0;
 }
 .fw a {

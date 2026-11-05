@@ -169,7 +169,8 @@ export const packageBullets = (p: PackageItem) => [
   ...p.perks
     .split('·')
     .map((s) => s.trim())
-    .filter(Boolean),
+    .filter(Boolean)
+    .map((s) => s.charAt(0).toLocaleUpperCase('vi-VN') + s.slice(1)),
 ];
 
 export const parseGrants = (json: string): Grant[] => {

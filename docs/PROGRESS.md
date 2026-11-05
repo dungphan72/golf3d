@@ -183,3 +183,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 ## v0.9.10 — Thang cỡ chữ thống nhất
 
 - Mọi cỡ chữ của trang chủ dùng một thang biến (`--t-2xs … --t-h1b` đầu `app/landing.css`): chữ nhỏ 12–14px, nội dung 16px, tiêu đề phụ 18–20px, tiêu đề mục tối đa 40px, số liệu tối đa 36px, tiêu đề hero tối đa 72px (trước đó tới ~176px). Muốn đổi cỡ toàn trang chỉ sửa các biến này.
+
+## v0.10 — Trang bảng giá `/bang-gia` đồng bộ với admin
+
+- Trang `/bang-gia` (tiếng Việt): hero kèm giờ mở cửa/VAT/giờ vàng từ…, thẻ giá theo khung giờ (GDR/giờ, 9 hố, 18 hố mỗi người; thẻ giờ vàng nổi bật, kèm đồ ăn miễn phí), thẻ nhóm 4 người, ghi chú phòng VIP dùng chung bảng giá (hoặc bảng riêng nếu VIP có giá riêng), gói hội viên chia nhóm (Combo 9 hố, Combo 18 hố, GDR, Thẻ VIP) với danh sách quyền lợi, lưu ý thuế/giờ vàng/tích điểm, nút đặt chỗ.
+- **Không còn giá cứng trong mã**: giá lấy từ cấu hình admin (Cài đặt cơ sở → bảng giá theo khung giờ) và danh mục gói (Hội viên → Danh mục gói), qua `lib/server/pricing-service.ts` + `lib/price-table.ts`. Trang chủ cũng đọc cùng nguồn nên sửa một chỗ là cả hai trang đổi. Khi chưa lưu gì thì dùng bảng giá chính thức làm mặc định.
+- Admin: tab Hội viên có nút **Thêm gói** và **Sửa** (tên, giá, hiệu lực, số lượt 9 hố/18 hố/GDR hoặc không giới hạn, quyền lợi, đang bán/ngừng bán). Gói mới tự vào nhóm phù hợp trên trang giá.
+- Tham khảo cấu trúc (giá theo giờ, gói trả trước, ưu đãi, hội viên) từ https://saigonswing.com/menu/ nhưng **không sao chép con số**: đó là bảng giá của đơn vị khác; giá hiển thị là giá của Saigon Golf 3D Club trong admin.
+- Sửa khoảng cách chữ toàn trang (lề của tiêu đề/đoạn văn bị reset nhầm).

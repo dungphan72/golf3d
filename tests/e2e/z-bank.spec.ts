@@ -20,7 +20,7 @@ async function finishedRound(
   people: number,
 ) {
   const { config } = await (await request.get('/api/club')).json();
-  const start = Math.ceil((Date.now() + 60_000) / 900_000) * 900_000;
+  const start = Math.ceil(Date.now() / 900_000) * 900_000;
   const booked = await post(request, '/api/club', {
     action: 'book',
     room,

@@ -126,3 +126,7 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Ứng dụng quản lý chuyển sang `/quan-ly` (có link "Dành cho nhân viên" ở chân trang); manifest/PWA mở `/quan-ly`.
 - `robots.txt` chặn `/quan-ly`, `/api/`, `/book/`; có trang 404 riêng.
 - Khi giá/gói thay đổi: sửa `lib/official-packages.ts` (gói) và mảng `PRICES` + câu hỏi trong `app/page.tsx` (bảng giá, FAQ).
+
+## v0.9.1 — Bản điện thoại kiểu ứng dụng
+
+- Điện thoại (≤640px): thanh tiêu đề xanh có tên màn hình + nút menu, nút nổi vàng "+" để tạo lịch đặt, danh sách lịch đặt dạng thẻ chạm được, thanh tab dưới có viên thuốc đánh dấu tab đang chọn, hộp thoại dạng ngăn kéo từ dưới lên (có thanh kéo, hoạt ảnh), ô nhập 16px (không bị zoom trên iOS), hỗ trợ vùng an toàn (tai thỏ/thanh Home). Giao diện nằm ở `app/mobile.css`.

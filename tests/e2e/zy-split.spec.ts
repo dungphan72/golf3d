@@ -14,7 +14,7 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
 
 async function finishedRound(request: APIRequestContext, room: string, customer: string) {
   const { config } = await (await request.get('/api/club')).json();
-  const start = Math.ceil((Date.now() + 60_000) / 900_000) * 900_000;
+  const start = Math.ceil(Date.now() / 900_000) * 900_000;
   const booked = await post(request, '/api/club', {
     action: 'book',
     room,

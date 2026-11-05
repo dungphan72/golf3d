@@ -1,6 +1,7 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import './kiotviet.css';
+import './mobile.css';
 export const metadata: Metadata = {
   title: 'Saigon Golf 3D Club — Play. Connect. Repeat.',
   description:
@@ -10,6 +11,12 @@ export const metadata: Metadata = {
     icon: [{ url: '/favicon-64.png', sizes: '64x64', type: 'image/png' }],
     apple: '/apple-touch-icon.png',
   },
+};
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  themeColor: '#165a3c',
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

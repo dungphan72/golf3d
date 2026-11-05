@@ -130,7 +130,7 @@ export function BookingTable({
     );
   return (
     <div className="table-wrap">
-      <table>
+      <table className="bookings-table">
         <thead>
           <tr>
             <th>Khách hàng</th>

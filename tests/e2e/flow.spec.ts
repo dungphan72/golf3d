@@ -128,8 +128,8 @@ test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', as
   const finance = await (await request.get('/api/finance')).json();
   expect(finance.shifts[0].transfer_received).toBe(5_000_000);
 
-  // A round starting within 15 minutes so it can be started immediately.
-  const start = Math.ceil((Date.now() + 60_000) / 900_000) * 900_000;
+  // A round starting within 15 minutes (never later) so it can be started immediately.
+  const start = Math.ceil(Date.now() / 900_000) * 900_000;
   const { config } = await (await request.get('/api/club')).json();
   const booked = await post(request, '/api/club', {
     action: 'book',

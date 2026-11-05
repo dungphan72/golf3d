@@ -427,9 +427,13 @@ export default function ClubApp() {
                           year: 'numeric',
                         })}
                       </span>
-                      <button className="primary" onClick={openBooking}>
+                      <button
+                        className="primary fab"
+                        aria-label="Tạo lịch đặt"
+                        onClick={openBooking}
+                      >
                         <Plus size={18} />
-                        Tạo lịch đặt
+                        <span className="fab-label">Tạo lịch đặt</span>
                       </button>
                     </div>
                   </div>

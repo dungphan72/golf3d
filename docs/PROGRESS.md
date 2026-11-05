@@ -198,3 +198,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Giá 9/18 hố và giá nhóm 4 người **được tắt (không xóa)** trong bảng giá; 13 gói cũ (combo 9/18 hố, GDR, thẻ VIP) chuyển sang "ngừng bán". Bản sao dữ liệu trước khi đổi: `docs/backups/settings-before-saigonswing.json`, `docs/backups/package-types-before-saigonswing.json` (bật lại giá 9/18 trong Cài đặt → bảng giá; bán lại gói cũ trong Hội viên → Bán lại).
 - Migration 0010: cột `section` (nhóm hiển thị trên trang giá) cho gói; form đặt chỗ chỉ hiện dịch vụ đang có giá.
 - Hạn chế đã biết: (1) gói giờ trừ **1 đơn vị mỗi phiên**, chưa trừ theo số giờ của phiên (nhân viên dùng "điều chỉnh" để trừ thêm giờ nếu phiên dài hơn 1 giờ); (2) gói chưa phân biệt phòng tiêu chuẩn/VIP khi trừ; (3) "Ngày của phụ nữ" và "trẻ em dưới 16" chỉ hiển thị trên trang giá, hệ thống tính tiền chưa tự áp dụng; (4) dòng "TAKE 40% OF ALL PACKAGES" được hiểu là giảm 40%, chưa tạo gói Early Bird/Junior riêng.
+
+## v0.10.2 — Gói trừ theo giờ, gói theo loại phòng, đổi "thường" thành "tiêu chuẩn"
+
+- **Gói giờ trừ theo số giờ chơi thực tế** (làm tròn lên, dung sai 5 phút, tối thiểu 1 giờ): 62 phút = 2 giờ, 64 phút = 1 giờ. Gói 9/18 hố vẫn trừ 1 lượt mỗi phiên. Gói không đủ giờ thì không trả được (báo "còn X giờ, cần Y"); nhân viên thu tiền hoặc chọn gói khác. Ràng buộc nằm ở cơ sở dữ liệu (migration 0011: cột `units` của lượt dùng gói, trigger khớp số giờ với sổ gói).
+- **Gói gắn với loại phòng**: `tiêu chuẩn` không trả được phòng VIP; `VIP` trả được cả hai; gói cũ (`tất cả phòng`) dùng mọi nơi. Chọn ở form Thêm/Sửa gói ("Áp dụng cho phòng"); trang giá ghi rõ phòng áp dụng.
+- Đổi cách gọi: "phòng/line/gói thường" thành **"tiêu chuẩn"** trên toàn giao diện, tên 16 gói trong dữ liệu thật (Gói tiêu chuẩn 10 giờ (+2 giờ tặng), Gói VIP …, Thẻ tiêu chuẩn …, Thẻ VIP …) và các dòng ưu đãi. "Giờ thường"/"ngày thường" giữ nguyên vì chỉ khung giờ/loại ngày.
+- Nhãn lượt GDR đổi thành "Giờ chơi".

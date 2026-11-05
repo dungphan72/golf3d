@@ -30,6 +30,7 @@ import {
   Award,
   Globe,
   GraduationCap,
+  HeartHandshake,
 } from 'lucide-react';
 import { rooms, defaults, money, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
@@ -52,6 +53,7 @@ import { OnlineRequests } from './OnlineRequests';
 import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
+import { CrmPanel } from './CrmPanel';
 // Less frequent screens live under "Quản lý khác" in the desktop top bar.
 const SECONDARY = new Set([
   'coaching',
@@ -168,6 +170,7 @@ export default function ClubApp() {
     ['online', 'Đặt online', Globe],
     ['coaching', 'Huấn luyện', GraduationCap],
     ['members', 'Hội viên', Award],
+    ['crm', 'Chăm sóc KH', HeartHandshake],
     ['support', 'Yêu cầu hỗ trợ', Headphones],
     ['roadmap', 'Lộ trình hệ thống', BookOpen],
     ['settings', 'Cài đặt cơ sở', Settings],
@@ -182,6 +185,7 @@ export default function ClubApp() {
     staff: 'staff.manage',
     audit: 'staff.manage',
     members: 'member.view',
+    crm: 'crm.view',
     online: 'booking.create',
     coaching: 'coach.view',
   };
@@ -204,6 +208,7 @@ export default function ClubApp() {
     coaching: 'Lịch dạy của huấn luyện viên',
     reports: 'Báo cáo doanh thu',
     members: 'Hội viên, gói và điểm thưởng',
+    crm: 'Chăm sóc khách hàng tự động',
     support: 'Trung tâm hỗ trợ',
     roadmap: 'Lộ trình phát triển',
     settings: 'Thiết lập cơ sở',
@@ -681,6 +686,9 @@ export default function ClubApp() {
                   )}
                   {view === 'members' && allowed('members') && (
                     <MembersPanel permissions={data?.permissions ?? []} />
+                  )}
+                  {view === 'crm' && allowed('crm') && (
+                    <CrmPanel permissions={data?.permissions ?? []} />
                   )}
                   {view === 'staff' && allowed('staff') && (
                     <StaffPanel actorRole={data?.role ?? ''} />

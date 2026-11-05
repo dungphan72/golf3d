@@ -739,3 +739,176 @@ body:has(.app-shell) {
 .app-shell .promo-form .check input {
   width: auto;
 }
+
+/* ---------- CRM ---------- */
+.app-shell .crm-panel {
+  display: grid;
+  gap: 14px;
+}
+.app-shell .crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+}
+.app-shell .crm-kpis > div {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 10px 14px;
+  display: grid;
+  gap: 2px;
+}
+.app-shell .crm-kpis span {
+  font-size: 12px;
+  color: var(--kv-muted);
+}
+.app-shell .crm-kpis strong {
+  font-size: 22px;
+  color: var(--kv-blue);
+}
+.app-shell .crm-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.app-shell .crm-task {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.app-shell .crm-task.closed {
+  opacity: 0.7;
+}
+.app-shell .crm-task header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.app-shell .crm-task header small {
+  margin-left: auto;
+  color: var(--kv-muted);
+}
+.app-shell .crm-task header small.late {
+  color: #b3261e;
+  font-weight: 600;
+}
+.app-shell .crm-task p {
+  margin: 0;
+}
+.app-shell .crm-message {
+  border: 1px dashed var(--kv-line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  font-size: 13px;
+}
+.app-shell .crm-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.app-shell .crm-actions input {
+  min-width: 14rem;
+  flex: 1;
+}
+.app-shell .crm-chip {
+  display: inline-block;
+  padding: 1px 8px;
+  margin: 0 4px 2px 0;
+  border: 1px solid var(--kv-line);
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--kv-muted);
+}
+.app-shell .crm-chip.seg-vip {
+  border-color: #c8960c;
+  color: #8a5d00;
+}
+.app-shell .crm-chip.seg-loyal,
+.app-shell .crm-chip.seg-new {
+  border-color: var(--kv-blue);
+  color: var(--kv-blue);
+}
+.app-shell .crm-chip.seg-lapsing,
+.app-shell .crm-chip.seg-dormant {
+  border-color: #b3261e;
+  color: #b3261e;
+}
+.app-shell .crm-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--kv-blue);
+  cursor: pointer;
+  text-decoration: underline;
+}
+.app-shell .crm-dot {
+  color: var(--kv-blue);
+}
+.app-shell .crm-customers {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+@media (min-width: 1100px) {
+  .app-shell .crm-customers:has(.crm-detail) {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+}
+.app-shell .crm-detail {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 14px;
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+.app-shell .crm-detail header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.app-shell .crm-detail h3,
+.app-shell .crm-detail h4 {
+  margin: 0;
+}
+.app-shell .crm-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+.app-shell .crm-timeline li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--kv-line);
+  font-size: 13px;
+}
+.app-shell .crm-flows {
+  display: grid;
+  gap: 12px;
+  max-width: 52rem;
+}
+.app-shell .crm-flow {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.app-shell .crm-flow header {
+  display: grid;
+  gap: 2px;
+}
+.app-shell .crm-flow textarea {
+  width: 100%;
+}

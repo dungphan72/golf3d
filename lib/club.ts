@@ -1,3 +1,4 @@
+import type { CrmSettings } from './crm.ts';
 import type { Promotion } from './promotions.ts';
 import { ruleQuote, billTotals, type PriceRule, type Service, type Bill } from './pricing.ts';
 export type Config = {
@@ -40,6 +41,8 @@ export type Config = {
   offers?: string[];
   /** Promotions entered in the admin; applied automatically by the price engine (see promotions.ts). */
   promotions?: Promotion[];
+  /** CRM flow switches and message templates (see crm.ts). */
+  crm?: Partial<CrmSettings>;
   /** Perks on the membership page, one per line: Tiêu đề | Mô tả. Unset = the standard list. */
   memberBenefits?: string[];
 };

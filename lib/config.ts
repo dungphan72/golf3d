@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { validateRules } from './pricing.ts';
 import { validatePromotions, type Promotion } from './promotions.ts';
+import { crmSettingsSchema } from './crm.ts';
 const money = z.number().int().min(0).max(100_000_000);
 const minutes = z.number().int().min(0).max(1440);
 const capacity = z.number().int().min(1).max(100).nullable();
@@ -89,6 +90,8 @@ export const configSchema = z
       .default(''),
     offers: z.array(z.string().trim().min(1).max(400)).max(20).default([]),
     promotions: z.array(promotionSchema).max(50).default([]),
+    // Stored by the CRM screen; kept here so saving the settings form never drops it.
+    crm: crmSettingsSchema.partial().optional(),
     memberBenefits: z.array(z.string().trim().min(1).max(300)).max(12).optional(),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),

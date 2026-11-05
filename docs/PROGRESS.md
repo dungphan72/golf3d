@@ -273,3 +273,14 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Chương trình bỏ chọn "Tự động áp dụng" chỉ hiển thị (điều kiện như độ tuổi, nhân viên xác nhận tại quầy và dùng Giảm giá phiếu).
 - Website: mục "Khuyến mãi" ở trang chủ và `/bang-gia` hiện các chương trình đang bật và chưa hết hạn, kèm mức giảm, điều kiện, trạng thái tự động/tại quầy. Khuyến mãi tắt hoặc hết hạn tự ẩn.
 - Mã: `lib/promotions.ts` (engine + kiểm tra), tích hợp trong `lib/pricing.ts`; kiểm thử `tests/promotions.test.ts`, `tests/e2e/zy-promotions.spec.ts` (API và giao diện). Cài đặt cũ không cần chuyển đổi (danh sách khuyến mãi mặc định rỗng); ô "Ưu đãi" dạng chữ cũ được thay bằng mục Khuyến mãi (dòng ưu đãi chữ có sẵn vẫn hiện nếu còn dữ liệu).
+
+## v0.14.0 — CRM chăm sóc khách hàng tự động
+
+- Màn hình **Chăm sóc KH** (quyền `crm.view`/`crm.work` cho chủ, quản lý, thu ngân, CSKH, sale; `crm.manage` cho chủ và quản lý), 3 tab:
+  - **Việc cần làm**: hộp việc tự sinh, lọc theo quy trình hoặc "việc của tôi", thẻ quá hạn/hôm nay/sắp tới/đã xong 7 ngày. Mỗi việc có sẵn tin nhắn mẫu đã điền tên, gói, hạn (nút sao chép), liên kết gọi điện và Zalo; nhân viên "Nhận việc", "Đã liên hệ" (chọn kênh + kết quả), "Hẹn lại" 1/3/7 ngày hoặc "Bỏ qua" có lý do.
+  - **Khách hàng**: tìm kiếm, nhóm tự tính (Mới, Thân thiết ≥5 lượt/90 ngày, VIP theo mức chi tiêu, Sắp rời bỏ 30–60 ngày, Ngủ đông >60 ngày, Chưa chơi); hồ sơ 360: số lần chơi, chi tiêu, điểm, ngày sinh, lịch sử liên hệ, việc, gói, các buổi chơi; ghi nhận liên hệ và thêm việc thủ công.
+  - **Quy trình tự động** (chủ/quản lý): bật/tắt từng quy trình, chỉnh tham số và mẫu tin nhắn, ngưỡng VIP.
+- **Quy trình tự động** sinh việc (SQL một lệnh, idempotent theo khóa sự kiện, chạy mỗi lần mở màn hình và mỗi phút khi đang mở): Chào mừng khách mới; Cảm ơn sau buổi chơi (24 giờ, tối đa một việc/khách/7 ngày); Mời quay lại (sau 30 ngày không chơi, một lần cho mỗi đợt vắng); Gói sắp hết hạn (7 ngày); Gói sắp hết giờ (≤2 giờ hoặc 1 lượt); Chúc mừng sinh nhật (nhắc trước 2 ngày); Đủ 10 điểm đổi lượt miễn phí. Hồ sơ khách còn được **tự tạo từ phiếu đã thu** (chuẩn hóa số điện thoại +84/dấu cách).
+- Dữ liệu: migration 0016 (`crm_tasks`, `crm_interactions`, cột `customers.birthday`, view `crm_visits`; trigger kiểm tra, việc đã đóng và lịch sử không sửa/xóa được). Cấu hình quy trình lưu trong cài đặt cơ sở (`crm`), không đổi `pricingRevision`.
+- Chưa có: tự gửi tin nhắn (Zalo OA/SMS cần tài khoản nhà cung cấp; hiện nhân viên gửi bằng nút sao chép + Zalo/gọi), chạy nền khi không ai mở màn hình (cần Cron Trigger), chiến dịch hàng loạt theo nhóm.
+- Kiểm thử: `tests/crm_sql_test.py`, `tests/crm.test.ts`, `tests/e2e/zz-crm.spec.ts` (API và giao diện).

@@ -10,8 +10,8 @@
   --sc-ink-soft: #55657d;
   --sc-accent: #f5b50a;
   --sc-accent-ink: #0c2447;
-  --sc-font-display: 'Be Vietnam Pro', system-ui, sans-serif;
-  --sc-font-text: 'Be Vietnam Pro', system-ui, sans-serif;
+  --sc-font-display: 'Lexend', 'Be Vietnam Pro', system-ui, sans-serif;
+  --sc-font-text: 'Lexend', 'Be Vietnam Pro', system-ui, sans-serif;
   --navy: #0c2447;
   --blue: #1d5cae;
   --sky: #dcecf6;
@@ -22,7 +22,7 @@
   --muted: #55657d;
   --line: #d9e3ee;
   --edge: max(16px, calc((100% - 76rem) / 2));
-  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  font-family: 'Lexend', 'Be Vietnam Pro', system-ui, sans-serif;
   color: var(--navy);
   background: var(--bg);
   line-height: 1.6;
@@ -192,17 +192,18 @@ a:hover > .fw-arrow-dot {
 .fw-headline h1 span {
   display: block;
   padding-right: 0.16em;
-  font-size: clamp(2.2rem, 5.6vw, 5rem);
+  font-size: clamp(2.1rem, 5.2vw, 4.7rem);
   font-weight: 300;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.05em;
   color: rgba(233, 243, 255, 0.92);
 }
 .fw-headline h1 strong {
   display: block;
   margin-top: 0.02em;
   font-weight: 300;
-  font-size: clamp(3.8rem, 12.8vw, 11.8rem);
-  letter-spacing: -0.055em;
+  font-size: clamp(3.6rem, 12vw, 11rem);
+  font-weight: 250;
+  letter-spacing: -0.06em;
   line-height: 1.04;
   padding-bottom: 0.06em;
   text-shadow: 0 2px 40px rgba(4, 18, 40, 0.35);

@@ -174,3 +174,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 
 - Dựng lại hero theo ảnh mẫu ở độ phân giải cao: khung viền trắng bo góc trên nền cảnh mờ tối, menu nằm thẳng trên ảnh (không có tab), tab trắng khoét góc "Đặt chỗ" kèm nút tròn xanh nhạt, tiêu đề "Nâng tầm" mảnh nhỏ + "cú đánh" cực lớn lệch nhau như mẫu, đoạn mô tả nhỏ bên dưới, bong bóng lời thoại bo vuông, tab dọc giờ mở cửa ở góc dưới trái, thẻ "Giờ vàng" (thay cho thẻ "thành viên mới"), thẻ "Khám phá phòng chơi" có ảnh trên, nút tròn cuộn xuống.
 - Khác mẫu có chủ ý: ảnh nền là phòng chơi thật (không có người chơi chụp ngoài trời), chuỗi huy hiệu 9/18/GDR/VIP thay cho ảnh avatar (không dùng ảnh người giả).
+
+## v0.9.9 — Font chữ theo phong cách mẫu Fairway
+
+- Trang chủ đổi sang font **Lexend** (hình học, nét mảnh, chữ "a" một tầng như mẫu; hỗ trợ đầy đủ tiếng Việt). Tiêu đề lớn dùng độ mảnh 250/300, chữ nhỏ 400–500; Be Vietnam Pro làm dự phòng. Font nạp từ Google Fonts trong `app/page.tsx`.
+- Mẫu dùng font không có bộ dấu tiếng Việt (nhiều font hình học như Outfit, Urbanist chỉ có Latin) nên em chọn Lexend vì giống nhất mà vẫn đủ dấu.

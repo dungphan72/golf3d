@@ -153,7 +153,7 @@ export default async function LandingPage() {
       <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;300;400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap"
       />
       <script
         type="application/ld+json"

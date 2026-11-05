@@ -27,6 +27,7 @@ import {
   Play,
   ChevronRight,
   Users,
+  ScrollText,
   LogOut,
   Award,
   Globe,
@@ -46,6 +47,7 @@ import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
 import { AccountPanel } from './AccountPanel';
 import { StaffPanel } from './StaffPanel';
+import { AuditPanel } from './AuditPanel';
 import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
 import { OnlineRequests } from './OnlineRequests';
@@ -159,6 +161,7 @@ export default function ClubApp() {
     ['roadmap', 'Lộ trình hệ thống', BookOpen],
     ['settings', 'Cài đặt cơ sở', Settings],
     ['staff', 'Nhân viên', Users],
+    ['audit', 'Nhật ký', ScrollText],
     ['account', 'Tài khoản', ShieldCheck],
   ] as const;
   const needs: Record<string, string> = {
@@ -166,6 +169,7 @@ export default function ClubApp() {
     reports: 'finance.view',
     settings: 'settings.manage',
     staff: 'staff.manage',
+    audit: 'staff.manage',
     members: 'member.view',
     online: 'booking.create',
     coaching: 'coach.view',
@@ -193,6 +197,7 @@ export default function ClubApp() {
     roadmap: 'Lộ trình phát triển',
     settings: 'Thiết lập cơ sở',
     staff: 'Nhân viên & phân quyền',
+    audit: 'Nhật ký hoạt động',
     account: 'Tài khoản của bạn',
   };
   function go(v: string) {
@@ -640,6 +645,7 @@ export default function ClubApp() {
                   {view === 'staff' && allowed('staff') && (
                     <StaffPanel actorRole={data?.role ?? ''} />
                   )}
+                  {view === 'audit' && allowed('audit') && <AuditPanel />}
                   {view === 'account' && <AccountPanel onChanged={load} onLogout={signOut} />}
                 </>
               )}

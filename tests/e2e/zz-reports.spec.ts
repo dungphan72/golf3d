@@ -38,4 +38,17 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
   expect(download.suggestedFilename()).toMatch(
     /^bao-cao-doanh-thu_\d{4}-\d{2}-\d{2}_\d{4}-\d{2}-\d{2}\.csv$/,
   );
+
+  // Activity log: the payments made by earlier specs are searchable, and the page renders them.
+  const log = await (
+    await page.request.get('/api/audit?q=' + encodeURIComponent('Ghi sổ tiền'))
+  ).json();
+  expect(log.rows.length).toBeGreaterThan(0);
+  expect(log.rows.every((r: { action: string }) => r.action === 'Ghi sổ tiền')).toBe(true);
+  await page.goto('/');
+  await page
+    .locator('aside')
+    .getByRole('button', { name: /Nhật ký/ })
+    .click();
+  await expect(page.getByRole('cell', { name: 'Ghi sổ tiền' }).first()).toBeVisible();
 });

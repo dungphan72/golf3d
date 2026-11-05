@@ -108,3 +108,7 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Migration 0009: cột `finance_entries.part` (1 = một phần của thanh toán chia). Trigger chỉ chuyển phiếu sang "đã thanh toán" khi các phần cộng đủ, `payment='mixed'`; vượt số tiền hoặc trùng hình thức bị chặn ở tầng database. Thanh toán một lần (part=0) giữ nguyên quy tắc cũ.
 - Phần chuyển khoản trùng khớp với báo có SePay thì tự gắn và đánh dấu giao dịch đã dùng trong cùng một batch.
 - Ca/sổ tiền và báo cáo tính từng hình thức riêng nên đối soát không đổi.
+
+## v0.7.2 — Nhật ký hoạt động
+
+- Tab **Nhật ký** (quyền `staff.manage`: chủ, quản lý): danh sách hoạt động mới nhất trước (ghi sổ tiền, ca, xác nhận…), tìm theo từ khóa, xem thêm từng trang 200 dòng. Chỉ đọc bảng `audit`.

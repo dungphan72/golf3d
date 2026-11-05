@@ -215,7 +215,7 @@ test('phân quyền: thu ngân chỉ làm được việc của thu ngân', asyn
 
   expect((await cashier.get('/api/club')).status()).toBe(200);
   expect((await cashier.get('/api/finance')).status()).toBe(200);
-  for (const url of ['/api/staff', '/api/export'])
+  for (const url of ['/api/staff', '/api/export', '/api/audit'])
     expect((await cashier.get(url)).status(), url).toBe(403);
   await post(cashier, '/api/club', { action: 'settings', value: {} }, 403);
   await post(

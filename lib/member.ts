@@ -63,6 +63,7 @@ export const memberInput = z.discriminatedUnion('action', [
       grants,
       validDays: z.number().int().min(1).max(3660),
       perks: z.string().trim().max(300).default(''),
+      section: z.string().trim().max(60).default(''),
       active: z.boolean(),
     })
     .strict(),

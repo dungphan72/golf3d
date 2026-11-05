@@ -60,6 +60,10 @@ export async function publicInfo(slug: string): Promise<R> {
       minLeadMinutes: MIN_LEAD_MINUTES,
       vip: (c.vipCapacity ?? 0) > 0,
       maxPeople: Math.min(4, c.capacity ?? 4),
+      // Only services that currently have a price can be requested online.
+      services: (['18', '9', 'gdr'] as const).filter((s) =>
+        (c.priceRules ?? []).some((r) => r.enabled && r.service === s),
+      ),
       captchaSiteKey: turnstileSiteKey(),
     });
   } catch (e) {

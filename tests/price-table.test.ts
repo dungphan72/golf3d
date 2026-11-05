@@ -102,3 +102,66 @@ test('package bullets list contents, validity and perks', () => {
   assert.ok(bullets.includes('Hiệu lực 6 tháng'));
   assert.ok(bullets.includes('Phòng chờ VIP'));
 });
+
+test('the same hours and prices on every day type read as one "Mỗi ngày" line', () => {
+  const rules = (['weekday', 'weekend', 'holiday'] as const).flatMap((day) => [
+    {
+      id: `s-early-${day}`,
+      label: 'Giờ vàng (Early Bird)',
+      service: 'gdr' as const,
+      room: 'standard' as const,
+      day,
+      from: '07:00',
+      to: '11:00',
+      people: null,
+      amount: 180_000,
+      enabled: true,
+    },
+    {
+      id: `s-normal-${day}`,
+      label: 'Giờ thường',
+      service: 'gdr' as const,
+      room: 'standard' as const,
+      day,
+      from: '11:00',
+      to: '23:00',
+      people: null,
+      amount: 300_000,
+      enabled: true,
+    },
+  ]);
+  const { rows } = buildPriceTable(rules, 'standard');
+  assert.deepEqual(
+    rows.map((r) => [r.days, r.from, r.to, r.gold, r.gdr, r.h9, r.h18]),
+    [
+      ['Mỗi ngày', '07:00', '11:00', true, 180_000, null, null],
+      ['Mỗi ngày', '11:00', '23:00', false, 300_000, null, null],
+    ],
+  );
+});
+
+test('packages with a section keep to it; named sections follow the automatic groups', () => {
+  const mk = (id: string, name: string, price: number, section: string): PackageItem => ({
+    id,
+    name,
+    price,
+    grants: [{ kind: 'gdr', qty: 10 }],
+    validDays: 30,
+    perks: '',
+    section,
+  });
+  const groups = groupPackages([
+    mk('a', 'Thẻ năm', 36_000_000, 'Thẻ 1 năm'),
+    mk('b', 'Gói 10 giờ', 3_000_000, 'Gói giờ'),
+    mk('c', 'Thẻ năm VIP', 60_000_000, 'Thẻ 1 năm'),
+    mk('d', 'Gói lẻ', 500_000, ''),
+  ]);
+  assert.deepEqual(
+    groups.map((g) => [g.title, g.items.map((p) => p.id)]),
+    [
+      ['Luyện tập GDR', ['d']], // automatic groups first
+      ['Gói giờ', ['b']],
+      ['Thẻ 1 năm', ['a', 'c']],
+    ],
+  );
+});

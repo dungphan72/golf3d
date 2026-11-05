@@ -19,6 +19,7 @@ export type PublicPricing = {
   fee: number | null;
   open: string;
   close: string;
+  offers: string[];
   source: 'admin' | 'default';
 };
 
@@ -52,7 +53,7 @@ export async function publicPricing(): Promise<PublicPricing> {
       const rows = (
         await db()
           .prepare(
-            'SELECT id,name,price,grants,valid_days,perks FROM package_types WHERE tenant=? AND active=1 ORDER BY price',
+            'SELECT id,name,price,grants,valid_days,perks,section FROM package_types WHERE tenant=? AND active=1 ORDER BY price',
           )
           .bind(tenant)
           .all<{
@@ -62,6 +63,7 @@ export async function publicPricing(): Promise<PublicPricing> {
             grants: string;
             valid_days: number;
             perks: string;
+            section: string;
           }>()
       ).results;
       const items: PackageItem[] = rows.length
@@ -72,6 +74,7 @@ export async function publicPricing(): Promise<PublicPricing> {
             grants: parseGrants(r.grants),
             validDays: r.valid_days,
             perks: r.perks,
+            section: r.section,
           }))
         : fallbackItems();
       return {
@@ -82,6 +85,7 @@ export async function publicPricing(): Promise<PublicPricing> {
         fee: config.fee,
         open: config.open,
         close: config.close,
+        offers: config.offers ?? [],
         source: 'admin',
       };
     }
@@ -97,6 +101,7 @@ export async function publicPricing(): Promise<PublicPricing> {
     fee: null,
     open: '08:00',
     close: '23:00',
+    offers: [],
     source: 'default',
   };
 }

@@ -9,6 +9,7 @@ export type EditablePackage = {
   grants: string;
   valid_days: number;
   perks: string;
+  section?: string;
   active: number;
 };
 
@@ -44,6 +45,7 @@ export function PackageEditor({
     grants: Grant[];
     validDays: number;
     perks: string;
+    section: string;
     active: boolean;
   }) => void;
   onCancel: () => void;
@@ -52,6 +54,7 @@ export function PackageEditor({
   const [price, setPrice] = useState(initial ? String(initial.price) : '');
   const [days, setDays] = useState(initial ? String(initial.valid_days) : '90');
   const [perks, setPerks] = useState(initial?.perks ?? '');
+  const [section, setSection] = useState(initial?.section ?? '');
   const [active, setActive] = useState(initial ? !!initial.active : true);
   const [grants, setGrants] = useState<GrantState>(() => startGrants(initial?.grants));
   const [error, setError] = useState('');
@@ -82,6 +85,7 @@ export function PackageEditor({
       grants: list,
       validDays,
       perks: perks.trim(),
+      section: section.trim(),
       active,
     });
   }
@@ -110,6 +114,15 @@ export function PackageEditor({
             value={days}
             onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))}
             required
+          />
+        </label>
+        <label>
+          Nhóm hiển thị trên trang giá (để trống = tự xếp)
+          <input
+            value={section}
+            maxLength={60}
+            placeholder="Ví dụ: Thẻ tháng"
+            onChange={(e) => setSection(e.target.value)}
           />
         </label>
         <label>

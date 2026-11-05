@@ -70,6 +70,7 @@ export const configSchema = z
       .string()
       .regex(/^([a-z0-9][a-z0-9-]{2,39})?$/, 'Mã đường dẫn gồm 3–40 ký tự a-z, 0-9, dấu gạch ngang')
       .default(''),
+    offers: z.array(z.string().trim().min(1).max(400)).max(20).default([]),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),
   })

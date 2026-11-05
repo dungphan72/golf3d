@@ -1,0 +1,1 @@
+ALTER TABLE `package_types` ADD `section` text DEFAULT '' NOT NULL;

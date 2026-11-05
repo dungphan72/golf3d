@@ -13,6 +13,7 @@ type Info = {
   minLeadMinutes: number;
   vip: boolean;
   maxPeople: number;
+  services?: string[];
   captchaSiteKey?: string | null;
 };
 type Status = {
@@ -133,6 +134,9 @@ export default function BookingPage({
         const v = (await r.json()) as Info & { error?: string };
         if (!r.ok) throw new Error(v.error || 'Không tải được thông tin');
         setInfo(v);
+        // Start on the first service that has a price.
+        if (v.services?.length)
+          setForm((f) => (v.services!.includes(f.service) ? f : { ...f, service: v.services![0] }));
       })
       .catch((e) => setLoadError(e instanceof Error ? e.message : String(e)));
     // eslint-disable-next-line react-hooks/set-state-in-effect -- restore the last request on this device
@@ -283,9 +287,17 @@ export default function BookingPage({
                 value={form.service}
                 onChange={(e) => setForm({ ...form, service: e.target.value })}
               >
-                <option value="18">Chơi 18 hố</option>
-                <option value="9">Chơi 9 hố</option>
-                <option value="gdr">Luyện tập GDR</option>
+                {[
+                  ['18', 'Chơi 18 hố'],
+                  ['9', 'Chơi 9 hố'],
+                  ['gdr', 'Luyện tập GDR'],
+                ]
+                  .filter(([v]) => !info.services || info.services.includes(v))
+                  .map(([v, label]) => (
+                    <option key={v} value={v}>
+                      {label}
+                    </option>
+                  ))}
               </select>
             </label>
             <label>

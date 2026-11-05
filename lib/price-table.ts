@@ -81,6 +81,23 @@ export function buildPriceTable(rules: PriceRule[], room: 'standard' | 'vip'): P
     if (twin) twin.days = 'Thứ 7, Chủ nhật & ngày lễ';
     else rows.push(row);
   }
+  // Identical hours and prices on weekdays and weekends/holidays read as "every day".
+  for (const r of [...rows]) {
+    if (r.days !== DAY_LABEL.weekday) continue;
+    const other = rows.find(
+      (x) =>
+        x.days === 'Thứ 7, Chủ nhật & ngày lễ' &&
+        x.from === r.from &&
+        x.to === r.to &&
+        x.gdr === r.gdr &&
+        x.h9 === r.h9 &&
+        x.h18 === r.h18,
+    );
+    if (other) {
+      r.days = 'Mỗi ngày';
+      rows.splice(rows.indexOf(other), 1);
+    }
+  }
   // A single group price is shown when it is the same on every day type, else the weekday one.
   const days = Object.values(groupByDay);
   const pick = (k: 'h9' | 'h18') => {
@@ -107,6 +124,8 @@ export type PackageItem = {
   grants: Grant[];
   validDays: number;
   perks: string;
+  /** Heading chosen in the admin; empty = grouped by what the package gives. */
+  section?: string;
 };
 export type PackageGroup = { id: string; title: string; vip: boolean; items: PackageItem[] };
 
@@ -129,7 +148,13 @@ export function groupPackages(items: PackageItem[]): PackageGroup[] {
     },
     { id: 'gdr', title: 'Luyện tập GDR', vip: false, test: (p) => kinds(p).has('gdr') },
   ];
-  const left = new Set(items);
+  // Packages with an explicit section keep to it, in order of their cheapest package.
+  const named = new Map<string, PackageItem[]>();
+  for (const p of items) {
+    const title = p.section?.trim();
+    if (title) named.set(title, [...(named.get(title) ?? []), p]);
+  }
+  const left = new Set(items.filter((p) => !p.section?.trim()));
   const claimed = new Map<string, PackageItem[]>();
   // VIP cards claim first (they also contain GDR sessions), then the plain combos.
   for (const d of [defs[0], defs[1], defs[2], defs[3]]) {
@@ -148,6 +173,20 @@ export function groupPackages(items: PackageItem[]): PackageGroup[] {
         items: mine.sort((a, b) => a.price - b.price),
       });
   }
+  for (const [title, list] of [...named].sort(
+    (a, b) => Math.min(...a[1].map((p) => p.price)) - Math.min(...b[1].map((p) => p.price)),
+  ))
+    groups.push({
+      id:
+        's-' +
+        title
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, ''),
+      title,
+      vip: /vip/i.test(title),
+      items: list.sort((a, b) => a.price - b.price),
+    });
   if (left.size)
     groups.push({
       id: 'other',

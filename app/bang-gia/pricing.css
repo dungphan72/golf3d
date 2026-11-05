@@ -117,7 +117,7 @@
 .pp-rate dl,
 .pp-group dl {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(var(--cols, 3), 1fr);
   gap: 1rem;
   margin: 0;
 }
@@ -407,4 +407,42 @@
   .pp-rate dl small {
     display: none;
   }
+}
+
+/* daily offers */
+.pp-offers-wrap {
+  padding-top: 0;
+}
+.pp-offers {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: 16px;
+}
+.pp-offers article {
+  background: linear-gradient(135deg, #fffbe9, #fff3c4);
+  box-shadow: 0 0 0 1.5px #f1d36a inset;
+  border-radius: 26px;
+  padding: 1.4rem;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+.pp-offers svg {
+  color: #8a5d00;
+}
+.pp-offers h3 {
+  margin: 0;
+  font-weight: 600;
+  font-size: var(--t-base);
+}
+.pp-offers strong {
+  font-weight: 500;
+  font-size: var(--t-lg);
+  color: #6b4a00;
+  line-height: 1.35;
+}
+.pp-offers p {
+  margin: 0;
+  font-size: var(--t-sm);
+  color: #6b5a2a;
 }

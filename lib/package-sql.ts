@@ -3,8 +3,8 @@
 // every multi-step operation is sent as one D1 batch (one transaction).
 export const CREATE_CUSTOMER_SQL = `INSERT INTO customers(id,tenant,name,phone,note,created) VALUES (?,?,?,?,?,?)`;
 export const UPDATE_CUSTOMER_SQL = `UPDATE customers SET name=?,note=? WHERE tenant=? AND id=?`;
-export const CREATE_PACKAGE_TYPE_SQL = `INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created) VALUES (?,?,?,?,?,?,?,?,?)`;
-export const UPDATE_PACKAGE_TYPE_SQL = `UPDATE package_types SET name=?,price=?,grants=?,valid_days=?,perks=?,active=? WHERE tenant=? AND id=?`;
+export const CREATE_PACKAGE_TYPE_SQL = `INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created,section) VALUES (?,?,?,?,?,?,?,?,?,?)`;
+export const UPDATE_PACKAGE_TYPE_SQL = `UPDATE package_types SET name=?,price=?,grants=?,valid_days=?,perks=?,active=?,section=? WHERE tenant=? AND id=?`;
 export const INSERT_PACKAGE_SQL = `INSERT INTO customer_packages(id,tenant,customer_id,type_id,name,source,price_paid,grants,perks,purchased,expires,actor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_LEDGER_SQL = `INSERT INTO package_ledger(id,tenant,package_id,kind,delta,reason,booking_id,actor,note,created) VALUES (?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_SALE_ENTRY_SQL = `INSERT INTO finance_entries(id,tenant,shift_id,kind,method,amount,booking_id,request_id,note,actor,created,package_id) VALUES (?,?,?,'payment',?,?,NULL,?,?,?,?,?)`;

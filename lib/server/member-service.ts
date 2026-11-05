@@ -85,7 +85,7 @@ export async function loadMembers(tenant: string, query: string, customerId: str
     const types = (
       await db()
         .prepare(
-          'SELECT id,name,price,grants,valid_days,perks,active FROM package_types WHERE tenant=? ORDER BY price LIMIT 200',
+          'SELECT id,name,price,grants,valid_days,perks,section,active FROM package_types WHERE tenant=? ORDER BY price LIMIT 200',
         )
         .bind(tenant)
         .all()
@@ -175,6 +175,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
               p.perks,
               1,
               now,
+              '',
             ),
         ),
       );
@@ -192,6 +193,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             input.validDays,
             input.perks,
             input.active ? 1 : 0,
+            input.section,
             tenant,
             input.id,
           )
@@ -216,6 +218,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           input.perks,
           input.active ? 1 : 0,
           now,
+          input.section,
         )
         .run();
       return reply({ ok: true });

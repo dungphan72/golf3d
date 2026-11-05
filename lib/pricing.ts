@@ -328,6 +328,7 @@ export function upgradeConfig(value: Partial<Config>, fallback: Config): Config 
       c.priceRules ??
       (Object.keys(value).length === 0 ? officialPriceRules() : seedPriceRules(c, false)),
     holidays: c.holidays ?? [],
+    offers: c.offers ?? [],
     feeMode: c.feeMode ?? 'percent',
     feeServices: c.feeServices ?? ['gdr', '9', '18'],
     pricingRevision: c.pricingRevision ?? 'v01-upgrade',

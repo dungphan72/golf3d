@@ -253,6 +253,8 @@ export const packageTypes = sqliteTable(
     grants: text('grants').notNull(), // JSON [{kind:'holes9'|'holes18'|'gdr', qty}]
     validDays: integer('valid_days').notNull(),
     perks: text('perks').notNull().default(''),
+    // Heading the package is listed under on the price page; empty = grouped automatically.
+    section: text('section').notNull().default(''),
     active: integer('active').notNull().default(1),
     created: integer('created').notNull(),
   },

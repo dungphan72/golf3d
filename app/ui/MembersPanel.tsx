@@ -13,6 +13,7 @@ type PackageType = {
   grants: string;
   valid_days: number;
   perks: string;
+  section?: string;
   active: number;
 };
 type OwnedPackage = {
@@ -376,6 +377,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                             grants: JSON.parse(t.grants),
                             validDays: t.valid_days,
                             perks: t.perks,
+                            section: t.section ?? '',
                             active: !t.active,
                           }),
                         'Đã cập nhật gói',

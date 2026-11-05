@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
 
 const TITLE = 'Saigon Golf 3D Club — Golf 3D Foresight GC3 tại Bình Trưng, TP.HCM';
 const DESCRIPTION =
-  'Chơi golf 3D mô phỏng Foresight GC3, luyện tập GDR và phòng VIP riêng tại 250 Lương Đình Của, Bình Trưng, TP.HCM. Mở cửa 08:00–23:00. Đặt lịch online, hotline 0902030185.';
+  'Chơi golf 3D mô phỏng Foresight GC3, luyện tập GDR và phòng VIP riêng tại 250 Lương Đình Của, Bình Trưng, TP.HCM. Mở cửa mỗi ngày. Đặt lịch online, hotline 0902030185.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -52,34 +52,43 @@ const STEPS = [
   },
   {
     t: 'Chơi tiếp, thanh toán sau',
-    p: 'Chơi 9 hoặc 18 hố, gọi đồ uống tại line. Trả tiền mặt, thẻ hoặc quét mã QR.',
+    p: 'Chơi theo giờ đã đặt, gọi đồ uống tại line. Trả tiền mặt, thẻ hoặc quét mã QR.',
   },
 ];
 
-const faqFor = (group: string, tax: string) => [
-  {
-    q: 'Giá 9 hố, 18 hố tính thế nào?',
-    a: `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`,
-  },
+const faqFor = (group: string, tax: string, goldText: string, holes: boolean) => [
+  holes
+    ? {
+        q: 'Giá 9 hố, 18 hố tính thế nào?',
+        a: `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`,
+      }
+    : {
+        q: 'Giá theo giờ tính thế nào?',
+        a: 'Tính theo giờ cho mỗi phòng. Phòng thường và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng bên trên.',
+      },
   {
     q: 'Giá niêm yết đã gồm thuế chưa?',
     a: `Giá niêm yết chưa gồm VAT${tax}; thuế được cộng thêm trên hóa đơn khi thanh toán.`,
   },
   {
     q: 'Giờ vàng là gì?',
-    a: 'Thứ 2 đến Thứ 6, 08:00–11:00. Giá luyện tập GDR, 9 hố và 18 hố thấp hơn khung thường, kèm đồ ăn và thức uống miễn phí. Không áp dụng cuối tuần và ngày lễ.',
+    a: `${goldText}. Giá trong khung giờ này thấp hơn khung thường.`,
   },
   {
     q: 'Đặt lịch online có cần thanh toán trước không?',
     a: 'Không. Bạn gửi yêu cầu, nhân viên xác nhận lại lịch và line. Thanh toán sau khi chơi bằng tiền mặt, thẻ hoặc quét mã QR chuyển khoản.',
   },
+  ...(holes
+    ? [
+        {
+          q: 'Có tích điểm cho khách quen không?',
+          a: 'Có. Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.',
+        },
+      ]
+    : []),
   {
-    q: 'Có tích điểm cho khách quen không?',
-    a: 'Có. Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.',
-  },
-  {
-    q: 'Combo và thẻ VIP có dùng được cho phòng VIP không?',
-    a: 'Được. Combo lượt chơi, gói luyện tập và thẻ VIP đều dùng được cho cả line thường và phòng VIP.',
+    q: 'Gói trả trước dùng thế nào?',
+    a: 'Mua gói tại quầy hoặc gọi hotline. Gói ghi rõ số giờ, thời hạn và phòng áp dụng; nhân viên sẽ trừ giờ mỗi lần bạn chơi.',
   },
 ];
 
@@ -104,7 +113,15 @@ export default async function LandingPage() {
     group.h9 != null && group.h18 != null
       ? `: ${money(group.h9)} (9 hố) hoặc ${money(group.h18)} (18 hố)`
       : '';
-  const faq = faqFor(groupText, pricing.vat != null ? ` ${pricing.vat}%` : '');
+  const hours = `${pricing.open}–${pricing.close}`;
+  const hasHoles = rows.some((r) => r.h9 != null || r.h18 != null);
+  const vipRows = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
+  const faq = faqFor(
+    groupText,
+    pricing.vat != null ? ` ${pricing.vat}%` : '',
+    `Giờ vàng là khung giá ưu đãi: ${gold.days}, ${gold.from}–${gold.to}`,
+    hasHoles,
+  );
   const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
   const bookLabel = slug ? 'Đặt chỗ' : 'Gọi đặt chỗ';
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BRAND.address)}`;
@@ -125,8 +142,8 @@ export default async function LandingPage() {
       {
         '@type': 'OpeningHoursSpecification',
         dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        opens: '08:00',
-        closes: '23:00',
+        opens: pricing.open,
+        closes: pricing.close,
       },
     ],
   };
@@ -220,23 +237,29 @@ export default async function LandingPage() {
             <div className="fw-bubble">Hơn cả một buổi chơi, một phiên bản tốt hơn của bạn.</div>
 
             <div className="fw-side-time" aria-label="Giờ mở cửa">
-              <span>08:00 – 23:00</span>
+              <span>
+                {pricing.open} – {pricing.close}
+              </span>
               <small>Mỗi ngày</small>
             </div>
 
             <a className="fw-card fw-card-gold" href="#gio-vang">
               <div className="fw-chips" aria-hidden="true">
-                <i>9</i>
-                <i>18</i>
+                {hasHoles && (
+                  <>
+                    <i>9</i>
+                    <i>18</i>
+                  </>
+                )}
                 <i>GDR</i>
                 <i>VIP</i>
                 <em>10 line</em>
               </div>
               <div className="fw-card-foot">
                 <span>
-                  <b>Giờ vàng miễn phí đồ uống</b>
+                  <b>Giờ vàng giá ưu đãi</b>
                   <small>
-                    T2–T6 · {gold.from}–{gold.to} · GDR từ {money(lowestGdr)}
+                    {gold.days} · {gold.from}–{gold.to} · từ {money(lowestGdr)}/giờ
                   </small>
                 </span>
                 <span className="fw-arrow-dot">
@@ -282,20 +305,24 @@ export default async function LandingPage() {
           </ol>
           <div className="fw-three" data-sc-in data-sc-stagger="80">
             {[
-              {
-                Icon: Flag,
-                t: 'Chơi 9 hố · 18 hố',
-                p: 'Mô phỏng sân thật. Giá theo đầu người cho nhóm 1–3 người, giá nhóm cho 4 người.',
-              },
+              ...(hasHoles
+                ? [
+                    {
+                      Icon: Flag,
+                      t: 'Chơi 9 hố · 18 hố',
+                      p: 'Mô phỏng sân thật. Giá theo đầu người cho nhóm 1–3 người, giá nhóm cho 4 người.',
+                    },
+                  ]
+                : []),
               {
                 Icon: Target,
-                t: 'Luyện tập GDR',
-                p: `Đặt line theo giờ để tập swing. Gói buổi tập 90 phút, giờ vàng từ ${money(lowestGdr)}.`,
+                t: hasHoles ? 'Luyện tập GDR' : 'Chơi và luyện tập theo giờ',
+                p: `Đặt line theo giờ để chơi, tập swing và xem số liệu từng cú đánh. Giờ vàng từ ${money(lowestGdr)}.`,
               },
               {
                 Icon: Crown,
                 t: 'Phòng VIP riêng tư',
-                p: 'Không gian riêng cho nhóm bạn, gia đình, đối tác. Combo và thẻ VIP dùng được.',
+                p: 'Không gian riêng cho nhóm bạn, gia đình, đối tác, có bảng giá phòng VIP riêng.',
               },
             ].map(({ Icon, t, p }) => (
               <article key={t} className="fw-tile fw-tile-line">
@@ -340,32 +367,55 @@ export default async function LandingPage() {
         <section id="gio-vang" className="fw-section fw-tight">
           <div className="fw-gold-panel" data-sc-in data-sc-stagger="90">
             <div>
-              <p className="fw-kicker fw-kicker-light">Thứ 2 – Thứ 6 · 08:00–11:00</p>
-              <h2>Giờ vàng, đồ ăn và thức uống miễn phí</h2>
+              <p className="fw-kicker fw-kicker-light">
+                {gold.days} · {gold.from}–{gold.to}
+              </p>
+              <h2>Giờ vàng, giá tốt nhất trong ngày</h2>
               <p className="fw-sub fw-sub-light">
-                Không áp dụng cuối tuần và ngày lễ. Giá chưa gồm VAT
+                Giá trong khung giờ này thấp hơn khung thường. Giá chưa gồm VAT
                 {pricing.vat != null ? ` ${pricing.vat}%` : ''}.
               </p>
             </div>
             <div className="fw-figs">
-              <div>
-                <strong>
-                  <Count v={gold.gdr} />
-                </strong>
-                <span>luyện tập GDR / giờ</span>
-              </div>
-              <div>
-                <strong>
-                  <Count v={gold.h9} />
-                </strong>
-                <span>9 hố / người</span>
-              </div>
-              <div>
-                <strong>
-                  <Count v={gold.h18} />
-                </strong>
-                <span>18 hố / người</span>
-              </div>
+              {hasHoles ? (
+                <>
+                  <div>
+                    <strong>
+                      <Count v={gold.gdr} />
+                    </strong>
+                    <span>luyện tập GDR / giờ</span>
+                  </div>
+                  <div>
+                    <strong>
+                      <Count v={gold.h9} />
+                    </strong>
+                    <span>9 hố / người</span>
+                  </div>
+                  <div>
+                    <strong>
+                      <Count v={gold.h18} />
+                    </strong>
+                    <span>18 hố / người</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <strong>
+                      <Count v={gold.gdr} />
+                    </strong>
+                    <span>phòng thường / giờ</span>
+                  </div>
+                  {vipRows.get(gold.key)?.gdr != null && (
+                    <div>
+                      <strong>
+                        <Count v={vipRows.get(gold.key)!.gdr} />
+                      </strong>
+                      <span>phòng VIP / giờ</span>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </section>
@@ -386,9 +436,18 @@ export default async function LandingPage() {
               <thead>
                 <tr>
                   <th>Khung giờ</th>
-                  <th>Luyện tập GDR / giờ</th>
-                  <th>9 hố / người</th>
-                  <th>18 hố / người</th>
+                  {hasHoles ? (
+                    <>
+                      <th>Luyện tập GDR / giờ</th>
+                      <th>9 hố / người</th>
+                      <th>18 hố / người</th>
+                    </>
+                  ) : (
+                    <>
+                      <th>{pricing.vip ? 'Phòng thường / giờ' : 'Giá / giờ'}</th>
+                      {pricing.vip && <th>Phòng VIP / giờ</th>}
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -399,11 +458,21 @@ export default async function LandingPage() {
                       {r.gold && <em>Giờ vàng</em>}
                     </td>
                     <td>{r.gdr == null ? '—' : money(r.gdr)}</td>
-                    <td>{r.h9 == null ? '—' : money(r.h9)}</td>
-                    <td>{r.h18 == null ? '—' : money(r.h18)}</td>
+                    {hasHoles ? (
+                      <>
+                        <td>{r.h9 == null ? '—' : money(r.h9)}</td>
+                        <td>{r.h18 == null ? '—' : money(r.h18)}</td>
+                      </>
+                    ) : (
+                      pricing.vip && (
+                        <td>
+                          {vipRows.get(r.key)?.gdr == null ? '—' : money(vipRows.get(r.key)!.gdr!)}
+                        </td>
+                      )
+                    )}
                   </tr>
                 ))}
-                {(group.h9 != null || group.h18 != null) && (
+                {hasHoles && (group.h9 != null || group.h18 != null) && (
                   <tr className="fw-group">
                     <td>Nhóm 4 người (cả ngày)</td>
                     <td>—</td>
@@ -424,8 +493,10 @@ export default async function LandingPage() {
             <p className="fw-kicker">Gói hội viên</p>
             <h2>Mua trước, chơi nhiều hơn</h2>
             <p className="fw-sub">
-              Mỗi lượt 9 hố hoặc 18 hố tích 1 điểm; đủ 10 điểm đổi 1 lượt miễn phí. Combo và thẻ VIP
-              dùng được cho cả phòng VIP.
+              {hasHoles
+                ? 'Mỗi lượt 9 hố hoặc 18 hố tích 1 điểm; đủ 10 điểm đổi 1 lượt miễn phí. '
+                : ''}
+              Đăng ký tại quầy hoặc gọi hotline để được tư vấn gói phù hợp.
             </p>
           </div>
           <div className="fw-pk-groups">
@@ -500,7 +571,7 @@ export default async function LandingPage() {
                   <MapPin size={18} /> {BRAND.address}
                 </li>
                 <li>
-                  <Clock size={18} /> Mở cửa mỗi ngày 08:00–23:00
+                  <Clock size={18} /> Mở cửa mỗi ngày {hours}
                 </li>
                 <li>
                   <Phone size={18} /> <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>

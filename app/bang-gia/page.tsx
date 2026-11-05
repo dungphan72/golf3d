@@ -23,10 +23,26 @@ export const metadata: Metadata = {
   },
 };
 
+/** "Tiêu đề | Giá hoặc mức giảm | Điều kiện" -> parts; missing parts are simply left out. */
+const parseOffer = (line: string) => {
+  const [title, value = '', note = ''] = line.split('|').map((s) => s.trim());
+  return { title, value, note };
+};
 const price = (v: number | null) => (v == null ? '—' : money(v));
 const pct = (v: number | null) => (v == null ? null : `${v}%`);
 
-function RateCard({ row }: { row: PriceRow }) {
+function RateCard({ row, vip }: { row: PriceRow; vip?: PriceRow | null }) {
+  // Tiles: one per price that exists. With a VIP list, hourly prices show both rooms side by side.
+  const tiles: { label: string; value: number | null; unit: string }[] = [];
+  const vipHourly = vip && vip.gdr != null && vip.gdr !== row.gdr;
+  if (row.gdr != null) {
+    if (vipHourly) {
+      tiles.push({ label: 'Phòng thường', value: row.gdr, unit: 'mỗi giờ' });
+      tiles.push({ label: 'Phòng VIP', value: vip!.gdr, unit: 'mỗi giờ' });
+    } else tiles.push({ label: 'Luyện tập GDR', value: row.gdr, unit: 'mỗi giờ' });
+  }
+  if (row.h9 != null) tiles.push({ label: 'Chơi 9 hố', value: row.h9, unit: 'mỗi người' });
+  if (row.h18 != null) tiles.push({ label: 'Chơi 18 hố', value: row.h18, unit: 'mỗi người' });
   return (
     <article className={'pp-rate' + (row.gold ? ' gold' : '')} data-sc-in>
       <header>
@@ -42,28 +58,15 @@ function RateCard({ row }: { row: PriceRow }) {
           </span>
         )}
       </header>
-      <dl>
-        <div>
-          <dt>Luyện tập GDR</dt>
-          <dd>{price(row.gdr)}</dd>
-          <small>mỗi giờ</small>
-        </div>
-        <div>
-          <dt>Chơi 9 hố</dt>
-          <dd>{price(row.h9)}</dd>
-          <small>mỗi người</small>
-        </div>
-        <div>
-          <dt>Chơi 18 hố</dt>
-          <dd>{price(row.h18)}</dd>
-          <small>mỗi người</small>
-        </div>
+      <dl style={{ ['--cols' as string]: tiles.length }}>
+        {tiles.map((t) => (
+          <div key={t.label}>
+            <dt>{t.label}</dt>
+            <dd>{price(t.value)}</dd>
+            <small>{t.unit}</small>
+          </div>
+        ))}
       </dl>
-      {row.gold && (
-        <p className="pp-perk">
-          <Gift size={15} /> Kèm đồ ăn và thức uống miễn phí trong giờ vàng
-        </p>
-      )}
     </article>
   );
 }
@@ -99,6 +102,11 @@ export default async function PricingPage() {
   const [pricing, slug] = await Promise.all([publicPricing(), bookingSlug()]);
   const bookHref = slug ? '/#dat-cho' : `tel:${BRAND.hotline}`;
   const bookLabel = slug ? 'Đặt chỗ' : 'Gọi đặt chỗ';
+  const goldRow = pricing.standard.rows.find((r) => r.gold);
+  const hasHoles = pricing.standard.rows.some((r) => r.h9 != null || r.h18 != null);
+  const vipByKey = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
+  // Hourly-only lists show both rooms in one card; lists with holes keep a separate VIP table.
+  const mergeVip = !hasHoles && !!pricing.vip;
   const vat = pct(pricing.vat);
   const fee = pricing.fee ? pct(pricing.fee) : null;
   const lowest = Math.min(
@@ -106,6 +114,7 @@ export default async function PricingPage() {
   );
   const nav = [
     ['#gia-theo-gio', 'Giá theo giờ'],
+    ...(pricing.offers.length ? [['#uu-dai', 'Ưu đãi']] : []),
     ['#goi', 'Gói hội viên'],
     ['#luu-y', 'Lưu ý'],
   ];
@@ -145,8 +154,10 @@ export default async function PricingPage() {
             <p className="fw-kicker fw-kicker-light">Bảng giá</p>
             <h1>Giá rõ ràng, chơi thoải mái</h1>
             <p className="pp-hero-sub">
-              Giá theo giờ và theo lượt, nhóm 4 người, combo trả trước và thẻ VIP. Bảng này luôn
-              khớp với giá đang áp dụng tại quầy.
+              {hasHoles
+                ? 'Giá theo giờ và theo lượt, nhóm 4 người, combo trả trước và thẻ VIP. '
+                : 'Giá theo giờ cho phòng thường và phòng VIP, gói trả trước và thẻ hội viên. '}
+              Bảng này luôn khớp với giá đang áp dụng tại quầy.
             </p>
             <ul className="pp-chips">
               <li>
@@ -178,13 +189,14 @@ export default async function PricingPage() {
             <p className="fw-kicker">Giá theo giờ và lượt</p>
             <h2>Chọn khung giờ phù hợp</h2>
             <p className="fw-sub">
-              Luyện tập GDR tính theo giờ. Chơi 9 hố và 18 hố tính theo đầu người cho nhóm 1–3
-              người.
+              {hasHoles
+                ? 'Luyện tập GDR tính theo giờ. Chơi 9 hố và 18 hố tính theo đầu người cho nhóm 1–3 người.'
+                : 'Giá tính theo giờ cho mỗi phòng. Chọn khung giờ bạn muốn chơi.'}
             </p>
           </div>
           <div className="pp-rates">
             {pricing.standard.rows.map((r) => (
-              <RateCard key={r.key} row={r} />
+              <RateCard key={r.key} row={r} vip={mergeVip ? vipByKey.get(r.key) : null} />
             ))}
           </div>
           {(pricing.standard.group.h9 != null || pricing.standard.group.h18 != null) && (
@@ -210,7 +222,7 @@ export default async function PricingPage() {
               </dl>
             </article>
           )}
-          {pricing.vip ? (
+          {pricing.vip && !mergeVip ? (
             <div className="pp-vip-rates">
               <div className="fw-head">
                 <p className="fw-kicker">Phòng VIP</p>
@@ -223,19 +235,39 @@ export default async function PricingPage() {
               </div>
             </div>
           ) : (
-            <p className="pp-vip-note">
-              <Crown size={16} /> Phòng VIP dùng chung bảng giá trên.
-            </p>
+            !pricing.vip && (
+              <p className="pp-vip-note">
+                <Crown size={16} /> Phòng VIP dùng chung bảng giá trên.
+              </p>
+            )
           )}
         </section>
+
+        {pricing.offers.length > 0 && (
+          <section id="uu-dai" className="pp-section pp-offers-wrap">
+            <div className="fw-head" data-sc-in data-sc-stagger="70">
+              <p className="fw-kicker">Ưu đãi</p>
+              <h2>Ưu đãi theo ngày</h2>
+            </div>
+            <div className="pp-offers" data-sc-in data-sc-stagger="70">
+              {pricing.offers.map(parseOffer).map((o) => (
+                <article key={o.title + o.value}>
+                  <Gift size={20} />
+                  <h3>{o.title}</h3>
+                  {o.value && <strong>{o.value}</strong>}
+                  {o.note && <p>{o.note}</p>}
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section id="goi" className="pp-section pp-tint">
           <div className="fw-head" data-sc-in data-sc-stagger="70">
             <p className="fw-kicker">Gói trả trước</p>
             <h2>Mua trước, chơi nhiều hơn</h2>
             <p className="fw-sub">
-              Combo lượt chơi, gói luyện tập và thẻ VIP đều dùng được cho cả line thường và phòng
-              VIP. Đăng ký tại quầy hoặc gọi {BRAND.hotline}.
+              Đăng ký tại quầy hoặc gọi {BRAND.hotline} để được tư vấn gói phù hợp.
             </p>
           </div>
           <nav className="pp-tabs" aria-label="Nhóm gói">
@@ -269,15 +301,18 @@ export default async function PricingPage() {
               <Gift size={22} />
               <h3>Giờ vàng</h3>
               <p>
-                Áp dụng Thứ 2 đến Thứ 6, kèm đồ ăn và thức uống miễn phí. Không áp dụng cuối tuần và
-                ngày lễ.
+                {goldRow
+                  ? `Khung giá ưu đãi: ${goldRow.days}, ${goldRow.from}–${goldRow.to}. Giá trong khung này thấp hơn khung thường.`
+                  : 'Khung giá ưu đãi (nếu có) được ghi ở các thẻ giá phía trên.'}
               </p>
             </article>
-            <article>
-              <Check size={22} />
-              <h3>Tích điểm</h3>
-              <p>Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.</p>
-            </article>
+            {hasHoles && (
+              <article>
+                <Check size={22} />
+                <h3>Tích điểm</h3>
+                <p>Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.</p>
+              </article>
+            )}
           </div>
         </section>
 

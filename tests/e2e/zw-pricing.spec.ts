@@ -46,12 +46,14 @@ test('trang bảng giá hiện giá từ admin và đổi ngay khi admin sửa',
     grants: [{ kind: 'holes9', qty: 2 }],
     validDays: 30,
     perks: 'Quyền lợi thử',
+    section: 'Nhóm thử nghiệm',
     active: true,
   });
   await page.reload();
   await expect(page.getByText('3.333.000 ₫')).toBeAttached();
   await expect(page.getByText('Gói thử nghiệm giá')).toBeAttached();
   await expect(page.getByText('Quyền lợi thử')).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'Nhóm thử nghiệm' })).toBeAttached();
 
   // 2) a retired package disappears
   const created = (await (await owner.get('/api/members')).json()).types.find(
@@ -66,6 +68,7 @@ test('trang bảng giá hiện giá từ admin và đổi ngay khi admin sửa',
     grants: JSON.parse(created.grants),
     validDays: created.valid_days,
     perks: created.perks,
+    section: created.section,
     active: false,
   });
   await page.reload();

@@ -1,0 +1,154 @@
+[
+  {
+    "results": [
+      {
+        "id": "4ddde69d-4eec-43ba-880c-23fe53a9ae70",
+        "tenant": "golf3d-main",
+        "name": "GDR giờ vàng · 10 buổi (+5)",
+        "price": 1000000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":15}]",
+        "valid_days": 60,
+        "perks": "90 phút/buổi, giờ vàng 08:00–11:00",
+        "active": 1
+      },
+      {
+        "id": "e29109c2-3a57-4cea-8121-96037d3be30a",
+        "tenant": "golf3d-main",
+        "name": "GDR · 10 buổi (+1)",
+        "price": 2000000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":11}]",
+        "valid_days": 90,
+        "perks": "90 phút/buổi",
+        "active": 1
+      },
+      {
+        "id": "da3947ce-18de-44fb-a1bd-023d7c71cd7d",
+        "tenant": "golf3d-main",
+        "name": "Combo 9 hố · 10 lượt (+1)",
+        "price": 3000000,
+        "grants": "[{\"kind\":\"holes9\",\"qty\":11}]",
+        "valid_days": 90,
+        "perks": "Giảm 20% F&B khi thanh toán thẻ",
+        "active": 1
+      },
+      {
+        "id": "29d4f6ac-a0aa-4ad6-968f-bad37de4429b",
+        "tenant": "golf3d-main",
+        "name": "GDR · 1 tháng",
+        "price": 3000000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":99999}]",
+        "valid_days": 30,
+        "perks": "Tặng tủ đồ 1 tháng",
+        "active": 1
+      },
+      {
+        "id": "07c02b7d-3c40-44f9-86e6-27dcd4a5b8fe",
+        "tenant": "golf3d-main",
+        "name": "GDR · 20 buổi (+5)",
+        "price": 4000000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":25}]",
+        "valid_days": 180,
+        "perks": "90 phút/buổi · miễn phí đỗ xe",
+        "active": 1
+      },
+      {
+        "id": "5dac8c74-5196-4292-9b74-4895b8fbefd3",
+        "tenant": "golf3d-main",
+        "name": "Combo 18 hố · 10 lượt (+1)",
+        "price": 5000000,
+        "grants": "[{\"kind\":\"holes18\",\"qty\":11}]",
+        "valid_days": 90,
+        "perks": "Giảm 20% F&B khi thanh toán thẻ",
+        "active": 1
+      },
+      {
+        "id": "10f88844-f197-4e5d-9268-1684dc0ca0e3",
+        "tenant": "golf3d-main",
+        "name": "Combo 9 hố · 20 lượt (+5)",
+        "price": 6000000,
+        "grants": "[{\"kind\":\"holes9\",\"qty\":25}]",
+        "valid_days": 180,
+        "perks": "Giảm 20% F&B khi thanh toán thẻ",
+        "active": 1
+      },
+      {
+        "id": "b5bd5ad3-eece-4db2-9d63-eb3020d1cd18",
+        "tenant": "golf3d-main",
+        "name": "GDR · 3 tháng",
+        "price": 7500000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":99999}]",
+        "valid_days": 90,
+        "perks": "Tặng tủ đồ 3 tháng",
+        "active": 1
+      },
+      {
+        "id": "ebee5730-8817-4edb-9b3b-997012bce1ca",
+        "tenant": "golf3d-main",
+        "name": "GDR · 6 tháng (giảm 30%)",
+        "price": 9450000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":99999},{\"kind\":\"holes18\",\"qty\":6}]",
+        "valid_days": 180,
+        "perks": "Tặng 6 lượt 18 hố · tủ đồ 6 tháng · miễn phí đỗ xe",
+        "active": 1
+      },
+      {
+        "id": "69525da6-d13d-4582-a839-60de4db6f54d",
+        "tenant": "golf3d-main",
+        "name": "Combo 18 hố · 20 lượt (+5)",
+        "price": 10000000,
+        "grants": "[{\"kind\":\"holes18\",\"qty\":25}]",
+        "valid_days": 180,
+        "perks": "Giảm 20% F&B khi thanh toán thẻ",
+        "active": 1
+      },
+      {
+        "id": "23a9817f-5564-45fc-95d1-e6eb54e564a2",
+        "tenant": "golf3d-main",
+        "name": "GDR · 12 tháng (giảm 30%)",
+        "price": 17500000,
+        "grants": "[{\"kind\":\"gdr\",\"qty\":99999},{\"kind\":\"holes18\",\"qty\":12}]",
+        "valid_days": 360,
+        "perks": "Tặng 12 lượt 18 hố · tủ đồ 12 tháng · miễn phí đỗ xe",
+        "active": 1
+      },
+      {
+        "id": "d8c7d709-89cb-4e0f-aa4f-b76958f9a628",
+        "tenant": "golf3d-main",
+        "name": "Thẻ VIP Platinum",
+        "price": 20000000,
+        "grants": "[{\"kind\":\"holes18\",\"qty\":10},{\"kind\":\"gdr\",\"qty\":10}]",
+        "valid_days": 180,
+        "perks": "Phòng chờ VIP · 1 bia/nước · giảm 20% F&B · miễn phí đỗ xe",
+        "active": 1
+      },
+      {
+        "id": "f5213026-cd28-4c55-becc-b79de0eb2ded",
+        "tenant": "golf3d-main",
+        "name": "Thẻ VIP Diamond",
+        "price": 50000000,
+        "grants": "[{\"kind\":\"holes18\",\"qty\":20},{\"kind\":\"gdr\",\"qty\":20}]",
+        "valid_days": 360,
+        "perks": "Phòng chờ VVIP · 1 bia/nước · giảm 30% F&B · miễn phí đỗ xe",
+        "active": 1
+      }
+    ],
+    "success": true,
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "SIN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 0.3716
+      },
+      "duration": 0.3716,
+      "changes": 0,
+      "last_row_id": 0,
+      "changed_db": false,
+      "size_after": 446464,
+      "rows_read": 26,
+      "rows_written": 0,
+      "total_attempts": 1
+    }
+  }
+]

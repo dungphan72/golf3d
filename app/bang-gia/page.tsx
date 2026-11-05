@@ -39,10 +39,10 @@ function RateCard({ row, vip }: { row: PriceRow; vip?: PriceRow | null }) {
     if (vipHourly) {
       tiles.push({ label: 'Phòng tiêu chuẩn', value: row.gdr, unit: 'mỗi giờ' });
       tiles.push({ label: 'Phòng VIP', value: vip!.gdr, unit: 'mỗi giờ' });
-    } else tiles.push({ label: 'Luyện tập GDR', value: row.gdr, unit: 'mỗi giờ' });
+    } else tiles.push({ label: 'Luyện tập', value: row.gdr, unit: 'mỗi giờ' });
   }
-  if (row.h9 != null) tiles.push({ label: 'Chơi 9 hố', value: row.h9, unit: 'mỗi người' });
-  if (row.h18 != null) tiles.push({ label: 'Chơi 18 hố', value: row.h18, unit: 'mỗi người' });
+  if (row.h9 != null) tiles.push({ label: 'Game 9 hố', value: row.h9, unit: 'mỗi người' });
+  if (row.h18 != null) tiles.push({ label: 'Game 18 hố', value: row.h18, unit: 'mỗi người' });
   return (
     <article className={'pp-rate' + (row.gold ? ' gold' : '')} data-sc-in>
       <header>
@@ -191,7 +191,7 @@ export default async function PricingPage() {
             <h2>Chọn khung giờ phù hợp</h2>
             <p className="fw-sub">
               {hasHoles
-                ? 'Luyện tập GDR tính theo giờ. Chơi 9 hố và 18 hố tính theo đầu người cho nhóm 1–3 người.'
+                ? 'Luyện tập tính theo giờ. Game 9 hố và Game 18 hố tính theo đầu người.'
                 : 'Giá tính theo giờ cho mỗi phòng. Chọn khung giờ bạn muốn chơi.'}
             </p>
           </div>

@@ -211,3 +211,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Trang công khai mới: quyền lợi hội viên (chơi mỗi ngày, đặt trước 4 tuần, gửi gậy miễn phí, bảo lưu một lần tối đa 6 tháng, đặt thêm giảm 10%), các thẻ hội viên và gói giờ. Thẻ và gói lấy từ danh mục gói trong admin (nhóm có tên bắt đầu bằng "Thẻ" hiện ở mục thẻ, còn lại ở mục gói giờ), nên sửa giá trong admin là trang đổi theo.
 - Quyền lợi sửa trong Cài đặt (ô "Quyền lợi hội viên", mỗi dòng "Tiêu đề | Mô tả", tối đa 12; để trống thì ẩn mục). Chưa lưu gì thì hiện danh sách mặc định trong `lib/member-benefits.ts`.
 - Có liên kết từ trang chủ và `/bang-gia`. Kiểm thử: `tests/e2e/zy-membership-page.spec.ts`.
+
+## v0.10.4 — Form đặt chỗ mới và giá Game 9/18 hố
+
+- Form đặt chỗ: 3 hình thức (Luyện tập, Game 9 hố, Game 18 hố), bỏ ô thời lượng (Luyện tập mặc định 1 giờ), "Số người" khách tự điền (nhóm, giải đấu; mỗi line tối đa 4 nên nhóm đông được ghi `guests` trong báo giá và hiện "cần N line" cho nhân viên), họ tên và số điện thoại bắt buộc.
+- Giá nhập vào cài đặt (trước đó lưu bản sao `docs/backups/settings-before-holes-prices.json`), tính theo người, nhân theo số người 1–4: Game 18 hố tiêu chuẩn 250k (07–12 T2–T6) / 300k; VIP 350k / 400k. Game 9 hố tiêu chuẩn 150k / 200k; VIP 200k / 250k. Thứ 7, Chủ nhật, ngày lễ: cả ngày theo giá 12:00–23:00. Quy tắc 9/18 hố cũ (đã tắt) được xóa.
+- Trang giá không hiện thẻ "Nhóm 4 người" khi giá nhóm chỉ bằng 4 lần giá một người.

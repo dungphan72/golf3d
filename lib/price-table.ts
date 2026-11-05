@@ -34,6 +34,18 @@ export function buildPriceTable(rules: PriceRule[], room: 'standard' | 'vip'): P
   for (const r of rules) {
     if (!r.enabled || r.room !== room) continue;
     if (r.service !== 'gdr' && r.people === 4) {
+      // A foursome that simply pays four times the per-person price is not a group deal: leave it out.
+      const single = rules.find(
+        (x) =>
+          x.enabled &&
+          x.room === room &&
+          x.service === r.service &&
+          x.day === r.day &&
+          x.people === 1 &&
+          x.from === r.from &&
+          x.to === r.to,
+      );
+      if (single && single.amount * 4 === r.amount) continue;
       const g = (groupByDay[r.day] ??= {});
       g[r.service === '9' ? 'h9' : 'h18'] = r.amount;
       continue;

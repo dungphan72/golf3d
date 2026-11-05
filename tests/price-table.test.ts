@@ -165,3 +165,23 @@ test('packages with a section keep to it; named sections follow the automatic gr
     ],
   );
 });
+
+test('a foursome that pays four times the per-person price is not shown as a group deal', () => {
+  const rule = (people: number, amount: number) => ({
+    id: `s-9-${people}`,
+    label: 'Giờ thường',
+    service: '9' as const,
+    room: 'standard' as const,
+    day: 'weekday' as const,
+    from: '07:00',
+    to: '23:00',
+    people,
+    amount,
+    enabled: true,
+  });
+  const flat = buildPriceTable([rule(1, 150_000), rule(4, 600_000)], 'standard');
+  assert.equal(flat.rows[0].h9, 150_000);
+  assert.equal(flat.group.h9, null);
+  const deal = buildPriceTable([rule(1, 150_000), rule(4, 500_000)], 'standard');
+  assert.equal(deal.group.h9, 500_000);
+});

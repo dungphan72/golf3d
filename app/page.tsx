@@ -316,7 +316,7 @@ export default async function LandingPage() {
                 : []),
               {
                 Icon: Target,
-                t: hasHoles ? 'Luyện tập GDR' : 'Chơi và luyện tập theo giờ',
+                t: hasHoles ? 'Luyện tập' : 'Chơi và luyện tập theo giờ',
                 p: `Đặt line theo giờ để chơi, tập swing và xem số liệu từng cú đánh. Giờ vàng từ ${money(lowestGdr)}.`,
               },
               {
@@ -438,7 +438,7 @@ export default async function LandingPage() {
                   <th>Khung giờ</th>
                   {hasHoles ? (
                     <>
-                      <th>Luyện tập GDR / giờ</th>
+                      <th>Luyện tập / giờ</th>
                       <th>9 hố / người</th>
                       <th>18 hố / người</th>
                     </>

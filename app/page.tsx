@@ -14,7 +14,7 @@ import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import BookingPage from './ui/BookingPage';
 import LandingFx from './ui/LandingFx';
-import { grantLine, validityText } from '../lib/price-table';
+import { grantLine, validityText, type PriceTable } from '../lib/price-table';
 import { publicPricing } from '../lib/server/pricing-service';
 import { bookingSlug } from '../lib/server/online-service';
 import './landing.css';
@@ -100,6 +100,71 @@ function Count({ v }: { v: number | null }) {
     <>
       <span data-sc-count={`0 ${v / 1000}`}>{v / 1000}</span>.000đ
     </>
+  );
+}
+
+const DAY_EN: Record<string, string> = {
+  'Thứ 2 – Thứ 6': 'Mon – Fri',
+  'Thứ 7, Chủ nhật': 'Sat, Sun',
+  'Thứ 7, Chủ nhật & ngày lễ': 'Sat, Sun & public holidays',
+  'Mỗi ngày': 'Every day',
+};
+const dong = (v: number | null) => (v == null ? '—' : `${v.toLocaleString('vi-VN')}đ / VND`);
+
+/** Bilingual price grid, one per room: navy header, one row per time slot. */
+function RateGrid({ title, table }: { title: string; table: PriceTable }) {
+  return (
+    <div className="fw-grid-wrap" data-sc-in>
+      <h3>{title}</h3>
+      <div className="fw-table-card fw-grid">
+        <table>
+          <thead>
+            <tr>
+              <th>
+                Thời gian <i>Time</i>
+              </th>
+              <th>
+                Luyện tập / 1 giờ <i>Practice / 1 hour</i>
+              </th>
+              <th>
+                Game 9 hố <i>9 Holes</i>
+              </th>
+              <th>
+                Game 18 hố <i>18 Holes</i>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((r) => (
+              <tr key={r.key}>
+                <td>
+                  {r.days} | {r.from}–{r.to}
+                  {r.gold ? ' (Giờ vàng)' : ''}
+                  <i>
+                    {DAY_EN[r.days] ?? r.days} | {r.from}–{r.to}
+                    {r.gold ? ' (Peak / "golden hour")' : ''}
+                  </i>
+                </td>
+                <td>{dong(r.gdr)}</td>
+                <td>{dong(r.h9)}</td>
+                <td>{dong(r.h18)}</td>
+              </tr>
+            ))}
+            {(table.group.h9 != null || table.group.h18 != null) && (
+              <tr>
+                <td>
+                  Đánh nhóm 4 người (cả ngày)
+                  <i>4-person group (all day)</i>
+                </td>
+                <td>—</td>
+                <td>{dong(table.group.h9)}</td>
+                <td>{dong(table.group.h18)}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -428,61 +493,72 @@ export default async function LandingPage() {
               Giá chưa gồm VAT{pricing.vat != null ? ` ${pricing.vat}%` : ''}.
               {group.h9 != null && group.h18 != null
                 ? ` Nhóm 4 người dùng giá nhóm cả ngày: ${money(group.h9)} cho 9 hố, ${money(group.h18)} cho 18 hố.`
-                : ''}
+                : hasHoles
+                  ? ' Game 9 hố và 18 hố tính theo người, Luyện tập tính theo giờ.'
+                  : ''}
             </p>
           </div>
-          <div className="fw-table-card" data-sc-in>
-            <table>
-              <thead>
-                <tr>
-                  <th>Khung giờ</th>
-                  {hasHoles ? (
-                    <>
-                      <th>Luyện tập / giờ</th>
-                      <th>9 hố / người</th>
-                      <th>18 hố / người</th>
-                    </>
-                  ) : (
-                    <>
-                      <th>{pricing.vip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
-                      {pricing.vip && <th>Phòng VIP / giờ</th>}
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.key}>
-                    <td>
-                      {r.days} · {r.from}–{r.to}
-                      {r.gold && <em>Giờ vàng</em>}
-                    </td>
-                    <td>{r.gdr == null ? '—' : money(r.gdr)}</td>
+          {hasHoles ? (
+            <>
+              <RateGrid title="Phòng tiêu chuẩn" table={pricing.standard} />
+              {pricing.vip && <RateGrid title="Phòng VIP" table={pricing.vip} />}
+            </>
+          ) : (
+            <div className="fw-table-card" data-sc-in>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Khung giờ</th>
                     {hasHoles ? (
                       <>
-                        <td>{r.h9 == null ? '—' : money(r.h9)}</td>
-                        <td>{r.h18 == null ? '—' : money(r.h18)}</td>
+                        <th>Luyện tập / giờ</th>
+                        <th>9 hố / người</th>
+                        <th>18 hố / người</th>
                       </>
                     ) : (
-                      pricing.vip && (
-                        <td>
-                          {vipRows.get(r.key)?.gdr == null ? '—' : money(vipRows.get(r.key)!.gdr!)}
-                        </td>
-                      )
+                      <>
+                        <th>{pricing.vip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
+                        {pricing.vip && <th>Phòng VIP / giờ</th>}
+                      </>
                     )}
                   </tr>
-                ))}
-                {hasHoles && (group.h9 != null || group.h18 != null) && (
-                  <tr className="fw-group">
-                    <td>Nhóm 4 người (cả ngày)</td>
-                    <td>—</td>
-                    <td>{group.h9 == null ? '—' : `${money(group.h9)} / nhóm`}</td>
-                    <td>{group.h18 == null ? '—' : `${money(group.h18)} / nhóm`}</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((r) => (
+                    <tr key={r.key}>
+                      <td>
+                        {r.days} · {r.from}–{r.to}
+                        {r.gold && <em>Giờ vàng</em>}
+                      </td>
+                      <td>{r.gdr == null ? '—' : money(r.gdr)}</td>
+                      {hasHoles ? (
+                        <>
+                          <td>{r.h9 == null ? '—' : money(r.h9)}</td>
+                          <td>{r.h18 == null ? '—' : money(r.h18)}</td>
+                        </>
+                      ) : (
+                        pricing.vip && (
+                          <td>
+                            {vipRows.get(r.key)?.gdr == null
+                              ? '—'
+                              : money(vipRows.get(r.key)!.gdr!)}
+                          </td>
+                        )
+                      )}
+                    </tr>
+                  ))}
+                  {hasHoles && (group.h9 != null || group.h18 != null) && (
+                    <tr className="fw-group">
+                      <td>Nhóm 4 người (cả ngày)</td>
+                      <td>—</td>
+                      <td>{group.h9 == null ? '—' : `${money(group.h9)} / nhóm`}</td>
+                      <td>{group.h18 == null ? '—' : `${money(group.h18)} / nhóm`}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
           <p className="fw-note">
             <a href="/bang-gia">Xem bảng giá đầy đủ</a> · <a href="/thanh-vien">Thẻ hội viên</a>
           </p>

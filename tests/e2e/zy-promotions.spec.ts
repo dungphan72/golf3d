@@ -32,7 +32,7 @@ const promo = (over: Record<string, unknown> = {}) => ({
 const postFrom = async (ip: string, request: APIRequestContext, data: unknown) => {
   const response = await request.post('/api/public/booking', {
     data,
-    headers: { 'x-forwarded-for': ip },
+    headers: { 'x-forwarded-for': ip, 'cf-connecting-ip': '203.0.113.9' },
   });
   expect(response.status(), await response.text()).toBe(200);
   return (await response.json()) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any

@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { sendResult, httpError, sameOrigin } from '../../auth-session';
+import { clientIp } from '../../../lib/server/http';
 import { turnstilePasses } from '../../../lib/server/turnstile';
 import {
   memberActionInput,
@@ -26,14 +27,6 @@ const cookieFor = (token: string, request: Request) => {
   return `${MEMBER_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MEMBER_SESSION_SECONDS}${secure}`;
 };
 const cleared = `${MEMBER_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
-
-function clientIp(req: Request) {
-  return (
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown'
-  );
-}
 
 export async function GET() {
   const token = (await cookies()).get(MEMBER_COOKIE)?.value;

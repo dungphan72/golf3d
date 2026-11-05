@@ -1,16 +1,8 @@
 import { publicInfo, submitRequest } from '../../../../lib/server/online-service';
-import { sendResult, httpError } from '../../../../lib/server/http';
+import { sendResult, httpError, clientIp } from '../../../../lib/server/http';
 import { turnstilePasses } from '../../../../lib/server/turnstile';
 import { SLUG_PATTERN } from '../../../../lib/online';
 export const dynamic = 'force-dynamic';
-
-function clientIp(req: Request) {
-  return (
-    req.headers.get('cf-connecting-ip') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-    'unknown'
-  );
-}
 
 export async function GET(req: Request) {
   const slug = new URL(req.url).searchParams.get('slug') ?? '';

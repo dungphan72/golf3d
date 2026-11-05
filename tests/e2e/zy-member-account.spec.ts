@@ -93,7 +93,7 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   expect(after.packages).toHaveLength(packagesBefore + 1);
 
   // The member books from their own page (name and phone come from the account) and can cancel it.
-  const day = new Date(Date.now() + 2 * 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
+  const day = new Date(Date.now() + 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
   const start = Date.parse(`${day}T10:00:00+07:00`);
   const booked = await guest.request.post('/api/member', {
     data: {
@@ -146,7 +146,7 @@ test('đăng nhập sai nhiều lần chỉ chặn đúng địa chỉ IP đó, 
   const password = 'matkhau-dung-123';
   const owner = await browser.newContext();
   const make = await owner.request.post('/api/member', {
-    headers: { 'x-forwarded-for': '10.0.0.1' },
+    headers: { 'x-forwarded-for': '10.0.0.1', 'cf-connecting-ip': '203.0.113.9' },
     data: { action: 'register', name: 'Chủ Tài Khoản', phone, email: '', password },
   });
   expect(make.status(), await make.text()).toBe(200);
@@ -154,7 +154,7 @@ test('đăng nhập sai nhiều lần chỉ chặn đúng địa chỉ IP đó, 
   const attacker = await browser.newContext();
   const login = (ctx: typeof attacker, ip: string, pw: string) =>
     ctx.request.post('/api/member', {
-      headers: { 'x-forwarded-for': ip },
+      headers: { 'x-forwarded-for': ip, 'cf-connecting-ip': '203.0.113.9' },
       data: { action: 'login', phone, password: pw },
     });
   for (let i = 0; i < 5; i++)
@@ -173,7 +173,7 @@ test('một địa chỉ IP chỉ đăng ký được vài tài khoản mỗi gi
   const statuses: number[] = [];
   for (let i = 0; i < 7; i++) {
     const r = await ctx.request.post('/api/member', {
-      headers: { 'x-forwarded-for': '10.5.5.5' },
+      headers: { 'x-forwarded-for': '10.5.5.5', 'cf-connecting-ip': '203.0.113.9' },
       data: {
         action: 'register',
         name: 'Khách ' + i,

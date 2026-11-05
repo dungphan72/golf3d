@@ -79,6 +79,9 @@ const server = spawn(
     '8787',
     '--ip',
     '127.0.0.1',
+    // Lets tests act as different visitors for per-IP limits (never set in production).
+    '--var',
+    'TRUST_FORWARDED_IP:1',
   ],
   { cwd: root, shell, stdio: 'inherit' },
 );

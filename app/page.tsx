@@ -23,7 +23,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     type: 'website',
     locale: 'vi_VN',
-    images: [{ url: BRAND.banner }],
+    images: [{ url: '/og.jpg', width: 1200, height: 675 }],
   },
 };
 
@@ -97,132 +97,6 @@ const FAQ = [
   },
 ];
 
-// A row of pines: [x, base y, height]
-const PINES: [number, number, number][] = [
-  [30, 640, 150],
-  [90, 650, 190],
-  [150, 645, 130],
-  [210, 655, 170],
-  [270, 650, 120],
-  [1180, 640, 140],
-  [1240, 650, 200],
-  [1300, 645, 150],
-  [1360, 655, 185],
-  [1420, 648, 130],
-  [1480, 652, 175],
-  [1550, 646, 145],
-];
-
-/** Stylised course scene for the hero: sky, clouds, mountains, lake, fairway, flag and a golfer. */
-function CourseScene() {
-  return (
-    <svg
-      className="fw-scene"
-      viewBox="0 0 1600 900"
-      preserveAspectRatio="xMidYMid slice"
-      role="img"
-      aria-label="Sân golf với núi và hồ nước"
-    >
-      <defs>
-        <linearGradient id="fwSky" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#1d5cae" />
-          <stop offset="0.5" stopColor="#4f9be0" />
-          <stop offset="0.78" stopColor="#a9d3f1" />
-          <stop offset="1" stopColor="#dcecf6" />
-        </linearGradient>
-        <linearGradient id="fwLake" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#8cc0e0" />
-          <stop offset="1" stopColor="#5f9cc6" />
-        </linearGradient>
-        <linearGradient id="fwFair" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#6db35a" />
-          <stop offset="1" stopColor="#2f7d32" />
-        </linearGradient>
-        <linearGradient id="fwFair2" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#3f9140" />
-          <stop offset="1" stopColor="#1d5f2c" />
-        </linearGradient>
-        <filter id="fwBlur" x="-20%" y="-50%" width="140%" height="200%">
-          <feGaussianBlur stdDeviation="14" />
-        </filter>
-      </defs>
-      <rect width="1600" height="900" fill="url(#fwSky)" />
-      <g fill="#fff" filter="url(#fwBlur)" opacity="0.95">
-        <ellipse cx="260" cy="170" rx="210" ry="48" />
-        <ellipse cx="380" cy="145" rx="150" ry="52" />
-        <ellipse cx="1180" cy="120" rx="230" ry="42" />
-        <ellipse cx="1330" cy="150" rx="150" ry="40" />
-        <ellipse cx="760" cy="250" rx="180" ry="30" opacity="0.8" />
-        <ellipse cx="60" cy="330" rx="150" ry="34" opacity="0.8" />
-      </g>
-      <path
-        d="M0 470 L120 395 L230 440 L370 340 L520 430 L640 385 L790 455 V560 H0 Z"
-        fill="#7d9bc2"
-      />
-      <path
-        d="M640 470 L800 380 L930 430 L1070 340 L1200 420 L1340 360 L1480 430 L1600 395 V560 H640 Z"
-        fill="#6384ad"
-      />
-      <path
-        d="M0 520 L160 470 L300 505 L470 455 L640 510 L820 475 L1000 520 L1180 470 L1360 510 L1600 475 V600 H0 Z"
-        fill="#3e6f56"
-      />
-      <rect y="560" width="1600" height="70" fill="url(#fwLake)" />
-      <path
-        d="M180 585 H520 M700 600 H1080 M1180 580 H1500"
-        stroke="#fff"
-        strokeOpacity="0.35"
-        strokeWidth="3"
-        strokeLinecap="round"
-      />
-      <g fill="#1c4a2b">
-        {PINES.map(([x, y, h]) => (
-          <path key={x} d={`M${x} ${y - h} L${x + 34} ${y} L${x - 34} ${y} Z`} />
-        ))}
-      </g>
-      <path
-        d="M0 640 C 260 600, 600 640, 900 650 C 1150 660, 1400 630, 1600 650 V900 H0 Z"
-        fill="url(#fwFair)"
-      />
-      <path
-        d="M0 720 C 300 690, 700 740, 1100 730 C 1350 724, 1500 710, 1600 720 V900 H0 Z"
-        fill="url(#fwFair2)"
-      />
-      <ellipse cx="1180" cy="690" rx="118" ry="16" fill="#8ccf78" />
-      <ellipse cx="560" cy="676" rx="70" ry="9" fill="#e9dcb4" opacity="0.95" />
-      <line x1="1180" y1="690" x2="1180" y2="560" stroke="#fff" strokeWidth="4" />
-      <path d="M1180 560 L1240 578 L1180 596 Z" fill="#fff" />
-      <g
-        transform="translate(500 396) scale(1.18)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        <path d="M-14 128 L-2 206 L-16 276" stroke="#e9e2d2" strokeWidth="30" />
-        <path d="M-4 128 L30 204 L48 274" stroke="#d9d1bf" strokeWidth="30" />
-        <path d="M22 34 L-18 128" stroke="#215c36" strokeWidth="50" />
-        <path d="M26 50 L66 150" stroke="#d7a483" strokeWidth="13" />
-        <path d="M66 150 L158 284" stroke="#2a2f38" strokeWidth="4" />
-        <ellipse cx="-18" cy="282" rx="24" ry="8" fill="#242a33" stroke="none" />
-        <ellipse cx="52" cy="280" rx="24" ry="8" fill="#242a33" stroke="none" />
-        <rect
-          x="150"
-          y="278"
-          width="22"
-          height="9"
-          rx="3"
-          fill="#2a2f38"
-          stroke="none"
-          transform="rotate(30 158 284)"
-        />
-        <circle cx="178" cy="289" r="6" fill="#fff" stroke="none" />
-        <circle cx="30" cy="2" r="22" fill="#d9a888" stroke="none" />
-        <path d="M8 -2 A22 22 0 0 1 52 -2 L72 0 L52 8 L8 8 Z" fill="#fff" stroke="none" />
-      </g>
-    </svg>
-  );
-}
-
 export default async function LandingPage() {
   const slug = await bookingSlug();
   const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
@@ -234,7 +108,7 @@ export default async function LandingPage() {
     name: BRAND.name,
     description: DESCRIPTION,
     telephone: BRAND.hotline,
-    image: BRAND.banner,
+    image: '/og.jpg',
     address: {
       '@type': 'PostalAddress',
       streetAddress: '250 Lương Đình Của',
@@ -297,7 +171,18 @@ export default async function LandingPage() {
       <main id="top">
         <section className="fw-hero">
           <div className="fw-stage">
-            <CourseScene />
+            <picture>
+              <source media="(max-width: 860px)" srcSet="/img/hero-room-m.webp" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                className="fw-scene"
+                src="/img/hero-room.webp"
+                alt="Phòng chơi Saigon Golf 3D Club với màn hình mô phỏng sân golf"
+                width={1506}
+                height={805}
+                fetchPriority="high"
+              />
+            </picture>
             <div className="fw-shade" aria-hidden="true" />
 
             <div className="fw-top-left">
@@ -409,6 +294,27 @@ export default async function LandingPage() {
                 <p>{p}</p>
               </article>
             ))}
+          </div>
+
+          <div className="fw-gallery" data-sc-in data-sc-stagger="90">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="fw-gal-a"
+              src="/img/space-wide.webp"
+              alt="Không gian Saigon Golf 3D Club: quả bóng trên thảm cỏ và màn hình mô phỏng"
+              width={1672}
+              height={941}
+              loading="lazy"
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="fw-gal-b"
+              src="/img/space-ball.webp"
+              alt="Saigon Golf 3D Club, 250 Lương Đình Của, Bình Trưng"
+              width={900}
+              height={900}
+              loading="lazy"
+            />
           </div>
         </section>
 
@@ -577,6 +483,15 @@ export default async function LandingPage() {
                 </li>
               </ul>
             </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              className="fw-contact-img"
+              src="/banner.webp"
+              alt="Saigon Golf 3D Club"
+              width={1600}
+              height={640}
+              loading="lazy"
+            />
             <div className="fw-contact-actions">
               <a className="fw-btn fw-btn-light" href={bookHref}>
                 {bookLabel} <ArrowUpRight size={16} />

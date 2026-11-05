@@ -156,3 +156,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Dựa trên bố cục mẫu Fairway Premium Golf Club: khung hero bo góc lớn, thanh điều hướng trắng khoét góc ở trên trái, tab "Đặt chỗ ↗" khoét góc ở trên phải, tiêu đề chữ mảnh cỡ rất lớn ("Nâng tầm cú đánh"), thẻ nổi bo tròn (giờ vàng, khám phá phòng chơi), bong bóng lời thoại, tab dọc giờ mở cửa. Phối màu xanh trời, xanh cỏ, trắng; điểm nhấn vàng của thương hiệu.
 - Chỉ tham khảo bố cục và phong cách, không dùng ảnh hay chữ của tác giả. Cảnh sân golf (người chơi, núi, hồ, cờ) là **hình vẽ SVG** do mình dựng; khi có ảnh thật của cơ sở thì thay vào `CourseScene` trong `app/page.tsx`.
 - Các phần dưới dùng cùng ngôn ngữ thẻ trắng bo tròn: bốn bước, giờ vàng (số đếm lên), bảng giá, gói hội viên theo nhóm, đặt chỗ (form nhúng) + hỏi đáp, liên hệ. Menu thu gọn cố định hiện sau khi cuộn qua hero. Engine ScrollCraft chỉ còn dùng cho hiện dần và đếm số.
+
+## v0.9.6 — Ảnh thật của cơ sở trên trang chủ
+
+- Dùng bộ ảnh anh gửi (4 ảnh: banner ngang, banner 16:9, ảnh vuông quả bóng, poster dọc). Nền hero là ảnh phòng chơi **sạch** cắt từ poster dọc (không có chữ), có bản riêng cho điện thoại (`public/img/hero-room*.webp`).
+- `public/banner.webp` thay bằng banner ngang mới (dùng ở trang `/book/<mã>`, thẻ "Khám phá phòng chơi" và phần liên hệ). Mục "không gian" dùng banner 16:9 và ảnh vuông (`public/img/space-*.webp`). Ảnh xem trước khi chia sẻ là `public/og.jpg`.
+- Các ảnh banner có logo, địa chỉ, hotline in sẵn nên chỉ dùng làm ảnh minh họa, không đặt chữ chồng lên.
+- Ảnh gốc nằm ngoài dự án (thư mục tạm của phiên làm việc); các bản đã nén nằm trong `public/`. Nên giữ bản gốc độ phân giải cao ở nơi khác để làm lại khi cần.

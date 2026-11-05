@@ -235,3 +235,13 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Mua gói online: hội viên đã được xác nhận chọn gói ở mục "Mua thêm gói" (giá lấy đúng từ danh mục gói đang bán) và gửi yêu cầu; tối đa 3 yêu cầu chờ, hủy được. Nhân viên thấy "yêu cầu mua gói" trong danh sách và chi tiết khách (Hội viên), bấm "Bán gói này" rồi thu tiền như bán gói thường: yêu cầu tự chuyển thành "đã xử lý" cùng giao dịch bán (một batch), hoặc "Từ chối". Không thu tiền online. Migration 0013 (`package_orders`, trigger kiểm tra gói/giá, bất biến, không xóa).
 - Đặt lịch trong trang cá nhân: điền sẵn tên và số điện thoại của hội viên, chọn hình thức, giờ, số người (tự điền, không bắt buộc), phòng VIP, ghi chú; dùng chung quy trình với form công khai (nhân viên xác nhận). Hội viên xem và hủy yêu cầu đang chờ ngay trong trang.
 - Kiểm thử: `tests/member_account_sql_test.py` (thêm bộ package_orders), `tests/e2e/zy-member-account.spec.ts`.
+
+## v0.12.0 — Hoàn thiện tính tiền: giảm giá, tiền thối, hoàn tiền
+
+- **Giảm giá phiếu** (chủ, quản lý): trên phiếu đã kết thúc, chưa thu tiền, chưa trả bằng gói; nhập số tiền hoặc chọn 5/10/20%, bắt buộc có lý do; một lần mỗi phiếu, không sửa được. Giảm trừ vào tiền chơi (đã gồm VAT), nhỏ hơn tiền chơi; tiền cần thu và mọi kiểm tra thu tiền dùng số sau giảm. Phiếu hiện dòng "Giảm giá (lý do)". Bảng `bill_discounts` (migration 0014), trigger tự trừ `golf_amount` và `amount`, ghi nhật ký.
+- **Tiền mặt: tiền khách đưa và tiền thối**: bấm "Tiền mặt", nhập hoặc chọn mệnh giá (100k/200k/500k/vừa đủ), thấy ngay tiền thối trước khi xác nhận.
+- **Hoàn tiền** (chủ, quản lý): với phiếu đã thu, hoàn một phần hoặc toàn bộ về đúng hình thức đã thu (tối đa số đã thu bằng hình thức đó trừ phần đã hoàn), bắt buộc lý do, cần mở ca; hoàn tiền mặt trừ vào két và không vượt số tiền mặt trong két. Là dòng `refund` trong sổ (không sửa/xóa), nhật ký "Hoàn tiền"; mã yêu cầu chống ghi trùng. Phiếu hiện dòng "Đã hoàn lại".
+- **Đối soát ca, báo cáo, tổng quan** đều trừ hoàn tiền: tiền mặt dự kiến = đầu ca + thu − chi − hoàn; chuyển khoản/thẻ dự kiến = thu − hoàn; trigger đóng ca kiểm tra đúng công thức. Báo cáo doanh thu theo ngày trừ hoàn tiền (thêm cột `refunds`); bảng doanh thu theo dịch vụ vẫn tính theo phiếu (chưa trừ hoàn).
+- Phân quyền mới: `billing.discount`, `billing.refund` (chủ và quản lý; thu ngân chưa có).
+- Chưa có: hoàn về gói trả trước (phiếu trả bằng gói), hoàn tiền sau khi ca đã đóng ngoài ca hiện tại (hoàn được nhưng ghi vào ca đang mở), duyệt hai cấp, xuất hóa đơn điện tử.
+- Kiểm thử: `tests/billing_sql_test.py`, `tests/billing.test.ts`, `tests/e2e/zy-billing.spec.ts` (API và giao diện).

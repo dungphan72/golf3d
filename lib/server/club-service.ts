@@ -59,7 +59,7 @@ export async function loadDashboard(tenant: string, displayName: string) {
       .first(),
     db()
       .prepare(
-        "SELECT COALESCE(SUM(amount),0) AS total FROM finance_entries WHERE tenant=? AND kind='payment' AND created>=? AND created<?",
+        "SELECT COALESCE(SUM(CASE WHEN kind='refund' THEN -amount ELSE amount END),0) AS total FROM finance_entries WHERE tenant=? AND kind IN ('payment','refund') AND created>=? AND created<?",
       )
       .bind(tenant, dayStart, dayStart + day)
       .first<{ total: number }>(),

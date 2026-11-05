@@ -256,6 +256,15 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                   <span>Chi / rút khỏi quỹ</span>
                   <strong>− {money(shift.cash_out)}</strong>
                 </div>
+                {shift.cash_refund + shift.transfer_refund + shift.card_refund > 0 && (
+                  <div>
+                    <span>Đã hoàn lại cho khách (trừ vào quỹ / chuyển khoản / thẻ)</span>
+                    <strong>
+                      − {money(shift.cash_refund)} / {money(shift.transfer_refund)} /{' '}
+                      {money(shift.card_refund)}
+                    </strong>
+                  </div>
+                )}
                 <div>
                   <span>Thu chuyển khoản</span>
                   <strong>{money(shift.transfer_received)}</strong>
@@ -306,7 +315,7 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                   data.entries.map((e) => (
                     <article key={e.id}>
                       <span className={'entry-icon ' + e.kind}>
-                        {e.kind === 'cash_out' ? (
+                        {e.kind === 'cash_out' || e.kind === 'refund' ? (
                           <ArrowUpRight size={18} />
                         ) : (
                           <ArrowDownLeft size={18} />
@@ -318,7 +327,9 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                             ? 'Thu tiền dịch vụ'
                             : e.kind === 'cash_in'
                               ? 'Nộp vào quỹ'
-                              : 'Chi / rút tiền mặt'}
+                              : e.kind === 'refund'
+                                ? 'Hoàn tiền cho khách'
+                                : 'Chi / rút tiền mặt'}
                         </strong>
                         <p>{e.note}</p>
                         <small>
@@ -326,7 +337,7 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                         </small>
                       </div>
                       <b>
-                        {e.kind === 'cash_out' ? '−' : '+'}
+                        {e.kind === 'cash_out' || e.kind === 'refund' ? '−' : '+'}
                         {money(e.amount)}
                       </b>
                     </article>

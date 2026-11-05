@@ -512,3 +512,20 @@ export const packageOrders = sqliteTable(
   },
   (t) => [index('package_order_customer').on(t.tenant, t.customerId, t.status)],
 );
+
+// ---- Bill discounts (one per bill, applied to a finished unpaid bill by a manager) ----
+export const billDiscounts = sqliteTable(
+  'bill_discounts',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    bookingId: text('booking_id')
+      .notNull()
+      .references(() => bookings.id),
+    amount: integer('amount').notNull(), // VND taken off the golf part of the bill
+    reason: text('reason').notNull(),
+    actor: text('actor').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('bill_discount_once').on(t.tenant, t.bookingId)],
+);

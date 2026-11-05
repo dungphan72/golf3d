@@ -10,6 +10,8 @@ export const PERMISSIONS = [
   'finance.view',
   'finance.operate',
   'finance.shift',
+  'billing.discount',
+  'billing.refund',
   'menu.manage',
   'fnb.order',
   'fnb.kitchen',

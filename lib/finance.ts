@@ -92,7 +92,7 @@ export type Entry = {
   id: string;
   tenant: string;
   shift_id: string;
-  kind: 'payment' | 'cash_in' | 'cash_out';
+  kind: 'payment' | 'cash_in' | 'cash_out' | 'refund';
   method: 'cash' | 'transfer' | 'card';
   amount: number;
   booking_id: string | null;
@@ -108,6 +108,10 @@ export type Totals = {
   cardReceived: number;
   cashIn: number;
   cashOut: number;
+  // Money handed back to customers; optional so older callers keep working.
+  cashRefund?: number;
+  transferRefund?: number;
+  cardRefund?: number;
 };
 export type ShiftSummary = Shift & {
   cash_received: number;
@@ -115,6 +119,9 @@ export type ShiftSummary = Shift & {
   card_received: number;
   cash_in: number;
   cash_out: number;
+  cash_refund: number;
+  transfer_refund: number;
+  card_refund: number;
   entry_count: number;
 };
 export function shiftTotals(shift: ShiftSummary): Totals {
@@ -125,15 +132,32 @@ export function shiftTotals(shift: ShiftSummary): Totals {
     cardReceived: shift.card_received,
     cashIn: shift.cash_in,
     cashOut: shift.cash_out,
+    cashRefund: shift.cash_refund ?? 0,
+    transferRefund: shift.transfer_refund ?? 0,
+    cardRefund: shift.card_refund ?? 0,
   };
 }
 export function reconciliation(
   t: Totals,
   counted: { cash: number; transfer: number; card: number },
 ) {
-  const expectedCash = t.openingCash + t.cashReceived + t.cashIn - t.cashOut;
-  const receipts = t.cashReceived + t.transferReceived + t.cardReceived;
-  if ([...Object.values(t), ...Object.values(counted), expectedCash].some((n) => n < 0))
+  const cashRefund = t.cashRefund ?? 0;
+  const transferRefund = t.transferRefund ?? 0;
+  const cardRefund = t.cardRefund ?? 0;
+  const expectedCash = t.openingCash + t.cashReceived + t.cashIn - t.cashOut - cashRefund;
+  const expectedTransfer = t.transferReceived - transferRefund;
+  const expectedCard = t.cardReceived - cardRefund;
+  const receipts =
+    t.cashReceived + t.transferReceived + t.cardReceived - cashRefund - transferRefund - cardRefund;
+  if (
+    [
+      ...Object.values(t),
+      ...Object.values(counted),
+      expectedCash,
+      expectedTransfer,
+      expectedCard,
+    ].some((n) => (n ?? 0) < 0)
+  )
     throw new Error('Số tiền đối soát không hợp lệ');
   if (
     ![...Object.values(t), ...Object.values(counted), expectedCash, receipts].every(
@@ -143,11 +167,11 @@ export function reconciliation(
     throw new Error('Số tiền vượt giới hạn tính toán an toàn');
   return {
     expectedCash,
-    expectedTransfer: t.transferReceived,
-    expectedCard: t.cardReceived,
+    expectedTransfer,
+    expectedCard,
     cashDifference: counted.cash - expectedCash,
-    transferDifference: counted.transfer - t.transferReceived,
-    cardDifference: counted.card - t.cardReceived,
+    transferDifference: counted.transfer - expectedTransfer,
+    cardDifference: counted.card - expectedCard,
     receipts,
   };
 }

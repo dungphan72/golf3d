@@ -7,6 +7,7 @@ import { operationKey } from '../../lib/finance';
 import { vietQrUrl } from '../../lib/bank';
 import type { Bill } from '../../lib/pricing';
 import { labels, time, date } from './shared';
+import { useBill, BillAdjustments, DiscountForm, CashPay, RefundForm } from './BillTools';
 function PackageRedeem({
   booking,
   money: fmt,
@@ -303,7 +304,9 @@ export function SessionPanel({
   onOpenShift,
   onRefresh,
   bank,
+  permissions = [],
 }: {
+  permissions?: string[];
   onRefresh: () => Promise<void>;
   bank: Bank;
   canPay: boolean;
@@ -322,6 +325,11 @@ export function SessionPanel({
     0;
   const foodVerified = !!food.data && !food.error && servedFood === (b.food_total ?? 0);
   const paymentKey = useRef(operationKey());
+  const { bill, reload: reloadBill } = useBill(b.id, b.status);
+  const refreshAll = async () => {
+    await onRefresh();
+    await reloadBill();
+  };
   const dialogRef = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     dialogRef.current?.showModal();
@@ -436,6 +444,7 @@ export function SessionPanel({
               <span>Tổng tiền chơi</span>
               <strong>{money(q.total)}</strong>
             </div>
+            <BillAdjustments bill={bill} />
             {food.data && <FoodReceipt data={food.data} />}
             <div className="bill-total">
               <span>Tổng cộng</span>
@@ -524,7 +533,15 @@ export function SessionPanel({
           )}
           {b.status === 'finished' && canPay && (
             <>
-              <PackageRedeem booking={b} money={money} onChanged={onRefresh} />
+              {permissions.includes('billing.discount') &&
+                bill &&
+                !bill.discount &&
+                !bill.payments.length &&
+                b.amount != null &&
+                !quoteError && (
+                  <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />
+                )}
+              <PackageRedeem booking={b} money={money} onChanged={refreshAll} />
               <TransferPanel
                 booking={b}
                 bank={bank}
@@ -540,14 +557,26 @@ export function SessionPanel({
               />
               <SplitPay
                 booking={b}
-                onChanged={onRefresh}
+                onChanged={refreshAll}
                 disabled={
                   busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
                 }
               />
               <p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>
+              <CashPay
+                bookingId={b.id}
+                disabled={
+                  busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
+                }
+                onPay={() =>
+                  onAction('pay', {
+                    method: 'cash',
+                    requestId: paymentKey.current,
+                    expectedAmount: b.amount!,
+                  })
+                }
+              />
               {[
-                ['cash', 'Tiền mặt'],
                 ['transfer', 'Chuyển khoản đã đối soát'],
                 ['card', 'Thẻ tại quầy'],
               ].map(([method, t]) => (
@@ -569,6 +598,9 @@ export function SessionPanel({
                 </button>
               ))}
             </>
+          )}
+          {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
+            <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
           )}
           {['finished', 'paid'].includes(b.status) && (
             <button

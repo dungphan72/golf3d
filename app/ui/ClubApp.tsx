@@ -738,6 +738,7 @@ export default function ClubApp() {
       )}
       {chosen && (
         <SessionPanel
+          permissions={data?.permissions ?? []}
           onRefresh={load}
           bank={{ bin: c.bankBin ?? '', account: c.bankAccount ?? '', holder: c.bankHolder ?? '' }}
           canPay={!!data?.activeShift}

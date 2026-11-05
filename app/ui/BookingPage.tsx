@@ -301,8 +301,8 @@ export default function BookingPage({
             </label>
             {form.service === 'gdr' && (
               <label>
-                Thời lượng
                 <select
+                  aria-label="Thời lượng"
                   value={form.minutes}
                   onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
                 >

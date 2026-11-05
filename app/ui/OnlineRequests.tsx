@@ -16,7 +16,7 @@ type Row = {
   status: string;
   room: string | null;
   reason: string;
-  quote: { total?: number | null; guests?: number };
+  quote: { total?: number | null; guests?: number; lines?: number };
   freeRooms: { id: string; name: string }[];
   late: boolean;
 };
@@ -36,7 +36,8 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
   const [data, setData] = useState<Listing | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [room, setRoom] = useState<Record<string, string>>({});
+  // Chosen room for each line of a request (a group of more than 4 needs one room per line).
+  const [room, setRoom] = useState<Record<string, string[]>>({});
 
   async function load() {
     const r = await fetch('/api/online', { cache: 'no-store' });
@@ -111,7 +112,7 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
                 {r.service === 'gdr' ? ` ${r.minutes}′` : ''} · {r.vip ? 'VIP' : 'line tiêu chuẩn'}{' '}
                 · {r.quote.guests || r.people} người
                 {(r.quote.guests ?? 0) > 4 && (
-                  <b> (nhóm, cần {Math.ceil(r.quote.guests! / 4)} line)</b>
+                  <b> (nhóm, {r.quote.lines ?? Math.ceil(r.quote.guests! / 4)} line)</b>
                 )}
                 <br />
                 {when(r.start)}
@@ -131,34 +132,50 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
               <td>
                 {r.status === 'pending' && !r.late && (
                   <>
-                    {r.freeRooms.length ? (
+                    {r.freeRooms.length >= (r.quote.lines ?? 1) ? (
                       <>
-                        <select
-                          value={room[r.id] ?? r.freeRooms[0].id}
-                          onChange={(e) => setRoom({ ...room, [r.id]: e.target.value })}
-                        >
-                          {r.freeRooms.map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.name}
-                            </option>
-                          ))}
-                        </select>{' '}
+                        {Array.from({ length: r.quote.lines ?? 1 }, (_, i) => {
+                          const chosen =
+                            room[r.id] ?? r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
+                          return (
+                            <select
+                              key={i}
+                              aria-label={`Phòng cho line ${i + 1}`}
+                              value={chosen[i]}
+                              onChange={(e) => {
+                                const next = [...chosen];
+                                next[i] = e.target.value;
+                                setRoom({ ...room, [r.id]: next });
+                              }}
+                            >
+                              {r.freeRooms.map((f) => (
+                                <option key={f.id} value={f.id}>
+                                  {f.name}
+                                </option>
+                              ))}
+                            </select>
+                          );
+                        })}{' '}
                         <button
                           className="primary"
                           disabled={busy}
-                          onClick={() =>
+                          onClick={() => {
+                            const chosen =
+                              room[r.id] ??
+                              r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
                             act({
                               action: 'confirm',
                               id: r.id,
-                              room: room[r.id] ?? r.freeRooms[0].id,
-                            })
-                          }
+                              room: chosen[0],
+                              extraRooms: chosen.slice(1),
+                            });
+                          }}
                         >
                           Xác nhận
                         </button>
                       </>
                     ) : (
-                      <span>Không còn phòng trống</span>
+                      <span>Không đủ phòng trống ({r.quote.lines ?? 1} line)</span>
                     )}{' '}
                   </>
                 )}

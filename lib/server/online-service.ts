@@ -11,6 +11,7 @@ import {
   codeLooksValid,
   MIN_LEAD_MINUTES,
   SLUG_PATTERN,
+  lineSizes,
   type PublicRequestInput,
   type StaffRequestInput,
 } from '../online';
@@ -91,31 +92,37 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
       return error(`Vui lòng đặt trước ít nhất ${MIN_LEAD_MINUTES} phút`);
     if (input.start > now + Math.max(1, c.days) * DAY)
       return error(`Chỉ nhận đặt trước tối đa ${c.days} ngày`);
-    // A line holds at most 4: bigger groups are priced and booked per line by the staff.
-    const perLine = input.guests > 0 ? Math.min(input.guests, 4) : input.people;
-    const group = input.guests > 4;
+    // A line holds at most 4: a bigger group is priced line by line and booked on several lines.
+    const sizes = input.guests > 0 ? lineSizes(input.guests) : [input.people];
+    const perLine = Math.max(...sizes);
     let plan;
+    let total = 0;
     try {
-      plan = planBooking(
-        {
-          room: REPRESENTATIVE[input.vip ? 'vip' : 'standard'],
-          service: input.service,
-          start: input.start,
-          people: perLine,
-          minutes: input.minutes,
-        },
-        c,
-        now,
-      );
+      for (const size of sizes) {
+        const p = planBooking(
+          {
+            room: REPRESENTATIVE[input.vip ? 'vip' : 'standard'],
+            service: input.service,
+            start: input.start,
+            people: size,
+            minutes: input.minutes,
+          },
+          c,
+          now,
+        );
+        plan ??= p;
+        total += p.bill.total;
+      }
     } catch (e) {
       return error(e instanceof Error ? e.message : 'Khung giờ này chưa nhận đặt');
     }
     const code = newToken();
     const quote = JSON.stringify({
-      total: group ? null : plan.bill.total,
-      bill: plan.bill,
-      rule: plan.ruleLabel,
+      total,
+      bill: plan!.bill,
+      rule: plan!.ruleLabel,
       guests: input.guests,
+      lines: sizes.length,
     });
     await db()
       .prepare(INSERT_REQUEST_SQL)
@@ -136,7 +143,7 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
         now,
       )
       .run();
-    return reply({ ok: true, code, total: group ? null : plan.bill.total });
+    return reply({ ok: true, code, total });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     if (message.includes('RATE_LIMITED'))
@@ -296,31 +303,45 @@ export async function applyRequest(
       }>();
     if (!row) return error('Không tìm thấy yêu cầu', 404);
     if (row.status !== 'pending') return error('Yêu cầu đã được xử lý', 409);
-    const room = rooms.find((r) => r.id === input.room);
-    if (!room || room.vip !== !!row.vip) return error('Phòng không đúng loại khách yêu cầu');
+    // A group of more than 4 is booked on one line per 4 players, each line in a different room.
+    const guests = (JSON.parse((row as { quote?: string }).quote ?? '{}') as { guests?: number })
+      .guests;
+    const sizes = guests && guests > 4 ? lineSizes(guests) : [row.people];
+    const picked = [input.room, ...input.extraRooms];
+    if (picked.length !== sizes.length || new Set(picked).size !== picked.length)
+      return error(`Nhóm này cần ${sizes.length} phòng khác nhau, một phòng cho mỗi line`);
+    const chosen = picked.map((id) => rooms.find((r) => r.id === id));
+    if (chosen.some((r) => !r || r.vip !== !!row.vip))
+      return error('Phòng không đúng loại khách yêu cầu');
     const claim = await d.prepare(CLAIM_REQUEST_SQL).bind(actor, now, tenant, row.id).run();
     if (!claim.meta.changes) return error('Yêu cầu đang được nhân viên khác xử lý', 409);
     const c = await loadConfig(tenant);
-    const booked = await runClubAction(tenant, {
-      action: 'book',
-      room: room.id,
-      service: row.service,
-      start: row.start,
-      people: row.people,
-      minutes: row.minutes,
-      customer: row.name,
-      phone: row.phone,
-      expectedRevision: c.pricingRevision,
-    });
-    if (booked.status !== 200 || typeof booked.body.id !== 'string') {
-      await d.prepare(RELEASE_REQUEST_SQL).bind(tenant, row.id).run();
-      return booked;
+    const made: string[] = [];
+    for (const [i, room] of chosen.entries()) {
+      const booked = await runClubAction(tenant, {
+        action: 'book',
+        room: room!.id,
+        service: row.service,
+        start: row.start,
+        people: sizes[i],
+        minutes: row.minutes,
+        customer: row.name,
+        phone: row.phone,
+        expectedRevision: c.pricingRevision,
+      });
+      if (booked.status !== 200 || typeof booked.body.id !== 'string') {
+        // Undo the lines already booked so the request can be handled again.
+        for (const id of made) await runClubAction(tenant, { action: 'cancel', id });
+        await d.prepare(RELEASE_REQUEST_SQL).bind(tenant, row.id).run();
+        return booked;
+      }
+      made.push(booked.body.id);
     }
     await d
       .prepare(CONFIRM_REQUEST_SQL)
-      .bind(room.id, booked.body.id, actor, now, tenant, row.id, actor)
+      .bind(picked[0], made[0], actor, now, tenant, row.id, actor)
       .run();
-    return reply({ ok: true, bookingId: booked.body.id });
+    return reply({ ok: true, bookingId: made[0], bookingIds: made });
   } catch (e) {
     console.error('apply request', e);
     return error('Chưa xác minh được kết quả. Tải lại danh sách trước khi thử tiếp.', 500);

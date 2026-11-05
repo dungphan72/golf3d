@@ -24,7 +24,13 @@ export type PublicRequestInput = z.infer<typeof publicRequestInput>;
 
 export const staffRequestInput = z.discriminatedUnion('action', [
   z
-    .object({ action: z.literal('confirm'), id: z.string().max(100), room: z.string().max(30) })
+    .object({
+      action: z.literal('confirm'),
+      id: z.string().max(100),
+      room: z.string().max(30),
+      // Groups of more than 4 need one room per line of 4.
+      extraRooms: z.array(z.string().max(30)).max(11).default([]),
+    })
     .strict(),
   z
     .object({
@@ -41,6 +47,16 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
   confirmed: 'Đã xác nhận lịch',
   rejected: 'Không thể sắp xếp',
   cancelled: 'Đã hủy',
+};
+
+/** A line holds 4 players: a bigger group is split over that many lines as evenly as possible. */
+export const groupLines = (guests: number) => Math.max(1, Math.ceil(guests / 4));
+export const lineSizes = (guests: number) => {
+  const lines = groupLines(guests);
+  return Array.from(
+    { length: lines },
+    (_, i) => Math.floor(guests / lines) + (i < guests % lines ? 1 : 0),
+  );
 };
 
 export const codeLooksValid = (code: string) => /^[A-Za-z0-9_-]{30,64}$/.test(code);

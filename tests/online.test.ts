@@ -48,3 +48,20 @@ test('slug and status code formats', () => {
   assert.ok(!codeLooksValid('short'));
   assert.ok(!codeLooksValid('a'.repeat(43) + '!'));
 });
+
+test('a group is split over lines of at most 4 as evenly as possible', async () => {
+  const { lineSizes, groupLines } = await import('../lib/online.ts');
+  assert.deepEqual(lineSizes(4), [4]);
+  assert.deepEqual(lineSizes(5), [3, 2]);
+  assert.deepEqual(lineSizes(9), [3, 3, 3]);
+  assert.deepEqual(lineSizes(10), [4, 3, 3]);
+  assert.equal(groupLines(30), 8);
+  for (const n of [1, 2, 7, 13, 30, 101]) {
+    const sizes = lineSizes(n);
+    assert.equal(
+      sizes.reduce((a, b) => a + b, 0),
+      n,
+    );
+    assert.ok(sizes.every((s) => s >= 1 && s <= 4));
+  }
+});

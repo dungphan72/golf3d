@@ -258,3 +258,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - `/api/member` khi chưa đăng nhập trả 200 `{signedOut:true}` thay cho 401 (hết lỗi đỏ trong console); trang cá nhân tự cập nhật mốc thời gian mỗi phút nên nhãn hết hạn luôn đúng.
 - ESLint: 0 cảnh báo (loại bản ScrollCraft chép sẵn khỏi lint, bỏ import thừa, ghi chú lý do cho cảnh báo hook).
 - Còn lại của đợt 1: kiểm tra CI trên GitHub (cần xem tab Actions).
+
+## v0.12.3 — Fix đợt 2/3: nhóm đông, báo cáo, hoàn gói
+
+- Nhóm trên 4 người đặt online: tự chia thành các line tối đa 4 người, đều nhau (9 người = 3 line × 3); báo giá cộng giá từng line (khách thấy "Tạm tính" đủ). Nhân viên xác nhận chọn đủ từng phòng (mỗi line một phòng khác nhau); hệ thống đặt đủ tất cả các line, lỗi giữa chừng thì hủy các line đã đặt và nhả yêu cầu để xử lý lại.
+- Báo cáo doanh thu theo dịch vụ đã trừ hoàn tiền (trước đó chỉ báo cáo theo ngày trừ).
+- Phiếu trả bằng gói: hiện hướng dẫn hoàn giờ/lượt qua "Điều chỉnh" trong Hội viên.
+- Còn chờ anh gửi: bảng giá mới của các gói giờ và thẻ (hiện đắt hơn hoặc bằng giá lẻ).

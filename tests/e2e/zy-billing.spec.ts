@@ -93,6 +93,10 @@ test('giảm giá phiếu, thu tiền, rồi hoàn một phần: sổ ca và phi
     409,
   );
 
+  const todayStr = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
+  const servicesBefore = (
+    await (await owner.get(`/api/reports?from=${todayStr}&to=${todayStr}`)).json()
+  ).services.find((x: { service: string }) => x.service === '18').revenue as number;
   // Refund part of it; the same request id is not recorded twice and the limit is the amount paid.
   const shiftsBefore = await (await owner.get('/api/finance')).json();
   const refundKey = key();
@@ -133,6 +137,12 @@ test('giảm giá phiếu, thu tiền, rồi hoàn một phần: sổ ca và phi
   // The dashboard revenue nets the refund out.
   const today = new Date(Date.now() + 7 * 3_600_000).toISOString().slice(0, 10);
   const report = await (await owner.get(`/api/reports?from=${today}&to=${today}`)).json();
+  // The by-service table nets refunds out too: refunding 20.000 lowers the '18' revenue by 20.000.
+  const services = (await (await owner.get(`/api/reports?from=${today}&to=${today}`)).json())
+    .services;
+  expect(services.find((x: { service: string }) => x.service === '18').revenue).toBe(
+    servicesBefore - 20_000,
+  );
   const day = report.days.find((d: { day: string }) => d.day === today);
   expect(day.refunds).toBeGreaterThanOrEqual(20_000);
 });

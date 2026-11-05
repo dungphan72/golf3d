@@ -599,6 +599,14 @@ export function SessionPanel({
               ))}
             </>
           )}
+          {b.status === 'paid' &&
+            b.payment === 'package' &&
+            permissions.includes('billing.refund') && (
+              <div className="info-strip">
+                Phiếu trả bằng gói. Để hoàn giờ/lượt cho khách, vào Hội viên, chọn khách, bấm
+                &quot;Điều chỉnh&quot; trên gói và cộng lại số giờ kèm lý do.
+              </div>
+            )}
           {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
             <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
           )}

@@ -386,8 +386,8 @@ export default function BookingPage({
               </div>
             )}
             <p className="form-note">
-              Mỗi line tối đa 4 người; nhóm đông nhân viên sẽ sắp xếp nhiều line và báo giá. Đây là
-              yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
+              Mỗi line tối đa 4 người; nhóm đông được xếp nhiều line và tính tiền theo từng line.
+              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
               {info.minLeadMinutes} phút, tối đa {info.days} ngày.
             </p>
             <button className="primary" disabled={busy || (!!info.captchaSiteKey && !captcha)}>

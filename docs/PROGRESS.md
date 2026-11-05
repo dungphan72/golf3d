@@ -219,3 +219,5 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Trang giá không hiện thẻ "Nhóm 4 người" khi giá nhóm chỉ bằng 4 lần giá một người.
 
 - Giá Luyện tập đổi sang đúng 3 khung như 9/18 hố (bản sao trước khi đổi: `docs/backups/settings-before-three-slots.json`): T2–T6 07:00–12:00 giá vàng 180k (tiêu chuẩn) / 330k (VIP); T2–T6 12:00–23:00 300k / 550k; Thứ 7, Chủ nhật, ngày lễ cả ngày 300k / 550k. Bảng giá hiện ba dòng cho mỗi phòng.
+
+- Bảng giá đổi về bảng giá chính thức theo hình anh gửi (bản sao trước đó: `docs/backups/settings-before-official-prices.json`): Luyện tập 100.000đ (T2–T6 08:00–11:00) / 250.000đ; Game 9 hố 300.000đ / 500.000đ; Game 18 hố 400.000đ / 650.000đ; Thứ 7, Chủ nhật, lễ cả ngày giá thường; nhóm 4 người 900.000đ (9 hố) / 1.000.000đ (18 hố). Phòng VIP dùng chung bảng. Giờ mở cửa 08:00. Các dòng ưu đãi theo giá cũ được xóa. Bảng trên trang chủ chỉ tiếng Việt.

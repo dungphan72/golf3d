@@ -103,35 +103,21 @@ function Count({ v }: { v: number | null }) {
   );
 }
 
-const DAY_EN: Record<string, string> = {
-  'Thứ 2 – Thứ 6': 'Mon – Fri',
-  'Thứ 7, Chủ nhật': 'Sat, Sun',
-  'Thứ 7, Chủ nhật & ngày lễ': 'Sat, Sun & public holidays',
-  'Mỗi ngày': 'Every day',
-};
 const dong = (v: number | null) => (v == null ? '—' : `${v.toLocaleString('vi-VN')}đ / VND`);
 
-/** Bilingual price grid, one per room: navy header, one row per time slot. */
-function RateGrid({ title, table }: { title: string; table: PriceTable }) {
+/** Price grid, one per room: navy header, one row per time slot. */
+function RateGrid({ title, table }: { title?: string; table: PriceTable }) {
   return (
     <div className="fw-grid-wrap" data-sc-in>
-      <h3>{title}</h3>
+      {title && <h3>{title}</h3>}
       <div className="fw-table-card fw-grid">
         <table>
           <thead>
             <tr>
-              <th>
-                Thời gian <i>Time</i>
-              </th>
-              <th>
-                Luyện tập / 1 giờ <i>Practice / 1 hour</i>
-              </th>
-              <th>
-                Game 9 hố <i>9 Holes</i>
-              </th>
-              <th>
-                Game 18 hố <i>18 Holes</i>
-              </th>
+              <th>Thời gian</th>
+              <th>Luyện tập / 1 giờ</th>
+              <th>Game 9 hố</th>
+              <th>Game 18 hố</th>
             </tr>
           </thead>
           <tbody>
@@ -140,10 +126,6 @@ function RateGrid({ title, table }: { title: string; table: PriceTable }) {
                 <td>
                   {r.days} | {r.from}–{r.to}
                   {r.gold ? ' (Giờ vàng)' : ''}
-                  <i>
-                    {DAY_EN[r.days] ?? r.days} | {r.from}–{r.to}
-                    {r.gold ? ' (Peak / "golden hour")' : ''}
-                  </i>
                 </td>
                 <td>{dong(r.gdr)}</td>
                 <td>{dong(r.h9)}</td>
@@ -152,10 +134,7 @@ function RateGrid({ title, table }: { title: string; table: PriceTable }) {
             ))}
             {(table.group.h9 != null || table.group.h18 != null) && (
               <tr>
-                <td>
-                  Đánh nhóm 4 người (cả ngày)
-                  <i>4-person group (all day)</i>
-                </td>
+                <td>Đánh nhóm 4 người (cả ngày)</td>
                 <td>—</td>
                 <td>{dong(table.group.h9)}</td>
                 <td>{dong(table.group.h18)}</td>
@@ -500,7 +479,10 @@ export default async function LandingPage() {
           </div>
           {hasHoles ? (
             <>
-              <RateGrid title="Phòng tiêu chuẩn" table={pricing.standard} />
+              <RateGrid
+                title={pricing.vip ? 'Phòng tiêu chuẩn' : undefined}
+                table={pricing.standard}
+              />
               {pricing.vip && <RateGrid title="Phòng VIP" table={pricing.vip} />}
             </>
           ) : (

@@ -5,6 +5,15 @@ import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
 import { type Service } from '../../lib/pricing';
 import { rooms, ready, money, type Config } from '../../lib/club';
+/** What still blocks online booking (the public page quotes prices with VAT and service fee). */
+const onlineMissing = (c: Config) =>
+  [
+    !c.open || !c.close ? 'giờ mở/đóng cửa' : '',
+    !c.capacity ? 'số line thường' : '',
+    !c.vipCapacity ? 'số phòng VIP' : '',
+    c.vat == null ? 'VAT' : '',
+    c.fee == null ? 'phí dịch vụ' : '',
+  ].filter(Boolean);
 export function BookingForm({
   config,
   busy,
@@ -495,6 +504,15 @@ export function SettingsForm({
               onChange={(e) => setC({ ...c, onlineSlug: e.target.value.trim().toLowerCase() })}
             />
           </label>
+          {c.onlineEnabled && (
+            <p className="form-note" role="status">
+              {onlineMissing(c).length
+                ? 'Chưa mở được cho khách vì còn thiếu: ' + onlineMissing(c).join(', ') + '.'
+                : !c.onlineSlug
+                  ? 'Hãy đặt mã đường dẫn để mở trang đặt lịch.'
+                  : 'Sẵn sàng: khách đặt lịch tại /book/' + c.onlineSlug + ' và trên trang chủ.'}
+            </p>
+          )}
         </div>
       </section>
       <div className="form-footer sticky-save">

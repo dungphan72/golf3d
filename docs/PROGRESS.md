@@ -130,3 +130,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 ## v0.9.1 — Bản điện thoại kiểu ứng dụng
 
 - Điện thoại (≤640px): thanh tiêu đề xanh có tên màn hình + nút menu, nút nổi vàng "+" để tạo lịch đặt, danh sách lịch đặt dạng thẻ chạm được, thanh tab dưới có viên thuốc đánh dấu tab đang chọn, hộp thoại dạng ngăn kéo từ dưới lên (có thanh kéo, hoạt ảnh), ô nhập 16px (không bị zoom trên iOS), hỗ trợ vùng an toàn (tai thỏ/thanh Home). Giao diện nằm ở `app/mobile.css`.
+
+## v0.9.2 — Đặt chỗ online ngay trên trang chủ
+
+- Form đặt chỗ nhúng thẳng vào trang chủ (mục "Đặt chỗ online"), dùng chung API/luật với `/book/<mã>`; nút đặt lịch cuộn tới form, thanh nút cố định ở dưới trên điện thoại. Chưa bật đặt online thì mục này hiện "Đặt chỗ qua hotline".
+- Trang chủ bổ sung: băng giờ vàng, "Vì sao chọn", chân trang nhiều cột.
+- Cài đặt cơ sở báo rõ còn thiếu gì để mở đặt online (giờ mở/đóng, số line, VIP, **VAT, phí dịch vụ**). Trang đặt lịch chỉ mở khi đủ các mục này vì báo giá cho khách có VAT và phí.

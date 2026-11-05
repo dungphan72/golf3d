@@ -9,6 +9,10 @@ test('trang giới thiệu công khai: giá, gói, liên hệ và lối vào qu�
   await expect(page.getByRole('cell', { name: '650.000 ₫' }).first()).toBeVisible();
   await expect(page.getByText('Thẻ VIP Diamond')).toBeVisible();
   await expect(page.getByText('250 Lương Đình Của').first()).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Vì sao chọn Saigon Golf 3D Club' }),
+  ).toBeVisible();
+  await expect(page.getByText('Đặt chỗ qua hotline')).toBeVisible(); // online booking not enabled yet
   // Before online booking is enabled the call-to-action falls back to the hotline.
   await expect(page.getByRole('link', { name: /0902030185/ }).first()).toBeVisible();
   // Structured data for search engines.

@@ -99,7 +99,14 @@ function TurnstileBox({
 }
 const storageKey = 'golf3d-request-code';
 
-export default function BookingPage({ slug }: { slug: string }) {
+export default function BookingPage({
+  slug,
+  embedded = false,
+}: {
+  slug: string;
+  embedded?: boolean;
+}) {
+  const shell = embedded ? 'booking-embed' : 'auth-screen';
   const [info, setInfo] = useState<Info | null>(null);
   const [loadError, setLoadError] = useState('');
   const [code, setCode] = useState('');
@@ -200,7 +207,7 @@ export default function BookingPage({ slug }: { slug: string }) {
 
   if (loadError)
     return (
-      <div className="auth-screen">
+      <div className={shell}>
         <div className="auth-card">
           <h1>{BRAND.name}</h1>
           <p>{loadError}</p>
@@ -210,14 +217,16 @@ export default function BookingPage({ slug }: { slug: string }) {
         </div>
       </div>
     );
-  if (!info) return <div className="auth-screen">Đang tải…</div>;
+  if (!info) return <div className={shell}>Đang tải…</div>;
   return (
-    <div className="auth-screen">
+    <div className={shell}>
       <div className="booking-wrap">
-        <div className="banner-card">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND.banner} alt={BRAND.name} width={1600} height={640} />
-        </div>
+        {!embedded && (
+          <div className="banner-card">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BRAND.banner} alt={BRAND.name} width={1600} height={640} />
+          </div>
+        )}
         {code && status ? (
           <div className="auth-card">
             <h1>{info.name}</h1>
@@ -384,9 +393,12 @@ export default function BookingPage({ slug }: { slug: string }) {
             </button>
           </form>
         )}
-        <p className="hotline">
-          Hotline: <a href={'tel:' + BRAND.hotline}>{BRAND.hotline}</a> · Đặt lịch: {BRAND.website}
-        </p>
+        {!embedded && (
+          <p className="hotline">
+            Hotline: <a href={'tel:' + BRAND.hotline}>{BRAND.hotline}</a> · Đặt lịch:{' '}
+            {BRAND.website}
+          </p>
+        )}
       </div>
     </div>
   );

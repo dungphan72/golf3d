@@ -1,23 +1,28 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
+  Activity,
   CalendarCheck,
+  CloudRain,
   Clock,
   Crosshair,
   Crown,
   Flag,
+  Gift,
   MapPin,
   Phone,
   QrCode,
   Sparkles,
   Target,
   Users,
+  Utensils,
 } from 'lucide-react';
 import './landing.css';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import { OFFICIAL_PACKAGES } from '../lib/official-packages';
 import { KIND_LABELS, UNLIMITED } from '../lib/member';
+import BookingPage from './ui/BookingPage';
 import { bookingSlug } from '../lib/server/online-service';
 
 export const dynamic = 'force-dynamic';
@@ -50,6 +55,39 @@ const grantsText = (grants: (typeof OFFICIAL_PACKAGES)[number]['grants']) =>
     .join(' + ');
 const validText = (days: number) => (days % 30 === 0 ? `${days / 30} tháng` : `${days} ngày`);
 
+const WHY = [
+  {
+    Icon: CloudRain,
+    title: 'Nắng mưa đều chơi',
+    text: 'Chơi trong nhà, không phụ thuộc thời tiết, mở cửa 08:00–23:00 mỗi ngày.',
+  },
+  {
+    Icon: Activity,
+    title: 'Hệ thống Foresight GC3',
+    text: 'Mô phỏng sân và đo cú đánh bằng thiết bị Foresight GC3.',
+  },
+  {
+    Icon: Users,
+    title: 'Chơi nhóm ưu đãi',
+    text: 'Nhóm 4 người dùng giá nhóm cả ngày: 900.000đ (9 hố), 1.000.000đ (18 hố).',
+  },
+  {
+    Icon: Crown,
+    title: 'Phòng VIP riêng tư',
+    text: '2 phòng VIP cho nhóm bạn, gia đình, đối tác; combo và thẻ VIP đều dùng được.',
+  },
+  {
+    Icon: Utensils,
+    title: 'Đồ ăn & thức uống',
+    text: 'Gọi món ngay tại line, phục vụ tận nơi; giờ vàng được miễn phí.',
+  },
+  {
+    Icon: Gift,
+    title: 'Tích điểm đổi lượt',
+    text: 'Mỗi lượt 9 hố hoặc 18 hố được 1 điểm, đủ 10 điểm đổi 1 lượt miễn phí.',
+  },
+];
+
 const FAQ = [
   {
     q: 'Giá 9 hố, 18 hố tính thế nào?',
@@ -79,8 +117,8 @@ const FAQ = [
 
 export default async function LandingPage() {
   const slug = await bookingSlug();
-  const bookHref = slug ? `/book/${slug}` : `tel:${BRAND.hotline}`;
-  const bookLabel = slug ? 'Đặt lịch online' : `Gọi ${BRAND.hotline}`;
+  const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
+  const bookLabel = slug ? 'Đặt chỗ online' : `Gọi ${BRAND.hotline}`;
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BRAND.address)}`;
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -122,7 +160,7 @@ export default async function LandingPage() {
           <a href="#dich-vu">Dịch vụ</a>
           <a href="#bang-gia">Bảng giá</a>
           <a href="#goi">Gói hội viên</a>
-          <a href="#cach-dat">Cách đặt lịch</a>
+          <a href="#dat-cho">Đặt chỗ</a>
           <a href="#lien-he">Liên hệ</a>
         </nav>
         <a className="lp-btn lp-btn-gold" href={bookHref}>
@@ -172,6 +210,20 @@ export default async function LandingPage() {
           </div>
         </section>
 
+        <section className="lp-promo" aria-label="Ưu đãi giờ vàng">
+          <Clock size={26} />
+          <div>
+            <strong>Giờ vàng · Thứ 2 – Thứ 6 · 08:00–11:00</strong>
+            <span>
+              Luyện tập GDR 100.000đ/giờ, 9 hố 300.000đ, 18 hố 400.000đ — kèm đồ ăn & thức uống miễn
+              phí.
+            </span>
+          </div>
+          <a className="lp-btn lp-btn-gold" href={slug ? '#dat-cho' : `tel:${BRAND.hotline}`}>
+            Đặt khung giờ vàng
+          </a>
+        </section>
+
         <section id="dich-vu" className="lp-section">
           <h2>Trải nghiệm tại Saigon Golf 3D Club</h2>
           <p className="lp-lead">
@@ -202,6 +254,21 @@ export default async function LandingPage() {
                 cho phòng VIP.
               </p>
             </article>
+          </div>
+        </section>
+
+        <section className="lp-section lp-why">
+          <h2>Vì sao chọn Saigon Golf 3D Club</h2>
+          <div className="lp-features">
+            {WHY.map(({ Icon, title, text }) => (
+              <div key={title} className="lp-feature">
+                <Icon size={22} />
+                <div>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -268,39 +335,66 @@ export default async function LandingPage() {
           </p>
         </section>
 
-        <section id="cach-dat" className="lp-section lp-alt">
-          <h2>Đặt lịch trong 3 bước</h2>
-          <ol className="lp-steps">
-            <li>
-              <span>
-                <CalendarCheck size={22} />
-              </span>
-              <h3>Gửi yêu cầu</h3>
-              <p>Chọn dịch vụ, số người, ngày giờ mong muốn. Chỉ mất chưa đầy một phút.</p>
-            </li>
-            <li>
-              <span>
-                <Crosshair size={22} />
-              </span>
-              <h3>Nhân viên xác nhận</h3>
-              <p>
-                Chúng tôi xếp line phù hợp và xác nhận lại. Bạn xem được kết quả ngay trên trang đặt
-                lịch.
-              </p>
-            </li>
-            <li>
-              <span>
-                <QrCode size={22} />
-              </span>
-              <h3>Đến chơi, thanh toán gọn</h3>
-              <p>Thanh toán sau khi chơi bằng tiền mặt, thẻ hoặc quét mã QR chuyển khoản.</p>
-            </li>
-          </ol>
-          <div className="lp-center">
-            <a className="lp-btn lp-btn-primary" href={bookHref}>
-              <CalendarCheck size={18} />
-              {bookLabel}
-            </a>
+        <section id="dat-cho" className="lp-section lp-alt lp-booking">
+          <div className="lp-booking-info">
+            <h2>Đặt chỗ online</h2>
+            <p className="lp-lead">
+              Chọn dịch vụ, số người và giờ bạn muốn. Nhân viên xác nhận lại ngay, không cần thanh
+              toán trước.
+            </p>
+            <ol className="lp-steps">
+              <li>
+                <span>
+                  <CalendarCheck size={20} />
+                </span>
+                <div>
+                  <h3>Gửi yêu cầu</h3>
+                  <p>Điền thông tin bên cạnh, chưa đầy một phút.</p>
+                </div>
+              </li>
+              <li>
+                <span>
+                  <Crosshair size={20} />
+                </span>
+                <div>
+                  <h3>Nhân viên xác nhận</h3>
+                  <p>
+                    Chúng tôi xếp line phù hợp và gọi xác nhận. Trạng thái tự cập nhật ngay trên
+                    trang.
+                  </p>
+                </div>
+              </li>
+              <li>
+                <span>
+                  <QrCode size={20} />
+                </span>
+                <div>
+                  <h3>Đến chơi, thanh toán gọn</h3>
+                  <p>Thanh toán sau khi chơi: tiền mặt, thẻ hoặc quét mã QR chuyển khoản.</p>
+                </div>
+              </li>
+            </ol>
+            <p className="lp-note">
+              Cần gấp hoặc nhóm đông? Gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
+            </p>
+          </div>
+          <div className="lp-booking-form">
+            {slug ? (
+              <BookingPage slug={slug} embedded />
+            ) : (
+              <div className="lp-callcard">
+                <Phone size={30} />
+                <h3>Đặt chỗ qua hotline</h3>
+                <p>
+                  Đặt lịch online sẽ mở trong thời gian tới. Hiện tại vui lòng gọi để được giữ line
+                  và xác nhận ngay.
+                </p>
+                <a className="lp-btn lp-btn-primary" href={`tel:${BRAND.hotline}`}>
+                  <Phone size={18} />
+                  Gọi {BRAND.hotline}
+                </a>
+              </div>
+            )}
           </div>
         </section>
 
@@ -351,11 +445,43 @@ export default async function LandingPage() {
       </main>
 
       <footer className="lp-footer">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name} · {BRAND.website}
-        </span>
-        <a href="/quan-ly">Dành cho nhân viên</a>
+        <div className="lp-footer-cols">
+          <div>
+            <strong>{BRAND.name}</strong>
+            <p>Golf 3D mô phỏng Foresight GC3 · Play. Connect. Repeat.</p>
+          </div>
+          <div>
+            <strong>Khám phá</strong>
+            <a href="#dich-vu">Dịch vụ</a>
+            <a href="#bang-gia">Bảng giá</a>
+            <a href="#goi">Gói hội viên</a>
+            <a href="#hoi-dap">Hỏi đáp</a>
+          </div>
+          <div>
+            <strong>Liên hệ</strong>
+            <a href={`tel:${BRAND.hotline}`}>Hotline {BRAND.hotline}</a>
+            <span>{BRAND.address}</span>
+            <span>Mở cửa 08:00–23:00 mỗi ngày</span>
+          </div>
+        </div>
+        <div className="lp-footer-bottom">
+          <span>
+            © {new Date().getFullYear()} {BRAND.name} · {BRAND.website}
+          </span>
+          <a href="/quan-ly">Dành cho nhân viên</a>
+        </div>
       </footer>
+      <div className="lp-sticky">
+        <a className="lp-btn lp-btn-gold" href={bookHref}>
+          <CalendarCheck size={18} />
+          {bookLabel}
+        </a>
+        {slug && (
+          <a className="lp-btn lp-btn-ghost" href={`tel:${BRAND.hotline}`} aria-label="Gọi hotline">
+            <Phone size={18} />
+          </a>
+        )}
+      </div>
     </div>
   );
 }

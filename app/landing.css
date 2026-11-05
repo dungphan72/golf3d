@@ -464,3 +464,227 @@ html:has(.lp) {
   margin-left: 0;
   margin-right: 0;
 }
+
+/* ---- Promo band ---- */
+.lp-promo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 18px max(16px, calc((100% - 1120px) / 2));
+  background: #fff3c4;
+  border-bottom: 1px solid #f0dc8a;
+  color: #4a3a00;
+}
+.lp-promo > svg {
+  color: #b58900;
+  flex-shrink: 0;
+}
+.lp-promo > div {
+  display: grid;
+  gap: 2px;
+  flex: 1 1 360px;
+}
+.lp-promo strong {
+  font-size: 17px;
+}
+.lp-promo span {
+  font-size: 15px;
+}
+
+/* ---- Why choose us ---- */
+.lp-features {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 24px;
+  margin-top: 26px;
+}
+.lp-feature {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.lp-feature > svg {
+  flex-shrink: 0;
+  width: 46px;
+  height: 46px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #e6f3eb;
+  color: var(--g);
+}
+.lp-feature h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+.lp-feature p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* ---- Booking section ---- */
+.lp-booking {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: start;
+}
+.lp-booking .lp-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.lp-booking .lp-steps li {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  align-items: flex-start;
+}
+.lp-booking .lp-steps li > span {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+}
+.lp-booking .lp-steps h3 {
+  margin: 0 0 2px;
+  font-size: 17px;
+}
+.lp-booking .lp-steps p {
+  font-size: 14.5px;
+}
+.lp-booking-form {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: clamp(16px, 3vw, 28px);
+  box-shadow: 0 12px 40px rgba(22, 90, 60, 0.12);
+}
+.lp-callcard {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+.lp-callcard > svg {
+  color: var(--g);
+}
+.lp-callcard h3 {
+  margin: 0;
+  font-size: 22px;
+}
+.lp-callcard p {
+  margin: 0;
+  color: var(--muted);
+}
+/* The embedded booking form drops its own page chrome. */
+.booking-embed .booking-wrap {
+  padding: 0;
+  gap: 12px;
+  justify-items: stretch;
+}
+.booking-embed .auth-card,
+.booking-embed .booking-wrap .auth-card {
+  width: 100%;
+  max-width: none;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+.booking-embed .auth-card h1 {
+  text-align: left;
+  font-size: 22px;
+}
+.booking-embed label {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ---- Footer ---- */
+.lp-footer {
+  display: block;
+  padding: 36px max(16px, calc((100% - 1120px) / 2)) 18px;
+}
+.lp-footer-cols {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1.4fr;
+  gap: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+.lp-footer-cols > div {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+}
+.lp-footer-cols strong {
+  color: #fff;
+  font-size: 15px;
+}
+.lp-footer-cols p {
+  margin: 0;
+}
+.lp-footer-cols a {
+  text-decoration: none;
+}
+.lp-footer-cols a:hover {
+  color: #fff;
+}
+.lp-footer-bottom {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+}
+
+/* ---- Sticky mobile call-to-action ---- */
+.lp-sticky {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .lp-features {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lp-booking {
+    grid-template-columns: 1fr;
+  }
+  .lp-footer-cols {
+    grid-template-columns: 1fr;
+  }
+  .lp-sticky {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    display: flex;
+    gap: 10px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 0 -4px 16px rgba(20, 50, 35, 0.15);
+  }
+  .lp-sticky .lp-btn-gold {
+    flex: 1;
+  }
+  .lp-sticky .lp-btn-ghost {
+    color: var(--g);
+    padding: 11px 14px;
+  }
+  .lp {
+    padding-bottom: 72px;
+  }
+}
+@media (max-width: 560px) {
+  .lp-features {
+    grid-template-columns: 1fr;
+  }
+}
+.booking-embed .auth-card p,
+.booking-embed .auth-card .form-note {
+  text-align: left;
+}

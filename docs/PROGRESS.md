@@ -245,3 +245,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Phân quyền mới: `billing.discount`, `billing.refund` (chủ và quản lý; thu ngân chưa có).
 - Chưa có: hoàn về gói trả trước (phiếu trả bằng gói), hoàn tiền sau khi ca đã đóng ngoài ca hiện tại (hoàn được nhưng ghi vào ca đang mở), duyệt hai cấp, xuất hóa đơn điện tử.
 - Kiểm thử: `tests/billing_sql_test.py`, `tests/billing.test.ts`, `tests/e2e/zy-billing.spec.ts` (API và giao diện).
+
+## v0.12.1 — Quản trị chỉ nền trắng, rà soát lỗi
+
+- Toàn bộ giao diện quản trị (`/quan-ly`, máy tính và điện thoại) dùng nền trắng: thanh điều hướng, tab, thanh thông báo, tiêu đề bảng, thẻ "Mỗi cú swing"; trạng thái chọn/hover dùng viền và màu chữ thay cho nền tô. Nút bấm và huy hiệu trạng thái giữ màu. Sửa luôn lỗi chữ tối trên nền xanh đậm ở thẻ Tổng quan.
+- Kết quả rà soát lỗi và kế hoạch fix theo đợt: `docs/BUG-PLAN.md`.

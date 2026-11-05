@@ -552,3 +552,134 @@ body:has(.app-shell) {
     display: none;
   }
 }
+
+/* ---------- White-only staff workspace ----------
+ * Every surface of the staff app is white; structure comes from hairline borders, and state
+ * (selected, hover, warning) from text colour, borders and underlines instead of tinted fills.
+ * Buttons keep their solid colour and status badges keep their semantic colours. */
+.app-shell {
+  --kv-canvas: #fff;
+  --kv-blue-soft: #fff;
+}
+body:has(.app-shell) {
+  background: #fff;
+}
+.app-shell .pilot {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+  color: var(--kv-muted);
+}
+.app-shell .empty,
+.app-shell .info-strip {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+}
+.app-shell .empty {
+  border-style: dashed;
+}
+.app-shell .tabs {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+}
+.app-shell .tabs button.active {
+  background: #fff;
+  color: var(--kv-blue);
+  box-shadow: inset 0 0 0 1.5px var(--kv-blue);
+}
+.app-shell thead,
+.app-shell th {
+  background: #fff;
+  border-bottom: 2px solid var(--kv-line);
+}
+.app-shell tbody tr:hover td,
+.app-shell tr[aria-selected='true'] td,
+.app-shell tr.selected td {
+  background: #fff;
+}
+.app-shell tr[aria-selected='true'] td,
+.app-shell tr.selected td {
+  box-shadow: inset 0 -2px 0 var(--kv-blue);
+}
+.app-shell .secondary:hover:not(:disabled) {
+  background: #fff;
+  border-color: var(--kv-blue);
+  color: var(--kv-blue);
+}
+.app-shell .section-heading h2 > span {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+}
+/* The daily card was a dark panel; on white it is an outlined card with dark text. */
+.app-shell .daily-card {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+  color: var(--kv-text);
+}
+.app-shell .daily-card h2,
+.app-shell .daily-card .eyebrow,
+.app-shell .daily-card p {
+  color: var(--kv-text);
+}
+@media (min-width: 1025px) {
+  .app-shell .sidebar {
+    background: #fff;
+    color: var(--kv-text);
+    box-shadow: 0 1px 0 var(--kv-line);
+  }
+  .app-shell .sidebar .brand {
+    color: var(--kv-text);
+  }
+  .app-shell .sidebar .brand-logo {
+    box-shadow: none;
+  }
+  .app-shell .nav-item {
+    color: var(--kv-muted);
+  }
+  .app-shell .nav-item:hover {
+    background: #fff;
+    color: var(--kv-blue);
+  }
+  .app-shell .nav-item.selected {
+    background: #fff;
+    color: var(--kv-blue);
+    box-shadow: inset 0 -3px 0 var(--kv-blue);
+  }
+  .app-shell .nav-item .count {
+    color: #fff;
+  }
+  .app-shell .profile {
+    color: var(--kv-text);
+  }
+  .app-shell .profile .avatar {
+    background: var(--kv-blue);
+    color: #fff;
+  }
+  .app-shell .topbar {
+    border-bottom: 1px solid var(--kv-line);
+  }
+  .app-shell .nav-more-toggle {
+    background: #fff;
+  }
+}
+@media (max-width: 1024px) {
+  .app-shell .sidebar {
+    background: #fff;
+    color: var(--kv-text);
+    border-right: 1px solid var(--kv-line);
+  }
+  .app-shell .sidebar .brand {
+    color: var(--kv-text);
+  }
+  .app-shell .nav-item {
+    color: var(--kv-muted);
+  }
+  .app-shell .nav-item:hover {
+    background: #fff;
+    color: var(--kv-blue);
+  }
+  .app-shell .nav-item.selected {
+    background: #fff;
+    color: var(--kv-blue);
+    box-shadow: inset 3px 0 0 var(--kv-blue);
+  }
+}

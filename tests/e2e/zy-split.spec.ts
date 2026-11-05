@@ -103,7 +103,7 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
 
   // The payment dialog offers the split form for an unpaid bill.
   await finishedRound(owner, 'line-6', 'Khách chia UI');
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await page
     .locator('aside')
     .getByRole('button', { name: /Lịch đặt/ })

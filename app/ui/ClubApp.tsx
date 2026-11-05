@@ -249,7 +249,7 @@ export default function ClubApp() {
   return (
     <div className="app-shell">
       <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
-        <Link className="brand" href="/" aria-label={BRAND.name + ' — trang chủ'}>
+        <Link className="brand" href="/quan-ly" aria-label={BRAND.name + ' — trang chủ'}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="brand-logo" src={BRAND.logo} alt="" width={46} height={46} />
           <span>

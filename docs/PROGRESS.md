@@ -119,3 +119,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Điện thoại/máy tính bảng giữ menu dạng ngăn kéo và thanh dưới, cùng bảng màu. Trang đặt lịch công khai và đăng nhập vẫn giữ nhận diện xanh lá–vàng của Saigon Golf 3D Club.
 - Toàn bộ giao diện nằm ở `app/kiotviet.css` (ghi đè có phạm vi `.app-shell`), có thể chỉnh màu ở các biến `--kv-*`.
 - Nút nhiều chữ (Tải lại, Thu / chi tiền mặt, Đối soát & đóng ca, Tạm dừng, In phiếu, Chia thanh toán, Tải CSV…) chuyển thành biểu tượng kèm tooltip (`data-tip`); màn hình cảm ứng/điện thoại vẫn hiện chữ.
+
+## v0.9 — Trang giới thiệu công khai (landing page)
+
+- `/` là trang giới thiệu cho khách: giới thiệu dịch vụ, bảng giá chính thức, 13 gói/combo/thẻ VIP (đọc từ `lib/official-packages.ts`), cách đặt lịch 3 bước, hỏi đáp, liên hệ + chỉ đường, dữ liệu có cấu trúc (JSON-LD) và Open Graph cho tìm kiếm/chia sẻ. Nút đặt lịch trỏ tới `/book/<mã>` khi cơ sở đã bật đặt online; chưa bật thì chuyển thành gọi hotline.
+- Ứng dụng quản lý chuyển sang `/quan-ly` (có link "Dành cho nhân viên" ở chân trang); manifest/PWA mở `/quan-ly`.
+- `robots.txt` chặn `/quan-ly`, `/api/`, `/book/`; có trang 404 riêng.
+- Khi giá/gói thay đổi: sửa `lib/official-packages.ts` (gói) và mảng `PRICES` + câu hỏi trong `app/page.tsx` (bảng giá, FAQ).

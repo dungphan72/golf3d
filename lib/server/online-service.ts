@@ -10,6 +10,7 @@ import {
   staffRequestInput,
   codeLooksValid,
   MIN_LEAD_MINUTES,
+  SLUG_PATTERN,
   type PublicRequestInput,
   type StaffRequestInput,
 } from '../online';
@@ -311,4 +312,23 @@ export async function applyRequest(
     console.error('apply request', e);
     return error('Chưa xác minh được kết quả. Tải lại danh sách trước khi thử tiếp.', 500);
   }
+}
+
+/** Slug of the first club that accepts online booking, for the public landing page (null = none). */
+export async function bookingSlug(): Promise<string | null> {
+  try {
+    const rows = (
+      await db()
+        .prepare(
+          "SELECT json_extract(value,'$.onlineSlug') AS slug FROM settings WHERE json_extract(value,'$.onlineEnabled')=1 LIMIT 20",
+        )
+        .all<{ slug: string | null }>()
+    ).results;
+    for (const r of rows) {
+      if (r.slug && SLUG_PATTERN.test(r.slug) && (await tenantBySlug(r.slug))) return r.slug;
+    }
+  } catch (e) {
+    console.error('booking slug', e);
+  }
+  return null;
 }

@@ -24,7 +24,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
   expect(total).toBeGreaterThan(0);
   expect(report.services.length).toBeGreaterThan(0);
 
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await page
     .locator('aside')
     .getByRole('button', { name: /Báo cáo/ })
@@ -45,7 +45,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
   ).json();
   expect(log.rows.length).toBeGreaterThan(0);
   expect(log.rows.every((r: { action: string }) => r.action === 'Ghi sổ tiền')).toBe(true);
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await page
     .locator('aside')
     .getByRole('button', { name: /Quản lý khác/ })

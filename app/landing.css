@@ -1,0 +1,466 @@
+/* Public landing page. Scoped under .lp; the staff app has its own theme in kiotviet.css. */
+.lp {
+  --g: #165a3c;
+  --g-dark: #0f4a30;
+  --gold: #f5b50a;
+  --ink: #1d2d24;
+  --muted: #5f6f65;
+  --soft: #f3f6f2;
+  --line: #dde5de;
+  color: var(--ink);
+  background: #fff;
+  font-size: 16px;
+  line-height: 1.6;
+  scroll-behavior: smooth;
+}
+html:has(.lp) {
+  scroll-behavior: smooth;
+}
+.lp h1,
+.lp h2,
+.lp h3 {
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.lp a {
+  color: inherit;
+}
+
+/* Header */
+.lp-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 10px max(16px, calc((100% - 1120px) / 2));
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 750;
+  color: var(--g);
+  white-space: nowrap;
+}
+.lp-brand img {
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+.lp-brand small {
+  color: #a87c00;
+  letter-spacing: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.lp-header nav {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 500;
+}
+.lp-header nav a {
+  text-decoration: none;
+  color: var(--muted);
+}
+.lp-header nav a:hover {
+  color: var(--g);
+}
+
+/* Buttons */
+.lp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-weight: 650;
+  font-size: 15px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    transform 0.12s ease,
+    background 0.12s ease;
+}
+.lp-btn:hover {
+  transform: translateY(-1px);
+}
+.lp .lp-btn-gold {
+  background: var(--gold);
+  color: #17331f;
+}
+.lp-btn-gold:hover {
+  background: #ffc42b;
+}
+.lp .lp-btn-primary {
+  background: var(--g);
+  color: #fff;
+}
+.lp-btn-primary:hover {
+  background: var(--g-dark);
+}
+.lp-btn-ghost {
+  border: 1.5px solid currentColor;
+  background: transparent;
+}
+
+/* Hero */
+.lp-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+  padding: clamp(40px, 7vw, 88px) max(16px, calc((100% - 1120px) / 2));
+  background:
+    radial-gradient(circle at 85% 10%, rgba(245, 181, 10, 0.16), transparent 45%),
+    linear-gradient(160deg, #0f4a30 0%, #165a3c 60%, #1d6b48 100%);
+  color: #fff;
+}
+.lp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 13px;
+  font-weight: 600;
+  color: #ffe08a;
+}
+.lp-hero h1 {
+  font-size: clamp(38px, 6vw, 68px);
+  margin: 18px 0 14px;
+  font-weight: 800;
+}
+.lp-hero h1 em {
+  font-style: normal;
+  color: var(--gold);
+}
+.lp-hero p {
+  max-width: 540px;
+  font-size: 18px;
+  color: #d8eadd;
+}
+.lp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 26px 0;
+}
+.lp-hero .lp-btn-ghost {
+  color: #fff;
+}
+.lp-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  color: #c4dccb;
+  font-size: 14px;
+}
+.lp-facts strong {
+  color: #fff;
+  font-size: 18px;
+  margin-right: 4px;
+}
+.lp-hero-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+/* Sections */
+.lp-section {
+  padding: clamp(44px, 6vw, 84px) max(16px, calc((100% - 1120px) / 2));
+}
+.lp-alt {
+  background: var(--soft);
+}
+.lp-section h2 {
+  font-size: clamp(26px, 3.4vw, 38px);
+  color: var(--g);
+  margin: 0 0 8px;
+}
+.lp-lead {
+  color: var(--muted);
+  margin: 0 0 30px;
+  font-size: 17px;
+}
+.lp-note {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.lp-center {
+  display: flex;
+  justify-content: center;
+  margin-top: 34px;
+}
+
+/* Cards */
+.lp-grid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.lp-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 26px;
+  box-shadow: 0 2px 10px rgba(22, 90, 60, 0.06);
+}
+.lp-card svg {
+  color: var(--g);
+  background: #e6f3eb;
+  padding: 11px;
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+}
+.lp-card h3 {
+  margin: 16px 0 8px;
+  font-size: 20px;
+}
+.lp-card p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Price table */
+.lp-table-wrap {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.lp-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+.lp-table th {
+  background: var(--g);
+  color: #fff;
+  text-align: left;
+  padding: 14px 18px;
+  font-size: 14px;
+}
+.lp-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.lp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.lp-table td:not(:first-child) {
+  font-weight: 650;
+  color: var(--g);
+}
+.lp-group-row td {
+  background: #fff8e1;
+}
+.lp-group-row svg {
+  vertical-align: -2px;
+}
+
+/* Packages */
+.lp-packages {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.lp-package {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 20px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lp-package h3 {
+  font-size: 16px;
+  margin: 0;
+}
+.lp-price {
+  font-size: 24px;
+  color: var(--g);
+}
+.lp-package p {
+  margin: 0;
+  font-weight: 550;
+}
+.lp-package small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.lp-package.vip {
+  background: linear-gradient(160deg, #0f4a30, #165a3c);
+  color: #fff;
+  border-color: transparent;
+}
+.lp-package.vip .lp-price {
+  color: var(--gold);
+}
+.lp-package.vip small {
+  color: #c4dccb;
+}
+
+/* Steps */
+.lp-steps {
+  list-style: none;
+  padding: 0;
+  margin: 10px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  counter-reset: step;
+}
+.lp-steps li {
+  background: #fff;
+  border-radius: 14px;
+  padding: 26px;
+  border: 1px solid var(--line);
+  position: relative;
+}
+.lp-steps li > span {
+  display: inline-flex;
+  width: 46px;
+  height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #17331f;
+}
+.lp-steps h3 {
+  margin: 14px 0 6px;
+  font-size: 19px;
+}
+.lp-steps p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* FAQ */
+.lp-faq {
+  max-width: 820px;
+  display: grid;
+  gap: 10px;
+}
+.lp-faq details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0 18px;
+  background: #fff;
+}
+.lp-faq summary {
+  cursor: pointer;
+  padding: 15px 0;
+  font-weight: 650;
+}
+.lp-faq details[open] summary {
+  color: var(--g);
+}
+.lp-faq p {
+  margin: 0 0 16px;
+  color: var(--muted);
+}
+
+/* Contact */
+.lp-contact {
+  background: linear-gradient(160deg, #0f4a30, #165a3c);
+  color: #fff;
+}
+.lp-contact h2 {
+  color: #fff;
+}
+.lp-contact ul {
+  list-style: none;
+  padding: 0;
+  margin: 14px 0 0;
+  display: grid;
+  gap: 10px;
+  font-size: 17px;
+}
+.lp-contact li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lp-contact li svg {
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.lp-contact .lp-btn-ghost {
+  color: #fff;
+}
+
+/* Footer */
+.lp-footer {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px max(16px, calc((100% - 1120px) / 2));
+  background: #0b3a25;
+  color: #a9c6b3;
+  font-size: 13px;
+}
+.lp-footer a {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 960px) {
+  .lp-hero {
+    grid-template-columns: 1fr;
+  }
+  .lp-grid3,
+  .lp-steps {
+    grid-template-columns: 1fr;
+  }
+  .lp-header nav {
+    display: none;
+  }
+  .lp-header .lp-btn {
+    margin-left: auto;
+    padding: 9px 14px;
+  }
+}
+@media (max-width: 520px) {
+  .lp-brand small {
+    display: none;
+  }
+  .lp-actions .lp-btn {
+    width: 100%;
+  }
+}
+
+.lp .lp-table th,
+.lp .lp-table td {
+  font-size: 15px;
+}
+.lp .lp-table th {
+  font-size: 14px;
+}
+.lp .lp-package small,
+.lp .lp-note {
+  font-size: 14px;
+}
+.lp-steps {
+  margin-left: 0;
+  margin-right: 0;
+}

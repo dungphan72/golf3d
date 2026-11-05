@@ -64,7 +64,7 @@ function allDayRules() {
 }
 
 test('đăng nhập: sai mật khẩu bị từ chối, đúng thì vào được', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await page.getByLabel('Email').fill(OWNER.email);
   await page.getByLabel('Mật khẩu').fill('sai-mat-khau');
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -157,7 +157,7 @@ test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', as
   const paid = club.bookings.find((b: { id: string }) => b.id === booked.id);
   expect([paid.status, paid.payment]).toEqual(['paid', 'package']);
 
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await nav(page, /Hội viên/).click();
   await page.getByRole('button', { name: /Khách Gói/ }).click();
   await expect(page.getByText('Điểm tích lũy:')).toBeVisible();
@@ -179,7 +179,7 @@ test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách th�
   await customer.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
   await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 
-  await page.goto('/');
+  await page.goto('/quan-ly');
   await nav(page, /Đặt online/).click();
   const row = page.getByRole('row', { name: /Khách Online/ });
   await expect(row).toBeVisible();
@@ -235,7 +235,7 @@ test('phân quyền: thu ngân chỉ làm được việc của thu ngân', asyn
   );
 
   const view = await ctx.newPage();
-  await view.goto('/');
+  await view.goto('/quan-ly');
   await expect(view.getByText('Một ngày chơi tốt lành.')).toBeVisible();
   await expect(nav(view, /Cài đặt cơ sở/)).toHaveCount(0);
   await expect(nav(view, /Nhân viên/)).toHaveCount(0);
@@ -330,7 +330,7 @@ test('huấn luyện: xếp lịch chống trùng, HLV chỉ thấy và đánh d
   });
 
   const view = await ctx.newPage();
-  await view.goto('/');
+  await view.goto('/quan-ly');
   await view
     .locator('aside')
     .getByRole('button', { name: /Quản lý khác/ })

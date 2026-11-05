@@ -217,3 +217,5 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Form đặt chỗ: 3 hình thức (Luyện tập, Game 9 hố, Game 18 hố), bỏ ô thời lượng (Luyện tập mặc định 1 giờ), "Số người" khách tự điền (nhóm, giải đấu; mỗi line tối đa 4 nên nhóm đông được ghi `guests` trong báo giá và hiện "cần N line" cho nhân viên), họ tên và số điện thoại bắt buộc.
 - Giá nhập vào cài đặt (trước đó lưu bản sao `docs/backups/settings-before-holes-prices.json`), tính theo người, nhân theo số người 1–4: Game 18 hố tiêu chuẩn 250k (07–12 T2–T6) / 300k; VIP 350k / 400k. Game 9 hố tiêu chuẩn 150k / 200k; VIP 200k / 250k. Thứ 7, Chủ nhật, ngày lễ: cả ngày theo giá 12:00–23:00. Quy tắc 9/18 hố cũ (đã tắt) được xóa.
 - Trang giá không hiện thẻ "Nhóm 4 người" khi giá nhóm chỉ bằng 4 lần giá một người.
+
+- Giá Luyện tập đổi sang đúng 3 khung như 9/18 hố (bản sao trước khi đổi: `docs/backups/settings-before-three-slots.json`): T2–T6 07:00–12:00 giá vàng 180k (tiêu chuẩn) / 330k (VIP); T2–T6 12:00–23:00 300k / 550k; Thứ 7, Chủ nhật, ngày lễ cả ngày 300k / 550k. Bảng giá hiện ba dòng cho mỗi phòng.

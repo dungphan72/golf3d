@@ -10,7 +10,10 @@ export const publicRequestInput = z
     phone: z.string().trim().min(8).max(20),
     service: z.enum(['gdr', '9', '18']),
     vip: z.boolean().default(false),
-    people: z.number().int().min(1).max(4),
+    /** Seats on one line, 1-4 (used when `guests` is left empty). */
+    people: z.number().int().min(1).max(4).default(1),
+    /** Total guests typed by the customer (groups, tournaments); 0 = not given. */
+    guests: z.number().int().min(0).max(1000).default(0),
     start: z.number().int(),
     minutes: z.number().int().min(0).max(720).default(0),
     note: z.string().trim().max(300).default(''),

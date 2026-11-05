@@ -16,7 +16,7 @@ type Row = {
   status: string;
   room: string | null;
   reason: string;
-  quote: { total?: number };
+  quote: { total?: number | null; guests?: number };
   freeRooms: { id: string; name: string }[];
   late: boolean;
 };
@@ -109,7 +109,10 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
               <td>
                 {SERVICE[r.service]}
                 {r.service === 'gdr' ? ` ${r.minutes}′` : ''} · {r.vip ? 'VIP' : 'line tiêu chuẩn'}{' '}
-                · {r.people} người
+                · {r.quote.guests || r.people} người
+                {(r.quote.guests ?? 0) > 4 && (
+                  <b> (nhóm, cần {Math.ceil(r.quote.guests! / 4)} line)</b>
+                )}
                 <br />
                 {when(r.start)}
                 {r.quote.total != null && <> · tạm tính {money(r.quote.total)}</>}

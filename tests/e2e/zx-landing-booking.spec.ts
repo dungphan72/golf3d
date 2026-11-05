@@ -16,3 +16,27 @@ test('khách đặt chỗ ngay trên trang chủ', async ({ page }) => {
   await form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
   await expect(form.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 });
+
+test('form đặt chỗ: 3 hình thức, không có ô phút, số người tự điền, tên và số điện thoại bắt buộc', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const form = page.locator('#dat-cho');
+  const service = form.getByLabel('Dịch vụ');
+  await expect(service.locator('option')).toHaveText(['Luyện tập', 'Game 9 hố', 'Game 18 hố']);
+  await expect(form.getByLabel('Thời lượng')).toHaveCount(0);
+  await expect(form.getByLabel('Họ và tên')).toHaveAttribute('required', '');
+  await expect(form.getByLabel('Số điện thoại')).toHaveAttribute('required', '');
+  // Blank name and phone: the browser blocks the submit.
+  await form.getByLabel(/Ngày, giờ bắt đầu/).fill(`${vnDay(1)}T16:00`);
+  await form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
+  await expect(form.getByText('Đang chờ nhân viên xác nhận')).toHaveCount(0);
+
+  // A tournament-size group is accepted and shown as typed.
+  await form.getByLabel('Số người').fill('30');
+  await form.getByLabel('Họ và tên').fill('Đoàn Giải Đấu');
+  await form.getByLabel('Số điện thoại').fill('0955666777');
+  await form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
+  await expect(form.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
+  await expect(form.getByText(/30 người/)).toBeVisible();
+});

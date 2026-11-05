@@ -10,7 +10,10 @@ test('trang thẻ hội viên hiện quyền lợi, thẻ và gói giờ; quyề
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Chơi golf mỗi ngày');
   await expect(page.getByRole('heading', { name: 'Gửi gậy miễn phí' })).toBeAttached();
   await expect(page.getByText('Thẻ VIP Platinum')).toBeAttached();
-  await expect(page.getByRole('link', { name: 'Xem bảng giá' })).toHaveAttribute('href', '/bang-gia');
+  await expect(page.getByRole('link', { name: 'Xem bảng giá' })).toHaveAttribute(
+    'href',
+    '/bang-gia',
+  );
 
   // The perks are edited in Settings and the page follows.
   const owner = page.request;

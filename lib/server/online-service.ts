@@ -61,7 +61,7 @@ export async function publicInfo(slug: string): Promise<R> {
       vip: (c.vipCapacity ?? 0) > 0,
       maxPeople: Math.min(4, c.capacity ?? 4),
       // Only services that currently have a price can be requested online.
-      services: (['18', '9', 'gdr'] as const).filter((s) =>
+      services: (['gdr', '9', '18'] as const).filter((s) =>
         (c.priceRules ?? []).some((r) => r.enabled && r.service === s),
       ),
       captchaSiteKey: turnstileSiteKey(),
@@ -91,6 +91,9 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
       return error(`Vui lòng đặt trước ít nhất ${MIN_LEAD_MINUTES} phút`);
     if (input.start > now + Math.max(1, c.days) * DAY)
       return error(`Chỉ nhận đặt trước tối đa ${c.days} ngày`);
+    // A line holds at most 4: bigger groups are priced and booked per line by the staff.
+    const perLine = input.guests > 0 ? Math.min(input.guests, 4) : input.people;
+    const group = input.guests > 4;
     let plan;
     try {
       plan = planBooking(
@@ -98,7 +101,7 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
           room: REPRESENTATIVE[input.vip ? 'vip' : 'standard'],
           service: input.service,
           start: input.start,
-          people: input.people,
+          people: perLine,
           minutes: input.minutes,
         },
         c,
@@ -108,7 +111,12 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
       return error(e instanceof Error ? e.message : 'Khung giờ này chưa nhận đặt');
     }
     const code = newToken();
-    const quote = JSON.stringify({ total: plan.bill.total, bill: plan.bill, rule: plan.ruleLabel });
+    const quote = JSON.stringify({
+      total: group ? null : plan.bill.total,
+      bill: plan.bill,
+      rule: plan.ruleLabel,
+      guests: input.guests,
+    });
     await db()
       .prepare(INSERT_REQUEST_SQL)
       .bind(
@@ -119,7 +127,7 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
         phone,
         input.service,
         input.vip ? 1 : 0,
-        input.people,
+        perLine,
         input.start,
         input.service === 'gdr' ? input.minutes : 0,
         input.note,
@@ -128,7 +136,7 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
         now,
       )
       .run();
-    return reply({ ok: true, code, total: plan.bill.total });
+    return reply({ ok: true, code, total: group ? null : plan.bill.total });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     if (message.includes('RATE_LIMITED'))
@@ -159,12 +167,13 @@ export async function requestStatus(code: string): Promise<R> {
         quote: string;
       }>();
     if (!row) return error('Không tìm thấy yêu cầu', 404);
-    const quote = JSON.parse(row.quote) as { total?: number };
+    const quote = JSON.parse(row.quote) as { total?: number | null; guests?: number };
     return reply({
       status: row.status,
       service: row.service,
       vip: !!row.vip,
       people: row.people,
+      guests: quote.guests ?? 0,
       start: row.start,
       minutes: row.minutes,
       reason: row.status === 'rejected' ? row.reason : '',

@@ -26,6 +26,8 @@ test('honeypot, unknown fields and bad values are rejected', () => {
   assert.ok(!publicRequestInput.safeParse({ ...valid, tenant: 'other' }).success);
   assert.ok(!publicRequestInput.safeParse({ ...valid, service: 'vip' }).success);
   assert.ok(!publicRequestInput.safeParse({ ...valid, people: 9 }).success);
+  assert.ok(publicRequestInput.safeParse({ ...valid, people: undefined, guests: 30 }).success);
+  assert.ok(!publicRequestInput.safeParse({ ...valid, guests: -1 }).success);
   assert.ok(!publicRequestInput.safeParse({ ...valid, name: 'A' }).success);
   assert.ok(!publicRequestInput.safeParse({ ...valid, start: 1.5 }).success);
 });

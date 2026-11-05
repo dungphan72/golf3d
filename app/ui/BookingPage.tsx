@@ -21,15 +21,16 @@ type Status = {
   service: string;
   vip: boolean;
   people: number;
+  guests?: number;
   start: number;
   minutes: number;
   reason: string;
   total: number | null;
 };
 const SERVICE: Record<string, string> = {
-  gdr: 'Luyện tập GDR',
-  '9': 'Chơi 9 hố',
-  '18': 'Chơi 18 hố',
+  gdr: 'Luyện tập',
+  '9': 'Game 9 hố',
+  '18': 'Game 18 hố',
 };
 const when = (ms: number) =>
   new Date(ms).toLocaleString('vi-VN', {
@@ -115,11 +116,10 @@ export default function BookingPage({
   const [form, setForm] = useState({
     name: '',
     phone: '',
-    service: '18',
+    service: 'gdr',
     vip: false,
-    people: 1,
+    guests: '',
     start: '',
-    minutes: 90,
     note: '',
     website: '',
   });
@@ -171,9 +171,10 @@ export default function BookingPage({
           phone: form.phone,
           service: form.service,
           vip: form.vip,
-          people: form.people,
+          guests: Number(form.guests) || 0,
           start: toMs(form.start),
-          minutes: form.service === 'gdr' ? form.minutes : 0,
+          // Practice is booked by the hour; the staff adjust the length when they confirm.
+          minutes: form.service === 'gdr' ? 60 : 0,
           note: form.note,
           website: form.website,
           captcha,
@@ -239,7 +240,7 @@ export default function BookingPage({
             </p>
             <p>
               {SERVICE[status.service]} · {status.vip ? 'phòng VIP' : 'line tiêu chuẩn'} ·{' '}
-              {status.people} người
+              {status.guests || status.people} người
               <br />
               {when(status.start)}
               {status.total != null && (
@@ -288,9 +289,9 @@ export default function BookingPage({
                 onChange={(e) => setForm({ ...form, service: e.target.value })}
               >
                 {[
-                  ['18', 'Chơi 18 hố'],
-                  ['9', 'Chơi 9 hố'],
-                  ['gdr', 'Luyện tập GDR'],
+                  ['gdr', 'Luyện tập'],
+                  ['9', 'Game 9 hố'],
+                  ['18', 'Game 18 hố'],
                 ]
                   .filter(([v]) => !info.services || info.services.includes(v))
                   .map(([v, label]) => (
@@ -311,33 +312,17 @@ export default function BookingPage({
                 required
               />
             </label>
-            {form.service === 'gdr' && (
-              <label>
-                <select
-                  aria-label="Thời lượng"
-                  value={form.minutes}
-                  onChange={(e) => setForm({ ...form, minutes: Number(e.target.value) })}
-                >
-                  {[60, 90, 120, 150, 180].map((n) => (
-                    <option key={n} value={n}>
-                      {n} phút
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
             <label>
-              <select
+              <input
                 aria-label="Số người"
-                value={form.people}
-                onChange={(e) => setForm({ ...form, people: Number(e.target.value) })}
-              >
-                {Array.from({ length: info.maxPeople }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n} người
-                  </option>
-                ))}
-              </select>
+                placeholder="Số người (nhóm, giải đấu: nhập tổng số)"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={1000}
+                value={form.guests}
+                onChange={(e) => setForm({ ...form, guests: e.target.value })}
+              />
             </label>
             {info.vip && (
               <label>
@@ -401,7 +386,8 @@ export default function BookingPage({
               </div>
             )}
             <p className="form-note">
-              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
+              Mỗi line tối đa 4 người; nhóm đông nhân viên sẽ sắp xếp nhiều line và báo giá. Đây là
+              yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
               {info.minLeadMinutes} phút, tối đa {info.days} ngày.
             </p>
             <button className="primary" disabled={busy || (!!info.captchaSiteKey && !captcha)}>

@@ -1080,3 +1080,34 @@ a:hover > .fw-arrow-dot {
   font-size: 1.625rem;
   white-space: nowrap;
 }
+
+/* price table: one size for every cell, same family and colours as the rest of the page */
+.fw .fw-table-card table {
+  font-family: inherit;
+  font-size: var(--t-base);
+}
+.fw .fw-table-card th {
+  background: #f4f8fc;
+  color: var(--muted);
+  font-size: var(--t-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  padding: 1.1rem 1.5rem;
+}
+.fw .fw-table-card td {
+  font-size: var(--t-base);
+  font-weight: 400;
+  color: var(--navy);
+  padding: 1.15rem 1.5rem;
+}
+.fw .fw-table-card td:not(:first-child) {
+  font-weight: 600;
+  color: var(--navy);
+}
+.fw .fw-table-card td em {
+  font-size: var(--t-xs);
+  font-weight: 600;
+}
+.fw .fw-table-card .fw-group td {
+  background: #f4f9fd;
+}

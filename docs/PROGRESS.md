@@ -112,3 +112,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 ## v0.7.2 — Nhật ký hoạt động
 
 - Tab **Nhật ký** (quyền `staff.manage`: chủ, quản lý): danh sách hoạt động mới nhất trước (ghi sổ tiền, ca, xác nhận…), tìm theo từ khóa, xem thêm từng trang 200 dòng. Chỉ đọc bảng `audit`.
+
+## v0.8 — Giao diện kiểu KiotViet
+
+- Khung quản lý đổi sang thanh menu ngang màu xanh phía trên (8 mục chính + "Quản lý khác" cho thực đơn, kho, huấn luyện, hỗ trợ, cài đặt, nhân viên, nhật ký, tài khoản); bảng dày có tiêu đề nền xanh nhạt, nút và ô nhập vuông gọn, nền xám nhạt.
+- Điện thoại/máy tính bảng giữ menu dạng ngăn kéo và thanh dưới, cùng bảng màu. Trang đặt lịch công khai và đăng nhập vẫn giữ nhận diện xanh lá–vàng của Saigon Golf 3D Club.
+- Toàn bộ giao diện nằm ở `app/kiotviet.css` (ghi đè có phạm vi `.app-shell`), có thể chỉnh màu ở các biến `--kv-*`.

@@ -1,0 +1,466 @@
+/*
+ * Staff workspace theme inspired by KiotViet: blue top navigation bar, flat white panels on a
+ * light grey canvas, dense tables with tinted headers, compact square-ish controls.
+ * Loaded after globals.css; scoped to .app-shell so the public booking page and login keep the
+ * Saigon Golf 3D Club brand look.
+ */
+.app-shell {
+  --kv-blue: #0b6fd0;
+  --kv-blue-dark: #0959a8;
+  --kv-blue-soft: #e8f2fd;
+  --kv-line: #dfe4ea;
+  --kv-text: #2a3441;
+  --kv-muted: #6b7684;
+  --kv-canvas: #eef1f5;
+  --kv-green: #1f9d55;
+  --kv-orange: #f08a1c;
+  background: var(--kv-canvas);
+  color: var(--kv-text);
+}
+body:has(.app-shell) {
+  background: #eef1f5;
+}
+
+/* ---------- Top navigation (desktop) ---------- */
+@media (min-width: 1025px) {
+  .app-shell .sidebar {
+    position: sticky;
+    inset: 0 0 auto 0;
+    width: auto;
+    height: 50px;
+    padding: 0 14px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    overflow: visible;
+    background: var(--kv-blue);
+    color: #fff;
+    box-shadow: 0 1px 3px rgba(9, 60, 120, 0.35);
+  }
+  .app-shell .sidebar .brand {
+    padding: 0 12px 0 0;
+    font-size: 14px;
+    gap: 9px;
+    flex-shrink: 0;
+  }
+  .app-shell .sidebar .brand-logo {
+    width: 34px;
+    height: 34px;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .app-shell .sidebar .brand small {
+    display: none;
+  }
+  .app-shell .location-switch,
+  .app-shell .nav-label,
+  .app-shell .club-note,
+  .app-shell .profile small,
+  .app-shell .profile > svg {
+    display: none;
+  }
+  .app-shell .sidebar nav {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .app-shell .sidebar nav::-webkit-scrollbar {
+    display: none;
+  }
+  .app-shell .nav-item {
+    width: auto;
+    flex-shrink: 0;
+    height: 50px;
+    margin: 0;
+    padding: 0 13px;
+    gap: 7px;
+    border-radius: 0;
+    color: #e3efff;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .app-shell .nav-item svg {
+    width: 17px;
+    height: 17px;
+  }
+  .app-shell .nav-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+  }
+  .app-shell .nav-item.selected {
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 600;
+    box-shadow: inset 0 -3px 0 #fff;
+  }
+  .app-shell .nav-item .count {
+    margin-left: 2px;
+    background: var(--kv-orange);
+    color: #fff;
+  }
+  .app-shell .sidebar-bottom {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .app-shell .sidebar-bottom .nav-item {
+    font-size: 12px;
+  }
+  .app-shell .profile {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 0 8px;
+    color: #fff;
+    background: none;
+    border: 0;
+  }
+  .app-shell .profile strong {
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .app-shell .profile .avatar {
+    background: #fff;
+    color: var(--kv-blue);
+  }
+  .app-shell .workspace {
+    margin-left: 0;
+  }
+  .app-shell .topbar {
+    height: 42px;
+    padding: 0 20px;
+    background: #fff;
+    border-bottom: 1px solid var(--kv-line);
+  }
+  .app-shell .workspace main {
+    max-width: none;
+    padding: 16px 20px 0;
+  }
+}
+
+/* ---------- Mobile: same palette, existing drawer layout ---------- */
+@media (max-width: 1024px) {
+  .app-shell .sidebar {
+    background: var(--kv-blue);
+  }
+  .app-shell .nav-item {
+    color: #e3efff;
+  }
+  .app-shell .nav-item:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+  .app-shell .nav-item.selected {
+    background: #fff;
+    color: var(--kv-blue);
+  }
+}
+
+/* ---------- Page headings, status strips ---------- */
+.app-shell h1 {
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: 0;
+  color: var(--kv-text);
+}
+.app-shell h2 {
+  color: var(--kv-text);
+  letter-spacing: 0;
+}
+.app-shell .page-heading {
+  margin-bottom: 14px;
+}
+.app-shell .eyebrow {
+  display: none;
+}
+.app-shell .page-heading p,
+.app-shell .date-display {
+  font-size: 12px;
+  color: var(--kv-muted);
+  margin-top: 4px;
+}
+.app-shell .breadcrumb,
+.app-shell .breadcrumb strong {
+  font-size: 12px;
+  color: var(--kv-muted);
+}
+.app-shell .breadcrumb strong {
+  color: var(--kv-text);
+  font-weight: 600;
+}
+.app-shell .pilot {
+  background: #fff7e6;
+  border: 1px solid #ffe2a8;
+  color: #8a5a00;
+  border-radius: 4px;
+}
+
+/* ---------- Buttons and inputs ---------- */
+.app-shell .primary,
+.app-shell .secondary,
+.app-shell .gold-button {
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.app-shell .primary {
+  background: var(--kv-blue);
+  color: #fff;
+  border: 1px solid var(--kv-blue);
+}
+.app-shell .primary:hover:not(:disabled) {
+  background: var(--kv-blue-dark);
+}
+.app-shell .secondary {
+  background: #fff;
+  color: var(--kv-blue);
+  border: 1px solid #b9d3ee;
+}
+.app-shell .secondary:hover:not(:disabled) {
+  background: var(--kv-blue-soft);
+}
+.app-shell .gold-button {
+  background: var(--kv-orange);
+  color: #fff;
+}
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  border: 1px solid #c8d0da;
+  border-radius: 4px;
+  background: #fff;
+  color: var(--kv-text);
+  min-height: 34px;
+}
+.app-shell input:focus,
+.app-shell select:focus,
+.app-shell textarea:focus {
+  outline: none;
+  border-color: var(--kv-blue);
+  box-shadow: 0 0 0 2px rgba(11, 111, 208, 0.18);
+}
+.app-shell label {
+  color: var(--kv-muted);
+  font-size: 12px;
+}
+.app-shell .icon-btn {
+  border-radius: 4px;
+}
+
+/* ---------- Panels ---------- */
+.app-shell .stat,
+.app-shell .room-card,
+.app-shell .settings-section,
+.app-shell .members-panel,
+.app-shell .staff-panel,
+.app-shell .table-wrap,
+.app-shell .support-card,
+.app-shell .shift-banner,
+.app-shell .info-strip {
+  border-radius: 4px;
+  border-color: var(--kv-line);
+  box-shadow: none;
+}
+.app-shell .stat {
+  padding: 14px 16px;
+}
+.app-shell .stat > strong {
+  font-size: 22px;
+  letter-spacing: 0;
+  font-weight: 650;
+  color: var(--kv-blue);
+  margin: 10px 0 6px;
+}
+.app-shell .stat > div,
+.app-shell .stat p {
+  font-size: 12px;
+  color: var(--kv-muted);
+}
+.app-shell .stat-icon {
+  color: var(--kv-blue);
+}
+.app-shell .stats {
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.app-shell .section-heading {
+  margin-bottom: 10px;
+}
+.app-shell .section-heading h2 {
+  font-size: 15px;
+  font-weight: 650;
+}
+.app-shell .section-heading h2 > span {
+  background: var(--kv-blue-soft);
+  color: var(--kv-blue);
+}
+.app-shell .info-strip {
+  background: #f3f8fe;
+  border: 1px solid #cfe2f6;
+  color: var(--kv-text);
+}
+.app-shell .error-box {
+  border-radius: 4px;
+}
+
+/* ---------- Dense tables ---------- */
+.app-shell table {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+  border-radius: 4px;
+  font-size: 13px;
+  border-collapse: collapse;
+  width: 100%;
+}
+.app-shell th {
+  background: #eaf1fa;
+  color: #243447;
+  font-size: 12.5px;
+  font-weight: 650;
+  text-align: left;
+  padding: 9px 10px;
+  border-bottom: 1px solid #cddbeb;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.app-shell td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #e8ecf1;
+  color: var(--kv-text);
+}
+.app-shell tbody tr:hover td {
+  background: #f5f9fe;
+}
+.app-shell tr[aria-selected='true'] td,
+.app-shell tr.selected td {
+  background: var(--kv-blue-soft);
+}
+
+/* ---------- Room cards ---------- */
+.app-shell .room-grid {
+  gap: 10px;
+}
+.app-shell .room-card {
+  background: #fff;
+  border: 1px solid var(--kv-line);
+}
+.app-shell .room-card:hover {
+  border-color: var(--kv-blue);
+  box-shadow: 0 2px 8px rgba(11, 111, 208, 0.15);
+}
+.app-shell .room-card.occupied {
+  border-color: var(--kv-green);
+}
+.app-shell .room-card.has-booking {
+  border-color: var(--kv-orange);
+}
+
+/* ---------- Dialogs ---------- */
+.app-shell .modal,
+.app-shell .native-dialog {
+  border-radius: 6px;
+}
+.app-shell .modal-heading {
+  border-bottom: 1px solid var(--kv-line);
+}
+.app-shell .tabs button.selected,
+.app-shell .tabs .selected {
+  color: var(--kv-blue);
+  border-color: var(--kv-blue);
+}
+
+/* ---------- "Quản lý khác" dropdown ---------- */
+@media (min-width: 1025px) {
+  .app-shell .sidebar nav {
+    overflow: visible;
+  }
+  .app-shell .nav-more {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .app-shell .nav-more-list {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    min-width: 230px;
+    background: #fff;
+    border: 1px solid var(--kv-line);
+    border-radius: 0 0 4px 4px;
+    box-shadow: 0 8px 20px rgba(20, 40, 70, 0.18);
+    z-index: 50;
+    padding: 4px 0;
+  }
+  .app-shell .nav-more.open .nav-more-list {
+    display: block;
+  }
+  .app-shell .nav-more-list .nav-item {
+    width: 100%;
+    height: 38px;
+    color: var(--kv-text);
+    font-weight: 500;
+  }
+  .app-shell .nav-more-list .nav-item:hover {
+    background: var(--kv-blue-soft);
+    color: var(--kv-blue);
+  }
+  .app-shell .nav-more-list .nav-item.selected {
+    background: var(--kv-blue-soft);
+    color: var(--kv-blue);
+    box-shadow: inset 3px 0 0 var(--kv-blue);
+  }
+}
+/* Mobile / tablet: the drawer keeps one flat list. */
+@media (max-width: 1024px) {
+  .app-shell .nav-more,
+  .app-shell .nav-more-list {
+    display: contents;
+  }
+  .app-shell .nav-more-toggle {
+    display: none;
+  }
+}
+
+@media (min-width: 1025px) {
+  .app-shell .nav-item {
+    padding: 0 11px;
+  }
+  .app-shell .sidebar-bottom .nav-item span {
+    display: none;
+  }
+  .app-shell .sidebar-bottom .nav-item {
+    padding: 0 10px;
+  }
+}
+@media (max-width: 1500px) and (min-width: 1025px) {
+  .app-shell .profile strong {
+    display: none;
+  }
+}
+
+/* ---------- Mobile polish ---------- */
+.app-shell .heading-actions .primary,
+.app-shell .page-heading .primary {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.app-shell .bottom-nav button.active,
+.app-shell .bottom-nav button.active svg {
+  color: var(--kv-blue);
+}
+.app-shell .bottom-nav button.active::before,
+.app-shell .bottom-nav button.active::after {
+  background: var(--kv-blue);
+}
+@media (max-width: 640px) {
+  .app-shell .page-heading {
+    flex-wrap: wrap;
+  }
+}

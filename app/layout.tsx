@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import './kiotviet.css';
 export const metadata: Metadata = {
   title: 'Saigon Golf 3D Club — Play. Connect. Repeat.',
   description:

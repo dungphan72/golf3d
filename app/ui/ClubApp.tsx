@@ -54,6 +54,18 @@ import { OnlineRequests } from './OnlineRequests';
 import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
+// Less frequent screens live under "Quản lý khác" in the desktop top bar.
+const SECONDARY = new Set([
+  'coaching',
+  'fnb',
+  'stock',
+  'support',
+  'roadmap',
+  'settings',
+  'staff',
+  'audit',
+  'account',
+]);
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     [view, setView] = useState('overview'),
@@ -67,7 +79,8 @@ export default function ClubApp() {
     [filter, setFilter] = useState('all'),
     [search, setSearch] = useState(''),
     [now, setNow] = useState(() => Date.now()),
-    [mobile, setMobile] = useState(false);
+    [mobile, setMobile] = useState(false),
+    [moreOpen, setMoreOpen] = useState(false);
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
@@ -216,6 +229,23 @@ export default function ClubApp() {
         <AccountPanel forced onChanged={load} onLogout={signOut} />
       </div>
     );
+  const renderNav = ([key, label, Icon]: (typeof navigation)[number]) => (
+    <button
+      key={key}
+      className={view === key ? 'nav-item selected' : 'nav-item'}
+      onClick={() => {
+        setMoreOpen(false);
+        go(key);
+      }}
+    >
+      <Icon size={19} />
+      <span>{label}</span>
+      {key === 'support' && pending.length > 0 && <b className="count">{pending.length}</b>}
+      {key === 'online' && (data?.onlinePending ?? 0) > 0 && (
+        <b className="count">{data?.onlinePending}</b>
+      )}
+    </button>
+  );
   return (
     <div className="app-shell">
       <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
@@ -238,24 +268,24 @@ export default function ClubApp() {
         </button>
         <div className="nav-label">KHÔNG GIAN LÀM VIỆC</div>
         <nav>
-          {navigation
-            .filter(([key]) => allowed(key))
-            .map(([key, label, Icon]) => (
+          {navigation.filter(([key]) => allowed(key) && !SECONDARY.has(key)).map(renderNav)}
+          {navigation.some(([key]) => allowed(key) && SECONDARY.has(key)) && (
+            <div className={'nav-more' + (moreOpen ? ' open' : '')}>
               <button
-                key={key}
-                className={view === key ? 'nav-item selected' : 'nav-item'}
-                onClick={() => go(key)}
+                type="button"
+                className={'nav-item nav-more-toggle' + (SECONDARY.has(view) ? ' selected' : '')}
+                aria-expanded={moreOpen}
+                onClick={() => setMoreOpen(!moreOpen)}
               >
-                <Icon size={19} />
-                <span>{label}</span>
-                {key === 'support' && pending.length > 0 && (
-                  <b className="count">{pending.length}</b>
-                )}
-                {key === 'online' && (data?.onlinePending ?? 0) > 0 && (
-                  <b className="count">{data?.onlinePending}</b>
-                )}
+                <Menu size={17} />
+                <span>Quản lý khác</span>
+                <ChevronDown size={14} />
               </button>
-            ))}
+              <div className="nav-more-list">
+                {navigation.filter(([key]) => allowed(key) && SECONDARY.has(key)).map(renderNav)}
+              </div>
+            </div>
+          )}
         </nav>
         <div className="sidebar-bottom">
           <div className="club-note">
@@ -269,13 +299,14 @@ export default function ClubApp() {
           </div>
           <button
             className="nav-item"
+            title={mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}
             onClick={() => {
               setMode(mode === 'staff' ? 'customer' : 'staff');
               go('overview');
             }}
           >
             <ArrowUpRight size={18} />
-            {mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}
+            <span>{mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}</span>
           </button>
           <div className="profile">
             <span className="avatar">D</span>

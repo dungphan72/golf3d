@@ -331,6 +331,10 @@ test('huấn luyện: xếp lịch chống trùng, HLV chỉ thấy và đánh d
 
   const view = await ctx.newPage();
   await view.goto('/');
+  await view
+    .locator('aside')
+    .getByRole('button', { name: /Quản lý khác/ })
+    .click();
   await nav(view, /Huấn luyện/).click();
   await expect(view.getByText('Học viên A')).toBeVisible();
   await expect(view.getByText('Ghi chú HLV: Cần tập grip')).toBeVisible();

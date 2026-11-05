@@ -108,8 +108,8 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
               </td>
               <td>
                 {SERVICE[r.service]}
-                {r.service === 'gdr' ? ` ${r.minutes}′` : ''} · {r.vip ? 'VIP' : 'line thường'} ·{' '}
-                {r.people} người
+                {r.service === 'gdr' ? ` ${r.minutes}′` : ''} · {r.vip ? 'VIP' : 'line tiêu chuẩn'}{' '}
+                · {r.people} người
                 <br />
                 {when(r.start)}
                 {r.quote.total != null && <> · tạm tính {money(r.quote.total)}</>}

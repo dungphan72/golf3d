@@ -26,22 +26,22 @@ def customer(c, id='c1', tenant='t1', phone='0912345678'):
     c.execute(CUSTOMER, (id, tenant, 'Khách A', phone, '', 1))
 
 
-def sell(c, id='p1', cust='c1', tenant='t1', price=5000000, grants=GRANT18, expires=100 * DAY, method='transfer', pay=True):
-    c.execute(PKG, (id, tenant, cust, 'type1', 'Combo 18 hố', 'sale', price, grants, '', 10, expires, 'owner'))
+def sell(c, id='p1', cust='c1', tenant='t1', price=5000000, grants=GRANT18, expires=100 * DAY, method='transfer', pay=True, room='any'):
+    c.execute(PKG, (id, tenant, cust, 'type1', 'Combo 18 hố', 'sale', price, grants, '', 10, expires, 'owner', room))
     for g in json.loads(grants):
         c.execute(LEDGER, ('g-' + id + g['kind'], tenant, id, g['kind'], g['qty'], 'grant', None, 'owner', '', 10))
     if pay:
         c.execute(SALE_ENTRY, ('sale-' + id, tenant, 's1', method, price, 'req-' + id, 'Bán gói', 'owner', 10, id))
 
 
-def book(c, id='b1', service='18', phone='0912345678', golf=650000, food=0, status='finished'):
+def book(c, id='b1', service='18', phone='0912345678', golf=650000, food=0, status='finished', room='line-1'):
     c.execute("INSERT INTO bookings(id,tenant,room,customer,phone,service,people,start,end,status,segments,amount,golf_amount,food_total,price,created) VALUES (?,?,?,'Test',?,?,1,0,1,?,'[]',?,?,?,'{}',0)",
-              (id, 't1', 'line-1', phone, service, status, golf + food, golf, food))
+              (id, 't1', room, phone, service, status, golf + food, golf, food))
 
 
-def redeem(c, booking_id='b1', pkg='p1', kind='holes18', covered=650000, created=20):
-    c.execute(REDEEM, ('r-' + booking_id, 't1', booking_id, pkg, kind, covered, 'owner', created))
-    c.execute(LEDGER, ('u-' + booking_id, 't1', pkg, kind, -1, 'use', booking_id, 'owner', '', created))
+def redeem(c, booking_id='b1', pkg='p1', kind='holes18', covered=650000, created=20, units=1):
+    c.execute(REDEEM, ('r-' + booking_id, 't1', booking_id, pkg, kind, covered, 'owner', created, units))
+    c.execute(LEDGER, ('u-' + booking_id, 't1', pkg, kind, -units, 'use', booking_id, 'owner', '', created))
 
 
 def remaining(c, pkg='p1', kind='holes18'):
@@ -121,10 +121,55 @@ class PackageSQL(unittest.TestCase):
         entry(self.c, amount=food)
         self.assertEqual(self.c.execute('SELECT status FROM bookings').fetchone()[0], 'paid')
 
+    GDR_HOURS = json.dumps([{'kind': 'gdr', 'qty': 12}])
+
+    def test_hourly_package_is_charged_in_hours_of_play(self):
+        sell(self.c, grants=self.GDR_HOURS)
+        book(self.c, service='gdr', golf=900000)
+        redeem(self.c, kind='gdr', covered=900000, units=3)  # a three-hour session
+        self.assertEqual(remaining(self.c, kind='gdr'), 9)
+
+    def test_ledger_use_must_match_the_hours_recorded_on_the_redemption(self):
+        sell(self.c, grants=self.GDR_HOURS)
+        book(self.c, service='gdr', golf=900000)
+        self.c.execute(REDEEM, ('r1', 't1', 'b1', 'p1', 'gdr', 900000, 'owner', 20, 3))
+        with self.assertRaises(sqlite3.IntegrityError):  # taking 1 hour for a 3-hour session
+            self.c.execute(LEDGER, ('u1', 't1', 'p1', 'gdr', -1, 'use', 'b1', 'owner', '', 20))
+        with self.assertRaises(sqlite3.IntegrityError):  # taking 5 hours
+            self.c.execute(LEDGER, ('u2', 't1', 'p1', 'gdr', -5, 'use', 'b1', 'owner', '', 20))
+
+    def test_a_package_with_too_few_hours_cannot_pay_a_longer_session(self):
+        sell(self.c, grants=json.dumps([{'kind': 'gdr', 'qty': 2}]))
+        book(self.c, service='gdr', golf=900000)
+        with self.assertRaises(sqlite3.IntegrityError):
+            redeem(self.c, kind='gdr', covered=900000, units=3)
+
+    def test_hole_rounds_still_cost_one_unit(self):
+        sell(self.c)
+        book(self.c)
+        with self.assertRaises(sqlite3.IntegrityError):
+            redeem(self.c, units=2)
+
+    def test_a_standard_package_cannot_pay_for_a_vip_room(self):
+        sell(self.c, grants=self.GDR_HOURS, room='standard')
+        book(self.c, service='gdr', golf=300000, room='vip-1')
+        with self.assertRaises(sqlite3.IntegrityError):
+            redeem(self.c, kind='gdr', covered=300000, units=1)
+        book(self.c, id='b2', service='gdr', golf=300000, room='line-2')
+        redeem(self.c, booking_id='b2', kind='gdr', covered=300000, units=1)
+
+    def test_a_vip_package_pays_for_either_room(self):
+        sell(self.c, grants=self.GDR_HOURS, room='vip')
+        book(self.c, service='gdr', golf=550000, room='vip-1')
+        redeem(self.c, kind='gdr', covered=550000, units=1)
+        book(self.c, id='b2', service='gdr', golf=300000, room='line-2')
+        redeem(self.c, booking_id='b2', kind='gdr', covered=300000, units=1)
+        self.assertEqual(remaining(self.c, kind='gdr'), 10)
+
     def test_redemption_without_ledger_use_cannot_finish_payment(self):
         sell(self.c)
         book(self.c)
-        self.c.execute(REDEEM, ('r1', 't1', 'b1', 'p1', 'holes18', 650000, 'owner', 20))
+        self.c.execute(REDEEM, ('r1', 't1', 'b1', 'p1', 'holes18', 650000, 'owner', 20, 1))
         with self.assertRaises(sqlite3.IntegrityError):
             self.c.execute(PAY_PKG, ('t1', 'b1', 650000))
 
@@ -160,7 +205,7 @@ class PackageSQL(unittest.TestCase):
         book(self.c)
         redeem(self.c)
         with self.assertRaises(sqlite3.IntegrityError):
-            self.c.execute(REDEEM, ('r2', 't1', 'b1', 'p1', 'holes18', 650000, 'owner', 21))
+            self.c.execute(REDEEM, ('r2', 't1', 'b1', 'p1', 'holes18', 650000, 'owner', 21, 1))
 
     def test_ledgers_and_packages_are_immutable_and_adjustments_need_reason(self):
         sell(self.c)
@@ -175,7 +220,7 @@ class PackageSQL(unittest.TestCase):
             self.c.execute(LEDGER, ('a3', 't1', 'p1', 'holes18', -50, 'adjust', None, 'owner', 'Vượt số dư', 31))
 
     def test_grant_must_match_package_snapshot_once(self):
-        self.c.execute(PKG, ('p9', 't1', 'c1', 'type1', 'Combo', 'sale', 100000, GRANT18, '', 10, 99, 'owner'))
+        self.c.execute(PKG, ('p9', 't1', 'c1', 'type1', 'Combo', 'sale', 100000, GRANT18, '', 10, 99, 'owner', 'any'))
         with self.assertRaises(sqlite3.IntegrityError):
             self.c.execute(LEDGER, ('g1', 't1', 'p9', 'holes18', 50, 'grant', None, 'owner', '', 10))
         self.c.execute(LEDGER, ('g2', 't1', 'p9', 'holes18', 11, 'grant', None, 'owner', '', 10))

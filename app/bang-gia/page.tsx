@@ -37,7 +37,7 @@ function RateCard({ row, vip }: { row: PriceRow; vip?: PriceRow | null }) {
   const vipHourly = vip && vip.gdr != null && vip.gdr !== row.gdr;
   if (row.gdr != null) {
     if (vipHourly) {
-      tiles.push({ label: 'Phòng thường', value: row.gdr, unit: 'mỗi giờ' });
+      tiles.push({ label: 'Phòng tiêu chuẩn', value: row.gdr, unit: 'mỗi giờ' });
       tiles.push({ label: 'Phòng VIP', value: vip!.gdr, unit: 'mỗi giờ' });
     } else tiles.push({ label: 'Luyện tập GDR', value: row.gdr, unit: 'mỗi giờ' });
   }
@@ -156,7 +156,7 @@ export default async function PricingPage() {
             <p className="pp-hero-sub">
               {hasHoles
                 ? 'Giá theo giờ và theo lượt, nhóm 4 người, combo trả trước và thẻ VIP. '
-                : 'Giá theo giờ cho phòng thường và phòng VIP, gói trả trước và thẻ hội viên. '}
+                : 'Giá theo giờ cho phòng tiêu chuẩn và phòng VIP, gói trả trước và thẻ hội viên. '}
               Bảng này luôn khớp với giá đang áp dụng tại quầy.
             </p>
             <ul className="pp-chips">

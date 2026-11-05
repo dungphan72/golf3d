@@ -53,7 +53,7 @@ export async function publicPricing(): Promise<PublicPricing> {
       const rows = (
         await db()
           .prepare(
-            'SELECT id,name,price,grants,valid_days,perks,section FROM package_types WHERE tenant=? AND active=1 ORDER BY price',
+            'SELECT id,name,price,grants,valid_days,perks,section,room FROM package_types WHERE tenant=? AND active=1 ORDER BY price',
           )
           .bind(tenant)
           .all<{
@@ -64,6 +64,7 @@ export async function publicPricing(): Promise<PublicPricing> {
             valid_days: number;
             perks: string;
             section: string;
+            room: string;
           }>()
       ).results;
       const items: PackageItem[] = rows.length
@@ -75,6 +76,7 @@ export async function publicPricing(): Promise<PublicPricing> {
             validDays: r.valid_days,
             perks: r.perks,
             section: r.section,
+            room: r.room,
           }))
         : fallbackItems();
       return {

@@ -553,7 +553,7 @@ export default function ClubApp() {
                         <div className="tabs">
                           {[
                             ['all', 'Tất cả · 12'],
-                            ['standard', 'Line thường · 10'],
+                            ['standard', 'Line tiêu chuẩn · 10'],
                             ['vip', 'Phòng VIP · 2'],
                           ].map(([v, t]) => (
                             <button

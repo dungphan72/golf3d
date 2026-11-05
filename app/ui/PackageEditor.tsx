@@ -10,6 +10,7 @@ export type EditablePackage = {
   valid_days: number;
   perks: string;
   section?: string;
+  room?: string;
   active: number;
 };
 
@@ -46,6 +47,7 @@ export function PackageEditor({
     validDays: number;
     perks: string;
     section: string;
+    room: 'any' | 'standard' | 'vip';
     active: boolean;
   }) => void;
   onCancel: () => void;
@@ -55,6 +57,9 @@ export function PackageEditor({
   const [days, setDays] = useState(initial ? String(initial.valid_days) : '90');
   const [perks, setPerks] = useState(initial?.perks ?? '');
   const [section, setSection] = useState(initial?.section ?? '');
+  const [room, setRoom] = useState<'any' | 'standard' | 'vip'>(
+    (initial?.room as 'any' | 'standard' | 'vip') ?? 'any',
+  );
   const [active, setActive] = useState(initial ? !!initial.active : true);
   const [grants, setGrants] = useState<GrantState>(() => startGrants(initial?.grants));
   const [error, setError] = useState('');
@@ -86,6 +91,7 @@ export function PackageEditor({
       validDays,
       perks: perks.trim(),
       section: section.trim(),
+      room,
       active,
     });
   }
@@ -124,6 +130,14 @@ export function PackageEditor({
             placeholder="Ví dụ: Thẻ tháng"
             onChange={(e) => setSection(e.target.value)}
           />
+        </label>
+        <label>
+          Áp dụng cho phòng
+          <select value={room} onChange={(e) => setRoom(e.target.value as typeof room)}>
+            <option value="any">Tất cả phòng</option>
+            <option value="standard">Chỉ phòng tiêu chuẩn</option>
+            <option value="vip">Phòng VIP (dùng được cả phòng tiêu chuẩn)</option>
+          </select>
         </label>
         <label>
           Quyền lợi thêm (cách nhau bằng dấu “·”)

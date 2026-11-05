@@ -126,6 +126,8 @@ export type PackageItem = {
   perks: string;
   /** Heading chosen in the admin; empty = grouped by what the package gives. */
   section?: string;
+  /** any | standard | vip: which rooms the package can pay for. */
+  room?: string;
 };
 export type PackageGroup = { id: string; title: string; vip: boolean; items: PackageItem[] };
 
@@ -206,9 +208,16 @@ export const validityText = (days: number) =>
       ? `Hiệu lực ${days / 30} tháng`
       : `Hiệu lực ${days} ngày`;
 /** Bullet list for a package card: what it contains, how long it lasts, then the perks. */
+export const roomBullet = (room?: string) =>
+  room === 'standard'
+    ? 'Áp dụng phòng tiêu chuẩn'
+    : room === 'vip'
+      ? 'Áp dụng cả phòng VIP và phòng tiêu chuẩn'
+      : null;
 export const packageBullets = (p: PackageItem) => [
   ...p.grants.map(grantLine),
   validityText(p.validDays),
+  ...(roomBullet(p.room) ? [roomBullet(p.room)!] : []),
   ...p.perks
     .split('·')
     .map((s) => s.trim())

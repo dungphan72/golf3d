@@ -255,6 +255,8 @@ export const packageTypes = sqliteTable(
     perks: text('perks').notNull().default(''),
     // Heading the package is listed under on the price page; empty = grouped automatically.
     section: text('section').notNull().default(''),
+    // Which rooms the package pays for: any | standard | vip (a standard package cannot pay for VIP).
+    room: text('room').notNull().default('any'),
     active: integer('active').notNull().default(1),
     created: integer('created').notNull(),
   },
@@ -274,6 +276,7 @@ export const customerPackages = sqliteTable(
     pricePaid: integer('price_paid').notNull(),
     grants: text('grants').notNull(),
     perks: text('perks').notNull().default(''),
+    room: text('room').notNull().default('any'),
     purchased: integer('purchased').notNull(),
     expires: integer('expires').notNull(),
     actor: text('actor').notNull(),
@@ -311,6 +314,8 @@ export const packageRedemptions = sqliteTable(
       .references(() => customerPackages.id),
     kind: text('kind').notNull(),
     covered: integer('covered').notNull(),
+    // Units taken from the package: hours of play for hourly packages, 1 for a hole round.
+    units: integer('units').notNull().default(1),
     actor: text('actor').notNull(),
     created: integer('created').notNull(),
   },

@@ -4,7 +4,7 @@ Ngày ghi nhận: 02/11/2026. Chủ sản phẩm: Phan Tiến Dũng.
 
 ## Sản phẩm và kiến trúc
 - Golf3D, tên miền dự kiến golf3d.net. Cơ sở đầu: 250 Lương Đình Của, Phường Bình Trưng, TP.HCM.
-- Một dãy 10 line thường + 2 VIP; thiết bị Foresight Sports GC3. Line tay trái theo website tham khảo là Line 10, cần kiểm tra thực địa trước mở bán.
+- Một dãy 10 line tiêu chuẩn + 2 VIP; thiết bị Foresight Sports GC3. Line tay trái theo website tham khảo là Line 10, cần kiểm tra thực địa trước mở bán.
 - Thương mại SaaS sau khi vận hành tốt. Mỗi chủ cơ sở là một tenant, có nhiều chi nhánh; tự cấu hình logo, thương hiệu, màu, giá, phòng, nhân viên và chính sách.
 - Một danh tính golfer toàn nền tảng; hồ sơ kinh doanh, lịch sử, ví, điểm, gói và hội viên tách theo tenant. Chủ không đọc được dữ liệu khách ở tenant khác.
 - Backend là nguồn sự thật: trạng thái, đồng hồ, giá, tiền, số dư và phân quyền không tin giá trị từ client.

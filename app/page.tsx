@@ -64,7 +64,7 @@ const faqFor = (group: string, tax: string, goldText: string, holes: boolean) =>
       }
     : {
         q: 'Giá theo giờ tính thế nào?',
-        a: 'Tính theo giờ cho mỗi phòng. Phòng thường và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng bên trên.',
+        a: 'Tính theo giờ cho mỗi phòng. Phòng tiêu chuẩn và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng bên trên.',
       },
   {
     q: 'Giá niêm yết đã gồm thuế chưa?',
@@ -404,7 +404,7 @@ export default async function LandingPage() {
                     <strong>
                       <Count v={gold.gdr} />
                     </strong>
-                    <span>phòng thường / giờ</span>
+                    <span>phòng tiêu chuẩn / giờ</span>
                   </div>
                   {vipRows.get(gold.key)?.gdr != null && (
                     <div>
@@ -444,7 +444,7 @@ export default async function LandingPage() {
                     </>
                   ) : (
                     <>
-                      <th>{pricing.vip ? 'Phòng thường / giờ' : 'Giá / giờ'}</th>
+                      <th>{pricing.vip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
                       {pricing.vip && <th>Phòng VIP / giờ</th>}
                     </>
                   )}

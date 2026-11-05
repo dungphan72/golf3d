@@ -17,8 +17,18 @@ function PackageRedeem({
   onChanged: () => Promise<void>;
 }) {
   type Usable = {
-    packages: { id: string; name: string; remaining: number; expires: number; customer: string }[];
+    packages: {
+      id: string;
+      name: string;
+      remaining: number;
+      expires: number;
+      customer: string;
+      enough: boolean;
+    }[];
     covered: number;
+    kind?: string;
+    units?: number;
+    usedUnits?: number;
   };
   const [data, setData] = useState<Usable | null>(null);
   const [busy, setBusy] = useState(false);
@@ -55,15 +65,26 @@ function PackageRedeem({
     <div className="info-strip">
       {data.covered > 0 ? (
         <p>
-          Đã trả phần golf bằng gói ({fmt(data.covered)}). Chỉ thu phần còn lại:{' '}
-          <strong>{fmt((booking.amount ?? 0) - data.covered)}</strong>
+          Đã trả phần golf bằng gói ({fmt(data.covered)}
+          {data.kind === 'gdr' && data.usedUnits ? `, trừ ${data.usedUnits} giờ` : ''}). Chỉ thu
+          phần còn lại: <strong>{fmt((booking.amount ?? 0) - data.covered)}</strong>
         </p>
       ) : (
         <>
-          <p>Khách có gói dùng được cho phiên này:</p>
+          <p>
+            Khách có gói dùng được cho phiên này
+            {data.kind === 'gdr' && data.units ? ` (cần trừ ${data.units} giờ)` : ''}:
+          </p>
           {data.packages.map((p) => (
-            <button key={p.id} className="secondary" disabled={busy} onClick={() => redeem(p.id)}>
-              Trả bằng gói: {p.name} (còn {p.remaining >= 99999 ? 'không giới hạn' : p.remaining})
+            <button
+              key={p.id}
+              className="secondary"
+              disabled={busy || !p.enough}
+              title={p.enough ? undefined : 'Gói không còn đủ giờ cho phiên này'}
+              onClick={() => redeem(p.id)}
+            >
+              Trả bằng gói: {p.name} (còn {p.remaining >= 99999 ? 'không giới hạn' : p.remaining}
+              {data.kind === 'gdr' ? ' giờ' : ''}){p.enough ? '' : ' · không đủ'}
             </button>
           ))}
         </>

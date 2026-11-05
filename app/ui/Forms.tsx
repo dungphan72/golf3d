@@ -10,7 +10,7 @@ import { rooms, ready, money, type Config } from '../../lib/club';
 const onlineMissing = (c: Config) =>
   [
     !c.open || !c.close ? 'giờ mở/đóng cửa' : '',
-    !c.capacity ? 'số line thường' : '',
+    !c.capacity ? 'số line tiêu chuẩn' : '',
     !c.vipCapacity ? 'số phòng VIP' : '',
     c.vat == null ? 'VAT' : '',
     c.fee == null ? 'phí dịch vụ' : '',
@@ -318,7 +318,7 @@ export function SettingsForm({
               onChange={(e) => setC({ ...c, close: e.target.value })}
             />
           </label>
-          {numberField('capacity', 'Sức chứa line thường', true)}
+          {numberField('capacity', 'Sức chứa line tiêu chuẩn', true)}
           {numberField('vipCapacity', 'Sức chứa VIP', true)}
         </div>
       </section>
@@ -458,7 +458,7 @@ export function SettingsForm({
         </div>
         <div className="form-grid">
           {numberField('buffer', 'Dự phòng lượt 9/18 hố (phút)')}
-          {numberField('clean', 'Dọn line thường (phút)')}
+          {numberField('clean', 'Dọn line tiêu chuẩn (phút)')}
           {numberField('vipClean', 'Dọn VIP (phút)')}
           {numberField('days', 'Khách online đặt trước (ngày)')}
           {numberField('grace', 'Giữ chỗ khách muộn (phút)')}

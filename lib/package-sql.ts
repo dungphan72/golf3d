@@ -3,12 +3,12 @@
 // every multi-step operation is sent as one D1 batch (one transaction).
 export const CREATE_CUSTOMER_SQL = `INSERT INTO customers(id,tenant,name,phone,note,created) VALUES (?,?,?,?,?,?)`;
 export const UPDATE_CUSTOMER_SQL = `UPDATE customers SET name=?,note=? WHERE tenant=? AND id=?`;
-export const CREATE_PACKAGE_TYPE_SQL = `INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created,section) VALUES (?,?,?,?,?,?,?,?,?,?)`;
-export const UPDATE_PACKAGE_TYPE_SQL = `UPDATE package_types SET name=?,price=?,grants=?,valid_days=?,perks=?,active=?,section=? WHERE tenant=? AND id=?`;
-export const INSERT_PACKAGE_SQL = `INSERT INTO customer_packages(id,tenant,customer_id,type_id,name,source,price_paid,grants,perks,purchased,expires,actor) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`;
+export const CREATE_PACKAGE_TYPE_SQL = `INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created,section,room) VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
+export const UPDATE_PACKAGE_TYPE_SQL = `UPDATE package_types SET name=?,price=?,grants=?,valid_days=?,perks=?,active=?,section=?,room=? WHERE tenant=? AND id=?`;
+export const INSERT_PACKAGE_SQL = `INSERT INTO customer_packages(id,tenant,customer_id,type_id,name,source,price_paid,grants,perks,purchased,expires,actor,room) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_LEDGER_SQL = `INSERT INTO package_ledger(id,tenant,package_id,kind,delta,reason,booking_id,actor,note,created) VALUES (?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_SALE_ENTRY_SQL = `INSERT INTO finance_entries(id,tenant,shift_id,kind,method,amount,booking_id,request_id,note,actor,created,package_id) VALUES (?,?,?,'payment',?,?,NULL,?,?,?,?,?)`;
-export const INSERT_REDEMPTION_SQL = `INSERT INTO package_redemptions(id,tenant,booking_id,package_id,kind,covered,actor,created) VALUES (?,?,?,?,?,?,?,?)`;
+export const INSERT_REDEMPTION_SQL = `INSERT INTO package_redemptions(id,tenant,booking_id,package_id,kind,covered,actor,created,units) VALUES (?,?,?,?,?,?,?,?,?)`;
 export const PAY_BY_PACKAGE_SQL = `UPDATE bookings SET status='paid',payment='package' WHERE tenant=? AND id=? AND status='finished' AND amount=?`;
 export const INSERT_LOYALTY_SQL = `INSERT INTO loyalty_ledger(id,tenant,customer_id,delta,reason,booking_id,actor,created) VALUES (?,?,?,?,?,?,?,?)`;
 export const CUSTOMER_LIST_SQL = `SELECT c.id,c.name,c.phone,c.note,c.created,COALESCE(p.points,0) AS points FROM customers c LEFT JOIN customer_points p ON p.tenant=c.tenant AND p.customer_id=c.id WHERE c.tenant=? AND (?='' OR c.phone LIKE ? OR c.name LIKE ?) ORDER BY c.created DESC LIMIT 100`;

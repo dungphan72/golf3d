@@ -10,6 +10,7 @@ import {
   type MemberInput,
 } from '../member';
 import { OFFICIAL_PACKAGES } from '../official-packages';
+import { roomAllows, unitsForSession, PACKAGE_ROOM_LABELS, type PackageRoom } from '../package-use';
 import { scopedShiftId } from '../finance';
 import {
   CREATE_CUSTOMER_SQL,
@@ -85,7 +86,7 @@ export async function loadMembers(tenant: string, query: string, customerId: str
     const types = (
       await db()
         .prepare(
-          'SELECT id,name,price,grants,valid_days,perks,section,active FROM package_types WHERE tenant=? ORDER BY price LIMIT 200',
+          'SELECT id,name,price,grants,valid_days,perks,section,room,active FROM package_types WHERE tenant=? ORDER BY price LIMIT 200',
         )
         .bind(tenant)
         .all()
@@ -103,31 +104,45 @@ export async function loadMembers(tenant: string, query: string, customerId: str
   }
 }
 
-/** Packages a customer can still use for a given booking (matching kind, unexpired, non-empty). */
+/** Packages a customer can use for a given booking: matching kind, unexpired, allowed in the room, with the units the session needs. */
 export async function usablePackages(tenant: string, bookingId: string) {
   try {
     const b = await db()
-      .prepare('SELECT service,phone FROM bookings WHERE tenant=? AND id=?')
+      .prepare('SELECT service,phone,room,segments FROM bookings WHERE tenant=? AND id=?')
       .bind(tenant, bookingId)
-      .first<{ service: string; phone: string }>();
+      .first<{ service: string; phone: string; room: string; segments: string }>();
     const kind = b ? kindForService(b.service) : null;
     if (!b || !kind) return reply({ packages: [] });
+    const units = unitsForSession(b.service, JSON.parse(b.segments));
     const rows = (
       await db()
         .prepare(
-          `SELECT cp.id,cp.name,cp.expires,bal.remaining,c.name AS customer FROM customer_packages cp
+          `SELECT cp.id,cp.name,cp.expires,cp.room,bal.remaining,c.name AS customer FROM customer_packages cp
            JOIN customers c ON c.id=cp.customer_id AND c.tenant=cp.tenant
            JOIN package_balances bal ON bal.package_id=cp.id AND bal.tenant=cp.tenant AND bal.kind=?
            WHERE cp.tenant=? AND c.phone=? AND cp.expires>=? AND bal.remaining>0 ORDER BY cp.expires LIMIT 20`,
         )
         .bind(kind, tenant, normalizePhone(b.phone), Date.now())
-        .all()
-    ).results;
+        .all<{
+          id: string;
+          name: string;
+          expires: number;
+          room: string;
+          remaining: number;
+          customer: string;
+        }>()
+    ).results.filter((p) => roomAllows(p.room, b.room));
     const redemption = await db()
-      .prepare('SELECT covered FROM package_redemptions WHERE tenant=? AND booking_id=?')
+      .prepare('SELECT covered,units FROM package_redemptions WHERE tenant=? AND booking_id=?')
       .bind(tenant, bookingId)
-      .first<{ covered: number }>();
-    return reply({ packages: rows, kind, covered: redemption?.covered ?? 0 });
+      .first<{ covered: number; units: number }>();
+    return reply({
+      packages: rows.map((p) => ({ ...p, enough: p.remaining >= units })),
+      kind,
+      units,
+      covered: redemption?.covered ?? 0,
+      usedUnits: redemption?.units ?? 0,
+    });
   } catch (e) {
     console.error('usable packages', e);
     return error('Chưa tải được gói của khách', 503);
@@ -176,6 +191,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
               1,
               now,
               '',
+              'any',
             ),
         ),
       );
@@ -194,6 +210,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             input.perks,
             input.active ? 1 : 0,
             input.section,
+            input.room,
             tenant,
             input.id,
           )
@@ -219,6 +236,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           input.active ? 1 : 0,
           now,
           input.section,
+          input.room,
         )
         .run();
       return reply({ ok: true });
@@ -243,6 +261,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           grants: string;
           valid_days: number;
           perks: string;
+          room: string;
         }>();
       if (!type) return error('Gói không tồn tại hoặc đã ngừng bán', 404);
       const shift = await d
@@ -267,6 +286,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             now,
             now + type.valid_days * DAY,
             actor,
+            type.room,
           ),
         ...grants.map((g) =>
           d
@@ -304,13 +324,15 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
     if (input.action === 'redeem') {
       const b = await d
         .prepare(
-          'SELECT id,status,service,amount,golf_amount,payment FROM bookings WHERE tenant=? AND id=?',
+          'SELECT id,status,service,room,segments,amount,golf_amount,payment FROM bookings WHERE tenant=? AND id=?',
         )
         .bind(tenant, input.bookingId)
         .first<{
           id: string;
           status: string;
           service: string;
+          room: string;
+          segments: string;
           amount: number | null;
           golf_amount: number | null;
         }>();
@@ -332,6 +354,29 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         b.amount == null
       )
         return error('Chỉ trả bằng gói cho phiên đã kết thúc, có tiền golf', 409);
+      const pkg = await d
+        .prepare('SELECT room FROM customer_packages WHERE tenant=? AND id=?')
+        .bind(tenant, input.packageId)
+        .first<{ room: string }>();
+      if (!pkg) return error('Không tìm thấy gói của khách', 404);
+      if (!roomAllows(pkg.room, b.room))
+        return error(
+          `Gói ${PACKAGE_ROOM_LABELS[pkg.room as PackageRoom]?.toLowerCase() ?? pkg.room} không dùng được cho phòng VIP. Hãy thu tiền hoặc dùng gói VIP.`,
+          409,
+        );
+      // Hourly packages are charged in hours of play; a hole round always costs one unit.
+      const units = unitsForSession(b.service, JSON.parse(b.segments));
+      const left = await d
+        .prepare(
+          'SELECT remaining FROM package_balances WHERE tenant=? AND package_id=? AND kind=?',
+        )
+        .bind(tenant, input.packageId, kind)
+        .first<{ remaining: number }>();
+      if ((left?.remaining ?? 0) < units)
+        return error(
+          `Gói chỉ còn ${left?.remaining ?? 0} ${kind === 'gdr' ? 'giờ' : 'lượt'}, phiên này cần ${units}. Hãy thu tiền hoặc chọn gói khác.`,
+          409,
+        );
       const remainingDue = b.amount - b.golf_amount;
       const statements = [
         d
@@ -345,6 +390,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             b.golf_amount,
             actor,
             now,
+            units,
           ),
         d
           .prepare(INSERT_PACKAGE_LEDGER_SQL)
@@ -353,7 +399,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             tenant,
             input.packageId,
             kind,
-            -1,
+            -units,
             'use',
             b.id,
             actor,
@@ -364,7 +410,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
       if (remainingDue === 0)
         statements.push(d.prepare(PAY_BY_PACKAGE_SQL).bind(tenant, b.id, b.amount));
       await d.batch(statements);
-      return reply({ ok: true, remainingDue, paid: remainingDue === 0 });
+      return reply({ ok: true, remainingDue, paid: remainingDue === 0, units });
     }
     if (input.action === 'adjust') {
       const id = await scopedShiftId(tenant, 'padj-' + input.requestId);
@@ -427,6 +473,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           now,
           now + FREE_ROUND_VALID_DAYS * DAY,
           actor,
+          'any',
         ),
       d
         .prepare(INSERT_PACKAGE_LEDGER_SQL)

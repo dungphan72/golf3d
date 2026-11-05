@@ -30,7 +30,8 @@ export function OffersField({
       />
       <small>
         Dùng cho ưu đãi mà bảng giá theo khung giờ không diễn tả được (ví dụ riêng một ngày trong
-        tuần, theo độ tuổi). Ví dụ: Ngày của phụ nữ | Phòng thường 210.000đ/giờ | Thứ Ba hằng tuần.
+        tuần, theo độ tuổi). Ví dụ: Ngày của phụ nữ | Phòng tiêu chuẩn 210.000đ/giờ | Thứ Ba hằng
+        tuần.
       </small>
     </label>
   );

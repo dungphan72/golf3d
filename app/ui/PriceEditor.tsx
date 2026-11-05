@@ -54,7 +54,7 @@ export function PriceEditor({
           Loại phòng
           <select value={room} onChange={(e) => setRoom(e.target.value)}>
             <option value="all">Tất cả</option>
-            <option value="standard">Line thường</option>
+            <option value="standard">Line tiêu chuẩn</option>
             <option value="vip">VIP</option>
           </select>
         </label>
@@ -144,7 +144,7 @@ export function PriceEditor({
                   value={r.room}
                   onChange={(e) => update(r.id, { room: e.target.value as PriceRule['room'] })}
                 >
-                  <option value="standard">Line thường</option>
+                  <option value="standard">Line tiêu chuẩn</option>
                   <option value="vip">VIP</option>
                 </select>
               </label>
@@ -265,7 +265,7 @@ export function TariffPreview({ config }: { config: Config }) {
             <article key={r.id}>
               <div>
                 <strong>
-                  {r.room === 'vip' ? 'Phòng VIP' : 'Line thường'}
+                  {r.room === 'vip' ? 'Phòng VIP' : 'Line tiêu chuẩn'}
                   {r.people ? ` · ${r.people} người` : ''}
                 </strong>
                 <span>

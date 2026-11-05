@@ -14,6 +14,7 @@ type PackageType = {
   valid_days: number;
   perks: string;
   section?: string;
+  room?: string;
   active: number;
 };
 type OwnedPackage = {
@@ -342,6 +343,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
             <th>Gói</th>
             <th>Giá</th>
             <th>Quyền lợi</th>
+            <th>Phòng</th>
             <th>Hiệu lực</th>
             <th>Trạng thái</th>
             {canAdjust && <th></th>}
@@ -356,6 +358,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                 {grantsText(t.grants)}
                 {t.perks ? ` · ${t.perks}` : ''}
               </td>
+              <td>{t.room === 'standard' ? 'Tiêu chuẩn' : t.room === 'vip' ? 'VIP' : 'Tất cả'}</td>
               <td>{t.valid_days} ngày</td>
               <td>{t.active ? 'Đang bán' : 'Ngừng bán'}</td>
               {canAdjust && (
@@ -378,6 +381,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                             validDays: t.valid_days,
                             perks: t.perks,
                             section: t.section ?? '',
+                            room: t.room ?? 'any',
                             active: !t.active,
                           }),
                         'Đã cập nhật gói',

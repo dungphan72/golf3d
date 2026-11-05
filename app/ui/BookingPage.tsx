@@ -238,7 +238,7 @@ export default function BookingPage({
               <strong>{REQUEST_STATUS_LABELS[status.status] ?? status.status}</strong>
             </p>
             <p>
-              {SERVICE[status.service]} · {status.vip ? 'phòng VIP' : 'line thường'} ·{' '}
+              {SERVICE[status.service]} · {status.vip ? 'phòng VIP' : 'line tiêu chuẩn'} ·{' '}
               {status.people} người
               <br />
               {when(status.start)}

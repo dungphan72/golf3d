@@ -67,3 +67,11 @@ pnpm exec wrangler d1 execute golf3d --remote --file owner.sql
 - Sao lưu tự động hằng ngày (D1 có Time Travel 30 ngày; vẫn nên tải `/api/export` hằng tuần).
 - CAPTCHA (Turnstile) cho `/book` khi mở rộng; thông báo Zalo/SMS.
 - Giai đoạn SaaS: chuyển sang Postgres/Supabase (cần dịch lại trigger sang plpgsql; dùng cùng bộ test để đối chiếu).
+
+## Chống bot cho trang đặt lịch (Cloudflare Turnstile, tùy chọn)
+
+1. Cloudflare Dashboard → Turnstile → Add widget (hostname: domain của app). Lấy **Site key** và **Secret key**.
+2. Site key: thêm biến `TURNSTILE_SITE_KEY` cho Worker `golf3d` (Settings → Variables). Secret key:
+   `pnpm exec wrangler secret put TURNSTILE_SECRET`.
+3. Khi có cả hai, form `/book/<mã>` hiện ô xác minh và máy chủ kiểm tra lại với Cloudflare. Thiếu một trong hai thì tắt.
+   Lưu ý: `scripts/deploy-cloudflare.mjs` có thể ghi đè biến; đặt biến trong Dashboard hoặc thêm vào cấu hình deploy.

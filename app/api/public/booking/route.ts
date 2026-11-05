@@ -1,5 +1,6 @@
 import { publicInfo, submitRequest } from '../../../../lib/server/online-service';
 import { sendResult, httpError } from '../../../../lib/server/http';
+import { turnstilePasses } from '../../../../lib/server/turnstile';
 import { SLUG_PATTERN } from '../../../../lib/online';
 export const dynamic = 'force-dynamic';
 
@@ -29,8 +30,11 @@ export async function POST(req: Request) {
   } catch {
     return httpError('Dữ liệu không hợp lệ');
   }
-  const { slug, ...rest } = body;
+  const { slug, captcha, ...rest } = body;
   if (typeof slug !== 'string' || !SLUG_PATTERN.test(slug))
     return httpError('Không tìm thấy cơ sở', 404);
-  return sendResult(await submitRequest(slug, rest, clientIp(req)));
+  const ip = clientIp(req);
+  if (!(await turnstilePasses(captcha, ip)))
+    return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
+  return sendResult(await submitRequest(slug, rest, ip));
 }

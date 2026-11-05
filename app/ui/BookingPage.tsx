@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
 import { BRAND } from '../../lib/brand';
@@ -13,6 +13,7 @@ type Info = {
   minLeadMinutes: number;
   vip: boolean;
   maxPeople: number;
+  captchaSiteKey?: string | null;
 };
 type Status = {
   status: string;
@@ -40,6 +41,62 @@ const when = (ms: number) =>
   });
 // A datetime-local value is interpreted as Vietnam time (UTC+7) regardless of the browser zone.
 const toMs = (local: string) => Date.parse(local + ':00+07:00');
+type TurnstileApi = {
+  render: (
+    el: HTMLElement,
+    options: { sitekey: string; callback: (t: string) => void; 'expired-callback': () => void },
+  ) => string;
+  reset: (id?: string) => void;
+};
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
+/** Cloudflare Turnstile widget; only rendered when the club has configured keys. */
+function TurnstileBox({
+  siteKey,
+  onToken,
+  resetKey,
+}: {
+  siteKey: string;
+  onToken: (token: string) => void;
+  resetKey: number;
+}) {
+  const box = useRef<HTMLDivElement>(null);
+  const widget = useRef<string>('');
+  useEffect(() => {
+    let live = true;
+    function mount() {
+      if (!live || !box.current || !window.turnstile || widget.current) return;
+      widget.current = window.turnstile.render(box.current, {
+        sitekey: siteKey,
+        callback: onToken,
+        'expired-callback': () => onToken(''),
+      });
+    }
+    if (window.turnstile) mount();
+    else {
+      const id = 'turnstile-script';
+      let script = document.getElementById(id) as HTMLScriptElement | null;
+      if (!script) {
+        script = document.createElement('script');
+        script.id = id;
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+        script.async = true;
+        document.head.appendChild(script);
+      }
+      script.addEventListener('load', mount);
+    }
+    return () => {
+      live = false;
+    };
+  }, [siteKey, onToken]);
+  useEffect(() => {
+    if (resetKey && widget.current) window.turnstile?.reset(widget.current);
+  }, [resetKey]);
+  return <div ref={box} />;
+}
 const storageKey = 'golf3d-request-code';
 
 export default function BookingPage({ slug }: { slug: string }) {
@@ -58,6 +115,8 @@ export default function BookingPage({ slug }: { slug: string }) {
     note: '',
     website: '',
   });
+  const [captcha, setCaptcha] = useState('');
+  const [captchaReset, setCaptchaReset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -106,6 +165,7 @@ export default function BookingPage({ slug }: { slug: string }) {
           minutes: form.service === 'gdr' ? form.minutes : 0,
           note: form.note,
           website: form.website,
+          captcha,
         }),
       });
       const v = (await r.json()) as { error?: string; code?: string };
@@ -114,6 +174,8 @@ export default function BookingPage({ slug }: { slug: string }) {
       setCode(v.code);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setCaptchaReset((n) => n + 1);
+      setCaptcha('');
     } finally {
       setBusy(false);
     }
@@ -301,6 +363,13 @@ export default function BookingPage({ slug }: { slug: string }) {
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
             />
+            {info.captchaSiteKey && (
+              <TurnstileBox
+                siteKey={info.captchaSiteKey}
+                onToken={setCaptcha}
+                resetKey={captchaReset}
+              />
+            )}
             {error && (
               <div className="error-box" role="alert">
                 {error}
@@ -310,7 +379,7 @@ export default function BookingPage({ slug }: { slug: string }) {
               Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
               {info.minLeadMinutes} phút, tối đa {info.days} ngày.
             </p>
-            <button className="primary" disabled={busy}>
+            <button className="primary" disabled={busy || (!!info.captchaSiteKey && !captcha)}>
               {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}
             </button>
           </form>

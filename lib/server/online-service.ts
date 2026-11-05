@@ -1,4 +1,5 @@
 import { db, loadConfig, type ServiceResult } from './common';
+import { turnstileSiteKey } from './turnstile';
 import { runClubAction } from './club-service';
 import { planBooking } from '../booking';
 import { ready, rooms, type Config } from '../club';
@@ -58,6 +59,7 @@ export async function publicInfo(slug: string): Promise<R> {
       minLeadMinutes: MIN_LEAD_MINUTES,
       vip: (c.vipCapacity ?? 0) > 0,
       maxPeople: Math.min(4, c.capacity ?? 4),
+      captchaSiteKey: turnstileSiteKey(),
     });
   } catch (e) {
     console.error('public info', e);

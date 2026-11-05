@@ -9,6 +9,7 @@ import {
   type Grant,
   type MemberInput,
 } from '../member';
+import { verifyAccount, resetAccountPassword } from './member-account-service';
 import { OFFICIAL_PACKAGES } from '../official-packages';
 import { roomAllows, unitsForSession, PACKAGE_ROOM_LABELS, type PackageRoom } from '../package-use';
 import { scopedShiftId } from '../finance';
@@ -163,6 +164,8 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .run();
       return reply({ ok: true, id });
     }
+    if (input.action === 'account-verify') return verifyAccount(tenant, input.customerId);
+    if (input.action === 'account-reset') return resetAccountPassword(tenant, input.customerId);
     if (input.action === 'customer-update') {
       const r = await d
         .prepare(UPDATE_CUSTOMER_SQL)

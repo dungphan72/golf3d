@@ -5,7 +5,14 @@ import { operationKey } from '../../lib/finance';
 import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/member';
 import { PackageEditor } from './PackageEditor';
 
-type Customer = { id: string; name: string; phone: string; note: string; points: number };
+type Customer = {
+  id: string;
+  name: string;
+  phone: string;
+  note: string;
+  points: number;
+  account: number | null; // null = no web account, 0 = waiting for staff, 1 = verified
+};
 type PackageType = {
   id: string;
   name: string;
@@ -125,6 +132,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                   onClick={() => setSelected(c.id)}
                 >
                   <strong>{c.name}</strong> · {c.phone} · {c.points} điểm
+                  {c.account === 0 && <b> · chờ xác nhận tài khoản</b>}
                 </button>
               </li>
             ))}
@@ -177,6 +185,53 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
               <p>
                 Điểm tích lũy: <strong>{current.points}</strong> (10 điểm = 1 lượt chơi miễn phí)
               </p>
+              {current.account != null && (
+                <p>
+                  Tài khoản web:{' '}
+                  <strong>{current.account ? 'đã xác nhận' : 'chờ xác nhận số điện thoại'}</strong>
+                  {!current.account && canSell && (
+                    <button
+                      className="primary"
+                      disabled={busy}
+                      onClick={() => {
+                        if (
+                          !window.confirm(
+                            'Chỉ xác nhận khi người đăng ký đúng là chủ số điện thoại này (đã gặp hoặc gọi lại). Xác nhận?',
+                          )
+                        )
+                          return;
+                        act(
+                          () => post({ action: 'account-verify', customerId: current.id }),
+                          'Đã xác nhận tài khoản web',
+                        );
+                      }}
+                    >
+                      Xác nhận
+                    </button>
+                  )}
+                  {canAdjust && (
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() =>
+                        act(async () => {
+                          const r = (await post({
+                            action: 'account-reset',
+                            customerId: current.id,
+                          })) as { password?: string; replayed?: boolean };
+                          window.alert(
+                            `Mật khẩu tạm: ${r.password}
+Đưa cho hội viên; họ đổi lại trong trang tài khoản.`,
+                          );
+                          return r;
+                        }, 'Đã đặt lại mật khẩu')
+                      }
+                    >
+                      Đặt lại mật khẩu
+                    </button>
+                  )}
+                </p>
+              )}
               {canSell && current.points >= 10 && (
                 <p>
                   Đổi 10 điểm:{' '}

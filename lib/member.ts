@@ -69,6 +69,8 @@ export const memberInput = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('types-seed') }).strict(),
+  z.object({ action: z.literal('account-verify'), customerId: id }).strict(),
+  z.object({ action: z.literal('account-reset'), customerId: id }).strict(),
   z
     .object({
       action: z.literal('sell'),

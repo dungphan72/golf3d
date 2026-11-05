@@ -30,6 +30,8 @@ const NEEDED: Record<string, Permission> = {
   redeem: 'finance.operate',
   'type-save': 'member.adjust',
   'types-seed': 'member.adjust',
+  'account-verify': 'member.sell',
+  'account-reset': 'member.adjust',
   adjust: 'member.adjust',
 };
 

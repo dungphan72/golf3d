@@ -455,3 +455,39 @@ export const bankTransactions = sqliteTable(
       .where(sql`${t.bookingId} IS NOT NULL`),
   ],
 );
+
+// ---- Member self-service accounts (website sign-up; staff verify the phone number) ----
+export const memberAccounts = sqliteTable(
+  'member_accounts',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    phone: text('phone').notNull(), // normalised, same as the customer's
+    email: text('email').notNull().default(''),
+    passwordHash: text('password_hash').notNull(),
+    // 0 until staff confirm the phone belongs to this person; only then are the card and play history shown.
+    verified: integer('verified').notNull().default(0),
+    failedCount: integer('failed_count').notNull().default(0),
+    lockedUntil: integer('locked_until').notNull().default(0),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    uniqueIndex('member_account_phone').on(t.tenant, t.phone),
+    index('member_account_customer').on(t.customerId),
+  ],
+);
+export const memberSessions = sqliteTable(
+  'member_sessions',
+  {
+    id: text('id').primaryKey(), // SHA-256 of the cookie token
+    accountId: text('account_id')
+      .notNull()
+      .references(() => memberAccounts.id),
+    expires: integer('expires').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('member_session_account').on(t.accountId)],
+);

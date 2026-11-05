@@ -221,3 +221,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Giá Luyện tập đổi sang đúng 3 khung như 9/18 hố (bản sao trước khi đổi: `docs/backups/settings-before-three-slots.json`): T2–T6 07:00–12:00 giá vàng 180k (tiêu chuẩn) / 330k (VIP); T2–T6 12:00–23:00 300k / 550k; Thứ 7, Chủ nhật, ngày lễ cả ngày 300k / 550k. Bảng giá hiện ba dòng cho mỗi phòng.
 
 - Bảng giá đổi về bảng giá chính thức theo hình anh gửi (bản sao trước đó: `docs/backups/settings-before-official-prices.json`): Luyện tập 100.000đ (T2–T6 08:00–11:00) / 250.000đ; Game 9 hố 300.000đ / 500.000đ; Game 18 hố 400.000đ / 650.000đ; Thứ 7, Chủ nhật, lễ cả ngày giá thường; nhóm 4 người 900.000đ (9 hố) / 1.000.000đ (18 hố). Phòng VIP dùng chung bảng. Giờ mở cửa 08:00. Các dòng ưu đãi theo giá cũ được xóa. Bảng trên trang chủ chỉ tiếng Việt.
+
+## v0.11.0 — Tài khoản hội viên online
+
+- Trang `/tai-khoan`: khách đăng ký (họ tên, số điện thoại, email tùy chọn, mật khẩu) và đăng nhập bằng số điện thoại. Trang cá nhân hiện giờ chơi còn lại, lượt 9/18 hố, điểm, từng thẻ/gói (hạn, phòng áp dụng, số còn lại), lịch sắp tới (yêu cầu đặt online và lịch đã xếp), giờ đã dùng từ gói, lịch sử đến chơi; sửa tên, email, đổi mật khẩu.
+- Bảo mật: số điện thoại chưa được chứng minh, nên tài khoản mới ở trạng thái "chờ xác nhận" và chỉ thấy thông báo cho đến khi nhân viên bấm "Xác nhận" ở Hội viên → khách (cần quyền member.sell). Nhân viên có thể "Đặt lại mật khẩu" (member.adjust): mật khẩu tạm hiện một lần, đăng xuất mọi thiết bị. Khóa 15 phút sau 5 lần sai; tối đa 30 đăng ký/giờ.
+- Dữ liệu: migration 0012 (`member_accounts`, `member_sessions`, trigger kiểm tra/bất biến), cookie riêng `g3d_member`, tách hẳn khỏi tài khoản nhân viên. Dịch vụ `lib/server/member-account-service.ts`, API `/api/member`.
+- Chưa có: quên mật khẩu tự động và xác thực số điện thoại bằng OTP (cần nhà cung cấp SMS/Zalo); mua gói online (thanh toán vẫn tại quầy).
+- Kiểm thử: `tests/member_account_sql_test.py`, `tests/e2e/zy-member-account.spec.ts`.

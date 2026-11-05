@@ -96,3 +96,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Cài đặt: BIN, số tài khoản, tên chủ tài khoản; khóa webhook SePay (chỉ lưu bản băm). Webhook: `POST /api/webhooks/sepay` với `Authorization: Apikey <khóa>`.
 - Hộp thanh toán hiện mã VietQR đúng số tiền + nội dung `SGG<mã>`; tiền báo có tự hiện, nhân viên bấm xác nhận để ghi sổ ca (không tự ghi sổ). Mỗi giao dịch chỉ dùng một lần, đúng số tiền, đúng phiếu.
 - Chưa thử với SePay thật (cần tài khoản/khóa của anh): kiểm thử dùng webhook mô phỏng theo tài liệu SePay.
+
+## v0.7 — Chống bot & báo cáo doanh thu
+
+- Turnstile tùy chọn cho `/book/<mã>`: bật khi có `TURNSTILE_SITE_KEY` + secret `TURNSTILE_SECRET` (xem DEPLOY-CLOUDFLARE).
+- Tab **Báo cáo** (quyền `finance.view`): tổng thu theo ngày và hình thức thanh toán, bán gói, chi tiền mặt, doanh thu theo dịch vụ; chọn khoảng ngày tối đa 366 ngày. Chỉ đọc sổ tiền, không ghi gì.

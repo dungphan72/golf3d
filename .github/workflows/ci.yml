@@ -21,7 +21,7 @@ jobs:
         run: pnpm lint
       - name: SQL tests
         run: |
-          for t in booking finance fnb stock package online coaching bank; do python tests/${t}_sql_test.py; done
+          for t in booking finance fnb stock package online coaching bank report; do python tests/${t}_sql_test.py; done
           python tests/migration_splitter_test.py
           python tests/import_backup_test.py
   e2e:

@@ -18,6 +18,7 @@ import {
   Headphones,
   UtensilsCrossed,
   Wallet,
+  ChartColumn,
   Menu,
   X,
   RefreshCw,
@@ -50,6 +51,7 @@ import { SepaySettings } from './SepaySettings';
 import { OnlineRequests } from './OnlineRequests';
 import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
+import { ReportsPanel } from './ReportsPanel';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     [view, setView] = useState('overview'),
@@ -147,6 +149,7 @@ export default function ClubApp() {
     ['bookings', 'Lịch đặt', CalendarDays],
     ['invoices', 'Hóa đơn', ReceiptText],
     ['finance', 'Ca & sổ tiền', Wallet],
+    ['reports', 'Báo cáo', ChartColumn],
     ['fnb', 'Thực đơn & bếp', UtensilsCrossed],
     ['stock', 'Kho F&B', Grid2X2],
     ['online', 'Đặt online', Globe],
@@ -160,6 +163,7 @@ export default function ClubApp() {
   ] as const;
   const needs: Record<string, string> = {
     finance: 'finance.view',
+    reports: 'finance.view',
     settings: 'settings.manage',
     staff: 'staff.manage',
     members: 'member.view',
@@ -183,6 +187,7 @@ export default function ClubApp() {
     stock: 'Kho rõ ràng, phục vụ an tâm.',
     online: 'Yêu cầu đặt lịch từ khách',
     coaching: 'Lịch dạy của huấn luyện viên',
+    reports: 'Báo cáo doanh thu',
     members: 'Hội viên, gói và điểm thưởng',
     support: 'Trung tâm hỗ trợ',
     roadmap: 'Lộ trình phát triển',
@@ -625,6 +630,7 @@ export default function ClubApp() {
                   )}
                   {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
                   {view === 'online' && allowed('online') && <OnlineRequests onChanged={load} />}
+                  {view === 'reports' && allowed('reports') && <ReportsPanel />}
                   {view === 'coaching' && allowed('coaching') && (
                     <CoachingPanel permissions={data?.permissions ?? []} />
                   )}

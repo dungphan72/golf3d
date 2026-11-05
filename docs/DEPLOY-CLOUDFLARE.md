@@ -74,4 +74,4 @@ pnpm exec wrangler d1 execute golf3d --remote --file owner.sql
 2. Site key: thêm biến `TURNSTILE_SITE_KEY` cho Worker `golf3d` (Settings → Variables). Secret key:
    `pnpm exec wrangler secret put TURNSTILE_SECRET`.
 3. Khi có cả hai, form `/book/<mã>` hiện ô xác minh và máy chủ kiểm tra lại với Cloudflare. Thiếu một trong hai thì tắt.
-   Lưu ý: `scripts/deploy-cloudflare.mjs` có thể ghi đè biến; đặt biến trong Dashboard hoặc thêm vào cấu hình deploy.
+   Khi deploy, đặt `TURNSTILE_SITE_KEY` trong môi trường để script đưa biến vào cấu hình (nếu không, lần deploy sau có thể xóa biến đặt trong Dashboard).

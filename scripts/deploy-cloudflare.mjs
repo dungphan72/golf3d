@@ -35,7 +35,11 @@ config.d1_databases = [
     migrations_dir: resolve(root, 'drizzle'),
   },
 ];
-config.vars = { ...(config.vars ?? {}), DISABLE_SITES_IDENTITY: '1' };
+config.vars = {
+  ...(config.vars ?? {}),
+  DISABLE_SITES_IDENTITY: '1',
+  ...(process.env.TURNSTILE_SITE_KEY ? { TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY } : {}),
+};
 config.workers_dev = process.env.CUSTOM_DOMAIN ? false : true;
 if (process.env.CUSTOM_DOMAIN)
   config.routes = [{ pattern: process.env.CUSTOM_DOMAIN, custom_domain: true }];

@@ -38,6 +38,27 @@ export const financeInput = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
+      action: z.literal('pay-split'),
+      requestId,
+      bookingId: id,
+      expectedAmount: money,
+      // One bill paid with 2-3 different methods; the parts must add up to the amount due.
+      parts: z
+        .array(
+          z
+            .object({
+              method: z.enum(['cash', 'transfer', 'card']),
+              amount: money.refine((n) => n > 0),
+              bankTxId: id.optional(),
+            })
+            .strict(),
+        )
+        .min(2)
+        .max(3),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('close'),
       shiftId: id,
       expectedVersion: z.number().int().min(0),

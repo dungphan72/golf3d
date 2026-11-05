@@ -101,3 +101,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 
 - Turnstile tùy chọn cho `/book/<mã>`: bật khi có `TURNSTILE_SITE_KEY` + secret `TURNSTILE_SECRET` (xem DEPLOY-CLOUDFLARE).
 - Tab **Báo cáo** (quyền `finance.view`): tổng thu theo ngày và hình thức thanh toán, bán gói, chi tiền mặt, doanh thu theo dịch vụ; chọn khoảng ngày tối đa 366 ngày. Chỉ đọc sổ tiền, không ghi gì.
+
+## v0.7.1 — Thanh toán chia nhiều hình thức
+
+- Một phiếu có thể thu bằng 2–3 hình thức (ví dụ một phần tiền mặt, một phần chuyển khoản/thẻ): nút "Chia nhiều hình thức thanh toán" trong hộp thanh toán. Các phần phải cộng đúng số phải thu; mỗi hình thức chỉ dùng một lần.
+- Migration 0009: cột `finance_entries.part` (1 = một phần của thanh toán chia). Trigger chỉ chuyển phiếu sang "đã thanh toán" khi các phần cộng đủ, `payment='mixed'`; vượt số tiền hoặc trùng hình thức bị chặn ở tầng database. Thanh toán một lần (part=0) giữ nguyên quy tắc cũ.
+- Phần chuyển khoản trùng khớp với báo có SePay thì tự gắn và đánh dấu giao dịch đã dùng trong cùng một batch.
+- Ca/sổ tiền và báo cáo tính từng hình thức riêng nên đối soát không đổi.

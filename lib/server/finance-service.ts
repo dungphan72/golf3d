@@ -12,6 +12,7 @@ import {
 import {
   OPEN_SHIFT_SQL,
   INSERT_ENTRY_SQL,
+  INSERT_PART_ENTRY_SQL,
   CLOSE_SHIFT_SQL,
   SHIFT_SUMMARY_SQL,
 } from '../finance-sql';
@@ -79,6 +80,25 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         : error('Mã yêu cầu đã dùng với dữ liệu khác', 409);
     }
     if (input.action === 'close') return null;
+    if (input.action === 'pay-split') {
+      const rows = (
+        await db
+          .prepare('SELECT * FROM finance_entries WHERE tenant=? AND request_id LIKE ?')
+          .bind(tenant, input.requestId + '-%')
+          .all<Entry>()
+      ).results;
+      if (!rows.length) return null;
+      const same =
+        rows.length === input.parts.length &&
+        rows.every(
+          (r) =>
+            r.booking_id === input.bookingId &&
+            input.parts.some((p) => p.method === r.method && p.amount === r.amount),
+        );
+      return same
+        ? reply({ ok: true, replayed: true })
+        : error('Mã yêu cầu đã dùng với dữ liệu khác', 409);
+    }
     const old = await db
       .prepare('SELECT * FROM finance_entries WHERE tenant=? AND request_id=?')
       .bind(tenant, input.requestId)
@@ -183,6 +203,50 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     const covered = await coveredByPackage(booking.id);
     if (covered >= booking.amount) return error('Phiếu đã được trả đủ bằng gói', 409);
     const due = booking.amount - covered;
+    if (input.action === 'pay-split') {
+      const methods = new Set(input.parts.map((p) => p.method));
+      if (methods.size !== input.parts.length)
+        return error('Mỗi hình thức thanh toán chỉ được nhập một lần', 400);
+      const total = input.parts.reduce((n, p) => n + p.amount, 0);
+      if (total !== due)
+        return error(`Tổng các phần (${total}) phải bằng số phải thu (${due})`, 400);
+      const withTx = input.parts.filter((p) => p.bankTxId);
+      if (withTx.length > 1 || withTx.some((p) => p.method !== 'transfer'))
+        return error('Chỉ phần chuyển khoản mới gắn được giao dịch ngân hàng', 400);
+      const statements = input.parts.map((p) =>
+        db
+          .prepare(INSERT_PART_ENTRY_SQL)
+          .bind(
+            crypto.randomUUID(),
+            tenant,
+            shift.id,
+            p.method,
+            p.amount,
+            booking.id,
+            input.requestId + '-' + p.method,
+            'Thanh toán chia phiếu ' + booking.id,
+            actor,
+            now,
+          ),
+      );
+      const linked = withTx[0];
+      if (linked) {
+        const tx = await db
+          .prepare('SELECT amount,status FROM bank_transactions WHERE tenant=? AND id=?')
+          .bind(tenant, linked.bankTxId)
+          .first<{ amount: number; status: string }>();
+        if (!tx || tx.status !== 'received')
+          return error('Giao dịch ngân hàng không còn khả dụng', 409);
+        if (tx.amount !== linked.amount)
+          return error(
+            `Số tiền chuyển khoản (${tx.amount}) khác phần chuyển khoản (${linked.amount})`,
+            409,
+          );
+        statements.push(db.prepare(USE_BANK_TX_SQL).bind(booking.id, tenant, linked.bankTxId));
+      }
+      await db.batch(statements);
+      return reply({ ok: true });
+    }
     const entry = db
       .prepare(INSERT_ENTRY_SQL)
       .bind(
@@ -236,6 +300,7 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     if (
       message.includes('BOOKING_NOT_PAYABLE') ||
       message.includes('booking_paid_once') ||
+      message.includes('booking_part_method_once') ||
       message.includes('finance_entries.booking_id')
     )
       return error('Phiếu đã được thanh toán hoặc vừa thay đổi ở thiết bị khác', 409);

@@ -90,12 +90,17 @@ export const financeEntries = sqliteTable(
     actor: text('actor').notNull(),
     created: integer('created').notNull(),
     packageId: text('package_id'),
+    // 1 = one part of a split payment (several methods for one bill); 0 = the whole bill at once.
+    part: integer('part').notNull().default(0),
   },
   (t) => [
     uniqueIndex('finance_request_once').on(t.tenant, t.requestId),
     uniqueIndex('booking_paid_once')
       .on(t.tenant, t.bookingId)
-      .where(sql`${t.bookingId} IS NOT NULL`),
+      .where(sql`${t.bookingId} IS NOT NULL AND ${t.part} = 0`),
+    uniqueIndex('booking_part_method_once')
+      .on(t.tenant, t.bookingId, t.method)
+      .where(sql`${t.bookingId} IS NOT NULL AND ${t.part} = 1`),
     index('finance_shift_time').on(t.tenant, t.shiftId, t.created),
   ],
 );

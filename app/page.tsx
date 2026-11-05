@@ -248,7 +248,7 @@ export default async function LandingPage() {
               <img
                 className="fw-scene"
                 src="/img/hero-room.webp"
-                alt="Phòng chơi Saigon Golf 3D Club với màn hình mô phỏng sân golf"
+                alt="Phòng golf mô phỏng với màn hình lớn chiếu sân golf"
                 width={1458}
                 height={1201}
                 fetchPriority="high"
@@ -335,7 +335,7 @@ export default async function LandingPage() {
 
             <a className="fw-card fw-card-discover" href="#dich-vu">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/space-wide.webp" alt="Khu vực chờ và line chơi" />
+              <img src="/img/space-wide.webp" alt="Màn hình mô phỏng sân golf trong phòng chơi" />
               <div className="fw-card-foot">
                 <span>
                   <b>Khám phá phòng chơi của bạn.</b>
@@ -402,7 +402,7 @@ export default async function LandingPage() {
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/img/space-wide.webp"
-              alt="Khu vực chờ và line chơi với màn hình mô phỏng tại Saigon Golf 3D Club"
+              alt="Màn hình mô phỏng sân golf trong phòng chơi"
               width={2000}
               height={667}
               loading="lazy"
@@ -416,7 +416,7 @@ export default async function LandingPage() {
                 Thiết bị theo dõi bóng với ba camera, ghi lại tốc độ, góc phóng, độ xoáy và quỹ đạo
                 của từng cú đánh rồi hiển thị ngay trên màn hình mô phỏng để bạn chỉnh swing.
               </p>
-              <small>Ảnh thiết bị: Foresight Sports.</small>
+              <small>Ảnh thiết bị và phòng chơi: Foresight Sports.</small>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -436,11 +436,11 @@ export default async function LandingPage() {
               {[
                 ['/img/fs-lounge.webp', 'Phòng chơi golf mô phỏng rộng rãi với khu ghế ngồi nghỉ'],
                 [
-                  '/img/fs-ferrari.webp',
+                  '/img/fs-castle.webp',
                   'Phòng golf mô phỏng tông tối với màn hình lớn nhìn ra sân',
                 ],
-                ['/img/fs-loft.webp', 'Không gian golf mô phỏng với màn hình chiếu sân golf'],
-                ['/img/fs-lodge.webp', 'Phòng golf mô phỏng nhìn ra khung cảnh thiên nhiên'],
+                ['/img/fs-office.webp', 'Không gian golf mô phỏng với màn hình chiếu sân golf'],
+                ['/img/fs-jag.webp', 'Phòng golf mô phỏng nhìn ra khung cảnh thiên nhiên'],
               ].map(([src, alt]) => (
                 <li key={src}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -685,7 +685,7 @@ export default async function LandingPage() {
             <img
               className="fw-contact-img"
               src="/img/space-ball.webp"
-              alt="Quả bóng golf trên thảm cỏ trong phòng chơi Saigon Golf 3D Club"
+              alt="Phòng golf mô phỏng với màn hình sân golf và thảm cỏ"
               width={900}
               height={900}
               loading="lazy"

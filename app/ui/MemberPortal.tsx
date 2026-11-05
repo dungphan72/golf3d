@@ -1,6 +1,7 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BRAND } from '../../lib/brand';
+import { money } from '../../lib/club';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
 
@@ -38,7 +39,18 @@ type Overview = {
     end: number;
     status: string;
   }[];
-  requests?: { service: string; vip: number; people: number; start: number; status: string }[];
+  requests?: {
+    id: string;
+    service: string;
+    vip: number;
+    people: number;
+    guests: number;
+    start: number;
+    status: string;
+  }[];
+  catalog?: { id: string; name: string; price: number; room: string; section: string }[];
+  orders?: { id: string; name: string; price: number; created: number }[];
+  booking?: { enabled: boolean; vip: boolean; services: string[]; days: number };
 };
 
 const SERVICE: Record<string, string> = { gdr: 'Luyện tập', '9': 'Game 9 hố', '18': 'Game 18 hố' };
@@ -53,6 +65,8 @@ const REQUEST_STATUS: Record<string, string> = {
   pending: 'Chờ câu lạc bộ xác nhận',
   confirmed: 'Đã xác nhận',
 };
+// A datetime-local value is Vietnam time (UTC+7) whatever the browser zone is.
+const toMs = (local: string) => Date.parse(local + ':00+07:00');
 const when = (ms: number) =>
   new Date(ms).toLocaleString('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',
@@ -202,6 +216,116 @@ function AuthForms({ onDone, first }: { onDone: () => void; first: 'login' | 're
   );
 }
 
+function BookForm({
+  info,
+  onDone,
+}: {
+  info: NonNullable<Overview['booking']>;
+  onDone: () => void;
+}) {
+  const [form, setForm] = useState({
+    service: info.services[0] ?? 'gdr',
+    start: '',
+    guests: '',
+    vip: false,
+    note: '',
+  });
+  const [error, setError] = useState('');
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      await call({
+        action: 'book',
+        service: form.service,
+        vip: form.vip,
+        guests: Number(form.guests) || 0,
+        start: toMs(form.start),
+        note: form.note,
+      });
+      setSent(true);
+      setForm({ ...form, start: '', guests: '', note: '' });
+      onDone();
+    } catch (err) {
+      setSent(false);
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form className="mp-book" onSubmit={submit}>
+      <div className="mp-two">
+        <label>
+          Hình thức
+          <select
+            value={form.service}
+            onChange={(e) => setForm({ ...form, service: e.target.value })}
+          >
+            {info.services.map((s) => (
+              <option key={s} value={s}>
+                {SERVICE[s]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Ngày, giờ bắt đầu (giờ Việt Nam)
+          <input
+            type="datetime-local"
+            step={900}
+            value={form.start}
+            onChange={(e) => setForm({ ...form, start: e.target.value })}
+            required
+          />
+        </label>
+        <label>
+          Số người (không bắt buộc)
+          <input
+            type="number"
+            min={1}
+            max={1000}
+            value={form.guests}
+            onChange={(e) => setForm({ ...form, guests: e.target.value })}
+          />
+        </label>
+        <label>
+          Ghi chú (không bắt buộc)
+          <input
+            value={form.note}
+            maxLength={250}
+            onChange={(e) => setForm({ ...form, note: e.target.value })}
+          />
+        </label>
+      </div>
+      {info.vip && (
+        <label className="mp-check">
+          <input
+            type="checkbox"
+            checked={form.vip}
+            onChange={(e) => setForm({ ...form, vip: e.target.checked })}
+          />
+          Phòng VIP riêng tư
+        </label>
+      )}
+      {error && (
+        <div className="mp-error" role="alert">
+          {error}
+        </div>
+      )}
+      {sent && (
+        <p role="status">Đã gửi yêu cầu. Câu lạc bộ sẽ xác nhận qua số điện thoại của bạn.</p>
+      )}
+      <button className="mp-primary" disabled={busy}>
+        {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}
+      </button>
+    </form>
+  );
+}
+
 function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
   const [name, setName] = useState(data.profile.name);
   const [email, setEmail] = useState(data.profile.email);
@@ -293,6 +417,7 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
   const [state, setState] = useState<'loading' | 'out' | 'in'>('loading');
   const [now] = useState(() => Date.now());
   const mounted = useRef(true);
+  const [booking, setBooking] = useState(false);
   const load = useCallback(async () => {
     const r = await fetch('/api/member', { cache: 'no-store' });
     if (!mounted.current) return;
@@ -384,9 +509,11 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
           <section className="mp-card" id="the">
             <div className="mp-row">
               <h2>Thẻ và gói của tôi</h2>
-              <a className="mp-secondary" href="/thanh-vien">
-                Mua thêm gói
-              </a>
+              {!!data.catalog?.length && (
+                <a className="mp-secondary" href="#mua-goi">
+                  Mua thêm gói
+                </a>
+              )}
             </div>
             {packs.length ? (
               <div className="mp-packs">
@@ -428,19 +555,101 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
             )}
           </section>
 
+          {!!data.catalog?.length && (
+            <section className="mp-card" id="mua-goi">
+              <h2>Mua thêm gói</h2>
+              <p className="mp-note">
+                Chọn gói và gửi yêu cầu. Câu lạc bộ sẽ liên hệ, thu tiền tại quầy rồi kích hoạt gói
+                vào tài khoản của bạn.
+              </p>
+              {!!data.orders?.length && (
+                <ul className="mp-list">
+                  {data.orders.map((o) => (
+                    <li key={o.id}>
+                      <strong>{o.name}</strong> · {money(o.price)} <em>Chờ câu lạc bộ xử lý</em>
+                      <button
+                        className="mp-link"
+                        onClick={async () => {
+                          try {
+                            await call({ action: 'order-cancel', id: o.id });
+                          } catch (e) {
+                            window.alert(e instanceof Error ? e.message : String(e));
+                          }
+                          load();
+                        }}
+                      >
+                        Hủy yêu cầu
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <ul className="mp-list">
+                {data.catalog.map((t) => (
+                  <li key={t.id} className="mp-buy">
+                    <span>
+                      <strong>{t.name}</strong>
+                      <small>{PACKAGE_ROOM_LABELS[t.room as PackageRoom] ?? 'Tất cả phòng'}</small>
+                    </span>
+                    <span>{money(t.price)}</span>
+                    <button
+                      className="mp-secondary"
+                      onClick={async () => {
+                        try {
+                          await call({ action: 'order', typeId: t.id });
+                        } catch (e) {
+                          window.alert(e instanceof Error ? e.message : String(e));
+                        }
+                        load();
+                      }}
+                    >
+                      Đăng ký mua
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           <section className="mp-card" id="lich">
             <div className="mp-row">
               <h2>Lịch chơi sắp tới</h2>
               {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-              <a className="mp-primary" href="/#dat-cho">
-                Đặt lịch mới
-              </a>
+              {data.booking?.enabled && data.booking.services.length > 0 && (
+                <button className="mp-primary" onClick={() => setBooking(!booking)}>
+                  {booking ? 'Đóng' : 'Đặt lịch mới'}
+                </button>
+              )}
             </div>
+            {booking && data.booking && (
+              <BookForm
+                info={data.booking}
+                onDone={() => {
+                  load();
+                }}
+              />
+            )}
             <ul className="mp-list">
               {(data.requests ?? []).map((r) => (
                 <li key={r.start + r.service}>
                   <strong>{SERVICE[r.service]}</strong> · {r.vip ? 'Phòng VIP' : 'Phòng tiêu chuẩn'}{' '}
-                  · {when(r.start)} <em>{REQUEST_STATUS[r.status]}</em>
+                  · {r.guests || r.people} người · {when(r.start)}{' '}
+                  <em>{REQUEST_STATUS[r.status]}</em>
+                  {r.status === 'pending' && (
+                    <button
+                      className="mp-link"
+                      onClick={async () => {
+                        try {
+                          await call({ action: 'book-cancel', id: r.id });
+                        } catch (e) {
+                          window.alert(e instanceof Error ? e.message : String(e));
+                        }
+                        load();
+                      }}
+                    >
+                      Hủy yêu cầu
+                    </button>
+                  )}
                 </li>
               ))}
               {upcoming.map((b) => (

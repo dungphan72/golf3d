@@ -227,3 +227,58 @@
   padding: 0.7rem 1rem;
   font-size: var(--t-sm);
 }
+
+.mp-book {
+  margin-bottom: 1rem;
+  padding: 1.25rem;
+  border-radius: 20px;
+  background: #f3f8fd;
+}
+.mp select {
+  font: inherit;
+  font-size: var(--t-base);
+  padding: 0.8rem 1rem;
+  border: 1px solid #cfdae6;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--navy, #0c2447);
+}
+.mp .mp-check {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.mp .mp-check input {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+}
+.mp-link {
+  font: inherit;
+  font-size: var(--t-xs);
+  margin-left: 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.mp-buy {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+}
+.mp-buy small {
+  display: block;
+  color: var(--muted);
+  font-size: var(--t-xs);
+}
+@media (max-width: 560px) {
+  .mp-buy {
+    grid-template-columns: 1fr auto;
+  }
+  .mp-buy button {
+    grid-column: 1 / -1;
+  }
+}

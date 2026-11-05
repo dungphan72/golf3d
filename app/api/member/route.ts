@@ -14,6 +14,10 @@ import {
   memberOverview,
   updateProfile,
   changeMemberPassword,
+  orderPackage,
+  cancelOrder,
+  bookAsMember,
+  cancelBooking,
 } from '../../../lib/server/member-account-service';
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +84,10 @@ export async function POST(req: Request) {
   try {
     if (input.action === 'profile')
       return sendResult(await updateProfile(user, input.name, input.email));
+    if (input.action === 'order') return sendResult(await orderPackage(user, input.typeId));
+    if (input.action === 'order-cancel') return sendResult(await cancelOrder(user, input.id));
+    if (input.action === 'book-cancel') return sendResult(await cancelBooking(user, input.id));
+    if (input.action === 'book') return sendResult(await bookAsMember(user, input, clientIp(req)));
     return sendResult(await changeMemberPassword(user, input.current, input.next));
   } catch (e) {
     console.error('member action', e);

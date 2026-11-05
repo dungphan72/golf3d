@@ -12,6 +12,7 @@ type Customer = {
   note: string;
   points: number;
   account: number | null; // null = no web account, 0 = waiting for staff, 1 = verified
+  orders?: number;
 };
 type PackageType = {
   id: string;
@@ -37,7 +38,11 @@ type OwnedPackage = {
 type Overview = {
   customers: Customer[];
   types: PackageType[];
-  detail: { customerId: string; packages: OwnedPackage[] } | null;
+  detail: {
+    customerId: string;
+    packages: OwnedPackage[];
+    orders?: { id: string; type_id: string; name: string; price: number; created: number }[];
+  } | null;
 };
 
 async function post(body: Record<string, unknown>) {
@@ -71,6 +76,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
   const [typeId, setTypeId] = useState('');
   const [method, setMethod] = useState<'cash' | 'transfer' | 'card'>('transfer');
   const [saleKey, setSaleKey] = useState(operationKey());
+  const [orderId, setOrderId] = useState('');
   const [now] = useState(() => Date.now());
 
   async function load(q = query, customer = selected) {
@@ -133,6 +139,7 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                 >
                   <strong>{c.name}</strong> · {c.phone} · {c.points} điểm
                   {c.account === 0 && <b> · chờ xác nhận tài khoản</b>}
+                  {!!c.orders && <b> · yêu cầu mua gói</b>}
                 </button>
               </li>
             ))}
@@ -258,6 +265,47 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                   ))}
                 </p>
               )}
+              {!!data?.detail?.orders?.length && (
+                <>
+                  <h3>Yêu cầu mua gói từ hội viên</h3>
+                  <ul>
+                    {data.detail.orders.map((o) => (
+                      <li key={o.id}>
+                        <strong>{o.name}</strong> · {money(o.price)} · {day(o.created)}
+                        {canSell && (
+                          <>
+                            <button
+                              className="primary"
+                              disabled={busy}
+                              onClick={() => {
+                                setTypeId(o.type_id);
+                                setOrderId(o.id);
+                                setNotice(
+                                  'Đã chọn gói theo yêu cầu. Chọn hình thức thu tiền và bấm "Bán gói" bên dưới.',
+                                );
+                              }}
+                            >
+                              Bán gói này
+                            </button>
+                            <button
+                              className="secondary"
+                              disabled={busy}
+                              onClick={() =>
+                                act(
+                                  () => post({ action: 'order-reject', id: o.id }),
+                                  'Đã từ chối yêu cầu mua gói',
+                                )
+                              }
+                            >
+                              Từ chối
+                            </button>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
               <h3>Gói đang có</h3>
               <ul>
                 {data?.detail?.packages.map((p) => (
@@ -312,7 +360,9 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                         customerId: current.id,
                         typeId,
                         method,
+                        ...(orderId ? { orderId } : {}),
                       });
+                      setOrderId('');
                       setSaleKey(operationKey());
                       return result;
                     }, 'Đã bán gói và ghi vào sổ ca');

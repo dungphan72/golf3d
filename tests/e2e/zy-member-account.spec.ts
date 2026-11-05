@@ -68,6 +68,57 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   await me.getByRole('button', { name: 'Đăng nhập', exact: true }).last().click();
   await expect(me.getByRole('heading', { name: type.name })).toBeVisible();
 
+  // The member asks to buy a package from the page; staff see it, sell it, and it becomes theirs.
+  await me.reload();
+  await expect(me.getByRole('button', { name: 'Đăng ký mua' }).first()).toBeVisible();
+  const ordered = await guest.request.post('/api/member', {
+    data: { action: 'order', typeId: type.id },
+  });
+  expect(ordered.status(), await ordered.text()).toBe(200);
+  const mine = await (await guest.request.get('/api/member')).json();
+  expect(mine.orders).toHaveLength(1);
+  const detail = await (await owner.get(`/api/members?customer=${customer.id}`)).json();
+  expect(detail.detail.orders).toHaveLength(1);
+  const packagesBefore = detail.detail.packages.length;
+  await post(owner, '/api/members', {
+    action: 'sell',
+    requestId: key(),
+    customerId: customer.id,
+    typeId: type.id,
+    method: 'cash',
+    orderId: detail.detail.orders[0].id,
+  });
+  const after = await (await guest.request.get('/api/member')).json();
+  expect(after.orders).toHaveLength(0);
+  expect(after.packages).toHaveLength(packagesBefore + 1);
+
+  // The member books from their own page (name and phone come from the account) and can cancel it.
+  const day = new Date(Date.now() + 2 * 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
+  const start = Date.parse(`${day}T10:00:00+07:00`);
+  const booked = await guest.request.post('/api/member', {
+    data: {
+      action: 'book',
+      service: '18',
+      vip: false,
+      guests: 0,
+      start,
+      note: 'từ trang hội viên',
+    },
+  });
+  expect(booked.status(), await booked.text()).toBe(200);
+  const withBooking = await (await guest.request.get('/api/member')).json();
+  expect(withBooking.requests).toHaveLength(1);
+  const cancelled = await guest.request.post('/api/member', {
+    data: { action: 'book-cancel', id: withBooking.requests[0].id },
+  });
+  expect(cancelled.status()).toBe(200);
+  expect((await (await guest.request.get('/api/member')).json()).requests).toHaveLength(0);
+  // A member cannot cancel someone else's request or order.
+  const other = await guest.request.post('/api/member', {
+    data: { action: 'order-cancel', id: crypto.randomUUID() },
+  });
+  expect(other.status()).toBe(409);
+
   // The same phone cannot register twice; another member's data is never returned to an anonymous call.
   const anon = await (await browser.newContext()).request.get('/api/member');
   expect(anon.status()).toBe(401);

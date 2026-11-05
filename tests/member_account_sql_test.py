@@ -67,5 +67,51 @@ class MemberAccountSQL(unittest.TestCase):
             self.c.execute("UPDATE member_accounts SET verified=0")
 
 
+def package_type(c, id='pt1', tenant='t1', name='Gói thử', price=1_000_000, active=1):
+    c.execute(
+        """INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created,section,room) VALUES (?,?,?,?,'[{"kind":"gdr","qty":1}]',30,'',?,0,'','any')""",
+        (id, tenant, name, price, active),
+    )
+
+
+def order(c, id='o1', tenant='t1', cust='c1', type_id='pt1', name='Gói thử', price=1_000_000, status='pending'):
+    return c.execute(
+        "INSERT INTO package_orders(id,tenant,customer_id,type_id,name,price,status,package_id,handled_by,handled_at,created) VALUES (?,?,?,?,?,?,?,NULL,NULL,NULL,0)",
+        (id, tenant, cust, type_id, name, price, status),
+    ).rowcount
+
+
+class PackageOrderSQL(unittest.TestCase):
+    def setUp(self):
+        self.c = connection()
+        self.c.executescript(DDL)
+        customer(self.c)
+        package_type(self.c)
+
+    def test_order_must_match_an_active_package_and_its_price(self):
+        self.assertEqual(order(self.c), 1)
+        for kw in [dict(id='o2', price=1), dict(id='o3', name='Khác'), dict(id='o4', type_id='none'), dict(id='o5', status='confirmed'), dict(id='o6', cust='zz')]:
+            with self.assertRaises(sqlite3.IntegrityError, msg=str(kw)):
+                order(self.c, **kw)
+        package_type(self.c, 'pt2', active=0, name='Ngừng bán')
+        with self.assertRaises(sqlite3.IntegrityError):
+            order(self.c, 'o7', type_id='pt2', name='Ngừng bán')
+
+    def test_at_most_three_pending_orders_per_customer(self):
+        for i in range(3):
+            order(self.c, f'p{i}')
+        with self.assertRaises(sqlite3.IntegrityError):
+            order(self.c, 'p9')
+        self.c.execute("UPDATE package_orders SET status='cancelled' WHERE id='p0'")
+        self.assertEqual(order(self.c, 'p10'), 1)
+
+    def test_order_is_settled_once_and_never_deleted(self):
+        order(self.c)
+        self.c.execute("UPDATE package_orders SET status='confirmed',handled_by='u1',handled_at=5")
+        for stmt in ["UPDATE package_orders SET status='pending'", "UPDATE package_orders SET price=1", 'DELETE FROM package_orders']:
+            with self.assertRaises(sqlite3.IntegrityError, msg=stmt):
+                self.c.execute(stmt)
+
+
 if __name__ == '__main__':
     unittest.main()

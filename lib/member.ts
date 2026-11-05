@@ -78,8 +78,10 @@ export const memberInput = z.discriminatedUnion('action', [
       customerId: id,
       typeId: id,
       method: z.enum(['cash', 'transfer', 'card']),
+      orderId: id.optional(), // the member's purchase request this sale fulfils
     })
     .strict(),
+  z.object({ action: z.literal('order-reject'), id }).strict(),
   z.object({ action: z.literal('redeem'), bookingId: id, packageId: id }).strict(),
   z
     .object({

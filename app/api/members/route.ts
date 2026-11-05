@@ -31,6 +31,7 @@ const NEEDED: Record<string, Permission> = {
   'type-save': 'member.adjust',
   'types-seed': 'member.adjust',
   'account-verify': 'member.sell',
+  'order-reject': 'member.sell',
   'account-reset': 'member.adjust',
   adjust: 'member.adjust',
 };

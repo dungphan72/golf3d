@@ -34,6 +34,19 @@ export const memberActionInput = z.discriminatedUnion('action', [
       next: z.string().min(1).max(200),
     })
     .strict(),
+  z.object({ action: z.literal('order'), typeId: z.string().min(8).max(64) }).strict(),
+  z.object({ action: z.literal('order-cancel'), id: z.string().min(8).max(64) }).strict(),
+  z
+    .object({
+      action: z.literal('book'),
+      service: z.enum(['gdr', '9', '18']),
+      vip: z.boolean().default(false),
+      guests: z.number().int().min(0).max(1000).default(0),
+      start: z.number().int(),
+      note: z.string().trim().max(250).default(''),
+    })
+    .strict(),
+  z.object({ action: z.literal('book-cancel'), id: z.string().min(8).max(64) }).strict(),
 ]);
 export type MemberActionInput = z.infer<typeof memberActionInput>;
 

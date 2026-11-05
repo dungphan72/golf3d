@@ -12,6 +12,7 @@ import {
 import { normalizePhone, validPhone } from '../member';
 import { CREATE_CUSTOMER_SQL } from '../package-sql';
 import { rooms } from '../club';
+import { submitRequest } from './online-service';
 import { MEMBER_SESSION_SECONDS } from '../member-account';
 
 type R = ServiceResult;
@@ -218,7 +219,7 @@ export async function memberOverview(user: MemberUser): Promise<R> {
   if (!user.verified) return reply({ profile });
   const now = Date.now();
   const config = await loadConfig(user.tenant);
-  const [packages, usage, points, bookings, requests] = await Promise.all([
+  const [packages, usage, points, bookings, requests, catalog, orders] = await Promise.all([
     d
       .prepare(
         `SELECT cp.id,cp.name,cp.source,cp.perks,cp.room,cp.purchased,cp.expires,
@@ -264,10 +265,37 @@ export async function memberOverview(user: MemberUser): Promise<R> {
       }>(),
     d
       .prepare(
-        `SELECT service,vip,people,start,status FROM booking_requests WHERE tenant=? AND phone=? AND status IN ('pending','confirmed') AND start>? ORDER BY start LIMIT 10`,
+        `SELECT id,service,vip,people,start,status,quote FROM booking_requests WHERE tenant=? AND phone=? AND status IN ('pending','confirmed') AND start>? ORDER BY start LIMIT 10`,
       )
       .bind(user.tenant, user.phone, now - 3_600_000)
-      .all<{ service: string; vip: number; people: number; start: number; status: string }>(),
+      .all<{
+        id: string;
+        service: string;
+        vip: number;
+        people: number;
+        start: number;
+        status: string;
+        quote: string;
+      }>(),
+    d
+      .prepare(
+        'SELECT id,name,price,room,section,valid_days FROM package_types WHERE tenant=? AND active=1 ORDER BY price LIMIT 60',
+      )
+      .bind(user.tenant)
+      .all<{
+        id: string;
+        name: string;
+        price: number;
+        room: string;
+        section: string;
+        valid_days: number;
+      }>(),
+    d
+      .prepare(
+        "SELECT id,name,price,created FROM package_orders WHERE tenant=? AND customer_id=? AND status='pending' ORDER BY created DESC LIMIT 10",
+      )
+      .bind(user.tenant, user.customerId)
+      .all<{ id: string; name: string; price: number; created: number }>(),
   ]);
   const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.name ?? id ?? '';
   return reply({
@@ -280,7 +308,20 @@ export async function memberOverview(user: MemberUser): Promise<R> {
     })),
     usage: usage.results.map((u) => ({ ...u, room: roomName(u.room) })),
     bookings: bookings.results.map((b) => ({ ...b, room: roomName(b.room) })),
-    requests: requests.results,
+    requests: requests.results.map(({ quote, ...r }) => ({
+      ...r,
+      guests: (JSON.parse(quote) as { guests?: number }).guests ?? 0,
+    })),
+    catalog: catalog.results,
+    orders: orders.results,
+    booking: {
+      enabled: !!config.onlineEnabled && !!config.onlineSlug,
+      vip: (config.vipCapacity ?? 0) > 0,
+      services: (['gdr', '9', '18'] as const).filter((s) =>
+        (config.priceRules ?? []).some((r) => r.enabled && r.service === s),
+      ),
+      days: config.days,
+    },
   });
 }
 
@@ -349,4 +390,102 @@ export async function resetAccountPassword(tenant: string, customerId: string): 
     d.prepare('DELETE FROM member_sessions WHERE account_id=?').bind(acct.id),
   ]);
   return reply({ ok: true, password });
+}
+
+// ---- Requests from the member page ----
+
+const PACKAGE_ORDER_ERRORS: [string, string, number][] = [
+  ['PACKAGE_TYPE_UNAVAILABLE', 'Gói này không còn bán hoặc giá vừa đổi. Hãy tải lại trang.', 409],
+  [
+    'TOO_MANY_PENDING_ORDERS',
+    'Bạn đang có 3 yêu cầu mua gói chờ xử lý. Vui lòng chờ câu lạc bộ liên hệ.',
+    429,
+  ],
+];
+
+export async function orderPackage(user: MemberUser, typeId: string): Promise<R> {
+  if (!user.verified) return error('Tài khoản chưa được câu lạc bộ xác nhận', 403);
+  const type = await db()
+    .prepare('SELECT id,name,price FROM package_types WHERE tenant=? AND id=? AND active=1')
+    .bind(user.tenant, typeId)
+    .first<{ id: string; name: string; price: number }>();
+  if (!type) return error('Gói không tồn tại hoặc đã ngừng bán', 404);
+  try {
+    await db()
+      .prepare(
+        "INSERT INTO package_orders(id,tenant,customer_id,type_id,name,price,status,package_id,handled_by,handled_at,created) VALUES (?,?,?,?,?,?,'pending',NULL,NULL,NULL,?)",
+      )
+      .bind(
+        crypto.randomUUID(),
+        user.tenant,
+        user.customerId,
+        type.id,
+        type.name,
+        type.price,
+        Date.now(),
+      )
+      .run();
+    return reply({ ok: true });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    for (const [needle, text, status] of PACKAGE_ORDER_ERRORS)
+      if (message.includes(needle)) return error(text, status);
+    console.error('package order', e);
+    return error('Chưa gửi được yêu cầu. Vui lòng thử lại.', 500);
+  }
+}
+
+export async function cancelOrder(user: MemberUser, id: string): Promise<R> {
+  const r = await db()
+    .prepare(
+      "UPDATE package_orders SET status='cancelled' WHERE tenant=? AND customer_id=? AND id=? AND status='pending'",
+    )
+    .bind(user.tenant, user.customerId, id)
+    .run();
+  return r.meta.changes
+    ? reply({ ok: true })
+    : error('Yêu cầu đã được xử lý hoặc không tồn tại', 409);
+}
+
+/** Booking request made from the signed-in member page: same pipeline as the public form, with the member's own name and phone. */
+export async function bookAsMember(
+  user: MemberUser,
+  input: { service: 'gdr' | '9' | '18'; vip: boolean; guests: number; start: number; note: string },
+  ip: string,
+): Promise<R> {
+  if (!user.verified) return error('Tài khoản chưa được câu lạc bộ xác nhận', 403);
+  const config = await loadConfig(user.tenant);
+  if (!config.onlineEnabled || !config.onlineSlug)
+    return error('Câu lạc bộ chưa nhận đặt lịch online', 409);
+  const customer = await db()
+    .prepare('SELECT name FROM customers WHERE tenant=? AND id=?')
+    .bind(user.tenant, user.customerId)
+    .first<{ name: string }>();
+  return submitRequest(
+    config.onlineSlug,
+    {
+      name: customer?.name ?? 'Hội viên',
+      phone: user.phone,
+      service: input.service,
+      vip: input.vip,
+      guests: input.guests,
+      start: input.start,
+      minutes: input.service === 'gdr' ? 60 : 0,
+      note: input.note,
+      website: '',
+    },
+    ip,
+  );
+}
+
+export async function cancelBooking(user: MemberUser, id: string): Promise<R> {
+  const r = await db()
+    .prepare(
+      "UPDATE booking_requests SET status='cancelled' WHERE tenant=? AND phone=? AND id=? AND status='pending' AND handled_by IS NULL",
+    )
+    .bind(user.tenant, user.phone, id)
+    .run();
+  return r.meta.changes
+    ? reply({ ok: true })
+    : error('Yêu cầu đã được xử lý nên không thể hủy tại đây. Vui lòng gọi câu lạc bộ.', 409);
 }

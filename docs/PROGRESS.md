@@ -229,3 +229,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Dữ liệu: migration 0012 (`member_accounts`, `member_sessions`, trigger kiểm tra/bất biến), cookie riêng `g3d_member`, tách hẳn khỏi tài khoản nhân viên. Dịch vụ `lib/server/member-account-service.ts`, API `/api/member`.
 - Chưa có: quên mật khẩu tự động và xác thực số điện thoại bằng OTP (cần nhà cung cấp SMS/Zalo); mua gói online (thanh toán vẫn tại quầy).
 - Kiểm thử: `tests/member_account_sql_test.py`, `tests/e2e/zy-member-account.spec.ts`.
+
+## v0.11.1 — Hội viên mua gói và đặt lịch ngay trong trang cá nhân
+
+- Mua gói online: hội viên đã được xác nhận chọn gói ở mục "Mua thêm gói" (giá lấy đúng từ danh mục gói đang bán) và gửi yêu cầu; tối đa 3 yêu cầu chờ, hủy được. Nhân viên thấy "yêu cầu mua gói" trong danh sách và chi tiết khách (Hội viên), bấm "Bán gói này" rồi thu tiền như bán gói thường: yêu cầu tự chuyển thành "đã xử lý" cùng giao dịch bán (một batch), hoặc "Từ chối". Không thu tiền online. Migration 0013 (`package_orders`, trigger kiểm tra gói/giá, bất biến, không xóa).
+- Đặt lịch trong trang cá nhân: điền sẵn tên và số điện thoại của hội viên, chọn hình thức, giờ, số người (tự điền, không bắt buộc), phòng VIP, ghi chú; dùng chung quy trình với form công khai (nhân viên xác nhận). Hội viên xem và hủy yêu cầu đang chờ ngay trong trang.
+- Kiểm thử: `tests/member_account_sql_test.py` (thêm bộ package_orders), `tests/e2e/zy-member-account.spec.ts`.

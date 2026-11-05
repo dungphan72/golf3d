@@ -96,7 +96,15 @@ export async function loadMembers(tenant: string, query: string, customerId: str
     if (customerId) {
       const packages = (await db().prepare(CUSTOMER_PACKAGES_SQL).bind(tenant, customerId).all())
         .results;
-      detail = { customerId, packages };
+      const orders = (
+        await db()
+          .prepare(
+            "SELECT id,type_id,name,price,created FROM package_orders WHERE tenant=? AND customer_id=? AND status='pending' ORDER BY created",
+          )
+          .bind(tenant, customerId)
+          .all()
+      ).results;
+      detail = { customerId, packages, orders };
     }
     return reply({ customers, types, detail });
   } catch (e) {
@@ -163,6 +171,15 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .bind(id, tenant, input.name, phone, input.note, now)
         .run();
       return reply({ ok: true, id });
+    }
+    if (input.action === 'order-reject') {
+      const r = await d
+        .prepare(
+          "UPDATE package_orders SET status='rejected',handled_by=?,handled_at=? WHERE tenant=? AND id=? AND status='pending'",
+        )
+        .bind(actor, now, tenant, input.id)
+        .run();
+      return r.meta.changes ? reply({ ok: true }) : error('Yêu cầu đã được xử lý', 409);
     }
     if (input.action === 'account-verify') return verifyAccount(tenant, input.customerId);
     if (input.action === 'account-reset') return resetAccountPassword(tenant, input.customerId);
@@ -321,6 +338,15 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             now,
             packageId,
           ),
+        ...(input.orderId
+          ? [
+              d
+                .prepare(
+                  "UPDATE package_orders SET status='confirmed',package_id=?,handled_by=?,handled_at=? WHERE tenant=? AND id=? AND customer_id=? AND status='pending'",
+                )
+                .bind(packageId, actor, now, tenant, input.orderId, input.customerId),
+            ]
+          : []),
       ]);
       return reply({ ok: true, packageId });
     }

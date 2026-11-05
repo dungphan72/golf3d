@@ -491,3 +491,24 @@ export const memberSessions = sqliteTable(
   },
   (t) => [index('member_session_account').on(t.accountId)],
 );
+
+// ---- Package purchase requests from the member page (staff sell the package and collect payment) ----
+export const packageOrders = sqliteTable(
+  'package_orders',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id')
+      .notNull()
+      .references(() => customers.id),
+    typeId: text('type_id').notNull(),
+    name: text('name').notNull(), // package name and price as shown to the member
+    price: integer('price').notNull(),
+    status: text('status').notNull(), // pending | confirmed | rejected | cancelled
+    packageId: text('package_id'),
+    handledBy: text('handled_by'),
+    handledAt: integer('handled_at'),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('package_order_customer').on(t.tenant, t.customerId, t.status)],
+);

@@ -248,7 +248,7 @@ export default async function LandingPage() {
               <img
                 className="fw-scene"
                 src="/img/hero-room.webp"
-                alt="Phòng golf mô phỏng với màn hình lớn chiếu sân golf"
+                alt="Phòng chơi Saigon Golf 3D Club với màn hình mô phỏng sân golf"
                 width={1458}
                 height={1201}
                 fetchPriority="high"
@@ -685,7 +685,7 @@ export default async function LandingPage() {
             <img
               className="fw-contact-img"
               src="/img/space-ball.webp"
-              alt="Phòng golf mô phỏng với màn hình sân golf và thảm cỏ"
+              alt="Quả bóng golf trên thảm cỏ trong phòng chơi Saigon Golf 3D Club"
               width={900}
               height={900}
               loading="lazy"

@@ -136,3 +136,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Form đặt chỗ nhúng thẳng vào trang chủ (mục "Đặt chỗ online"), dùng chung API/luật với `/book/<mã>`; nút đặt lịch cuộn tới form, thanh nút cố định ở dưới trên điện thoại. Chưa bật đặt online thì mục này hiện "Đặt chỗ qua hotline".
 - Trang chủ bổ sung: băng giờ vàng, "Vì sao chọn", chân trang nhiều cột.
 - Cài đặt cơ sở báo rõ còn thiếu gì để mở đặt online (giờ mở/đóng, số line, VIP, **VAT, phí dịch vụ**). Trang đặt lịch chỉ mở khi đủ các mục này vì báo giá cho khách có VAT và phí.
+
+## v0.9.3 — Landing page cuộn trang (scroll-driven)
+
+- Thiết kế lại trang chủ theo hướng cuộn trang có chuyển động, tự viết bằng CSS + một component nhỏ (`app/ui/ScrollFx.tsx`), không dùng thư viện hay skill ngoài: cảnh sân golf nhiều lớp có parallax ở phần đầu, thanh tiến độ cuộn, menu đổi nền khi cuộn, các khối hiện dần, số liệu đếm lên, phần "Một buổi chơi, bốn bước" được ghim lại và bóng golf bay theo thanh cuộn.
+- Tôn trọng chế độ giảm chuyển động của hệ điều hành (hiện tĩnh, không chuyển động). Điện thoại có thanh Đặt chỗ cố định ở dưới.
+- Skill "ScrollCraft" (bài MindStudio) không có nguồn tải công khai nên không được cài; xem thông tin ở lịch sử trò chuyện.

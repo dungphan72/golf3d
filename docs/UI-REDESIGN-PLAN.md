@@ -87,3 +87,7 @@ Mỗi giai đoạn: làm xong → chạy toàn bộ test (e2e, SQL, đơn vị) 
 1. Nhóm menu ở mục 3 có hợp lý không (có muốn chuyển mục nào sang nhóm khác)?
 2. Trang đầu hợp nhất (bỏ Tổng quan riêng) có đồng ý không?
 3. Bắt đầu từ giai đoạn 1 rồi làm lần lượt, hay chỉ làm GĐ 1–3 trước để anh xem?
+
+## Tiến độ
+
+Giai đoạn 1–8 đã hoàn thành và triển khai (chi tiết từng giai đoạn trong `docs/PROGRESS.md`). Giai đoạn 8: dọn khoảng 200 quy tắc CSS không còn phần tử nào dùng (`globals.css`, `kiotviet.css`, `mobile.css` giảm từ 82 KB xuống 63 KB), màn Huấn luyện dùng bảng chung, chỉnh lưới line và ô số trên điện thoại, kiểm tra ảnh chụp ở máy tính và điện thoại.

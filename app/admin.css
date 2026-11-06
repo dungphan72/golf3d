@@ -699,7 +699,7 @@
     font-size: 20px;
   }
   .ds-home .room-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: 10px;
   }
   .ds-legend {
@@ -1167,4 +1167,17 @@
   margin-top: 12px;
   color: var(--ds-muted);
   font-size: 13px;
+}
+
+.ds-root .room-card .room-walkin,
+.ds-root .room-card .room-book {
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .ds-tile-text strong {
+    font-size: 17px;
+  }
+  .ds-tile-icon {
+    display: none;
+  }
 }

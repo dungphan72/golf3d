@@ -23,50 +23,8 @@ body:has(.app-shell) {
 
 /* ---------- Top navigation (desktop) ---------- */
 @media (min-width: 1025px) {
-  .app-shell .sidebar {
-    position: sticky;
-    inset: 0 0 auto 0;
-    width: auto;
-    height: 50px;
-    padding: 0 14px;
-    flex-direction: row;
-    align-items: center;
-    gap: 6px;
-    overflow: visible;
-    background: #165a3c;
-    color: #fff;
-    box-shadow: 0 1px 3px rgba(10, 50, 30, 0.35);
-  }
-  .app-shell .sidebar .brand {
-    padding: 0 12px 0 0;
-    font-size: 14px;
-    gap: 9px;
-    flex-shrink: 0;
-  }
-  .app-shell .sidebar .brand-logo {
-    width: 34px;
-    height: 34px;
-    box-shadow: 0 0 0 2px #fff;
-  }
-  .app-shell .sidebar .brand small {
-    display: none;
-  }
-  .app-shell .location-switch,
-  .app-shell .nav-label,
-  .app-shell .club-note,
   .app-shell .profile small,
   .app-shell .profile > svg {
-    display: none;
-  }
-  .app-shell .sidebar nav {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    gap: 0;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .app-shell .sidebar nav::-webkit-scrollbar {
     display: none;
   }
   .app-shell .nav-item {
@@ -101,17 +59,6 @@ body:has(.app-shell) {
     background: var(--kv-orange);
     color: #fff;
   }
-  .app-shell .sidebar-bottom {
-    margin: 0;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-  }
-  .app-shell .sidebar-bottom .nav-item {
-    font-size: 12px;
-  }
   .app-shell .profile {
     display: flex;
     align-items: center;
@@ -129,26 +76,10 @@ body:has(.app-shell) {
     background: #fff;
     color: var(--kv-blue);
   }
-  .app-shell .workspace {
-    margin-left: 0;
-  }
-  .app-shell .topbar {
-    height: 42px;
-    padding: 0 20px;
-    background: #fff;
-    border-bottom: 1px solid var(--kv-line);
-  }
-  .app-shell .workspace main {
-    max-width: none;
-    padding: 16px 20px 0;
-  }
 }
 
 /* ---------- Mobile: same palette, existing drawer layout ---------- */
 @media (max-width: 1024px) {
-  .app-shell .sidebar {
-    background: #165a3c;
-  }
   .app-shell .nav-item {
     color: #e3efff;
   }
@@ -172,26 +103,8 @@ body:has(.app-shell) {
   color: var(--kv-text);
   letter-spacing: 0;
 }
-.app-shell .page-heading {
-  margin-bottom: 14px;
-}
 .app-shell .eyebrow {
   display: none;
-}
-.app-shell .page-heading p,
-.app-shell .date-display {
-  font-size: 12px;
-  color: var(--kv-muted);
-  margin-top: 4px;
-}
-.app-shell .breadcrumb,
-.app-shell .breadcrumb strong {
-  font-size: 12px;
-  color: var(--kv-muted);
-}
-.app-shell .breadcrumb strong {
-  color: var(--kv-text);
-  font-weight: 600;
 }
 .app-shell .pilot {
   background: #fff7e6;
@@ -261,7 +174,6 @@ body:has(.app-shell) {
 .app-shell .members-panel,
 .app-shell .staff-panel,
 .app-shell .table-wrap,
-.app-shell .support-card,
 .app-shell .shift-banner,
 .app-shell .info-strip {
   border-radius: 4px;
@@ -282,9 +194,6 @@ body:has(.app-shell) {
 .app-shell .stat p {
   font-size: 12px;
   color: var(--kv-muted);
-}
-.app-shell .stat-icon {
-  color: var(--kv-blue);
 }
 .app-shell .stats {
   gap: 12px;
@@ -358,9 +267,6 @@ body:has(.app-shell) {
 .app-shell .room-card.occupied {
   border-color: var(--kv-green);
 }
-.app-shell .room-card.has-booking {
-  border-color: var(--kv-orange);
-}
 
 /* ---------- Dialogs ---------- */
 .app-shell .modal,
@@ -377,66 +283,11 @@ body:has(.app-shell) {
 }
 
 /* ---------- "Quản lý khác" dropdown ---------- */
-@media (min-width: 1025px) {
-  .app-shell .sidebar nav {
-    overflow: visible;
-  }
-  .app-shell .nav-more {
-    position: relative;
-    flex-shrink: 0;
-  }
-  .app-shell .nav-more-list {
-    display: none;
-    position: absolute;
-    top: 50px;
-    left: 0;
-    min-width: 230px;
-    background: #fff;
-    border: 1px solid var(--kv-line);
-    border-radius: 0 0 4px 4px;
-    box-shadow: 0 8px 20px rgba(20, 50, 35, 0.18);
-    z-index: 50;
-    padding: 4px 0;
-  }
-  .app-shell .nav-more.open .nav-more-list {
-    display: block;
-  }
-  .app-shell .nav-more-list .nav-item {
-    width: 100%;
-    height: 38px;
-    color: var(--kv-text);
-    font-weight: 500;
-  }
-  .app-shell .nav-more-list .nav-item:hover {
-    background: var(--kv-blue-soft);
-    color: var(--kv-blue);
-  }
-  .app-shell .nav-more-list .nav-item.selected {
-    background: var(--kv-blue-soft);
-    color: var(--kv-blue);
-    box-shadow: inset 3px 0 0 var(--kv-blue);
-  }
-}
 /* Mobile / tablet: the drawer keeps one flat list. */
-@media (max-width: 1024px) {
-  .app-shell .nav-more,
-  .app-shell .nav-more-list {
-    display: contents;
-  }
-  .app-shell .nav-more-toggle {
-    display: none;
-  }
-}
 
 @media (min-width: 1025px) {
   .app-shell .nav-item {
     padding: 0 11px;
-  }
-  .app-shell .sidebar-bottom .nav-item span {
-    display: none;
-  }
-  .app-shell .sidebar-bottom .nav-item {
-    padding: 0 10px;
   }
 }
 @media (max-width: 1500px) and (min-width: 1025px) {
@@ -446,23 +297,9 @@ body:has(.app-shell) {
 }
 
 /* ---------- Mobile polish ---------- */
-.app-shell .heading-actions .primary,
-.app-shell .page-heading .primary {
+.app-shell .heading-actions .primary {
   white-space: nowrap;
   flex-shrink: 0;
-}
-.app-shell .bottom-nav button.active,
-.app-shell .bottom-nav button.active svg {
-  color: var(--kv-blue);
-}
-.app-shell .bottom-nav button.active::before,
-.app-shell .bottom-nav button.active::after {
-  background: var(--kv-blue);
-}
-@media (max-width: 640px) {
-  .app-shell .page-heading {
-    flex-wrap: wrap;
-  }
 }
 
 /* ---------- Palette refinements (calm green + gold, easy on the eyes) ---------- */
@@ -485,9 +322,6 @@ body:has(.app-shell) {
 }
 .app-shell .stat > strong {
   color: #165a3c;
-}
-.app-shell .page-heading h1 {
-  color: #1c3326;
 }
 
 /* ---------- Icon buttons with tooltips ---------- */
@@ -610,28 +444,7 @@ body:has(.app-shell) {
   border: 1px solid var(--kv-line);
 }
 /* The daily card was a dark panel; on white it is an outlined card with dark text. */
-.app-shell .daily-card {
-  background: #fff;
-  border: 1px solid var(--kv-line);
-  color: var(--kv-text);
-}
-.app-shell .daily-card h2,
-.app-shell .daily-card .eyebrow,
-.app-shell .daily-card p {
-  color: var(--kv-text);
-}
 @media (min-width: 1025px) {
-  .app-shell .sidebar {
-    background: #fff;
-    color: var(--kv-text);
-    box-shadow: 0 1px 0 var(--kv-line);
-  }
-  .app-shell .sidebar .brand {
-    color: var(--kv-text);
-  }
-  .app-shell .sidebar .brand-logo {
-    box-shadow: none;
-  }
   .app-shell .nav-item {
     color: var(--kv-muted);
   }
@@ -654,22 +467,8 @@ body:has(.app-shell) {
     background: var(--kv-blue);
     color: #fff;
   }
-  .app-shell .topbar {
-    border-bottom: 1px solid var(--kv-line);
-  }
-  .app-shell .nav-more-toggle {
-    background: #fff;
-  }
 }
 @media (max-width: 1024px) {
-  .app-shell .sidebar {
-    background: #fff;
-    color: var(--kv-text);
-    border-right: 1px solid var(--kv-line);
-  }
-  .app-shell .sidebar .brand {
-    color: var(--kv-text);
-  }
   .app-shell .nav-item {
     color: var(--kv-muted);
   }
@@ -828,17 +627,11 @@ body:has(.app-shell) {
   font-size: 11px;
   color: var(--kv-muted);
 }
-.app-shell .crm-chip.seg-vip {
-  border-color: #c8960c;
-  color: #8a5d00;
-}
-.app-shell .crm-chip.seg-loyal,
-.app-shell .crm-chip.seg-new {
+.app-shell .crm-chip.seg-loyal {
   border-color: var(--kv-blue);
   color: var(--kv-blue);
 }
-.app-shell .crm-chip.seg-lapsing,
-.app-shell .crm-chip.seg-dormant {
+.app-shell .crm-chip.seg-lapsing {
   border-color: #b3261e;
   color: #b3261e;
 }

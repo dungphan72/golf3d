@@ -340,3 +340,9 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - **Ca & sổ tiền**: bỏ tiêu đề và đoạn giới thiệu lặp, giữ nút Tải lại và Mở ca.
 - **Báo cáo**: nút chọn nhanh 7 ngày, 30 ngày, tháng này; ô tổng thu lớn và các ô tiền mặt, chuyển khoản, thẻ, bán gói, chi; biểu đồ theo ngày; hai bảng dùng `DataTable`.
 - **Nhân viên** và **Nhật ký**: dùng `DataTable`; nhật ký có ô tìm kiếm chung; trạng thái nhân viên hiện dạng nhãn.
+
+## Nâng cấp giao diện quản lý: giai đoạn 8 (hoàn thiện)
+
+- Dọn CSS: bỏ 209 quy tắc trong `globals.css`, `kiotviet.css`, `mobile.css` mà không lớp nào trong mã nguồn còn dùng (thanh menu ngang cũ, tiêu đề trang, nút nổi, thanh dưới cũ, thẻ trang trí, Lộ trình…); ba tệp giảm từ 82 KB còn 63 KB. Kiểm bằng toàn bộ test e2e và ảnh chụp trang chủ khách, trang quản lý ở máy tính và điện thoại.
+- Huấn luyện: bảng buổi học và bộ lọc HLV dùng thành phần chung.
+- Điện thoại: lưới line một cột khi màn hẹp để hai nút Bắt đầu / Đặt lịch không bị xuống dòng; ô số liệu gọn hơn.

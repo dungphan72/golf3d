@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { DataTable, FilterBar } from './kit';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { LESSON_STATUS_LABELS } from '../../lib/coaching';
@@ -112,95 +113,117 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
         </div>
       )}
       {!data?.me && (
-        <label>
-          Xem lịch của
-          <select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
-            <option value="">Tất cả HLV</option>
-            {data?.coaches.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.active ? '' : ' (ngừng)'}
-              </option>
-            ))}
-          </select>
-        </label>
+        <FilterBar>
+          <label className="ds-date">
+            Xem lịch của
+            <select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
+              <option value="">Tất cả HLV</option>
+              {data?.coaches.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.active ? '' : ' (ngừng)'}
+                </option>
+              ))}
+            </select>
+          </label>
+        </FilterBar>
       )}
-      <table>
-        <thead>
-          <tr>
-            <th>Giờ</th>
-            <th>HLV</th>
-            <th>Học viên</th>
-            <th>Trạng thái</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {data?.lessons.map((l) => (
-            <tr key={l.id}>
-              <td>
-                {when(l.start)} · {l.minutes} phút
-              </td>
-              <td>{l.coach_name}</td>
-              <td>
-                <strong>{l.customer_name}</strong> · {l.phone}
-                {l.price != null && <> · {money(l.price)}</>}
-                {l.note && (
-                  <>
-                    <br />
-                    <em>{l.note}</em>
-                  </>
-                )}
-                {l.coach_note && (
-                  <>
-                    <br />
-                    Ghi chú HLV: {l.coach_note}
-                  </>
-                )}
-              </td>
-              <td>{LESSON_STATUS_LABELS[l.status] ?? l.status}</td>
-              <td>
-                {l.status === 'scheduled' && (
-                  <>
-                    {l.start <= from + 6 * 3600_000 && (
-                      <>
-                        <button disabled={busy} onClick={() => mark(l, 'done')}>
-                          Đã dạy
-                        </button>{' '}
-                        <button disabled={busy} onClick={() => mark(l, 'no_show')}>
-                          Vắng
-                        </button>{' '}
-                      </>
-                    )}
-                    {canSchedule && (
-                      <button disabled={busy} onClick={() => mark(l, 'cancelled')}>
-                        Hủy
-                      </button>
-                    )}
-                  </>
-                )}
-                {l.status !== 'cancelled' && (
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      const coachNote = window.prompt('Ghi chú buổi học:', l.coach_note);
-                      if (coachNote !== null)
-                        act(() => post({ action: 'lesson-note', id: l.id, coachNote }));
-                    }}
-                  >
-                    Ghi chú
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {data && !data.lessons.length && (
-            <tr>
-              <td colSpan={5}>Chưa có buổi học trong 3 tuần tới</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {data && (
+        <DataTable
+          rows={data.lessons}
+          rowKey={(l) => l.id}
+          empty="Chưa có buổi học trong 3 tuần tới"
+          columns={[
+            {
+              key: 'time',
+              header: 'Giờ',
+              cell: (l) => (
+                <>
+                  {when(l.start)}
+                  <small>{l.minutes} phút</small>
+                </>
+              ),
+            },
+            { key: 'coach', header: 'HLV', cell: (l) => l.coach_name },
+            {
+              key: 'student',
+              header: 'Học viên',
+              cell: (l) => (
+                <>
+                  <strong>{l.customer_name}</strong>
+                  <small>
+                    {l.phone}
+                    {l.price != null && <> · {money(l.price)}</>}
+                  </small>
+                  {l.note && (
+                    <small>
+                      <em>{l.note}</em>
+                    </small>
+                  )}
+                  {l.coach_note && <small>Ghi chú HLV: {l.coach_note}</small>}
+                </>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Trạng thái',
+              cell: (l) => LESSON_STATUS_LABELS[l.status] ?? l.status,
+            },
+            {
+              key: 'act',
+              header: '',
+              cell: (l) => (
+                <div className="ds-cell-actions">
+                  {l.status === 'scheduled' && (
+                    <>
+                      {l.start <= from + 6 * 3600_000 && (
+                        <>
+                          <button
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => mark(l, 'done')}
+                          >
+                            Đã dạy
+                          </button>
+                          <button
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => mark(l, 'no_show')}
+                          >
+                            Vắng
+                          </button>
+                        </>
+                      )}
+                      {canSchedule && (
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => mark(l, 'cancelled')}
+                        >
+                          Hủy
+                        </button>
+                      )}
+                    </>
+                  )}
+                  {l.status !== 'cancelled' && (
+                    <button
+                      className="secondary"
+                      disabled={busy}
+                      onClick={() => {
+                        const coachNote = window.prompt('Ghi chú buổi học:', l.coach_note);
+                        if (coachNote !== null)
+                          act(() => post({ action: 'lesson-note', id: l.id, coachNote }));
+                      }}
+                    >
+                      Ghi chú
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
       {canSchedule && (
         <form
           className="form-grid"

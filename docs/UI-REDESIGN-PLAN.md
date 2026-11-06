@@ -114,3 +114,7 @@ Thiết bị chính ở quầy: **máy tính và điện thoại** (máy tính b
 - `!important`: 6 (admin), 5 (globals), 3 (landing).
 - Ảnh chụp gốc (máy tính 1440 px, điện thoại 390 px) đã chụp cho trang chủ và 9 màn máy tính. Còn thiếu nhóm Quản trị (nằm trong menu thả xuống) và các màn điện thoại ngoài trang chủ (menu "Thêm").
 - Trang chủ máy tính và điện thoại nhìn ổn; chưa thấy lỗi bố cục ở hai màn đã xem.
+
+## Tài liệu cho nhân viên
+
+Đã viết `docs/HUONG-DAN-NHAN-VIEN.md` (đăng nhập và menu, phím tắt, mở ca, khách vào chơi, phiên chơi, gọi món, thu tiền, đóng ca, bếp/bar, hội viên và CRM, quyền theo vai trò, xử lý sự cố); đối chiếu từng nhãn nút và bảng quyền với mã nguồn. Cập nhật `docs/CRM-LEAD.md` (vị trí màn Chăm sóc KH), `README.md` và `docs/PROGRESS.md`.

@@ -4,7 +4,7 @@
 
 Private pilot for a golf facility: 10 open practice lines and 2 VIP rooms in Bình Trưng, TP.HCM. **Not production-ready for real customer billing yet.**
 
-Read [requirements](docs/REQUIREMENTS.md), [progress and limitations](docs/PROGRESS.md), and [design](docs/DESIGN.md).
+Read [requirements](docs/REQUIREMENTS.md), [progress and limitations](docs/PROGRESS.md), and [design](docs/DESIGN.md). Staff: [hướng dẫn nhân viên](docs/HUONG-DAN-NHAN-VIEN.md).
 
 Current increment: **v0.4 — session food orders, kitchen queue and combined receipts**. See [progress](docs/PROGRESS.md).
 

@@ -1,5 +1,16 @@
 # Tiến độ Golf3D
 
+## Giao diện quản lý, đợt 2 (2026-11-06)
+Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2"); hướng dẫn dùng cho nhân viên: `docs/HUONG-DAN-NHAN-VIEN.md`.
+- **CSS**: bốn tệp (`globals`, `kiotviet`, `mobile`, `admin`) gộp còn `tokens.css` + `globals.css` + `admin.css` theo đúng thứ tự cascade; gộp các selector trùng chứng minh được an toàn; xóa quy tắc của menu/thanh cũ và của các lớp không còn dùng.
+- **Menu**: chỉ còn một mục **CRM**; màn Chăm sóc KH cũ thành tab "Chăm sóc KH (cũ)" bên trong (còn nhận lead Zalo/Facebook/quảng cáo).
+- **Thành phần chung** (`app/ui/kit.tsx`): `PageTabs sub`, `DataTable` (nhãn vùng cuộn, focus bàn phím, `hideOnPhone`), `KpiTile`, `ModalDialog`, `DialogHeading`; áp dụng cho báo cáo lead, gói hội viên, sổ giao dịch và đối soát ca, hộp thoại phiên.
+- **Tách tệp** (di chuyển thuần túy, đã so từng dòng): `LeadPanel` → `app/ui/lead/`, `CrmPanel` → `app/ui/crm/`, `FinancePanel` → `app/ui/finance/`, `SessionPanel` → `app/ui/session/`.
+- **Thao tác tại quầy**: phím `/` (tìm kiếm) và `N` (đặt lịch) trên máy tính; vùng bấm tối thiểu 44 px trên cảm ứng, có test e2e bảo vệ.
+- **Truy cập**: axe-core 0 lỗi ở các màn nhân viên (kể cả ca đang mở/đã đóng và hộp thoại phiên với dữ liệu thật), sửa tương phản chữ, tiêu đề, liên kết "Bỏ qua đến nội dung".
+- **CI**: sửa test CRM bị giới hạn 10 lần/10 phút theo địa chỉ khi chạy trên máy CI.
+- Chưa làm: sáu hộp thoại còn lại chuyển sang `ModalDialog`; chuyển dữ liệu CRM cũ sang module mới rồi bỏ tab cũ.
+
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar
 - Quản lý món theo nhóm, đơn vị, giá trước thuế/phí, VAT và phí F&B riêng; tạo/sửa/tạm ngưng, giữ lịch sử giá đơn đã gửi.
 - Nhân viên/chủ cơ sở gọi tối đa 10 loại món/đơn trong phiên đang chơi; xem giá đầy đủ trước gửi; không giả lập OTP hay quyền khách hàng.

@@ -1,6 +1,6 @@
 # CRM lead: từ tin nhắn đầu tiên đến thanh toán
 
-Màn hình **Chăm sóc KH** (menu trên cùng) có các tab: Lead mới, Việc cần làm, Khách hàng, Nhân sự nhận lead, Kênh & tích hợp, Quy trình tự động.
+Màn hình **Chăm sóc KH** nay nằm trong mục **CRM** của menu, ở tab cuối **Chăm sóc KH (cũ)** (mục "Chăm sóc KH" riêng đã bỏ khỏi menu; liên kết `?view=crm` và cảnh báo lead quá hạn trên trang chủ mở thẳng tab này). Bên trong có các tab nhỏ: Lead mới, Việc cần làm, Hồ sơ khách, Báo cáo tư vấn (quản lý), Thiết lập (Nhân sự nhận lead, Kênh & tích hợp, Quy trình tự động). Tab này giữ lại vì lead từ Zalo, Facebook và form quảng cáo vẫn ghi vào bảng cũ cho tới khi chuyển dữ liệu sang module CRM mới (`docs/CRM-MODULE.md`).
 
 ## Luồng chạy
 

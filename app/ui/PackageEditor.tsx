@@ -76,7 +76,7 @@ export function PackageEditor({
       list.push({ kind, qty });
     }
     if (!list.length)
-      return setError('Chọn ít nhất một quyền lợi (lượt 9 hố, 18 hố hoặc buổi GDR)');
+      return setError('Chọn ít nhất một quyền lợi (lượt 9 hố, 18 hố hoặc buổi luyện tập)');
     const cost = Math.round(Number(price));
     if (!Number.isFinite(cost) || cost < 1) return setError('Giá phải lớn hơn 0');
     const validDays = Math.round(Number(days));

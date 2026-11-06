@@ -32,7 +32,7 @@ function allDayRules() {
     for (const day of days) {
       rules.push({
         id: `${room}-gdr-${day}`,
-        label: 'GDR',
+        label: 'Luyện tập',
         service: 'gdr',
         room,
         day,

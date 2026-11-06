@@ -375,8 +375,7 @@ export function SessionPanel({
           <div>
             <h3>{b.customer}</h3>
             <p>
-              {b.phone} · {b.people} người ·{' '}
-              {b.service === 'gdr' ? 'Luyện tập GDR' : b.service + ' hố'}
+              {b.phone} · {b.people} người · {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'}
             </p>
           </div>
         </div>

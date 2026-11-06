@@ -12,7 +12,7 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:
   // green when free, yellow when a booking is due within 2 hours.
-  const free = page.locator('.room-card:has(.room-walkin)').first();
+  const free = page.locator('.room-card:has(.room-walkin:not([disabled]))').first();
   await expect(free).toBeVisible();
   const state = await free.getAttribute('data-state');
   expect(['free', 'soon']).toContain(state);
@@ -20,7 +20,8 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   expect(color).toBe(state === 'free' ? 'rgb(31, 157, 85)' : 'rgb(245, 181, 10)');
 
   // The walk-in dialog opens with the line already chosen.
-  await free.getByRole('button', { name: /Vào chơi ngay/ }).click();
+  await expect(free.getByRole('button', { name: /^Đặt lịch/ })).toBeVisible();
+  await free.getByRole('button', { name: /^Bắt đầu/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Vào chơi ngay' });
   await expect(dialog).toBeVisible();
   await expect(

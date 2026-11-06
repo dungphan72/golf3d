@@ -159,7 +159,7 @@ test('packages with a section keep to it; named sections follow the automatic gr
   assert.deepEqual(
     groups.map((g) => [g.title, g.items.map((p) => p.id)]),
     [
-      ['Luyện tập GDR', ['d']], // automatic groups first
+      ['Luyện tập', ['d']], // automatic groups first
       ['Gói giờ', ['b']],
       ['Thẻ 1 năm', ['a', 'c']],
     ],

@@ -160,7 +160,7 @@ export function groupPackages(items: PackageItem[]): PackageGroup[] {
       vip: false,
       test: (p) => kinds(p).size === 1 && kinds(p).has('holes18'),
     },
-    { id: 'gdr', title: 'Luyện tập GDR', vip: false, test: (p) => kinds(p).has('gdr') },
+    { id: 'gdr', title: 'Luyện tập', vip: false, test: (p) => kinds(p).has('gdr') },
   ];
   // Packages with an explicit section keep to it, in order of their cheapest package.
   const named = new Map<string, PackageItem[]>();

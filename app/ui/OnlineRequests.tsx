@@ -21,7 +21,7 @@ type Row = {
   late: boolean;
 };
 type Listing = { requests: Row[]; enabled: boolean; slug: string };
-const SERVICE: Record<string, string> = { gdr: 'GDR', '9': '9 hố', '18': '18 hố' };
+const SERVICE: Record<string, string> = { gdr: 'Luyện tập', '9': '9 hố', '18': '18 hố' };
 const when = (ms: number) =>
   new Date(ms).toLocaleString('vi-VN', {
     timeZone: 'Asia/Ho_Chi_Minh',

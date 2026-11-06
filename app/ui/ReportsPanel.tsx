@@ -16,7 +16,7 @@ type Day = {
 type Service = { service: string; rounds: number; revenue: number; food: number };
 type Report = { days: Day[]; services: Service[] };
 
-const SERVICE: Record<string, string> = { gdr: 'Luyện tập GDR', '9': '9 hố', '18': '18 hố' };
+const SERVICE: Record<string, string> = { gdr: 'Luyện tập', '9': '9 hố', '18': '18 hố' };
 const vnDate = (ms: number) => new Date(ms + 7 * 3600_000).toISOString().slice(0, 10);
 const shortDay = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
 

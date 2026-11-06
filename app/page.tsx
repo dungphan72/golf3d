@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 
 const TITLE = 'Saigon Golf 3D Club — Golf 3D Foresight GC3 tại Bình Trưng, TP.HCM';
 const DESCRIPTION =
-  'Chơi golf 3D mô phỏng Foresight GC3, luyện tập GDR và phòng VIP riêng tại 250 Lương Đình Của, Bình Trưng, TP.HCM. Mở cửa mỗi ngày. Đặt lịch online, hotline 0902030185.';
+  'Chơi golf 3D mô phỏng Foresight GC3, luyện tập và phòng VIP riêng tại 250 Lương Đình Của, Bình Trưng, TP.HCM. Mở cửa mỗi ngày. Đặt lịch online, hotline 0902030185.';
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -318,7 +318,7 @@ export default async function LandingPage() {
                     <i>18</i>
                   </>
                 )}
-                <i>GDR</i>
+                <i>Luyện tập</i>
                 <i>VIP</i>
                 <em>10 line</em>
               </div>
@@ -473,7 +473,7 @@ export default async function LandingPage() {
                     <strong>
                       <Count v={gold.gdr} />
                     </strong>
-                    <span>luyện tập GDR / giờ</span>
+                    <span>luyện tập / giờ</span>
                   </div>
                   <div>
                     <strong>

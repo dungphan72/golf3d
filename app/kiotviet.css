@@ -1037,20 +1037,39 @@ body:has(.app-shell) {
 .app-shell .room-card.clean .room-status {
   color: #5b6770;
 }
-.app-shell .room-card .room-walkin {
-  display: block;
-  width: calc(100% - 28px);
+.app-shell .room-card .room-actions {
+  display: flex;
+  gap: 8px;
   margin: 0 14px 12px;
+}
+.app-shell .room-card .room-walkin,
+.app-shell .room-card .room-book {
+  flex: 1;
   padding: 8px 10px;
   border-radius: 6px;
-  border: 1px solid #1f9d55;
-  background: #fff;
-  color: #1f9d55;
   font-weight: 650;
   cursor: pointer;
+  background: #fff;
 }
-.app-shell .room-card .room-walkin:hover {
+.app-shell .room-card .room-walkin {
+  border: 1px solid #1f9d55;
+  color: #1f9d55;
+}
+.app-shell .room-card .room-walkin:hover:not(:disabled) {
   background: #1f9d55;
+  color: #fff;
+}
+.app-shell .room-card .room-walkin:disabled {
+  border-color: var(--kv-line);
+  color: #9aa5ad;
+  cursor: not-allowed;
+}
+.app-shell .room-card .room-book {
+  border: 1px solid #1c5fb0;
+  color: #1c5fb0;
+}
+.app-shell .room-card .room-book:hover {
+  background: #1c5fb0;
   color: #fff;
 }
 .legend i.free {

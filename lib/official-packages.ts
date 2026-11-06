@@ -49,7 +49,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-peak-10',
-    name: 'GDR giờ vàng · 10 buổi (+5)',
+    name: 'Luyện tập giờ vàng · 10 buổi (+5)',
     price: 1_000_000,
     grants: [{ kind: 'gdr', qty: 15 }],
     validDays: 2 * DAYS,
@@ -57,7 +57,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-10',
-    name: 'GDR · 10 buổi (+1)',
+    name: 'Luyện tập · 10 buổi (+1)',
     price: 2_000_000,
     grants: [{ kind: 'gdr', qty: 11 }],
     validDays: 3 * DAYS,
@@ -65,7 +65,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-20',
-    name: 'GDR · 20 buổi (+5)',
+    name: 'Luyện tập · 20 buổi (+5)',
     price: 4_000_000,
     grants: [{ kind: 'gdr', qty: 25 }],
     validDays: 6 * DAYS,
@@ -73,7 +73,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-1m',
-    name: 'GDR · 1 tháng',
+    name: 'Luyện tập · 1 tháng',
     price: 3_000_000,
     grants: [{ kind: 'gdr', qty: UNLIMITED }],
     validDays: 1 * DAYS,
@@ -81,7 +81,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-3m',
-    name: 'GDR · 3 tháng',
+    name: 'Luyện tập · 3 tháng',
     price: 7_500_000,
     grants: [{ kind: 'gdr', qty: UNLIMITED }],
     validDays: 3 * DAYS,
@@ -89,7 +89,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-6m',
-    name: 'GDR · 6 tháng (giảm 30%)',
+    name: 'Luyện tập · 6 tháng (giảm 30%)',
     price: 9_450_000,
     grants: [
       { kind: 'gdr', qty: UNLIMITED },
@@ -100,7 +100,7 @@ export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   },
   {
     key: 'gdr-12m',
-    name: 'GDR · 12 tháng (giảm 30%)',
+    name: 'Luyện tập · 12 tháng (giảm 30%)',
     price: 17_500_000,
     grants: [
       { kind: 'gdr', qty: UNLIMITED },

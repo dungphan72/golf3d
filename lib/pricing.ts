@@ -63,7 +63,7 @@ export function validateRules(rules: PriceRule[]) {
     if (!Number.isSafeInteger(rule.amount) || rule.amount <= 0 || rule.amount > 100_000_000)
       throw new Error('Đơn giá phải là số đồng nguyên lớn hơn 0, tối đa 100 triệu');
     if (rule.service === 'gdr' && rule.people !== null)
-      throw new Error('Giá GDR áp dụng theo phòng, không theo số người');
+      throw new Error('Giá luyện tập áp dụng theo phòng, không theo số người');
     if (
       rule.service !== 'gdr' &&
       (!Number.isInteger(rule.people) || rule.people! < 1 || rule.people! > 4)
@@ -113,7 +113,7 @@ export function selectRule(ms: number, c: Config, service: Service, vip: boolean
   if (matches.length > 1) throw new Error('Có khung giá trùng, hãy kiểm tra cấu hình');
   if (!matches.length)
     throw new Error(
-      `Chưa có giá ${vip ? 'VIP' : 'line tiêu chuẩn'} · ${service === 'gdr' ? 'GDR' : service + ' hố'} · ${p.date} ${String(Math.floor(p.minute / 60)).padStart(2, '0')}:${String(p.minute % 60).padStart(2, '0')}`,
+      `Chưa có giá ${vip ? 'VIP' : 'line tiêu chuẩn'} · ${service === 'gdr' ? 'luyện tập' : service + ' hố'} · ${p.date} ${String(Math.floor(p.minute / 60)).padStart(2, '0')}:${String(p.minute % 60).padStart(2, '0')}`,
     );
   return matches[0];
 }

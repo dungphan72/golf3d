@@ -116,7 +116,7 @@ export function BookingForm({
             <label>
               Dịch vụ
               <select value={service} onChange={(e) => setService(e.target.value)}>
-                <option value="gdr">Luyện tập GDR</option>
+                <option value="gdr">Luyện tập</option>
                 <option value="9">Chơi 9 hố</option>
                 <option value="18">Chơi 18 hố</option>
               </select>
@@ -356,7 +356,7 @@ export function SettingsForm({
             <legend>Dịch vụ chịu phí</legend>
             {(
               [
-                ['gdr', 'GDR'],
+                ['gdr', 'Luyện tập'],
                 ['9', '9 hố'],
                 ['18', '18 hố'],
               ] as const

@@ -81,7 +81,7 @@ export function RoomGrid({
               >
                 <div className="room-top">
                   <span className="room-type">
-                    {r.vip ? 'PRIVATE ROOM' : r.left ? 'LEFT-HANDED' : 'GDR PRACTICE'}
+                    {r.vip ? 'PRIVATE ROOM' : r.left ? 'LEFT-HANDED' : 'LUYỆN TẬP'}
                   </span>
                   {r.vip ? (
                     <Flag size={17} />
@@ -136,16 +136,25 @@ export function RoomGrid({
                   )}
                 </div>
               </button>
-              {canWalkIn && (
+              <div className="room-actions">
                 <button
                   type="button"
                   className="room-walkin"
+                  disabled={!canWalkIn}
                   onClick={() => onWalkIn(r.id)}
-                  aria-label={`Vào chơi ngay ${r.name}`}
+                  aria-label={`Bắt đầu ${r.name}`}
                 >
-                  Vào chơi ngay
+                  Bắt đầu
                 </button>
-              )}
+                <button
+                  type="button"
+                  className="room-book"
+                  onClick={() => onBook(r.id)}
+                  aria-label={`Đặt lịch ${r.name}`}
+                >
+                  Đặt lịch
+                </button>
+              </div>
             </article>
           );
         })}
@@ -194,7 +203,7 @@ export function BookingTable({
                 {date(b.start)} · {time(b.start)}
               </td>
               <td>
-                {b.service === 'gdr' ? 'GDR' : b.service + ' hố'} · {b.people} người
+                {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'} · {b.people} người
               </td>
               <td>
                 <span className={'badge ' + b.status}>{labels[b.status]}</span>

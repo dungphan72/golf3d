@@ -3,7 +3,11 @@ import { useState } from 'react';
 import { Plus, Trash2, ChevronDown } from 'lucide-react';
 import { money, type Config } from '../../lib/club';
 import { validateRules, type PriceRule, type Service, type DayType } from '../../lib/pricing';
-const services = { gdr: 'GDR · theo giờ', '9': '9 hố · trọn lượt', '18': '18 hố · trọn lượt' };
+const services = {
+  gdr: 'Luyện tập · theo giờ',
+  '9': '9 hố · trọn lượt',
+  '18': '18 hố · trọn lượt',
+};
 const days = { weekday: 'T2–T6', weekend: 'T7 & CN', holiday: 'Ngày lễ' };
 export function PriceEditor({
   rules,
@@ -285,7 +289,7 @@ export function TariffPreview({ config }: { config: Config }) {
       </div>
       <p className="form-note">
         Ngày lễ chỉ áp dụng cho các ngày chủ cơ sở đã khai báo. Vui lòng chọn lịch để xem tổng dự
-        kiến gồm VAT và phí. GDR tính theo thời gian thực; 9/18 hố trọn lượt.
+        kiến gồm VAT và phí. Luyện tập tính theo thời gian thực; 9/18 hố trọn lượt.
       </p>
     </div>
   );

@@ -60,7 +60,7 @@ export function planBooking(
     promo: { id: string; name: string } | null = null;
   if (service === 'gdr') {
     if (!Number.isInteger(minutes) || minutes < 60 || minutes > 720 || (minutes - 60) % 30 !== 0)
-      throw new Error('GDR tối thiểu 60 phút, tăng mỗi 30 phút.');
+      throw new Error('Luyện tập tối thiểu 60 phút, tăng mỗi 30 phút.');
     end = start + minutes * 60000;
   } else {
     const price = packagePrice(start, c, service, room.vip, people);

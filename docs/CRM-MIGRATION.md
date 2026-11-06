@@ -111,9 +111,29 @@ Cổng `POST /api/leads/website` (form trên 3dgolf.vn) đã chuyển được. 
 
 Trang chủ hiện thêm "N lead mới ở CRM chưa liên hệ" và "N việc CRM quá hạn" để lễ tân không bỏ sót.
 
+## Cổng Zalo OA: chuyển sang CRM mới bằng công tắc riêng
+
+`POST /api/leads/zalo` (tin khách nhắn Zalo Official Account) chuyển được theo cách tương tự: **CRM → Cấu hình → "Tin nhắn Zalo OA"**, mặc định vẫn vào CRM cũ, độc lập với công tắc website. Chữ ký Zalo vẫn kiểm như trước.
+
+**Cần áp migration `0020` trước khi bật** (chỉ thêm, không đổi dữ liệu có sẵn; bản đang chạy không dùng):
+
+```bash
+pnpm exec wrangler d1 migrations apply golf3d --remote --config dist/server/wrangler.deploy.json
+```
+
+Migration thêm bảng `crm2_inbound` (nhớ mã từng sự kiện, vì Zalo gửi lại sự kiện khi thấy lỗi) và cột `crm2_leads.channel_ref` (Zalo ID của khách). Bật công tắc khi chưa áp migration sẽ lỗi.
+
+| Khác biệt khi bật | Chi tiết |
+|---|---|
+| Khách không có số điện thoại | Gộp theo Zalo ID: các tin của cùng một khách vào một lead (còn mở) thay vì mỗi tin một lead. Tên lead là "Khách Zalo" kèm 4 ký tự cuối của ID; **ID đầy đủ nằm trong ghi chú** (cách duy nhất để tìm khách trong ứng dụng Zalo OA). |
+| Tin gửi lại bởi Zalo | Nhớ theo mã sự kiện, không tạo thêm gì. Mã chỉ ghi sau khi xử lý xong, nên lỗi giữa chừng không làm mất tin. |
+| Khách để lại số ở tin sau | Số được điền vào lead (nếu lead chưa có số). |
+| Trả lời khách | Nhân viên trả lời ngay trong ứng dụng Zalo OA, như bên cũ. |
+| Thông báo cho nhân viên | Email khi được chia lead, theo cài đặt của module mới; không còn tin Zalo/email của hàng chờ gửi bên cũ. |
+
 ## Việc còn lại để bỏ tab "Chăm sóc KH (cũ)"
 
-1. Chuyển ba cổng còn lại (`/api/leads/facebook`, `/zalo`, `/ads`) sang `ingestLead` của module mới, từng cổng một.
+1. Chuyển hai cổng còn lại (`/api/leads/facebook`, `/api/leads/ads`) sang module mới, từng cổng một (đã có sẵn `ingestChannelLead` dùng chung).
 2. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
 3. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
 4. Chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.

@@ -17,6 +17,7 @@ import {
 } from '../core/calls';
 import { pickAssignee } from '../core/distribution';
 import { toInquiry, type WebsiteLead } from '../core/website';
+import type { CrmSettings } from '../core/settings';
 import { addWorkingMinutes, workMinutesBetween } from '../core/workhours';
 import { afterSalesPlan } from '../core/customers';
 import { canEditLead, canSeeLead, isManager, maskForViewer, type Actor } from '../core/access';
@@ -98,12 +99,80 @@ export type IntakeInput = {
   preferredTime?: string;
 };
 
+/** How the customer got in touch again: a form they filled in, or a message on a chat channel. */
+export type Via = 'form' | 'chat';
+
+/**
+ * A known customer writes again: the lead gets one more inquiry (and comes back to NEW if it was lost), the owner a
+ * call task and a message. A phone number given now fills an empty one.
+ */
+export async function absorbInquiry(
+  tenant: string,
+  old: LeadRow,
+  i: IntakeInput,
+  settings: CrmSettings,
+  base: string,
+  now: number,
+  via: Via,
+) {
+  const norm = normalizePhone(i.phone);
+  await db()
+    .prepare(
+      `UPDATE crm2_leads SET inquiry_count=inquiry_count+1,updated=?,
+       stage=CASE WHEN stage='LOST' THEN 'NEW' ELSE stage END,
+       status_id=CASE WHEN stage='LOST' THEN 'khach-moi' ELSE status_id END,
+       lost_reason=CASE WHEN stage='LOST' THEN '' ELSE lost_reason END,
+       phone=CASE WHEN phone='' THEN ? ELSE phone END,
+       phone_norm=CASE WHEN phone_norm='' THEN ? ELSE phone_norm END,
+       target_service=CASE WHEN target_service='' THEN ? ELSE target_service END WHERE tenant=? AND id=?`,
+    )
+    .bind(now, i.phone.trim().slice(0, 50), norm, i.targetService ?? '', tenant, old.id)
+    .run();
+  const chat = via === 'chat';
+  await addActivity(
+    tenant,
+    old.id,
+    'INQUIRY',
+    chat
+      ? `Khách nhắn lại qua ${i.source || 'chat'}: ${i.notes || '(không có nội dung)'}`
+      : i.notes
+        ? `Khách gửi lại: ${i.notes}`
+        : 'Khách gửi lại thông tin',
+    chat ? i.source || 'Chat' : 'Website',
+    now,
+  );
+  if (!old.owner) return;
+  const due = addWorkingMinutes(now, settings.slaMinutes, settings.workHours);
+  await addTask(
+    tenant,
+    {
+      leadId: old.id,
+      title: chat ? 'Khách nhắn lại, trả lời ngay' : 'Khách gửi lại biểu mẫu, gọi lại ngay',
+      type: 'CALL',
+      dueAt: due,
+      assignee: old.owner,
+      createdBy: 'Hệ thống',
+      ukey: `again:${old.id}:${old.inquiryCount + 1}`,
+    },
+    now,
+  );
+  await notifyStaff(
+    tenant,
+    old.owner,
+    `crm2:again:${old.id}:${old.inquiryCount + 1}`,
+    `[CRM] Khách ${chat ? 'nhắn' : 'gửi'} lại: ${old.fullName}`,
+    `Khách ${old.fullName} (${old.phone || 'chưa có số'}) vừa ${chat ? 'nhắn' : 'gửi'} lại thông tin. Hồ sơ: ${base}/quan-ly?view=crm&lead=${old.id}`,
+    now,
+  );
+}
+
 /** Every inquiry (website form, manual entry, import) ends up here. */
 export async function ingestLead(
   tenant: string,
   i: IntakeInput,
   base: string,
   now: number,
+  via: Via = 'form',
 ): Promise<Result> {
   const d = db();
   const norm = normalizePhone(i.phone);
@@ -124,48 +193,7 @@ export async function ingestLead(
       .bind(tenant, norm, now - 365 * DAY)
       .first<LeadRow>();
     if (old) {
-      await d
-        .prepare(
-          `UPDATE crm2_leads SET inquiry_count=inquiry_count+1,updated=?,
-           stage=CASE WHEN stage='LOST' THEN 'NEW' ELSE stage END,
-           status_id=CASE WHEN stage='LOST' THEN 'khach-moi' ELSE status_id END,
-           lost_reason=CASE WHEN stage='LOST' THEN '' ELSE lost_reason END,
-           target_service=CASE WHEN target_service='' THEN ? ELSE target_service END WHERE tenant=? AND id=?`,
-        )
-        .bind(now, i.targetService ?? '', tenant, old.id)
-        .run();
-      await addActivity(
-        tenant,
-        old.id,
-        'INQUIRY',
-        i.notes ? `Khách gửi lại: ${i.notes}` : 'Khách gửi lại thông tin',
-        'Website',
-        now,
-      );
-      if (old.owner) {
-        const due = addWorkingMinutes(now, settings.slaMinutes, settings.workHours);
-        await addTask(
-          tenant,
-          {
-            leadId: old.id,
-            title: 'Khách gửi lại biểu mẫu, gọi lại ngay',
-            type: 'CALL',
-            dueAt: due,
-            assignee: old.owner,
-            createdBy: 'Hệ thống',
-            ukey: `again:${old.id}:${old.inquiryCount + 1}`,
-          },
-          now,
-        );
-        await notifyStaff(
-          tenant,
-          old.owner,
-          `crm2:again:${old.id}:${old.inquiryCount + 1}`,
-          `[CRM] Khách gửi lại: ${old.fullName}`,
-          `Khách ${old.fullName} (${old.phone}) vừa gửi lại thông tin. Hồ sơ: ${base}/quan-ly?view=crm&lead=${old.id}`,
-          now,
-        );
-      }
+      await absorbInquiry(tenant, old, i, settings, base, now, via);
       return reply({ ok: true, duplicate: true, id: old.id });
     }
   }

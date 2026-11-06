@@ -38,6 +38,8 @@ import {
 } from '../modules/crm/core/customers.ts';
 import { sanitizeSettings } from '../modules/crm/core/settings.ts';
 import { toInquiry } from '../modules/crm/core/website.ts';
+import { zaloInquiry } from '../modules/crm/core/zalo.ts';
+import type { LeadInput } from '../lib/leads.ts';
 import { canSeeLead, canEditLead, maskForViewer } from '../modules/crm/core/access.ts';
 
 const H = 3_600_000;
@@ -478,4 +480,34 @@ test('cấu hình: lead từ form website mặc định vào CRM cũ, chỉ nh�
   assert.equal(sanitizeSettings({ websiteLeads: 'CRM2' }).websiteLeads, 'CRM2');
   assert.equal(sanitizeSettings({ websiteLeads: 'crm2' }).websiteLeads, 'LEGACY');
   assert.equal(sanitizeSettings({ websiteLeads: 7 }).websiteLeads, 'LEGACY');
+});
+
+test('tin nhắn Zalo: đặt tên theo Zalo ID, giữ ID trong ghi chú, đoán dịch vụ', () => {
+  const base: Pick<LeadInput, 'zaloId' | 'phone' | 'need' | 'message'> = {
+    zaloId: 'u-8f3a91c2',
+    phone: '',
+    need: '',
+    message: 'Cho em hỏi giá',
+  };
+  const a = zaloInquiry(base);
+  assert.equal(a.fullName, 'Khách Zalo 91c2');
+  assert.equal(a.source, 'Zalo OA');
+  assert.equal(a.phone, '');
+  assert.equal(a.targetService, '');
+  assert.equal(a.notes, 'Cho em hỏi giá\nZalo ID: u-8f3a91c2');
+  assert.equal(zaloInquiry({ ...base, need: 'swing' }).targetService, 'Luyện swing');
+  assert.equal(zaloInquiry({ ...base, need: '18', phone: '0912345678' }).phone, '0912345678');
+  assert.equal(zaloInquiry({ ...base, need: 'other' }).targetService, '');
+  // a very long message never pushes the Zalo id out of the notes
+  const long = zaloInquiry({ ...base, message: 'x'.repeat(3000) });
+  assert.equal(long.notes.length, 2000);
+});
+
+test('cấu hình: tin Zalo mặc định vào CRM cũ, chỉ nhận đúng hai giá trị', () => {
+  assert.equal(sanitizeSettings(undefined).zaloLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ zaloLeads: 'CRM2' }).zaloLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ zaloLeads: 'zalo' }).zaloLeads, 'LEGACY');
+  // the two switches are independent
+  const s = sanitizeSettings({ websiteLeads: 'CRM2' });
+  assert.deepEqual([s.websiteLeads, s.zaloLeads], ['CRM2', 'LEGACY']);
 });

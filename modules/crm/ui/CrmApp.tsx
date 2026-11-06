@@ -38,6 +38,7 @@ type Settings = {
   afterSales: { enabled: boolean };
   notifyAssignEmail: boolean;
   websiteLeads: 'LEGACY' | 'CRM2';
+  zaloLeads: 'LEGACY' | 'CRM2';
   [k: string]: unknown;
 };
 type Config = {
@@ -141,6 +142,20 @@ function ConfigScreen() {
           <small>
             Chỉ đổi khi đã có nhân viên làm việc ở CRM mới và bộ lập lịch gọi /api/crm2/cron. Lead
             đã vào bên cũ vẫn ở bên cũ; đổi lại bất cứ lúc nào.
+          </small>
+        </label>
+        <label>
+          Tin nhắn Zalo OA
+          <select
+            value={s.zaloLeads}
+            onChange={(e) => setS({ ...s, zaloLeads: e.target.value as 'LEGACY' | 'CRM2' })}
+          >
+            <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
+            <option value="CRM2">CRM mới (màn này)</option>
+          </select>
+          <small>
+            Khách nhắn Zalo không có số điện thoại: các tin của cùng một khách gộp vào một lead theo
+            Zalo ID (ghi trong ghi chú). Nhân viên trả lời trong ứng dụng Zalo OA.
           </small>
         </label>
         <label>

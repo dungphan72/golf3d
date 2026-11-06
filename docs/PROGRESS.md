@@ -13,7 +13,8 @@ Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2
 - Vị trí và cỡ hộp thoại: sửa lỗi mọi hộp thoại dính góc trên bên trái trên máy tính (bộ reset của Tailwind xóa `margin: auto` của `<dialog>`); căn giữa lại, giữ trong màn hình có thanh cuộn riêng (kể cả màn ngang thấp), hộp xác nhận thành tấm trượt đầy chiều ngang trên điện thoại; biểu mẫu đặt lịch và vào chơi ngay dùng chữ 13–17 px, có khoảng cách, ô nhập cùng chiều cao. Có test e2e giữ vị trí.
 - Chuyển lead CRM cũ sang module mới (hướng 1, nhập một lần, chạy lại được, có hoàn tác và kiểm tra): `scripts/crm-legacy-*.sql`, `docs/CRM-MIGRATION.md`, `tests/crm_migrate_sql_test.py`. Đã thử trên cơ sở dữ liệu cục bộ; chưa chạy trên cơ sở dữ liệu thật.
 - Cổng website (`/api/leads/website`) chuyển sang CRM mới bằng công tắc trong CRM → Cấu hình (mặc định vẫn vào CRM cũ): `modules/crm/core/website.ts`, `ingestWebsiteLead`, test `tests/e2e/zzzz-website-to-crm2.spec.ts`; trang chủ báo lead mới và việc quá hạn của CRM mới. Xem `docs/CRM-MIGRATION.md`.
-- Chưa làm: chuyển ba cổng còn lại (Facebook, Zalo, quảng cáo), cấu hình kênh và thông báo nhân viên trong module mới, rồi bỏ tab cũ.
+- Cổng Zalo OA chuyển sang CRM mới bằng công tắc riêng (mặc định cũ); migration `0020` thêm `crm2_inbound` và `crm2_leads.channel_ref`; `ingestChannelLead` dùng chung (nhớ sự kiện, gộp tin theo Zalo ID). Xem `docs/CRM-MIGRATION.md`.
+- Chưa làm: chuyển hai cổng còn lại (Facebook, quảng cáo), cấu hình kênh và thông báo nhân viên trong module mới, rồi bỏ tab cũ.
 
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar
 - Quản lý món theo nhóm, đơn vị, giá trước thuế/phí, VAT và phí F&B riêng; tạo/sửa/tạm ngưng, giữ lịch sử giá đơn đã gửi.

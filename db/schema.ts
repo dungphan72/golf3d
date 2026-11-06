@@ -784,11 +784,13 @@ export const crm2Leads = sqliteTable(
     firstResponseMin: integer('first_response_min'),
     firstResponseWorkMin: integer('first_response_work_min'),
     wonAt: integer('won_at'),
+    channelRef: text('channel_ref').notNull().default(''), // who wrote on a chat channel, e.g. zalo:<user id>
     created: integer('created').notNull(),
     updated: integer('updated').notNull(),
   },
   (t) => [
     index('crm2_lead_phone').on(t.tenant, t.phoneNorm),
+    index('crm2_lead_channel').on(t.tenant, t.channelRef),
     index('crm2_lead_owner').on(t.tenant, t.owner, t.nextAction, t.nextDue),
     index('crm2_lead_stage').on(t.tenant, t.stage),
   ],
@@ -827,6 +829,17 @@ export const crm2Tasks = sqliteTable(
     index('crm2_task_assignee').on(t.tenant, t.assignee, t.doneAt, t.dueAt),
     uniqueIndex('crm2_task_ukey').on(t.tenant, t.ukey),
   ],
+);
+/** One row per webhook event already turned into a lead or an inquiry: the provider retries, we never repeat. */
+export const crm2Inbound = sqliteTable(
+  'crm2_inbound',
+  {
+    tenant: text('tenant').notNull(),
+    extKey: text('ext_key').notNull(),
+    leadId: text('lead_id').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_inbound_key').on(t.tenant, t.extKey)],
 );
 export const crm2BlockedPhones = sqliteTable(
   'crm2_blocked_phones',

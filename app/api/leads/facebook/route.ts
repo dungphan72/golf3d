@@ -4,6 +4,8 @@ import { safeEqual } from '../../../../lib/server/throttle';
 import { facebookSignatureOk, fetchFacebookLead, secret } from '../../../../lib/server/providers';
 import { intake } from '../../../../lib/server/lead-intake';
 import { publicTenant } from '../../../../lib/server/member-account-service';
+import { getSettings } from '../../../../modules/crm/server/store';
+import { ingestFacebookLead } from '../../../../modules/crm/server/channels';
 export const dynamic = 'force-dynamic';
 
 /** Facebook subscription check: echo the challenge when the verify token matches. */
@@ -36,6 +38,8 @@ export async function POST(req: Request) {
     return httpError('Dữ liệu không hợp lệ');
   }
   const now = requestNow(req);
+  // The club decides in CRM > Cấu hình where Facebook leads go; the old CRM stays the default.
+  const toCrm2 = (await getSettings(tenant)).facebookLeads === 'CRM2';
   let processed = 0;
   for (const entry of body.entry ?? [])
     for (const ch of entry.changes ?? []) {
@@ -66,7 +70,8 @@ export async function POST(req: Request) {
       // Without the details (no page token) the lead still arrives: staff answer on Facebook.
       if (!fields)
         lead.message = `Lead Facebook ${leadgenId}: chưa lấy được chi tiết biểu mẫu (cần FB_PAGE_TOKEN). Mở Facebook Lead Center để xem.`;
-      await intake(tenant, lead, originOf(req), now);
+      if (toCrm2) await ingestFacebookLead(tenant, lead, originOf(req), now);
+      else await intake(tenant, lead, originOf(req), now);
       processed++;
     }
   return sendResult({ status: 200, body: { ok: true, processed } });

@@ -1,5 +1,6 @@
 /** Maps a message a customer sent to the Zalo Official Account onto the CRM module's inquiry. Pure: no I/O. */
 import type { LeadInput } from '../../../lib/leads.ts';
+import { serviceOf } from './services.ts';
 
 export type ChatInquiry = {
   fullName: string;
@@ -7,13 +8,6 @@ export type ChatInquiry = {
   notes: string;
   source: string;
   targetService: string;
-};
-
-const SERVICES: Record<string, string> = {
-  swing: 'Luyện swing',
-  '9': 'Game 9 hố',
-  '18': 'Game 18 hố',
-  group: 'Nhóm / sự kiện',
 };
 
 /**
@@ -29,6 +23,6 @@ export function zaloInquiry(
     phone: ev.phone,
     notes: [ev.message, `Zalo ID: ${ev.zaloId}`].filter(Boolean).join('\n').slice(0, 2000),
     source: 'Zalo OA',
-    targetService: SERVICES[ev.need] ?? '',
+    targetService: serviceOf(ev.need),
   };
 }

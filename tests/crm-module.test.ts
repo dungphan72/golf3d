@@ -39,6 +39,8 @@ import {
 import { sanitizeSettings } from '../modules/crm/core/settings.ts';
 import { toInquiry } from '../modules/crm/core/website.ts';
 import { zaloInquiry } from '../modules/crm/core/zalo.ts';
+import { facebookInquiry } from '../modules/crm/core/facebook.ts';
+import { isService, serviceOf } from '../modules/crm/core/services.ts';
 import type { LeadInput } from '../lib/leads.ts';
 import { canSeeLead, canEditLead, maskForViewer } from '../modules/crm/core/access.ts';
 
@@ -510,4 +512,49 @@ test('cấu hình: tin Zalo mặc định vào CRM cũ, chỉ nhận đúng hai 
   // the two switches are independent
   const s = sanitizeSettings({ websiteLeads: 'CRM2' });
   assert.deepEqual([s.websiteLeads, s.zaloLeads], ['CRM2', 'LEGACY']);
+});
+
+test('dịch vụ khách hỏi: bảng dùng chung, lạ thì để trống', () => {
+  assert.equal(serviceOf('swing'), 'Luyện swing');
+  assert.equal(serviceOf('18'), 'Game 18 hố');
+  assert.equal(serviceOf('group'), 'Nhóm / sự kiện');
+  assert.equal(serviceOf('other'), '');
+  assert.equal(serviceOf(''), '');
+  assert.equal(serviceOf(undefined), '');
+  assert.equal(isService('9'), true);
+  assert.equal(isService('other'), false);
+});
+
+test('lead Facebook: giữ tên, số, email, đưa chiến dịch và mã biểu mẫu vào ghi chú', () => {
+  const ev: Pick<
+    LeadInput,
+    'name' | 'phone' | 'email' | 'need' | 'message' | 'campaign' | 'channelRef'
+  > = {
+    name: 'Lan',
+    phone: '0912345678',
+    email: 'lan@example.vn',
+    need: '9',
+    message: 'Chơi 9 hố cuối tuần',
+    campaign: 'khai-truong',
+    channelRef: 'facebook-lead:fb-123',
+  };
+  const a = facebookInquiry(ev);
+  assert.deepEqual(
+    [a.fullName, a.phone, a.email, a.source, a.targetService],
+    ['Lan', '0912345678', 'lan@example.vn', 'Facebook', 'Game 9 hố'],
+  );
+  assert.equal(a.notes, 'Chơi 9 hố cuối tuần\nChiến dịch: khai-truong\nFacebook lead: fb-123');
+  // a form with nothing but the id still says where the lead came from
+  const bare = facebookInquiry({ ...ev, message: '', campaign: '', need: '' });
+  assert.equal(bare.notes, 'Facebook lead: fb-123');
+  assert.equal(bare.targetService, '');
+  assert.equal(facebookInquiry({ ...ev, message: 'x'.repeat(3000) }).notes.length, 2000);
+});
+
+test('cấu hình: lead Facebook mặc định vào CRM cũ và độc lập với hai công tắc kia', () => {
+  assert.equal(sanitizeSettings(undefined).facebookLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ facebookLeads: 'CRM2' }).facebookLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ facebookLeads: true }).facebookLeads, 'LEGACY');
+  const s = sanitizeSettings({ facebookLeads: 'CRM2', zaloLeads: 'CRM2' });
+  assert.deepEqual([s.websiteLeads, s.zaloLeads, s.facebookLeads], ['LEGACY', 'CRM2', 'CRM2']);
 });

@@ -39,6 +39,7 @@ type Settings = {
   notifyAssignEmail: boolean;
   websiteLeads: 'LEGACY' | 'CRM2';
   zaloLeads: 'LEGACY' | 'CRM2';
+  facebookLeads: 'LEGACY' | 'CRM2';
   [k: string]: unknown;
 };
 type Config = {
@@ -156,6 +157,20 @@ function ConfigScreen() {
           <small>
             Khách nhắn Zalo không có số điện thoại: các tin của cùng một khách gộp vào một lead theo
             Zalo ID (ghi trong ghi chú). Nhân viên trả lời trong ứng dụng Zalo OA.
+          </small>
+        </label>
+        <label>
+          Lead Facebook / Instagram (Lead Ads)
+          <select
+            value={s.facebookLeads}
+            onChange={(e) => setS({ ...s, facebookLeads: e.target.value as 'LEGACY' | 'CRM2' })}
+          >
+            <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
+            <option value="CRM2">CRM mới (màn này)</option>
+          </select>
+          <small>
+            Chiến dịch và mã biểu mẫu Facebook ghi trong ghi chú của lead. Mỗi lần khách gửi biểu
+            mẫu chỉ tính một lần dù Facebook gửi lại.
           </small>
         </label>
         <label>

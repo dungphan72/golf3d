@@ -1,6 +1,7 @@
 /** Maps a lead posted by the website form (POST /api/leads/website) onto the CRM module's inquiry. Pure: no I/O. */
 import { needFromText, phoneInText } from '../../../lib/leads.ts';
 import { normalizePhone } from './phone.ts';
+import { isService, serviceOf } from './services.ts';
 
 export type WebsiteLead = {
   name: string;
@@ -25,18 +26,12 @@ export type WebsiteInquiry = {
   preferredTime: string;
 };
 
-const SERVICES: Record<string, string> = {
-  swing: 'Luyện swing',
-  '9': 'Game 9 hố',
-  '18': 'Game 18 hố',
-  group: 'Nhóm / sự kiện',
-};
 const VN_OFFSET = 7 * 3_600_000;
 
 /** Same reading of the form as the old CRM: the typed number, else one found in the message. */
 export function toInquiry(raw: WebsiteLead): WebsiteInquiry {
   const phone = normalizePhone(raw.phone) || phoneInText(raw.message);
-  const need = SERVICES[raw.need] ? raw.need : needFromText(raw.message);
+  const need = isService(raw.need) ? raw.need : needFromText(raw.message);
   const when =
     raw.preferredStart != null && Number.isFinite(raw.preferredStart)
       ? new Date(raw.preferredStart + VN_OFFSET).toISOString()
@@ -57,7 +52,7 @@ export function toInquiry(raw: WebsiteLead): WebsiteInquiry {
     email: raw.email,
     notes,
     source: 'Website',
-    targetService: SERVICES[need] ?? '',
+    targetService: serviceOf(need),
     preferredDate: when.slice(0, 10),
     preferredTime: when.slice(11, 16),
   };

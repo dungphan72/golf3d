@@ -131,9 +131,20 @@ Migration thêm bảng `crm2_inbound` (nhớ mã từng sự kiện, vì Zalo g�
 | Trả lời khách | Nhân viên trả lời ngay trong ứng dụng Zalo OA, như bên cũ. |
 | Thông báo cho nhân viên | Email khi được chia lead, theo cài đặt của module mới; không còn tin Zalo/email của hàng chờ gửi bên cũ. |
 
+## Cổng Facebook / Instagram Lead Ads: chuyển bằng công tắc riêng
+
+`POST /api/leads/facebook` chuyển được tương tự: **CRM → Cấu hình → "Lead Facebook / Instagram (Lead Ads)"**, mặc định vẫn vào CRM cũ, độc lập với hai công tắc kia. Không cần migration mới (dùng bảng của cổng Zalo). Chữ ký Facebook, việc lấy chi tiết từ Graph API và xử lý nhiều sự kiện trong một lần gọi giữ nguyên.
+
+| Khác biệt khi bật | Chi tiết |
+|---|---|
+| Chiến dịch, mã biểu mẫu | Không có ô riêng, ghi trong ghi chú ("Chiến dịch: …", "Facebook lead: …"). Mã biểu mẫu là cách tìm lại lead trong Facebook Lead Center. |
+| Facebook gửi lại | Nhớ theo mã sự kiện, không tạo thêm gì; lỗi giữa chừng thì lần gửi lại sau vẫn được xử lý. |
+| Cùng số điền thêm biểu mẫu | Gộp vào lead đã có, ghi "Khách gửi lại" với người gửi là Facebook. |
+| Thiếu chi tiết biểu mẫu | Chưa có `FB_PAGE_TOKEN` thì lead vẫn đến với lời nhắn "chưa lấy được chi tiết"; nhân viên xem ở Facebook. |
+
 ## Việc còn lại để bỏ tab "Chăm sóc KH (cũ)"
 
-1. Chuyển hai cổng còn lại (`/api/leads/facebook`, `/api/leads/ads`) sang module mới, từng cổng một (đã có sẵn `ingestChannelLead` dùng chung).
+1. Chuyển cổng còn lại (`/api/leads/ads`: Google, TikTok, Zapier, Make) sang module mới (đã có sẵn `ingestChannelLead` dùng chung).
 2. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
 3. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
 4. Chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.

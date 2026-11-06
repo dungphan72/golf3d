@@ -138,7 +138,7 @@ export async function absorbInquiry(
       : i.notes
         ? `Khách gửi lại: ${i.notes}`
         : 'Khách gửi lại thông tin',
-    chat ? i.source || 'Chat' : 'Website',
+    chat ? i.source || 'Chat' : i.source || 'Website',
     now,
   );
   if (!old.owner) return;

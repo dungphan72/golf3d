@@ -1,7 +1,15 @@
 import { db } from '../../../lib/server/common';
 import type { LeadInput } from '../../../lib/leads';
+import { facebookInquiry } from '../core/facebook';
 import { zaloInquiry } from '../core/zalo';
-import { absorbInquiry, ingestLead, LEAD_COLS, type IntakeInput, type LeadRow } from './leads';
+import {
+  absorbInquiry,
+  ingestLead,
+  LEAD_COLS,
+  type IntakeInput,
+  type LeadRow,
+  type Via,
+} from './leads';
 import { getSettings } from './store';
 
 /** What the webhook callers (website, Zalo, ...) are told: same shape as the old CRM's answer. */
@@ -29,6 +37,7 @@ export async function ingestChannelLead(
   i: IntakeInput,
   base: string,
   now: number,
+  via: Via = 'chat',
 ): Promise<ChannelResult> {
   const d = db();
   const seen = await d
@@ -54,12 +63,12 @@ export async function ingestChannelLead(
         .first<LeadRow>()
     : null;
   if (open) {
-    await absorbInquiry(tenant, open, i, await getSettings(tenant), base, now, 'chat');
+    await absorbInquiry(tenant, open, i, await getSettings(tenant), base, now, via);
     leadId = open.id;
     owner = open.owner;
     duplicate = true;
   } else {
-    const r = await ingestLead(tenant, i, base, now, 'chat');
+    const r = await ingestLead(tenant, i, base, now, via);
     const b = r.body as { id?: string; duplicate?: boolean; owner?: string | null };
     leadId = b.id ?? ''; // a blocked number is dropped without telling the sender
     owner = b.owner ?? (leadId ? await ownerOf(tenant, leadId) : null);
@@ -89,5 +98,21 @@ export function ingestZaloLead(tenant: string, ev: LeadInput, base: string, now:
     zaloInquiry(ev),
     base,
     now,
+  );
+}
+
+/**
+ * A Facebook / Instagram lead form submission (the old gate has already checked the signature and read the form).
+ * Each submission has its own id, so a repeat from Facebook is skipped and a second form from the same phone joins the
+ * lead that number already has.
+ */
+export function ingestFacebookLead(tenant: string, ev: LeadInput, base: string, now: number) {
+  return ingestChannelLead(
+    tenant,
+    { extKey: ev.extKey, channelRef: ev.channelRef },
+    facebookInquiry(ev),
+    base,
+    now,
+    'form',
   );
 }

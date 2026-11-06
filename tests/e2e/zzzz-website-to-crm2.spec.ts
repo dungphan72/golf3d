@@ -13,8 +13,15 @@ let token = '';
 let seq = 0;
 const phone = () => `0944${String(300000 + ++seq)}`;
 
+// The gate allows 20 posts per 10 minutes per address and a CI runner is one address for the whole suite, so every post
+// pretends to come from a different visitor (the test server trusts x-forwarded-for).
+let ipSeq = 0;
+const visitor = () => ({ 'x-forwarded-for': `10.88.0.${++ipSeq}` });
 async function send(data: Json, status = 200) {
-  const r = await owner.post('/api/leads/website', { data, headers: { 'x-lead-token': token } });
+  const r = await owner.post('/api/leads/website', {
+    data,
+    headers: { 'x-lead-token': token, ...visitor() },
+  });
   expect(r.status(), await r.text()).toBe(status);
   return (await r.json()) as Json;
 }
@@ -128,7 +135,7 @@ test('lead mới hiện ở số liệu tổng quan để trang chủ báo', asy
 test('mã webhook sai vẫn bị từ chối, bật CRM mới cũng vậy', async () => {
   const r = await owner.post('/api/leads/website', {
     data: { name: 'X', phone: phone() },
-    headers: { 'x-lead-token': 'lk_khong-dung-0000000000' },
+    headers: { 'x-lead-token': 'lk_khong-dung-0000000000', ...visitor() },
   });
   expect(r.status()).toBe(401);
 });

@@ -869,11 +869,6 @@ body:has(.app-shell) {
  * bottom sheets and a tab bar. Phones only (<= 640px); tablets keep the desktop layout.
  */
 @media (max-width: 640px) {
-  body:has(.app-shell) {
-    background: #f3f6f2;
-    -webkit-tap-highlight-color: transparent;
-  }
-
   /* App bar */
   .app-shell .top-actions .avatar,
   .app-shell .connection,
@@ -968,6 +963,7 @@ body:has(.app-shell) {
 /* White-only staff workspace on phones: white app bar, outlined tab selection, green FAB. */
 @media (max-width: 640px) {
   body:has(.app-shell) {
+    -webkit-tap-highlight-color: transparent;
     background: #fff;
   }
 }
@@ -2351,12 +2347,7 @@ body:has(.app-shell) {
   text-align: left;
   color: inherit;
 }
-.rc-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
+
 .rc-head strong {
   font-size: 16px;
   font-weight: 700;
@@ -2369,12 +2360,7 @@ body:has(.app-shell) {
   border-radius: 4px;
   color: var(--ds-muted);
 }
-.rc-chip {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
-}
+
 .room-card.free .rc-chip {
   color: var(--ds-green);
 }
@@ -2540,12 +2526,18 @@ body:has(.app-shell) {
   gap: 0;
 }
 .rc-head {
+  display: flex;
+  align-items: center;
+  gap: 4px 6px;
   flex-wrap: nowrap;
 }
 .rc-head strong {
   white-space: nowrap;
 }
 .rc-chip {
+  margin-left: auto;
+  font-weight: 700;
+  white-space: nowrap;
   font-size: 11.5px;
 }
 .ds-root .badge {

@@ -28,38 +28,7 @@ body:has(.app-shell) {
   .app-shell .profile > svg {
     display: none;
   }
-  .app-shell .nav-item {
-    width: auto;
-    flex-shrink: 0;
-    height: 50px;
-    margin: 0;
-    padding: 0 13px;
-    gap: 7px;
-    border-radius: 0;
-    color: #e3efff;
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  .app-shell .nav-item svg {
-    width: 17px;
-    height: 17px;
-  }
-  .app-shell .nav-item:hover {
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff;
-  }
-  .app-shell .nav-item.selected {
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-    font-weight: 600;
-    box-shadow: inset 0 -3px 0 #f5b50a;
-  }
-  .app-shell .nav-item .count {
-    margin-left: 2px;
-    background: var(--kv-orange);
-    color: #fff;
-  }
+
   .app-shell .profile {
     display: flex;
     align-items: center;
@@ -80,19 +49,6 @@ body:has(.app-shell) {
 }
 
 /* ---------- Mobile: same palette, existing drawer layout ---------- */
-@media (max-width: 1024px) {
-  .app-shell .nav-item {
-    color: #e3efff;
-  }
-  .app-shell .nav-item:hover {
-    background: rgba(255, 255, 255, 0.14);
-  }
-  .app-shell .nav-item.selected {
-    background: #fff;
-    color: var(--kv-blue);
-  }
-}
-
 /* ---------- Page headings, status strips ---------- */
 .app-shell h1 {
   font-size: 20px;
@@ -106,12 +62,6 @@ body:has(.app-shell) {
 }
 .app-shell .eyebrow {
   display: none;
-}
-.app-shell .pilot {
-  background: #fff7e6;
-  border: 1px solid #ffe2a8;
-  color: #8a5a00;
-  border-radius: 4px;
 }
 
 /* ---------- Buttons and inputs ---------- */
@@ -286,11 +236,6 @@ body:has(.app-shell) {
 /* ---------- "Quản lý khác" dropdown ---------- */
 /* Mobile / tablet: the drawer keeps one flat list. */
 
-@media (min-width: 1025px) {
-  .app-shell .nav-item {
-    padding: 0 11px;
-  }
-}
 @media (max-width: 1500px) and (min-width: 1025px) {
   .app-shell .profile strong {
     display: none;
@@ -304,19 +249,10 @@ body:has(.app-shell) {
 }
 
 /* ---------- Palette refinements (calm green + gold, easy on the eyes) ---------- */
-.app-shell .nav-item .count {
-  background: #f5b50a;
-  color: #17331f;
-}
+
 .app-shell .profile .avatar {
   background: #f5b50a;
   color: #17331f;
-}
-@media (max-width: 1024px) {
-  .app-shell .nav-item.selected {
-    background: #fff;
-    color: #165a3c;
-  }
 }
 .app-shell .room-card.occupied {
   border-color: #2e9e5b;
@@ -354,8 +290,7 @@ body:has(.app-shell) {
   opacity: 1;
   visibility: visible;
 }
-.app-shell .heading-actions [data-tip]::after,
-.app-shell .top-actions [data-tip]::after {
+.app-shell .heading-actions [data-tip]::after {
   left: auto;
   right: 0;
   transform: none;
@@ -399,11 +334,7 @@ body:has(.app-shell) {
 body:has(.app-shell) {
   background: #fff;
 }
-.app-shell .pilot {
-  background: #fff;
-  border: 1px solid var(--kv-line);
-  color: var(--kv-muted);
-}
+
 .app-shell .empty,
 .app-shell .info-strip {
   background: #fff;
@@ -446,21 +377,6 @@ body:has(.app-shell) {
 }
 /* The daily card was a dark panel; on white it is an outlined card with dark text. */
 @media (min-width: 1025px) {
-  .app-shell .nav-item {
-    color: var(--kv-muted);
-  }
-  .app-shell .nav-item:hover {
-    background: #fff;
-    color: var(--kv-blue);
-  }
-  .app-shell .nav-item.selected {
-    background: #fff;
-    color: var(--kv-blue);
-    box-shadow: inset 0 -3px 0 var(--kv-blue);
-  }
-  .app-shell .nav-item .count {
-    color: #fff;
-  }
   .app-shell .profile {
     color: var(--kv-text);
   }
@@ -469,21 +385,6 @@ body:has(.app-shell) {
     color: #fff;
   }
 }
-@media (max-width: 1024px) {
-  .app-shell .nav-item {
-    color: var(--kv-muted);
-  }
-  .app-shell .nav-item:hover {
-    background: #fff;
-    color: var(--kv-blue);
-  }
-  .app-shell .nav-item.selected {
-    background: #fff;
-    color: var(--kv-blue);
-    box-shadow: inset 3px 0 0 var(--kv-blue);
-  }
-}
-
 /* ---------- Promotions editor (Cài đặt) ---------- */
 .app-shell .promo-editor {
   margin-top: 1.5rem;
@@ -870,9 +771,7 @@ body:has(.app-shell) {
  */
 @media (max-width: 640px) {
   /* App bar */
-  .app-shell .top-actions .avatar,
-  .app-shell .connection,
-  .app-shell .pilot {
+  .app-shell .connection {
     display: none;
   }
 
@@ -3219,4 +3118,30 @@ body:has(.app-shell) {
 }
 .ds-main:focus {
   outline: none;
+}
+
+/* Session dialog on touch screens: every control is a full thumb target. */
+@media (pointer: coarse) {
+  .ds-root.ds-root .modal .secondary,
+  .ds-root.ds-root .modal .primary,
+  .ds-root.ds-root .modal .icon-btn,
+  .ds-root.ds-root .modal summary {
+    min-height: 44px;
+  }
+  .ds-root.ds-root .modal .icon-btn {
+    min-width: 44px;
+  }
+  .ds-root.ds-root .modal summary {
+    display: flex;
+    align-items: center;
+  }
+  .ds-root.ds-root .ds-brand {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .ds-skip {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
 }

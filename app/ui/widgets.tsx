@@ -56,12 +56,14 @@ export function RoomGrid({
           const next = bookings
             .filter((b) => b.room === r.id && b.status === 'booked' && b.end > now)
             .sort((a, b) => a.start - b.start)[0];
-          const item = live ?? next;
+          // A finished session waiting for payment is opened from the card, so the bill can be collected.
+          const due = bookings.find((b) => b.room === r.id && b.status === 'finished');
+          const item = live ?? due ?? next;
           return (
             <button
               className={
                 'room-card ' +
-                (live ? 'occupied' : clean ? 'clean' : next ? 'has-booking' : '') +
+                (live ? 'occupied' : due || clean ? 'clean' : next ? 'has-booking' : '') +
                 (r.vip ? ' vip' : '')
               }
               key={r.id}
@@ -80,13 +82,26 @@ export function RoomGrid({
               <h3>{r.name}</h3>
               <span className="room-status">
                 <i />
-                {live ? labels[live.status] : clean ? 'Đang dọn' : next ? 'Đã đặt' : 'Sẵn sàng'}
+                {live
+                  ? labels[live.status]
+                  : due
+                    ? 'Chờ thanh toán'
+                    : clean
+                      ? 'Đang dọn'
+                      : next
+                        ? 'Đã đặt'
+                        : 'Sẵn sàng'}
               </span>
               <div className="room-bottom">
                 {live ? (
                   <>
                     <span>{live.customer}</span>
                     <span>{time(live.start)}</span>
+                  </>
+                ) : due ? (
+                  <>
+                    <span>{due.customer} · bấm để thu tiền</span>
+                    <ArrowUpRight size={14} />
                   </>
                 ) : next ? (
                   <>

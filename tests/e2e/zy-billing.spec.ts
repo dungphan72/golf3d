@@ -153,11 +153,14 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   const id = await finishedRound(owner, 'line-10', 'Khách Giao Diện');
   const total = await amountOf(owner, id);
   await page.goto('/quan-ly');
+  // A finished session waits for payment on its room card: one click opens the bill.
   await page
     .locator('aside')
-    .getByRole('button', { name: /Hóa đơn/ })
+    .getByRole('button', { name: /Sơ đồ phòng/ })
     .click();
-  await page.getByText('Khách Giao Diện').first().click();
+  const card = page.locator('.room-card', { hasText: 'Khách Giao Diện' });
+  await expect(card.getByText('Chờ thanh toán')).toBeVisible();
+  await card.click();
   const dialog = page.getByRole('dialog', { name: 'Chi tiết phiên chơi' });
   await expect(dialog).toBeVisible();
 

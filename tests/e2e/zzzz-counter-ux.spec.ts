@@ -57,3 +57,48 @@ test('bàn phím: liên kết "Bỏ qua đến nội dung" chuyển tiêu điể
   await page.keyboard.press('Enter');
   await expect(page.locator('main#noi-dung')).toBeFocused();
 });
+
+test('hộp thoại đặt lịch và bắt đầu nằm giữa màn hình, không tràn ra ngoài (máy tính)', async ({
+  page,
+}) => {
+  expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  await page.goto('/quan-ly');
+  const viewport = page.viewportSize()!;
+  const check = async () => {
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog).toBeVisible();
+    const box = (await dialog.boundingBox())!;
+    expect(Math.abs(box.x - (viewport.width - box.width) / 2)).toBeLessThan(2);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y + box.height).toBeLessThanOrEqual(viewport.height + 1);
+    await page.keyboard.press('Escape');
+    await expect(dialog).toBeHidden();
+  };
+  await page.getByRole('button', { name: 'Đặt lịch', exact: true }).first().click();
+  await check();
+  // Earlier specs may leave every line busy, so only open "Bắt đầu" when a free line has the button.
+  const start = page.getByRole('button', { name: /^Bắt đầu Line/ }).first();
+  if (await start.count()) {
+    await start.click();
+    await check();
+  }
+});
+
+test.describe('điện thoại: hộp thoại là tấm trượt từ dưới lên, nằm gọn trong màn hình', () => {
+  test.use({ ...phone, locale: 'vi-VN' });
+
+  test('đặt lịch', async ({ page }) => {
+    expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+    await page.goto('/quan-ly');
+    await page.getByRole('button', { name: 'Đặt lịch', exact: true }).first().click();
+    const dialog = page.locator('dialog[open]');
+    await expect(dialog).toBeVisible();
+    await page.waitForTimeout(600); // the sheet slides up first
+    const box = (await dialog.boundingBox())!;
+    const viewport = page.viewportSize()!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(Math.abs(box.y + box.height - viewport.height)).toBeLessThan(2);
+  });
+});

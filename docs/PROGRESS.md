@@ -10,6 +10,7 @@ Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2
 - **Truy cập**: axe-core 0 lỗi ở các màn nhân viên (kể cả ca đang mở/đã đóng và hộp thoại phiên với dữ liệu thật), sửa tương phản chữ, tiêu đề, liên kết "Bỏ qua đến nội dung".
 - **CI**: sửa test CRM bị giới hạn 10 lần/10 phút theo địa chỉ khi chạy trên máy CI.
 - Hộp thoại: bảy hộp (phiên, đặt lịch, vào chơi ngay, ghi nhận kho, sửa món, hủy đơn, ca) dùng chung `ModalDialog` (khóa Esc khi đang lưu, có tên cho trình đọc màn hình).
+- Vị trí và cỡ hộp thoại: sửa lỗi mọi hộp thoại dính góc trên bên trái trên máy tính (bộ reset của Tailwind xóa `margin: auto` của `<dialog>`); căn giữa lại, giữ trong màn hình có thanh cuộn riêng (kể cả màn ngang thấp), hộp xác nhận thành tấm trượt đầy chiều ngang trên điện thoại; biểu mẫu đặt lịch và vào chơi ngay dùng chữ 13–17 px, có khoảng cách, ô nhập cùng chiều cao. Có test e2e giữ vị trí.
 - Chưa làm: chuyển dữ liệu CRM cũ sang module mới rồi bỏ tab cũ.
 
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar

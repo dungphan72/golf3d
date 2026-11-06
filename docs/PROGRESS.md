@@ -333,3 +333,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - **Việc cần làm ngay** trên trang đầu có thêm lead quá 5 phút chưa gọi và lead mới đang chờ gọi (cho người có quyền xem CRM; cập nhật mỗi 30 giây).
 - Sửa biểu tượng điện thoại/Zalo bị xuống dòng trong thẻ lead và hồ sơ khách.
 - Huấn luyện: chưa đổi bên trong (làm ở giai đoạn 8 cùng bảng còn lại).
+
+## Nâng cấp giao diện quản lý: giai đoạn 7 (Tài chính và Quản trị)
+
+- **Cài đặt cơ sở** chia 5 tab: Cơ sở (tên, địa chỉ, giờ hoạt động), Giá (VAT/phí, ngày lễ, bảng giá), Khuyến mãi (khuyến mãi và quyền lợi hội viên), Đặt lịch (giữ phòng 9/18 hố, khoảng đệm, chính sách, đặt online), Thanh toán (tài khoản nhận tiền cho mã QR và nhận báo có SePay). Vẫn một nút Lưu cấu hình dùng chung. Bỏ dòng thông báo cũ "chưa mở nhận khách", bỏ số thứ tự 01/02/03 và khối năm ô "chưa kết nối".
+- **Ca & sổ tiền**: bỏ tiêu đề và đoạn giới thiệu lặp, giữ nút Tải lại và Mở ca.
+- **Báo cáo**: nút chọn nhanh 7 ngày, 30 ngày, tháng này; ô tổng thu lớn và các ô tiền mặt, chuyển khoản, thẻ, bán gói, chi; biểu đồ theo ngày; hai bảng dùng `DataTable`.
+- **Nhân viên** và **Nhật ký**: dùng `DataTable`; nhật ký có ô tìm kiếm chung; trạng thái nhân viên hiện dạng nhãn.

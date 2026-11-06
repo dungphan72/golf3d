@@ -46,3 +46,27 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online v�
   // The e2e menu is empty, so the table shows its empty state.
   await expect(page.getByText('Chưa có món để theo dõi kho')).toBeVisible();
 });
+
+test('Cài đặt cơ sở chia tab; Báo cáo, Nhân viên, Nhật ký dùng bảng chung', async ({ page }) => {
+  expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  await page.goto('/quan-ly');
+  const nav = (name: RegExp) => page.locator('aside').getByRole('button', { name });
+  await nav(/Cài đặt cơ sở/).click();
+  for (const tab of ['Cơ sở', 'Giá', 'Khuyến mãi', 'Đặt lịch', 'Thanh toán'])
+    await expect(page.getByRole('tab', { name: tab, exact: true })).toBeVisible();
+  await expect(page.getByLabel('Tên cơ sở')).toBeVisible();
+  await page.getByRole('tab', { name: 'Giá', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Khung giá theo lịch' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Thanh toán' }).click();
+  await expect(page.getByLabel(/Mã BIN ngân hàng/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nhận báo có từ ngân hàng' })).toBeVisible();
+
+  await nav(/Báo cáo/).click();
+  await page.getByRole('button', { name: '7 ngày' }).click();
+  await expect(page.locator('.ds-tile-main').getByText('Tổng thu')).toBeVisible();
+
+  await nav(/Nhân viên/).click();
+  await expect(page.getByRole('columnheader', { name: 'Vai trò' })).toBeVisible();
+  await nav(/Nhật ký/).click();
+  await expect(page.getByRole('columnheader', { name: 'Hành động' })).toBeVisible();
+});

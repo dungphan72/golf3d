@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { DataTable, FilterBar } from './kit';
 
 type Row = { id: string; action: string; detail: string; created: number };
 
@@ -56,42 +57,27 @@ export function AuditPanel() {
 
   return (
     <section className="members-panel">
-      <label>
-        Tìm trong nhật ký
-        <input
-          value={search}
-          placeholder="Ví dụ: Ghi sổ tiền, tên nhân viên, mã phiếu"
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </label>
+      <FilterBar
+        search={search}
+        onSearch={setSearch}
+        placeholder="Tìm: Ghi sổ tiền, tên nhân viên, mã phiếu"
+        label="Tìm trong nhật ký"
+      />
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
-      <table>
-        <thead>
-          <tr>
-            <th>Thời gian</th>
-            <th>Hành động</th>
-            <th>Chi tiết</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.id}>
-              <td>{when(r.created)}</td>
-              <td>{r.action}</td>
-              <td style={{ wordBreak: 'break-word' }}>{summary(r.detail)}</td>
-            </tr>
-          ))}
-          {!rows.length && !error && (
-            <tr>
-              <td colSpan={3}>Chưa có hoạt động nào</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <DataTable
+        rows={rows}
+        rowKey={(r) => r.id}
+        empty="Chưa có hoạt động nào"
+        columns={[
+          { key: 'time', header: 'Thời gian', cell: (r) => when(r.created) },
+          { key: 'action', header: 'Hành động', cell: (r) => <strong>{r.action}</strong> },
+          { key: 'detail', header: 'Chi tiết', cell: (r) => summary(r.detail) },
+        ]}
+      />
       {hasMore && (
         <button
           className="secondary"

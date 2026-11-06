@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { DataTable } from './kit';
 import { ROLES, ROLE_LABELS, type Role } from '../../lib/auth/permissions';
 
 type Staff = { id: string; email: string; name: string; role: Role; active: boolean };
@@ -49,7 +50,6 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
   }
   return (
     <section className="staff-panel">
-      <h2>Nhân viên & phân quyền</h2>
       {error && (
         <div className="error-box" role="alert">
           {error}
@@ -61,61 +61,75 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
           hiển thị một lần; nhân viên sẽ phải đổi khi đăng nhập lần đầu.
         </div>
       )}
-      <table>
-        <thead>
-          <tr>
-            <th>Tên</th>
-            <th>Email</th>
-            <th>Vai trò</th>
-            <th>Trạng thái</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {staff.map((s) => {
-            const locked = s.role === 'owner' && actorRole !== 'owner';
-            return (
-              <tr key={s.id}>
-                <td>{s.name}</td>
-                <td>{s.email}</td>
-                <td>
-                  <select
-                    value={s.role}
-                    disabled={busy || locked}
-                    onChange={(e) =>
-                      act(() => call({ action: 'update', userId: s.id, role: e.target.value }))
-                    }
-                  >
-                    {assignable.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLE_LABELS[r]}
-                      </option>
-                    ))}
-                    {locked && <option value="owner">{ROLE_LABELS.owner}</option>}
-                  </select>
-                </td>
-                <td>{s.active ? 'Đang hoạt động' : 'Đã khóa'}</td>
-                <td>
+      <DataTable
+        rows={staff}
+        rowKey={(s) => s.id}
+        empty="Chưa có nhân viên"
+        columns={[
+          { key: 'name', header: 'Tên', cell: (s) => <strong>{s.name}</strong> },
+          { key: 'email', header: 'Email', cell: (s) => s.email },
+          {
+            key: 'role',
+            header: 'Vai trò',
+            cell: (s) => {
+              const locked = s.role === 'owner' && actorRole !== 'owner';
+              return (
+                <select
+                  aria-label={'Vai trò của ' + s.name}
+                  value={s.role}
+                  disabled={busy || locked}
+                  onChange={(e) =>
+                    act(() => call({ action: 'update', userId: s.id, role: e.target.value }))
+                  }
+                >
+                  {assignable.map((r) => (
+                    <option key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </option>
+                  ))}
+                  {locked && <option value="owner">{ROLE_LABELS.owner}</option>}
+                </select>
+              );
+            },
+          },
+          {
+            key: 'status',
+            header: 'Trạng thái',
+            cell: (s) => (
+              <span className={'badge ' + (s.active ? 'paid' : 'cancelled')}>
+                {s.active ? 'Đang hoạt động' : 'Đã khóa'}
+              </span>
+            ),
+          },
+          {
+            key: 'act',
+            header: '',
+            cell: (s) => {
+              const locked = s.role === 'owner' && actorRole !== 'owner';
+              return (
+                <div className="ds-cell-actions">
                   <button
+                    className="secondary"
                     disabled={busy || locked}
                     onClick={() =>
                       act(() => call({ action: 'update', userId: s.id, active: !s.active }))
                     }
                   >
                     {s.active ? 'Khóa' : 'Mở khóa'}
-                  </button>{' '}
+                  </button>
                   <button
+                    className="secondary"
                     disabled={busy || locked}
                     onClick={() => act(() => call({ action: 'reset', userId: s.id }), s.email)}
                   >
                     Cấp lại mật khẩu
                   </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                </div>
+              );
+            },
+          },
+        ]}
+      />
       <form
         className="form-grid"
         onSubmit={(e) => {

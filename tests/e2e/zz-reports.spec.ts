@@ -30,7 +30,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
     .getByRole('button', { name: /Báo cáo/ })
     .click();
   await expect(page.getByText('Doanh thu theo ngày')).toBeVisible();
-  await expect(page.getByRole('rowheader', { name: 'Tổng thu' })).toBeVisible();
+  await expect(page.locator('.ds-tile-main').getByText('Tổng thu')).toBeVisible();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('button', { name: 'Tải file CSV' }).click(),

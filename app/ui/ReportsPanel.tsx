@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download } from 'lucide-react';
 import { money } from '../../lib/club';
 import { toCsv } from '../../lib/csv';
+import { DataTable, FilterBar } from './kit';
 
 type Day = {
   day: string;
@@ -93,140 +94,128 @@ export function ReportsPanel() {
   }
   const chart = [...(report?.days ?? [])].reverse();
 
+  const range = (days: number) => {
+    setTo(vnDate(Date.now()));
+    setFrom(vnDate(Date.now() - (days - 1) * 86_400_000));
+  };
+  const monthStart = () => {
+    setTo(vnDate(Date.now()));
+    setFrom(vnDate(Date.now()).slice(0, 8) + '01');
+  };
+  const tiles: [string, number, string?][] = [
+    ['Tiền mặt', totals.cash],
+    ['Chuyển khoản', totals.transfer],
+    ['Thẻ', totals.card],
+    ['Trong đó bán gói', totals.packages],
+    ['Chi tiền mặt', totals.expenses],
+  ];
+
   return (
-    <section className="members-panel">
-      <div className="form-grid">
-        <label>
+    <section className="ds-reports">
+      <FilterBar
+        right={
+          <button
+            aria-label="Tải file CSV"
+            type="button"
+            className="secondary"
+            disabled={!report}
+            onClick={download}
+          >
+            <Download size={16} /> Tải file CSV
+          </button>
+        }
+      >
+        <div className="ds-seg" role="group" aria-label="Khoảng nhanh">
+          <button onClick={() => range(7)}>7 ngày</button>
+          <button onClick={() => range(30)}>30 ngày</button>
+          <button onClick={monthStart}>Tháng này</button>
+        </div>
+        <label className="ds-date">
           Từ ngày
           <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
         </label>
-        <label>
+        <label className="ds-date">
           Đến ngày
           <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <button
-          data-tip="Tải file CSV"
-          aria-label="Tải file CSV"
-          type="button"
-          className="secondary icon-only"
-          disabled={!report}
-          onClick={download}
-        >
-          <Download size={16} />
-          <span className="btn-label">Tải file CSV</span>
-        </button>
-      </div>
+      </FilterBar>
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
-      <table>
-        <tbody>
-          <tr>
-            <th>Tổng thu</th>
-            <td>
-              <strong>{money(received)}</strong> ({totals.payments} lượt thanh toán)
-            </td>
-          </tr>
-          <tr>
-            <th>Tiền mặt · Chuyển khoản · Thẻ</th>
-            <td>
-              {money(totals.cash)} · {money(totals.transfer)} · {money(totals.card)}
-            </td>
-          </tr>
-          <tr>
-            <th>Trong đó bán gói hội viên</th>
-            <td>{money(totals.packages)}</td>
-          </tr>
-          <tr>
-            <th>Chi tiền mặt</th>
-            <td>{money(totals.expenses)}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div className="ds-tiles">
+        <article className="ds-tile ds-tile-main">
+          <span className="ds-tile-text">
+            <small>Tổng thu</small>
+            <strong>{money(received)}</strong>
+            <small>{totals.payments} lượt thanh toán</small>
+          </span>
+        </article>
+        {tiles.map(([label, value]) => (
+          <article className="ds-tile" key={label}>
+            <span className="ds-tile-text">
+              <small>{label}</small>
+              <strong>{money(value)}</strong>
+            </span>
+          </article>
+        ))}
+      </div>
 
-      <h2>Doanh thu theo ngày</h2>
-      <div
-        role="img"
-        aria-label="Biểu đồ doanh thu theo ngày"
-        style={{ display: 'flex', alignItems: 'flex-end', gap: 3, height: 120, overflowX: 'auto' }}
-      >
+      <h2 className="ds-subhead">Doanh thu theo ngày</h2>
+      <div role="img" aria-label="Biểu đồ doanh thu theo ngày" className="ds-chart">
         {chart.map((d) => (
           <div
             key={d.day}
             title={`${d.day}: ${money(d.cash + d.transfer + d.card)}`}
             style={{
-              flex: '1 0 10px',
-              minWidth: 10,
               height: `${Math.max(2, ((d.cash + d.transfer + d.card) / peak) * 100)}%`,
-              background: 'var(--brand, #0b4d14)',
-              borderRadius: '3px 3px 0 0',
             }}
           />
         ))}
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Ngày</th>
-            <th>Tiền mặt</th>
-            <th>Chuyển khoản</th>
-            <th>Thẻ</th>
-            <th>Tổng thu</th>
-            <th>Bán gói</th>
-            <th>Chi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {report?.days.map((d) => (
-            <tr key={d.day}>
-              <td>{shortDay(d.day)}</td>
-              <td>{money(d.cash)}</td>
-              <td>{money(d.transfer)}</td>
-              <td>{money(d.card)}</td>
-              <td>
-                <strong>{money(d.cash + d.transfer + d.card)}</strong>
-              </td>
-              <td>{money(d.packages)}</td>
-              <td>{money(d.expenses)}</td>
-            </tr>
-          ))}
-          {report && !report.days.length && (
-            <tr>
-              <td colSpan={7}>Chưa có giao dịch trong khoảng này</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {report && (
+        <DataTable
+          rows={report.days}
+          rowKey={(d) => d.day}
+          empty="Chưa có giao dịch trong khoảng này"
+          columns={[
+            { key: 'day', header: 'Ngày', cell: (d) => shortDay(d.day) },
+            { key: 'cash', header: 'Tiền mặt', align: 'right', cell: (d) => money(d.cash) },
+            {
+              key: 'transfer',
+              header: 'Chuyển khoản',
+              align: 'right',
+              cell: (d) => money(d.transfer),
+            },
+            { key: 'card', header: 'Thẻ', align: 'right', cell: (d) => money(d.card) },
+            {
+              key: 'total',
+              header: 'Tổng thu',
+              align: 'right',
+              cell: (d) => <strong>{money(d.cash + d.transfer + d.card)}</strong>,
+            },
+            { key: 'pk', header: 'Bán gói', align: 'right', cell: (d) => money(d.packages) },
+            { key: 'ex', header: 'Chi', align: 'right', cell: (d) => money(d.expenses) },
+          ]}
+        />
+      )}
 
-      <h2>Theo dịch vụ (phiếu đã thanh toán)</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Dịch vụ</th>
-            <th>Số lượt</th>
-            <th>Doanh thu phiếu</th>
-            <th>Trong đó F&amp;B</th>
-          </tr>
-        </thead>
-        <tbody>
-          {report?.services.map((s) => (
-            <tr key={s.service}>
-              <td>{SERVICE[s.service] ?? s.service}</td>
-              <td>{s.rounds}</td>
-              <td>{money(s.revenue)}</td>
-              <td>{money(s.food)}</td>
-            </tr>
-          ))}
-          {report && !report.services.length && (
-            <tr>
-              <td colSpan={4}>Chưa có phiếu thanh toán</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      <p className="form-note">
+      <h2 className="ds-subhead">Theo dịch vụ (phiếu đã thanh toán)</h2>
+      {report && (
+        <DataTable
+          rows={report.services}
+          rowKey={(x) => x.service}
+          empty="Chưa có phiếu thanh toán"
+          columns={[
+            { key: 's', header: 'Dịch vụ', cell: (x) => SERVICE[x.service] ?? x.service },
+            { key: 'n', header: 'Số lượt', align: 'right', cell: (x) => x.rounds },
+            { key: 'r', header: 'Doanh thu phiếu', align: 'right', cell: (x) => money(x.revenue) },
+            { key: 'f', header: 'Trong đó F&B', align: 'right', cell: (x) => money(x.food) },
+          ]}
+        />
+      )}
+      <p className="ds-note">
         Doanh thu phiếu gồm cả phần đã trừ bằng lượt gói (không thu tiền); tổng thu chỉ tính tiền
         thực nhận trong sổ ca.
       </p>

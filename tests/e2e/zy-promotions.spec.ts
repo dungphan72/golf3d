@@ -119,6 +119,7 @@ test('thêm, sửa, tắt và xóa khuyến mãi ngay trong màn hình Cài đ�
     .locator('aside')
     .getByRole('button', { name: /Cài đặt cơ sở/ })
     .click();
+  await page.getByRole('tab', { name: 'Khuyến mãi' }).click();
 
   await page.getByRole('button', { name: 'Thêm khuyến mãi' }).click();
   await page.getByLabel('Tên chương trình').fill('Giờ vàng thứ Ba');

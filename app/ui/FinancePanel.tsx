@@ -119,18 +119,8 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
     : null;
   return (
     <section className="finance-panel">
-      <div className="finance-toolbar">
-        <div>
-          <h2>
-            <Wallet size={20} />
-            Ca làm việc & sổ tiền
-          </h2>
-          <p>
-            Đối soát riêng tiền mặt, chuyển khoản và thẻ. Các khoản nộp quỹ không tính vào thực thu
-            dịch vụ.
-          </p>
-        </div>
-        <div className="heading-actions">
+      <div className="ds-filterbar">
+        <div className="ds-filter-right">
           <button
             data-tip="Tải lại"
             aria-label="Tải lại"

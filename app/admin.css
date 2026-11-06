@@ -1124,3 +1124,47 @@
   display: inline-block;
   vertical-align: -2px;
 }
+
+/* ---------- Reports ---------- */
+.ds-date {
+  display: grid;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--ds-muted);
+}
+.ds-date input {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+  color: var(--ds-text);
+}
+.ds-tile-main {
+  border: 2px solid var(--ds-green);
+}
+.ds-tile-main strong {
+  font-size: 28px;
+  color: var(--ds-green-dark);
+}
+.ds-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 120px;
+  overflow-x: auto;
+  margin-bottom: 14px;
+  padding: 8px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+}
+.ds-chart div {
+  flex: 1 0 10px;
+  min-width: 10px;
+  background: var(--ds-green);
+  border-radius: 3px 3px 0 0;
+}
+.ds-note {
+  margin-top: 12px;
+  color: var(--ds-muted);
+  font-size: 13px;
+}

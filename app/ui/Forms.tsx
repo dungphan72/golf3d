@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { X, Flag, Check, ArrowRight, Save, Info } from 'lucide-react';
+import { X, Flag, Check, ArrowRight, Save } from 'lucide-react';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
 import { OffersField } from './OffersField';
@@ -234,13 +234,16 @@ export function BookingForm({
     </dialog>
   );
 }
+export type SettingsTab = 'facility' | 'price' | 'promo' | 'booking' | 'payment';
 export function SettingsForm({
   config,
   busy,
+  tab,
   onSave,
 }: {
   config: Config;
   busy: boolean;
+  tab: SettingsTab;
   onSave: (c: Config) => Promise<boolean>;
 }) {
   const [c, setC] = useState(config);
@@ -278,258 +281,292 @@ export function SettingsForm({
         onSave(c);
       }}
     >
-      <div className="info-strip">
-        <Info size={17} />
-        Chưa mở nhận khách công khai. Giá tham khảo từ website cũ; các ô trống cần chủ cơ sở xác
-        nhận.
-      </div>
-      <section className="settings-section">
-        <div>
-          <span className="eyebrow">01 / CƠ SỞ</span>
-          <h2>Thông tin & giờ hoạt động</h2>
-          <p>Giờ theo múi giờ Việt Nam. Giờ đóng nhỏ hơn giờ mở được hiểu là hoạt động qua đêm.</p>
-        </div>
-        <div className="form-grid">
-          <label>
-            Tên cơ sở
-            <input value={c.name} required onChange={(e) => setC({ ...c, name: e.target.value })} />
-          </label>
-          <label>
-            Địa chỉ
-            <input
-              value={c.address}
-              required
-              onChange={(e) => setC({ ...c, address: e.target.value })}
-            />
-          </label>
-          <label>
-            Giờ mở cửa
-            <input
-              type="time"
-              value={c.open}
-              required
-              onChange={(e) => setC({ ...c, open: e.target.value })}
-            />
-          </label>
-          <label>
-            Giờ đóng cửa
-            <input
-              type="time"
-              value={c.close}
-              required
-              onChange={(e) => setC({ ...c, close: e.target.value })}
-            />
-          </label>
-          {numberField('capacity', 'Sức chứa line tiêu chuẩn', true)}
-          {numberField('vipCapacity', 'Sức chứa VIP', true)}
-        </div>
-      </section>
-      <section className="settings-section">
-        <div>
-          <span className="eyebrow">02 / THUẾ & PHÍ</span>
-          <h2>VAT và phí dịch vụ</h2>
-          <p>
-            Phí tính một lần cho mỗi phiên. VAT tính trên tiền dịch vụ cộng phí. Mọi khoản đều được
-            hiển thị trước khi xác nhận.
-          </p>
-        </div>
-        <div className="form-grid">
-          {numberField('vat', 'VAT (%) · nhập 0 nếu không thu', true)}
-          <label>
-            Loại phí dịch vụ
-            <select
-              value={c.feeMode ?? 'percent'}
-              onChange={(e) =>
-                setC({ ...c, feeMode: e.target.value as 'percent' | 'fixed', fee: 0 })
-              }
-            >
-              <option value="percent">Phần trăm (%)</option>
-              <option value="fixed">Số tiền cố định / phiên (₫)</option>
-            </select>
-          </label>
-          {numberField(
-            'fee',
-            c.feeMode === 'fixed' ? 'Phí cố định (₫ / phiên)' : 'Phí dịch vụ (%)',
-            true,
-          )}
-          <fieldset className="fee-services">
-            <legend>Dịch vụ chịu phí</legend>
-            {(
-              [
-                ['gdr', 'Luyện tập'],
-                ['9', '9 hố'],
-                ['18', '18 hố'],
-              ] as const
-            ).map(([service, label]) => (
-              <label key={service}>
+      {tab === 'facility' && (
+        <>
+          <section className="settings-section">
+            <div>
+              <h2>Thông tin & giờ hoạt động</h2>
+              <p>
+                Giờ theo múi giờ Việt Nam. Giờ đóng nhỏ hơn giờ mở được hiểu là hoạt động qua đêm.
+              </p>
+            </div>
+            <div className="form-grid">
+              <label>
+                Tên cơ sở
                 <input
-                  type="checkbox"
-                  checked={(c.feeServices ?? ['gdr', '9', '18']).includes(service)}
+                  value={c.name}
+                  required
+                  onChange={(e) => setC({ ...c, name: e.target.value })}
+                />
+              </label>
+              <label>
+                Địa chỉ
+                <input
+                  value={c.address}
+                  required
+                  onChange={(e) => setC({ ...c, address: e.target.value })}
+                />
+              </label>
+              <label>
+                Giờ mở cửa
+                <input
+                  type="time"
+                  value={c.open}
+                  required
+                  onChange={(e) => setC({ ...c, open: e.target.value })}
+                />
+              </label>
+              <label>
+                Giờ đóng cửa
+                <input
+                  type="time"
+                  value={c.close}
+                  required
+                  onChange={(e) => setC({ ...c, close: e.target.value })}
+                />
+              </label>
+              {numberField('capacity', 'Sức chứa line tiêu chuẩn', true)}
+              {numberField('vipCapacity', 'Sức chứa VIP', true)}
+            </div>
+          </section>
+        </>
+      )}
+      {tab === 'price' && (
+        <>
+          <section className="settings-section">
+            <div>
+              <h2>VAT và phí dịch vụ</h2>
+              <p>
+                Phí tính một lần cho mỗi phiên. VAT tính trên tiền dịch vụ cộng phí. Mọi khoản đều
+                được hiển thị trước khi xác nhận.
+              </p>
+            </div>
+            <div className="form-grid">
+              {numberField('vat', 'VAT (%) · nhập 0 nếu không thu', true)}
+              <label>
+                Loại phí dịch vụ
+                <select
+                  value={c.feeMode ?? 'percent'}
+                  onChange={(e) =>
+                    setC({ ...c, feeMode: e.target.value as 'percent' | 'fixed', fee: 0 })
+                  }
+                >
+                  <option value="percent">Phần trăm (%)</option>
+                  <option value="fixed">Số tiền cố định / phiên (₫)</option>
+                </select>
+              </label>
+              {numberField(
+                'fee',
+                c.feeMode === 'fixed' ? 'Phí cố định (₫ / phiên)' : 'Phí dịch vụ (%)',
+                true,
+              )}
+              <fieldset className="fee-services">
+                <legend>Dịch vụ chịu phí</legend>
+                {(
+                  [
+                    ['gdr', 'Luyện tập'],
+                    ['9', '9 hố'],
+                    ['18', '18 hố'],
+                  ] as const
+                ).map(([service, label]) => (
+                  <label key={service}>
+                    <input
+                      type="checkbox"
+                      checked={(c.feeServices ?? ['gdr', '9', '18']).includes(service)}
+                      onChange={(e) => {
+                        const current = c.feeServices ?? ['gdr', '9', '18'];
+                        setC({
+                          ...c,
+                          feeServices: e.target.checked
+                            ? [...current, service]
+                            : current.filter((s) => s !== service),
+                        });
+                      }}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
+            </div>
+          </section>
+          <section className="settings-section">
+            <div>
+              <h2>Khung giá theo lịch</h2>
+              <p>
+                Tách ngày thường, cuối tuần và ngày lễ; giá riêng theo loại phòng và số người. Chỉ
+                lịch đặt mới dùng giá mới, phiên cũ giữ bản giá đã xác nhận.
+              </p>
+              <label className="holiday-label">
+                Danh sách ngày lễ
+                <input
+                  placeholder="2026-12-25, 2027-01-01"
+                  value={holidayText}
                   onChange={(e) => {
-                    const current = c.feeServices ?? ['gdr', '9', '18'];
+                    setHolidayText(e.target.value);
                     setC({
                       ...c,
-                      feeServices: e.target.checked
-                        ? [...current, service]
-                        : current.filter((s) => s !== service),
+                      holidays: e.target.value
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
                     });
                   }}
                 />
-                {label}
+                <small>
+                  Ngày dạng YYYY-MM-DD, cách nhau dấu phẩy. Không tự suy đoán lịch nghỉ lễ.
+                </small>
               </label>
-            ))}
-          </fieldset>
-        </div>
-      </section>
-      <section className="settings-section">
-        <div>
-          <span className="eyebrow">03 / BẢNG GIÁ</span>
-          <h2>Khung giá theo lịch</h2>
-          <p>
-            Tách ngày thường, cuối tuần và ngày lễ; giá riêng theo loại phòng và số người. Chỉ lịch
-            đặt mới dùng giá mới, phiên cũ giữ bản giá đã xác nhận.
-          </p>
-          <label className="holiday-label">
-            Danh sách ngày lễ
-            <input
-              placeholder="2026-12-25, 2027-01-01"
-              value={holidayText}
-              onChange={(e) => {
-                setHolidayText(e.target.value);
-                setC({
-                  ...c,
-                  holidays: e.target.value
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                });
-              }}
-            />
-            <small>Ngày dạng YYYY-MM-DD, cách nhau dấu phẩy. Không tự suy đoán lịch nghỉ lễ.</small>
-          </label>
-        </div>
-        <PriceEditor
-          rules={c.priceRules ?? []}
-          onChange={(priceRules) => setC({ ...c, priceRules })}
-        />
-        <PromotionsEditor
-          promotions={c.promotions ?? []}
-          onChange={(promotions) => setC({ ...c, promotions })}
-        />
-        <OffersField
-          offers={c.memberBenefits ?? DEFAULT_BENEFITS}
-          onChange={(memberBenefits) => setC({ ...c, memberBenefits })}
-          label="Quyền lợi hội viên (hiện trên trang thẻ hội viên)"
-          placeholder="Mỗi dòng một quyền lợi: Tiêu đề | Mô tả"
-          hint="Ví dụ: Gửi gậy miễn phí | Gửi bộ gậy tại câu lạc bộ, không tính phí. Để trống nếu không muốn hiện mục này."
-          max={12}
-        />
-      </section>
-      <section className="settings-section">
-        <div>
-          <span className="eyebrow">03B / THỜI LƯỢNG</span>
-          <h2>Giữ phòng 9 & 18 hố</h2>
-          <p>
-            Thời lượng theo số người để xếp lịch, không phải giới hạn tính tiền. Cộng thêm biên độ
-            dự phòng bên dưới.
-          </p>
-        </div>
-        <div>
-          {(['holeMinutes9', 'holeMinutes18'] as const).map((key) => (
-            <div className="package-row" key={key}>
-              <strong>{key === 'holeMinutes9' ? '9 hố (phút)' : '18 hố (phút)'}</strong>
-              <div className="four-cols">
-                {c[key].map((v, i) => (
-                  <label key={i}>
-                    {i + 1} người
-                    <input
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={v}
-                      onChange={(e) => {
-                        const a = [...c[key]];
-                        a[i] = Number(e.target.value);
-                        setC({ ...c, [key]: a });
-                      }}
-                    />
-                  </label>
-                ))}
-              </div>
             </div>
-          ))}
-        </div>
-      </section>
-      <section className="settings-section">
-        <div>
-          <span className="eyebrow">04 / ĐẶT LỊCH</span>
-          <h2>Khoảng đệm & chính sách</h2>
-          <p>
-            Các mốc khách online sẽ áp dụng khi mở cổng golfer. Nhân viên bản thử được đặt trước tối
-            đa 90 ngày.
-          </p>
-        </div>
-        <div className="form-grid">
-          {numberField('buffer', 'Dự phòng lượt 9/18 hố (phút)')}
-          {numberField('clean', 'Dọn line tiêu chuẩn (phút)')}
-          {numberField('vipClean', 'Dọn VIP (phút)')}
-          {numberField('days', 'Khách online đặt trước (ngày)')}
-          {numberField('grace', 'Giữ chỗ khách muộn (phút)')}
-          {numberField('cancelHours', 'Đổi/hủy trước giờ chơi (giờ)')}
-          <label>
-            Mã BIN ngân hàng nhận tiền (6 số, vd 970436 = Vietcombank)
-            <input
-              value={c.bankBin ?? ''}
-              inputMode="numeric"
-              pattern="(\d{6})?"
-              onChange={(e) => setC({ ...c, bankBin: e.target.value.trim() })}
+            <PriceEditor
+              rules={c.priceRules ?? []}
+              onChange={(priceRules) => setC({ ...c, priceRules })}
             />
-          </label>
-          <label>
-            Số tài khoản nhận tiền
-            <input
-              value={c.bankAccount ?? ''}
-              inputMode="numeric"
-              pattern="(\d{6,20})?"
-              onChange={(e) => setC({ ...c, bankAccount: e.target.value.trim() })}
+          </section>
+        </>
+      )}
+      {tab === 'promo' && (
+        <>
+          <section className="settings-section">
+            <div>
+              <h2>Khuyến mãi và quyền lợi hội viên</h2>
+              <p>Khuyến mãi tự áp vào báo giá và phiếu, đồng thời hiện trên trang chủ.</p>
+            </div>
+            <PromotionsEditor
+              promotions={c.promotions ?? []}
+              onChange={(promotions) => setC({ ...c, promotions })}
             />
-          </label>
-          <label>
-            Tên chủ tài khoản (hiện trên mã QR)
-            <input
-              value={c.bankHolder ?? ''}
-              maxLength={60}
-              onChange={(e) => setC({ ...c, bankHolder: e.target.value })}
+            <OffersField
+              offers={c.memberBenefits ?? DEFAULT_BENEFITS}
+              onChange={(memberBenefits) => setC({ ...c, memberBenefits })}
+              label="Quyền lợi hội viên (hiện trên trang thẻ hội viên)"
+              placeholder="Mỗi dòng một quyền lợi: Tiêu đề | Mô tả"
+              hint="Ví dụ: Gửi gậy miễn phí | Gửi bộ gậy tại câu lạc bộ, không tính phí. Để trống nếu không muốn hiện mục này."
+              max={12}
             />
-          </label>
-          <label>
-            <span>Nhận yêu cầu đặt lịch online</span>
-            <input
-              type="checkbox"
-              checked={!!c.onlineEnabled}
-              onChange={(e) => setC({ ...c, onlineEnabled: e.target.checked })}
-            />
-          </label>
-          <label>
-            Mã đường dẫn trang đặt lịch (/book/mã)
-            <input
-              value={c.onlineSlug ?? ''}
-              pattern="[a-z0-9][a-z0-9\-]{2,39}"
-              placeholder="vd: golf3d-binhtrung"
-              onChange={(e) => setC({ ...c, onlineSlug: e.target.value.trim().toLowerCase() })}
-            />
-          </label>
-          {c.onlineEnabled && (
-            <p className="form-note" role="status">
-              {onlineMissing(c).length
-                ? 'Chưa mở được cho khách vì còn thiếu: ' + onlineMissing(c).join(', ') + '.'
-                : !c.onlineSlug
-                  ? 'Hãy đặt mã đường dẫn để mở trang đặt lịch.'
-                  : 'Sẵn sàng: khách đặt lịch tại /book/' + c.onlineSlug + ' và trên trang chủ.'}
-            </p>
-          )}
-        </div>
-      </section>
+          </section>
+        </>
+      )}
+      {tab === 'booking' && (
+        <>
+          <section className="settings-section">
+            <div>
+              <h2>Giữ phòng 9 & 18 hố</h2>
+              <p>
+                Thời lượng theo số người để xếp lịch, không phải giới hạn tính tiền. Cộng thêm biên
+                độ dự phòng bên dưới.
+              </p>
+            </div>
+            <div>
+              {(['holeMinutes9', 'holeMinutes18'] as const).map((key) => (
+                <div className="package-row" key={key}>
+                  <strong>{key === 'holeMinutes9' ? '9 hố (phút)' : '18 hố (phút)'}</strong>
+                  <div className="four-cols">
+                    {c[key].map((v, i) => (
+                      <label key={i}>
+                        {i + 1} người
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={v}
+                          onChange={(e) => {
+                            const a = [...c[key]];
+                            a[i] = Number(e.target.value);
+                            setC({ ...c, [key]: a });
+                          }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="settings-section">
+            <div>
+              <h2>Khoảng đệm & chính sách</h2>
+              <p>
+                Các mốc khách online sẽ áp dụng khi mở cổng golfer. Nhân viên bản thử được đặt trước
+                tối đa 90 ngày.
+              </p>
+            </div>
+            <div className="form-grid">
+              {numberField('buffer', 'Dự phòng lượt 9/18 hố (phút)')}
+              {numberField('clean', 'Dọn line tiêu chuẩn (phút)')}
+              {numberField('vipClean', 'Dọn VIP (phút)')}
+              {numberField('days', 'Khách online đặt trước (ngày)')}
+              {numberField('grace', 'Giữ chỗ khách muộn (phút)')}
+              {numberField('cancelHours', 'Đổi/hủy trước giờ chơi (giờ)')}
+              <label>
+                <span>Nhận yêu cầu đặt lịch online</span>
+                <input
+                  type="checkbox"
+                  checked={!!c.onlineEnabled}
+                  onChange={(e) => setC({ ...c, onlineEnabled: e.target.checked })}
+                />
+              </label>
+              <label>
+                Mã đường dẫn trang đặt lịch (/book/mã)
+                <input
+                  value={c.onlineSlug ?? ''}
+                  pattern="[a-z0-9][a-z0-9\-]{2,39}"
+                  placeholder="vd: golf3d-binhtrung"
+                  onChange={(e) => setC({ ...c, onlineSlug: e.target.value.trim().toLowerCase() })}
+                />
+              </label>
+              {c.onlineEnabled && (
+                <p className="form-note" role="status">
+                  {onlineMissing(c).length
+                    ? 'Chưa mở được cho khách vì còn thiếu: ' + onlineMissing(c).join(', ') + '.'
+                    : !c.onlineSlug
+                      ? 'Hãy đặt mã đường dẫn để mở trang đặt lịch.'
+                      : 'Sẵn sàng: khách đặt lịch tại /book/' +
+                        c.onlineSlug +
+                        ' và trên trang chủ.'}
+                </p>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+      {tab === 'payment' && (
+        <>
+          <section className="settings-section">
+            <div>
+              <h2>Tài khoản nhận tiền</h2>
+              <p>Dùng để tạo mã QR chuyển khoản trên phiếu thanh toán.</p>
+            </div>
+            <div className="form-grid">
+              <label>
+                Mã BIN ngân hàng nhận tiền (6 số, vd 970436 = Vietcombank)
+                <input
+                  value={c.bankBin ?? ''}
+                  inputMode="numeric"
+                  pattern="(\d{6})?"
+                  onChange={(e) => setC({ ...c, bankBin: e.target.value.trim() })}
+                />
+              </label>
+              <label>
+                Số tài khoản nhận tiền
+                <input
+                  value={c.bankAccount ?? ''}
+                  inputMode="numeric"
+                  pattern="(\d{6,20})?"
+                  onChange={(e) => setC({ ...c, bankAccount: e.target.value.trim() })}
+                />
+              </label>
+              <label>
+                Tên chủ tài khoản (hiện trên mã QR)
+                <input
+                  value={c.bankHolder ?? ''}
+                  maxLength={60}
+                  onChange={(e) => setC({ ...c, bankHolder: e.target.value })}
+                />
+              </label>
+            </div>
+          </section>
+        </>
+      )}
       <div className="form-footer sticky-save">
         <span>
           <ShieldText />
@@ -538,20 +575,6 @@ export function SettingsForm({
           <Save size={17} />
           {busy ? 'Đang lưu…' : 'Lưu cấu hình'}
         </button>
-      </div>
-      <div className="integration-grid">
-        {[
-          'OTP / Đăng nhập golfer',
-          'Chuyển khoản tự động',
-          'Zalo OA / SMS / Email',
-          'Hóa đơn điện tử',
-          'Foresight Sports GC3',
-        ].map((t) => (
-          <div key={t}>
-            <strong>{t}</strong>
-            <span>Chưa kết nối · triển khai giai đoạn sau</span>
-          </div>
-        ))}
       </div>
     </form>
   );

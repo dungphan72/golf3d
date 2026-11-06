@@ -5,7 +5,8 @@ import { defaults, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
 import FnbPanel from './FnbPanel';
 import { BookingForm } from './Forms';
-import { SettingsForm } from './Forms';
+import { SettingsForm, type SettingsTab } from './Forms';
+import { PageTabs } from './kit';
 import { type Data } from './shared';
 import { BookingsHub, HUB_VIEWS, InvoiceList } from './BookingsHub';
 import { HomeBoard } from './HomeBoard';
@@ -45,7 +46,8 @@ export default function ClubApp() {
     [leads, setLeads] = useState<
       { overdue: number; waiting: number; queued: number } | undefined
     >(),
-    [mobile, setMobile] = useState(false);
+    [mobile, setMobile] = useState(false),
+    [settingsTab, setSettingsTab] = useState<SettingsTab>('facility');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
@@ -291,12 +293,24 @@ export default function ClubApp() {
                   {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
                   {view === 'settings' && allowed('settings') && (
                     <>
+                      <PageTabs
+                        value={settingsTab}
+                        onChange={(k) => setSettingsTab(k as SettingsTab)}
+                        tabs={[
+                          { key: 'facility', label: 'Cơ sở' },
+                          { key: 'price', label: 'Giá' },
+                          { key: 'promo', label: 'Khuyến mãi' },
+                          { key: 'booking', label: 'Đặt lịch' },
+                          { key: 'payment', label: 'Thanh toán' },
+                        ]}
+                      />
                       <SettingsForm
                         config={c}
                         busy={busy}
+                        tab={settingsTab}
                         onSave={(v) => mutate({ action: 'settings', value: v })}
                       />
-                      <SepaySettings />
+                      {settingsTab === 'payment' && <SepaySettings />}
                     </>
                   )}
                   {view === 'reports' && allowed('reports') && <ReportsPanel />}

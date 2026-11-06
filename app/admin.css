@@ -706,3 +706,237 @@
     gap: 10px;
   }
 }
+
+/* ---------- Session detail dialog: one column in the order of the work ---------- */
+.ds-root .native-dialog .modal.session {
+  width: 600px;
+  padding: 20px 22px 24px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ds-root .modal.session .modal-heading {
+  margin: 0;
+}
+.ds-root .modal.session .modal-heading h2 {
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sp-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+}
+.sp-summary .avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ds-green);
+  background: #fff;
+  color: var(--ds-green-dark);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 18px;
+}
+.sp-who h3 {
+  font-size: 18px;
+}
+.sp-who p {
+  color: var(--ds-muted);
+  font-size: 14px;
+  margin-top: 2px;
+}
+.sp-times {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 24px;
+  margin: 8px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--ds-line);
+}
+.sp-times dt {
+  font-size: 13px;
+  color: var(--ds-muted);
+}
+.sp-times dd {
+  margin: 2px 0 0;
+  font-size: 17px;
+  font-weight: 650;
+}
+.sp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sp-actions button,
+.sp-print button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 18px;
+  font-size: 16px;
+  font-weight: 650;
+  border-radius: 8px;
+}
+.sp-actions .primary {
+  flex: 1 1 200px;
+  background: var(--ds-green);
+  color: #fff;
+}
+.sp-actions .primary:hover:not(:disabled) {
+  background: var(--ds-green-dark);
+}
+.ds-root .modal.session .secondary {
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text);
+  border-radius: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  font-weight: 600;
+}
+.ds-root .modal.session .secondary:hover:not(:disabled) {
+  border-color: var(--ds-green);
+}
+.ds-root .modal.session .bill {
+  margin: 0;
+  padding: 16px;
+  border-radius: var(--ds-radius);
+}
+.ds-root .modal.session .bill h3 {
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ds-muted);
+}
+.ds-root .modal.session .bill > div {
+  font-size: 15px;
+  color: var(--ds-text);
+  padding: 7px 0;
+}
+.ds-root .modal.session .bill > div small {
+  font-size: 13px;
+  color: var(--ds-muted);
+}
+.ds-root .modal.session .bill-total {
+  font-size: 20px !important;
+  font-weight: 700;
+  color: var(--ds-green-dark) !important;
+}
+.bill-note summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--ds-muted);
+  padding-top: 8px;
+}
+.ds-root .modal.session .bill .bill-note p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-muted);
+}
+.ds-root .modal.session .info-strip {
+  font-size: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 0;
+}
+.sp-pay {
+  border: 2px solid var(--ds-green);
+  border-radius: var(--ds-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sp-pay-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.sp-pay-head h3 {
+  font-size: 18px;
+}
+.sp-pay-head strong {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--ds-green-dark);
+  letter-spacing: -0.5px;
+}
+.sp-pay .muted {
+  font-size: 14px;
+  color: var(--ds-muted);
+}
+.pay-methods {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.pay-methods > .info-strip {
+  grid-column: 1 / -1;
+}
+.pay-methods > button.primary {
+  min-height: 52px;
+  font-size: 15px;
+  font-weight: 650;
+  background: var(--ds-green);
+  color: #fff;
+  border-radius: 8px;
+}
+.pay-methods > button.primary:hover:not(:disabled) {
+  background: var(--ds-green-dark);
+}
+.pay-extras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sp-print {
+  display: flex;
+  justify-content: flex-end;
+}
+.ds-root .modal.session .support-actions {
+  margin: 0;
+  padding-top: 14px;
+}
+.ds-root .modal.session .support-actions h3 {
+  font-size: 15px;
+}
+@media (max-width: 640px) {
+  .pay-methods {
+    grid-template-columns: 1fr;
+  }
+  .sp-pay-head strong {
+    font-size: 24px;
+  }
+  .sp-actions .primary {
+    flex-basis: 100%;
+  }
+}
+
+/* The shell is not printed; the receipt dialog is. */
+@media print {
+  .ds-side,
+  .ds-body,
+  .ds-scrim {
+    display: none !important;
+  }
+  .sp-actions,
+  .sp-pay,
+  .sp-print,
+  .bill-note summary {
+    display: none !important;
+  }
+  .ds-root .native-dialog .modal.session {
+    width: 100%;
+  }
+}

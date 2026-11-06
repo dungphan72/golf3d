@@ -241,9 +241,8 @@ function SplitPay({
   if (!open)
     return (
       <button
-        data-tip="Chia nhiều hình thức thanh toán"
         aria-label="Chia nhiều hình thức thanh toán"
-        className="secondary icon-only"
+        className="secondary"
         disabled={disabled}
         onClick={() => setOpen(true)}
       >
@@ -350,6 +349,10 @@ export function SessionPanel({
     quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
   }
   const minutes = seg.reduce((s, x) => s + (x.end - x.start) / 60000, 0);
+  const cannotPay = busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0;
+  const payAs = (method: string) =>
+    onAction('pay', { method, requestId: paymentKey.current, expectedAmount: b.amount! });
+  const operating = ['booked', 'playing', 'paused'].includes(b.status);
   return (
     <dialog
       className="native-dialog"
@@ -359,40 +362,74 @@ export function SessionPanel({
     >
       <section className="modal session">
         <div className="modal-heading">
-          <div>
-            <span className="eyebrow">CHI TIẾT PHIÊN CHƠI</span>
-            <h2>
-              {rooms.find((r) => r.id === b.room)?.name}{' '}
-              <span className={'badge ' + b.status}>{labels[b.status]}</span>
-            </h2>
-          </div>
+          <h2>
+            {rooms.find((r) => r.id === b.room)?.name}{' '}
+            <span className={'badge ' + b.status}>{labels[b.status]}</span>
+          </h2>
           <button className="icon-btn" onClick={onClose} aria-label="Đóng">
             <X />
           </button>
         </div>
-        <div className="session-customer">
+        <div className="sp-summary">
           <span className="avatar">{b.customer[0]}</span>
-          <div>
+          <div className="sp-who">
             <h3>{b.customer}</h3>
             <p>
-              {b.phone} · {b.people} người · {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'}
+              {b.phone ? b.phone + ' · ' : ''}
+              {b.people} người · {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'}
             </p>
           </div>
+          <dl className="sp-times">
+            <div>
+              <dt>Lịch hẹn</dt>
+              <dd>
+                {date(b.start)} · {time(b.start)}
+              </dd>
+            </div>
+            <div>
+              <dt>Đã chơi</dt>
+              <dd>{Math.round(minutes)} phút</dd>
+            </div>
+          </dl>
         </div>
-        <div className="session-time">
-          <span>
-            Lịch hẹn
-            <strong>
-              {date(b.start)} · {time(b.start)}
-            </strong>
-          </span>
-          <span>
-            Thực tế chơi
-            <strong>
-              {minutes.toFixed(1)} <small>phút</small>
-            </strong>
-          </span>
-        </div>
+        {operating && (
+          <div className="sp-actions">
+            {b.status === 'booked' && (
+              <>
+                <button className="primary" disabled={busy} onClick={() => onAction('start')}>
+                  <Play size={18} />
+                  Bắt đầu chơi
+                </button>
+                <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
+                  Hủy lịch
+                </button>
+              </>
+            )}
+            {b.status === 'paused' && (
+              <button className="secondary" disabled={busy} onClick={() => onAction('resume')}>
+                <Play size={17} />
+                Tiếp tục
+              </button>
+            )}
+            {['playing', 'paused'].includes(b.status) && (
+              <button className="primary" disabled={busy} onClick={() => onAction('finish')}>
+                <Square size={18} />
+                Kết thúc chơi
+              </button>
+            )}
+            {b.status === 'playing' && (
+              <button
+                aria-label="Tạm dừng do sự cố"
+                className="secondary"
+                disabled={busy}
+                onClick={() => onAction('pause')}
+              >
+                <Pause size={17} />
+                Tạm dừng do sự cố
+              </button>
+            )}
+          </div>
+        )}
         {quoteError ? (
           <div className="info-strip" role="alert">
             {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến
@@ -400,7 +437,7 @@ export function SessionPanel({
           </div>
         ) : (
           <div className="bill">
-            <h3>{b.status === 'paid' ? 'PHIẾU THANH TOÁN' : 'CHI TIẾT TẠM TÍNH'}</h3>
+            <h3>{b.status === 'paid' ? 'Phiếu thanh toán' : 'Tạm tính'}</h3>
             {q.lines.map((l, i) => (
               <div key={i}>
                 <span>
@@ -415,7 +452,7 @@ export function SessionPanel({
                 <strong>{money(Math.round(l.amount))}</strong>
               </div>
             ))}
-            {b.service !== 'gdr' && snap.promo && snap.listBase > snap.base ? (
+            {b.service !== 'gdr' && snap.promo && snap.listBase > snap.base && (
               <>
                 <div>
                   <span>Trọn lượt {b.service} hố (giá niêm yết)</span>
@@ -426,16 +463,9 @@ export function SessionPanel({
                   <strong>−{money(snap.listBase - snap.base)}</strong>
                 </div>
               </>
-            ) : (
-              b.service !== 'gdr' && (
-                <div>
-                  <span>Trọn lượt {b.service} hố</span>
-                  <strong>{money(q.subtotal)}</strong>
-                </div>
-              )
             )}
             <div>
-              <span>Tiền dịch vụ</span>
+              <span>{b.service === 'gdr' ? 'Tiền dịch vụ' : `Trọn lượt ${b.service} hố`}</span>
               <strong>{money(q.subtotal)}</strong>
             </div>
             <div>
@@ -452,23 +482,22 @@ export function SessionPanel({
               <span>VAT ({snap.config.vat}%)</span>
               <strong>{money(q.vat)}</strong>
             </div>
-            <div>
-              <span>Tổng tiền chơi</span>
-              <strong>{money(q.total)}</strong>
-            </div>
             <BillAdjustments bill={bill} />
             {food.data && <FoodReceipt data={food.data} />}
             <div className="bill-total">
               <span>Tổng cộng</span>
               <strong>{money(b.amount ?? q.total + (b.food_total ?? 0))}</strong>
             </div>
-            <p>
-              Giá được lưu tại thời điểm đặt.{' '}
-              {snap.config.feeMode === 'fixed'
-                ? 'Phí cố định tính một lần mỗi phiên.'
-                : 'Phí theo tỷ lệ tiền dịch vụ.'}{' '}
-              VAT tính trên tiền dịch vụ cộng phí. Chưa kết nối hóa đơn điện tử.
-            </p>
+            <details className="bill-note">
+              <summary>Cách tính</summary>
+              <p>
+                Giá được lưu tại thời điểm đặt.{' '}
+                {snap.config.feeMode === 'fixed'
+                  ? 'Phí cố định tính một lần mỗi phiên.'
+                  : 'Phí theo tỷ lệ tiền dịch vụ.'}{' '}
+                VAT tính trên tiền dịch vụ cộng phí. Chưa kết nối hóa đơn điện tử.
+              </p>
+            </details>
           </div>
         )}
         {food.error && (
@@ -499,142 +528,91 @@ export function SessionPanel({
             Còn {pendingFood} đơn chưa phục vụ hoặc hủy; chưa thể thanh toán.
           </div>
         )}
-        <div className="session-buttons">
-          {b.status === 'booked' && (
-            <>
-              <button className="primary" disabled={busy} onClick={() => onAction('start')}>
-                <Play size={17} />
-                Bắt đầu chơi
-              </button>
-              <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
-                Hủy lịch
-              </button>
-            </>
-          )}
-          {b.status === 'playing' && (
-            <button
-              data-tip="Tạm dừng do sự cố"
-              aria-label="Tạm dừng do sự cố"
-              className="secondary icon-only"
-              disabled={busy}
-              onClick={() => onAction('pause')}
-            >
-              <Pause size={16} />
-              <span className="btn-label">Tạm dừng do sự cố</span>
-            </button>
-          )}
-          {b.status === 'paused' && (
-            <button className="primary" disabled={busy} onClick={() => onAction('resume')}>
-              <Play size={16} />
-              Tiếp tục
-            </button>
-          )}
-          {['playing', 'paused'].includes(b.status) && (
-            <button className="primary" disabled={busy} onClick={() => onAction('finish')}>
-              <Square size={16} />
-              Kết thúc chơi
-            </button>
-          )}
-          {b.status === 'finished' && !canPay && (
-            <div className="info-strip">
-              Cần mở ca trước khi thu tiền.
-              <button className="secondary" onClick={onOpenShift}>
-                Đi đến mở ca
-              </button>
+        {b.status === 'finished' && (
+          <section className="sp-pay" aria-label="Thu tiền">
+            <div className="sp-pay-head">
+              <h3>Thu tiền</h3>
+              <strong>{b.amount == null ? '—' : money(b.amount)}</strong>
             </div>
-          )}
-          {b.status === 'finished' && canPay && (
-            <>
-              {permissions.includes('billing.discount') &&
-                bill &&
-                !bill.discount &&
-                !bill.payments.length &&
-                b.amount != null &&
-                !quoteError && (
-                  <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />
-                )}
-              <PackageRedeem booking={b} money={money} onChanged={refreshAll} />
-              <TransferPanel
-                booking={b}
-                bank={bank}
-                busy={busy}
-                onUse={(txId) =>
-                  onAction('pay', {
-                    method: 'transfer',
-                    requestId: paymentKey.current,
-                    expectedAmount: b.amount!,
-                    bankTxId: txId,
-                  })
-                }
-              />
-              <SplitPay
-                booking={b}
-                onChanged={refreshAll}
-                disabled={
-                  busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
-                }
-              />
-              <p className="muted">Chỉ xác nhận sau khi đã kiểm tra nhận đủ tiền:</p>
-              <CashPay
-                bookingId={b.id}
-                disabled={
-                  busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
-                }
-                onPay={() =>
-                  onAction('pay', {
-                    method: 'cash',
-                    requestId: paymentKey.current,
-                    expectedAmount: b.amount!,
-                  })
-                }
-              />
-              {[
-                ['transfer', 'Chuyển khoản đã đối soát'],
-                ['card', 'Thẻ tại quầy'],
-              ].map(([method, t]) => (
-                <button
-                  className="primary"
-                  disabled={
-                    busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0
-                  }
-                  key={method}
-                  onClick={() =>
+            {!canPay ? (
+              <div className="info-strip">
+                Cần mở ca trước khi thu tiền.
+                <button className="secondary" onClick={onOpenShift}>
+                  Đi đến mở ca
+                </button>
+              </div>
+            ) : (
+              <>
+                <PackageRedeem booking={b} money={money} onChanged={refreshAll} />
+                <TransferPanel
+                  booking={b}
+                  bank={bank}
+                  busy={busy}
+                  onUse={(txId) =>
                     onAction('pay', {
-                      method,
+                      method: 'transfer',
                       requestId: paymentKey.current,
                       expectedAmount: b.amount!,
+                      bankTxId: txId,
                     })
                   }
-                >
-                  {t}
-                </button>
-              ))}
-            </>
-          )}
-          {b.status === 'paid' &&
-            b.payment === 'package' &&
-            permissions.includes('billing.refund') && (
-              <div className="info-strip">
-                Phiếu trả bằng gói. Để hoàn giờ/lượt cho khách, vào Hội viên, chọn khách, bấm
-                &quot;Điều chỉnh&quot; trên gói và cộng lại số giờ kèm lý do.
-              </div>
+                />
+                <p className="muted">Chỉ bấm sau khi đã nhận đủ tiền.</p>
+                <div className="pay-methods">
+                  <CashPay bookingId={b.id} disabled={cannotPay} onPay={() => payAs('cash')} />
+                  {[
+                    ['transfer', 'Chuyển khoản đã đối soát'],
+                    ['card', 'Thẻ tại quầy'],
+                  ].map(([method, t]) => (
+                    <button
+                      className="primary"
+                      disabled={cannotPay}
+                      key={method}
+                      onClick={() => payAs(method)}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+                <div className="pay-extras">
+                  {permissions.includes('billing.discount') &&
+                    bill &&
+                    !bill.discount &&
+                    !bill.payments.length &&
+                    b.amount != null &&
+                    !quoteError && (
+                      <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />
+                    )}
+                  <SplitPay booking={b} onChanged={refreshAll} disabled={cannotPay} />
+                </div>
+              </>
             )}
-          {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
-            <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
+          </section>
+        )}
+        {b.status === 'paid' &&
+          b.payment === 'package' &&
+          permissions.includes('billing.refund') && (
+            <div className="info-strip">
+              Phiếu trả bằng gói. Để hoàn giờ/lượt cho khách, vào Hội viên, chọn khách, bấm
+              &quot;Điều chỉnh&quot; trên gói và cộng lại số giờ kèm lý do.
+            </div>
           )}
-          {['finished', 'paid'].includes(b.status) && (
+        {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
+          <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
+        )}
+        {['finished', 'paid'].includes(b.status) && (
+          <div className="sp-print">
             <button
-              data-tip="In phiếu"
               aria-label="In phiếu"
-              className="secondary icon-only"
+              className="secondary"
               disabled={!!quoteError || !foodVerified}
               onClick={() => window.print()}
             >
-              <Printer size={16} />
-              <span className="btn-label">In phiếu</span>
+              <Printer size={17} />
+              In phiếu
             </button>
-          )}
-        </div>
+          </div>
+        )}
         {['playing', 'paused'].includes(b.status) && (
           <div className="support-actions">
             <h3>Gửi yêu cầu hỗ trợ</h3>

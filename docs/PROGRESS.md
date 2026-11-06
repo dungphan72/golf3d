@@ -308,3 +308,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - **Trang đầu hợp nhất** (`app/ui/HomeBoard.tsx`, mục "Sơ đồ phòng"): 4 ô số (đang chơi, chờ thanh toán, lịch hôm nay, thực thu), lưới line duy nhất, cột "Việc cần làm ngay" (phiên chờ thu tiền, khách sắp đến trong 1 giờ hoặc chưa đến, yêu cầu hỗ trợ, đặt online chờ xác nhận).
 - **Đã bỏ**: trang Tổng quan trùng, tiêu đề 3 tầng và khẩu hiệu, thẻ trang trí, thẻ "Sẵn sàng đón khách", nút nổi Tạo lịch đặt, trang Lộ trình hệ thống, dải "bản thử nội bộ", chân trang, chữ tiếng Anh trên thẻ line; mục "Quản lý khác" (mọi mục hiện thẳng trong nhóm).
 - Chữ và nút lớn hơn (chữ từ 14px, nút cao từ 40px). CSS cũ của các phần đã bỏ chưa xóa, sẽ dọn ở giai đoạn 8.
+
+## Nâng cấp giao diện quản lý: giai đoạn 4 (chi tiết phiên chơi và thu tiền)
+
+- Hộp thoại phiên chơi một cột theo thứ tự việc: tên line + trạng thái → khách (tên, số điện thoại, số người, hình thức, giờ hẹn, số phút đã chơi) → nút việc chính to, nằm ngay trên cùng (Bắt đầu chơi / Kết thúc chơi / Tiếp tục, Hủy lịch, Tạm dừng) → tạm tính → đồ ăn thức uống → khung **Thu tiền** viền xanh có số tiền cần thu cỡ lớn.
+- Khung Thu tiền: trả bằng gói và mã QR chuyển khoản (nếu có) → ba nút lớn Tiền mặt, Chuyển khoản đã đối soát, Thẻ tại quầy → Giảm giá, Chia nhiều hình thức thanh toán. Phiếu đã thu: Hoàn tiền, In phiếu.
+- Bỏ lặp: dòng "Tổng tiền chơi" trùng "Tiền dịch vụ", dòng "Trọn lượt" thứ hai, dòng chữ nhỏ giải thích giá (gom vào mục "Cách tính" thu gọn), dòng "CHI TIẾT PHIÊN CHƠI".
+- Sửa lỗi in phiếu sau khi đổi khung ở giai đoạn 2: khi in chỉ còn hộp thoại phiếu, ẩn menu và thanh trên.

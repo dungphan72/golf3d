@@ -28,8 +28,15 @@ async function setSettings(patch: Json) {
   const s = await settingsOf();
   await post(owner, '/api/crm2/config', { settings: { ...s, ...patch } });
 }
+// The public form allows 10 posts per 10 minutes per address, and a CI runner is one address for the whole
+// suite; give every post its own forwarded address (the test server trusts it) so the limit never applies.
+let ipSeq = 0;
+const nextIp = () => `10.77.0.${++ipSeq}`;
 const intake = (r: APIRequestContext, data: Json, t?: number) =>
-  r.post('/api/crm2/intake', { data, headers: t ? at(t) : {} });
+  r.post('/api/crm2/intake', {
+    data,
+    headers: { ...(t ? at(t) : {}), 'x-forwarded-for': nextIp() },
+  });
 const lead = async (id: string, t?: number) =>
   (await get(owner, '/api/crm2/leads?id=' + id, t)).lead as Json;
 
@@ -494,9 +501,19 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
 }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   const p = phone();
-  await page.request.post('/api/crm2/intake', {
-    data: { fullName: 'Khách Giao Diện CRM', phone: p, consent: true, targetService: 'Gói 18 hố' },
-  });
+  expect(
+    (
+      await page.request.post('/api/crm2/intake', {
+        data: {
+          fullName: 'Khách Giao Diện CRM',
+          phone: p,
+          consent: true,
+          targetService: 'Gói 18 hố',
+        },
+        headers: { 'x-forwarded-for': nextIp() },
+      })
+    ).status(),
+  ).toBe(200);
   await page.goto('/quan-ly');
   await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });

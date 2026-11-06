@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Phone, MessageCircle, Copy, Check, Clock } from 'lucide-react';
-import { Chips, FilterBar, askConfirm } from './kit';
+import { Chips, DataTable, FilterBar, askConfirm } from './kit';
 import {
   CALL_RESULTS,
   CALL_RESULT_LABELS,
@@ -1279,87 +1279,70 @@ export function LeadReportView() {
         ))}
       </div>
       <h3>Phễu tư vấn</h3>
-      <table className="ds-table">
-        <thead>
-          <tr>
-            <th>Giai đoạn</th>
-            <th>Số lead</th>
-            <th>Tỷ lệ</th>
-          </tr>
-        </thead>
-        <tbody>
-          {STAGES.map((st) => (
-            <tr key={st}>
-              <td>{STAGE_LABELS[st]}</td>
-              <td>{count(st)}</td>
-              <td>{pct(count(st), r.total)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={[
+          {
+            key: 'stage',
+            header: 'Giai đoạn',
+            cell: (st: (typeof STAGES)[number]) => STAGE_LABELS[st],
+          },
+          { key: 'n', header: 'Số lead', cell: (st) => count(st) },
+          { key: 'pct', header: 'Tỷ lệ', cell: (st) => pct(count(st), r.total) },
+        ]}
+        rows={[...STAGES]}
+        rowKey={(st) => st}
+        empty="Chưa có lead"
+      />
       <h3>Hiệu quả theo nguồn</h3>
-      <table className="ds-table">
-        <thead>
-          <tr>
-            <th>Nguồn</th>
-            <th>Lead</th>
-            <th>Chốt</th>
-            <th>Tỷ lệ chốt</th>
-            <th>Giá trị chốt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {r.sources.map((x) => (
-            <tr key={x.source}>
-              <td>{SOURCE_LABELS[x.source as LeadSource] ?? x.source}</td>
-              <td>{x.leads}</td>
-              <td>{x.won}</td>
-              <td>{pct(x.won, x.leads)}</td>
-              <td>{x.value.toLocaleString('vi-VN')}đ</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={[
+          {
+            key: 'source',
+            header: 'Nguồn',
+            cell: (x: (typeof r.sources)[number]) =>
+              SOURCE_LABELS[x.source as LeadSource] ?? x.source,
+          },
+          { key: 'leads', header: 'Lead', cell: (x) => x.leads },
+          { key: 'won', header: 'Chốt', cell: (x) => x.won },
+          { key: 'rate', header: 'Tỷ lệ chốt', cell: (x) => pct(x.won, x.leads) },
+          {
+            key: 'value',
+            header: 'Giá trị chốt',
+            cell: (x) => x.value.toLocaleString('vi-VN') + 'đ',
+          },
+        ]}
+        rows={r.sources}
+        rowKey={(x) => x.source}
+        empty="Chưa có lead theo nguồn trong kỳ này"
+      />
       <h3>Theo nhân viên và tốc độ phản hồi</h3>
-      <table className="ds-table">
-        <thead>
-          <tr>
-            <th>Nhân viên</th>
-            <th>Lead</th>
-            <th>Đã gọi</th>
-            <th>Chốt</th>
-            <th>Phản hồi trung bình</th>
-            <th>Giá trị chốt</th>
-          </tr>
-        </thead>
-        <tbody>
-          {r.agents.map((x) => (
-            <tr key={x.user_id ?? 'none'}>
-              <td>{x.name}</td>
-              <td>{x.leads}</td>
-              <td>{x.called}</td>
-              <td>{x.won}</td>
-              <td>{minutes(x.avg_ms)}</td>
-              <td>{x.value.toLocaleString('vi-VN')}đ</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        columns={[
+          { key: 'name', header: 'Nhân viên', cell: (x: (typeof r.agents)[number]) => x.name },
+          { key: 'leads', header: 'Lead', cell: (x) => x.leads },
+          { key: 'called', header: 'Đã gọi', cell: (x) => x.called },
+          { key: 'won', header: 'Chốt', cell: (x) => x.won },
+          { key: 'avg', header: 'Phản hồi trung bình', cell: (x) => minutes(x.avg_ms) },
+          {
+            key: 'value',
+            header: 'Giá trị chốt',
+            cell: (x) => x.value.toLocaleString('vi-VN') + 'đ',
+          },
+        ]}
+        rows={r.agents}
+        rowKey={(x) => x.user_id ?? 'none'}
+        empty="Chưa có lead được giao trong kỳ này"
+      />
       <h3>Lý do không thành</h3>
-      {r.lost.length ? (
-        <table className="ds-table">
-          <tbody>
-            {r.lost.map((x) => (
-              <tr key={x.reason}>
-                <td>{x.reason}</td>
-                <td>{x.n}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p>Chưa có lead không thành trong kỳ này.</p>
-      )}
+      <DataTable
+        columns={[
+          { key: 'reason', header: 'Lý do', cell: (x: (typeof r.lost)[number]) => x.reason },
+          { key: 'n', header: 'Số lead', cell: (x) => x.n },
+        ]}
+        rows={r.lost}
+        rowKey={(x) => x.reason}
+        empty="Chưa có lead không thành trong kỳ này."
+      />
     </>
   );
 }

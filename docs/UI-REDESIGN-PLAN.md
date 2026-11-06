@@ -103,7 +103,7 @@ Thiết bị chính ở quầy: **máy tính và điện thoại** (máy tính b
 | A | Rà soát: ảnh chụp mọi màn ở điện thoại/máy tính, đo CSS còn dùng, lập danh sách lỗi | Xong (số liệu bên dưới) |
 | B | Gộp CSS: `tokens` + một tệp thành phần admin, thay `kiotviet.css`, `mobile.css`, phần staff của `globals.css`, `admin.css`; tách khỏi `landing.css` | B1 (gộp cơ học) xong: `tokens.css` + `globals.css` + `admin.css` (đã nhập kiotviet/mobile theo đúng thứ tự cascade). B2 xong: gộp 3 selector trùng chứng minh được an toàn; 36 cặp còn lại là ghi đè theo cỡ màn hình có `@media` xen giữa nên giữ; `!important` còn lại đều có lý do (in, giảm chuyển động). Kiểm bằng so computed style 89 trạng thái xem + e2e 56/56 |
 | C | Gộp hai mục CRM (giữ crmx) | Xong: menu chỉ còn mục CRM; màn Chăm sóc KH cũ thành tab "Chăm sóc KH (cũ)" trong CRM (vẫn nhận lead Zalo/Facebook/quảng cáo cho tới khi chuyển dữ liệu sang `crm2_*`). Link `?view=crm` và cảnh báo lead trên trang chủ mở thẳng tab đó. Còn lại: hai thanh tab lồng nhau có nhãn trùng ("Khách hàng", "Việc..."), xử lý ở GĐ D |
-| D | Chuyển panel lớn sang `kit.tsx` | Chờ |
+| D | Chuyển panel lớn sang `kit.tsx` | Một phần: tab lồng nhau dùng `PageTabs sub`, tab cũ đổi tên "Hồ sơ khách"; 4 bảng báo cáo lead và bảng gói hội viên dùng `DataTable`. Chưa làm: tách `LeadPanel`/`CrmPanel` (>1.000 dòng) thành thành phần nhỏ; `FinancePanel`, `SessionPanel`; bảng có ô nhập trong `LeadPanel` giữ nguyên |
 | E | Tối ưu thao tác tại quầy: máy tính (phím tắt, bảng dày) và điện thoại (vùng bấm 44 px, thanh hành động cố định) | Chờ |
 | F | Truy cập, test e2e, dọn mã chết, tài liệu | Chờ |
 

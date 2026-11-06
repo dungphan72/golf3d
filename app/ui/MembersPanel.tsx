@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { PageTabs, askConfirm, askText } from './kit';
+import { DataTable, PageTabs, askConfirm, askText } from './kit';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/member';
@@ -473,67 +473,71 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
               Nạp danh mục theo bảng giá chính thức
             </button>
           )}
-          <table>
-            <thead>
-              <tr>
-                <th>Gói</th>
-                <th>Giá</th>
-                <th>Quyền lợi</th>
-                <th>Phòng</th>
-                <th>Hiệu lực</th>
-                <th>Trạng thái</th>
-                {canAdjust && <th></th>}
-              </tr>
-            </thead>
-            <tbody>
-              {data?.types.map((t) => (
-                <tr key={t.id}>
-                  <td>{t.name}</td>
-                  <td>{money(t.price)}</td>
-                  <td>
-                    {grantsText(t.grants)}
-                    {t.perks ? ` · ${t.perks}` : ''}
-                  </td>
-                  <td>
-                    {t.room === 'standard' ? 'Tiêu chuẩn' : t.room === 'vip' ? 'VIP' : 'Tất cả'}
-                  </td>
-                  <td>{t.valid_days} ngày</td>
-                  <td>{t.active ? 'Đang bán' : 'Ngừng bán'}</td>
-                  {canAdjust && (
-                    <td>
-                      <button disabled={busy} onClick={() => setEditing(t)}>
-                        Sửa
-                      </button>{' '}
-                      <button
-                        disabled={busy}
-                        onClick={() =>
-                          act(
-                            () =>
-                              post({
-                                action: 'type-save',
-                                id: t.id,
-                                requestId: operationKey(),
-                                name: t.name,
-                                price: t.price,
-                                grants: JSON.parse(t.grants),
-                                validDays: t.valid_days,
-                                perks: t.perks,
-                                section: t.section ?? '',
-                                room: t.room ?? 'any',
-                                active: !t.active,
-                              }),
-                            'Đã cập nhật gói',
-                          )
-                        }
-                      >
-                        {t.active ? 'Ngừng bán' : 'Bán lại'}
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            columns={[
+              { key: 'name', header: 'Gói', cell: (t: PackageType) => t.name },
+              { key: 'price', header: 'Giá', cell: (t) => money(t.price) },
+              {
+                key: 'grants',
+                header: 'Quyền lợi',
+                cell: (t) => grantsText(t.grants) + (t.perks ? ` · ${t.perks}` : ''),
+              },
+              {
+                key: 'room',
+                header: 'Phòng',
+                cell: (t) =>
+                  t.room === 'standard' ? 'Tiêu chuẩn' : t.room === 'vip' ? 'VIP' : 'Tất cả',
+              },
+              { key: 'days', header: 'Hiệu lực', cell: (t) => `${t.valid_days} ngày` },
+              {
+                key: 'status',
+                header: 'Trạng thái',
+                cell: (t) => (t.active ? 'Đang bán' : 'Ngừng bán'),
+              },
+              ...(canAdjust
+                ? [
+                    {
+                      key: 'actions',
+                      header: '',
+                      cell: (t: PackageType) => (
+                        <>
+                          <button disabled={busy} onClick={() => setEditing(t)}>
+                            Sửa
+                          </button>{' '}
+                          <button
+                            disabled={busy}
+                            onClick={() =>
+                              act(
+                                () =>
+                                  post({
+                                    action: 'type-save',
+                                    id: t.id,
+                                    requestId: operationKey(),
+                                    name: t.name,
+                                    price: t.price,
+                                    grants: JSON.parse(t.grants),
+                                    validDays: t.valid_days,
+                                    perks: t.perks,
+                                    section: t.section ?? '',
+                                    room: t.room ?? 'any',
+                                    active: !t.active,
+                                  }),
+                                'Đã cập nhật gói',
+                              )
+                            }
+                          >
+                            {t.active ? 'Ngừng bán' : 'Bán lại'}
+                          </button>
+                        </>
+                      ),
+                    },
+                  ]
+                : []),
+            ]}
+            rows={data?.types ?? []}
+            rowKey={(t) => t.id}
+            empty="Chưa có gói hội viên"
+          />
         </>
       )}
     </section>

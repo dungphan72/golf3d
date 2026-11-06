@@ -12,14 +12,17 @@ export function PageTabs({
   tabs,
   value,
   onChange,
+  sub = false,
 }: {
   tabs: TabItem[];
   value: string;
   onChange: (key: string) => void;
+  /** Compact pill tabs for a tab bar nested under another one. */
+  sub?: boolean;
 }) {
   return (
     <div
-      className="ds-tabs"
+      className={sub ? 'ds-tabs sub' : 'ds-tabs'}
       role="tablist"
       onKeyDown={(e) => {
         if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;

@@ -161,8 +161,7 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
   await expect(page.getByText('Đã xử lý gần đây')).toBeVisible();
 
   // Customer file from the customers tab.
-  // The legacy screens sit under the CRM tabs, so their own tab bar is the last one.
-  await page.getByRole('tab', { name: 'Khách hàng' }).last().click();
+  await page.getByRole('tab', { name: 'Hồ sơ khách' }).click();
   await page.locator('tbody tr', { hasText: 'Khách Sinh Nhật' }).click();
   await expect(page.getByRole('heading', { name: 'Khách Sinh Nhật' })).toBeVisible();
   await page.getByRole('tab', { name: 'Chăm sóc', exact: true }).click();

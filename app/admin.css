@@ -1843,6 +1843,23 @@ body:has(.app-shell) {
   color: var(--ds-green-dark);
   border-bottom-color: var(--ds-green);
 }
+.ds-tabs.sub {
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 0;
+}
+.ds-tabs.sub button {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--ds-line);
+  border-radius: 18px;
+  font-size: 14px;
+}
+.ds-tabs.sub button.active {
+  background: var(--ds-green);
+  border-color: var(--ds-green);
+  color: #fff;
+}
 .ds-tabs button b {
   min-width: 22px;
   height: 22px;

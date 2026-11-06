@@ -993,12 +993,13 @@ export function CrmPanel({
   return (
     <section className="crm-panel">
       <PageTabs
+        sub
         value={tab}
         onChange={(k) => setTab(k as typeof tab)}
         tabs={[
           { key: 'leads', label: 'Lead mới' },
           { key: 'tasks', label: 'Việc cần làm' },
-          { key: 'customers', label: 'Khách hàng' },
+          { key: 'customers', label: 'Hồ sơ khách' },
           { key: 'report', label: 'Báo cáo tư vấn', hidden: !canManage },
           { key: 'setup', label: 'Thiết lập' },
         ]}

@@ -196,7 +196,7 @@ export function GlobalSearch({
       <Search size={18} />
       <input
         aria-label="Tìm khách hoặc phiếu"
-        placeholder="Tìm khách, số điện thoại, line…"
+        placeholder="Tìm khách, số điện thoại, line…  ( / )"
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -342,6 +342,24 @@ export function AppHeader({
   const active = NAV_PARENT[view] ?? view;
   const admin = ADMIN_KEYS.filter(visible).map(item);
   const name = user.split('@')[0] || 'Chủ cơ sở';
+  // Counter shortcuts: "/" jumps to search, "n" starts a booking. Ignored while typing or in a dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('dialog[open], [aria-modal="true"]')) return;
+      if (e.key === '/') {
+        e.preventDefault();
+        document.querySelector<HTMLInputElement>('.ds-search input')?.focus();
+      } else if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        onBook();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onBook]);
   return (
     <header className="ds-head">
       <div className="ds-head-row">
@@ -359,7 +377,12 @@ export function AppHeader({
         <h1 className="ds-title">{title}</h1>
         <GlobalSearch bookings={bookings} onPick={onPick} />
         <div className="ds-top-actions">
-          <button className="ds-primary" aria-label="Đặt lịch" onClick={onBook}>
+          <button
+            className="ds-primary"
+            aria-label="Đặt lịch"
+            title="Đặt lịch (N)"
+            onClick={onBook}
+          >
             <Plus size={19} />
             <span>Đặt lịch</span>
           </button>

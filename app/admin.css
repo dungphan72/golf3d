@@ -3178,3 +3178,26 @@ body:has(.app-shell) {
   gap: var(--ds-s3);
   align-items: center;
 }
+
+/* Counter touch targets: every control reachable with a thumb is at least 44px (phones and tablets). */
+@media (pointer: coarse) {
+  .ds-root.ds-root .room-card .room-walkin,
+  .ds-root.ds-root .room-card .room-book,
+  .ds-root.ds-root .room-card .room-open,
+  .ds-root.ds-root .room-card .room-pay,
+  .ds-root.ds-root .ds-primary,
+  .ds-root.ds-root .ds-user-btn,
+  .ds-root.ds-root .ds-link,
+  .ds-root.ds-root .ds-search input,
+  .ds-root.ds-root input[type='date'],
+  .ds-root.ds-root input[type='datetime-local'] {
+    min-height: 44px;
+  }
+  .ds-root.ds-root .ds-primary {
+    min-width: 44px;
+  }
+  .ds-root.ds-root .ds-iconbtn {
+    width: 44px;
+    height: 44px;
+  }
+}

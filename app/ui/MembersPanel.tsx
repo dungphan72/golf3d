@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { PageTabs } from './kit';
+import { PageTabs, askConfirm, askText } from './kit';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/member';
@@ -213,11 +213,13 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                       <button
                         className="primary"
                         disabled={busy}
-                        onClick={() => {
+                        onClick={async () => {
                           if (
-                            !window.confirm(
-                              'Chỉ xác nhận khi người đăng ký đúng là chủ số điện thoại này (đã gặp hoặc gọi lại). Xác nhận?',
-                            )
+                            !(await askConfirm({
+                              title: 'Xác nhận tài khoản web?',
+                              message:
+                                'Chỉ xác nhận khi người đăng ký đúng là chủ số điện thoại này (đã gặp hoặc gọi lại).',
+                            }))
                           )
                             return;
                           act(
@@ -335,11 +337,25 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                         <button
                           className="secondary"
                           disabled={busy}
-                          onClick={() => {
-                            const note = window.prompt('Lý do điều chỉnh (ít nhất 3 ký tự):');
-                            const delta = Number(window.prompt('Số lượt cộng (+) hoặc trừ (-):'));
-                            const kind = window.prompt('Loại: holes9, holes18 hoặc gdr', 'holes18');
-                            if (!note || !Number.isInteger(delta) || !delta || !kind) return;
+                          onClick={async () => {
+                            const note = await askText({
+                              title: 'Điều chỉnh số lượt',
+                              label: 'Lý do điều chỉnh (ít nhất 3 ký tự)',
+                              min: 3,
+                            });
+                            if (!note) return;
+                            const deltaText = await askText({
+                              title: 'Điều chỉnh số lượt',
+                              label: 'Số lượt cộng (+) hoặc trừ (-)',
+                              initial: '1',
+                            });
+                            const delta = Number(deltaText);
+                            const kind = await askText({
+                              title: 'Điều chỉnh số lượt',
+                              label: 'Loại: holes9, holes18 hoặc gdr',
+                              initial: 'holes18',
+                            });
+                            if (!Number.isInteger(delta) || !delta || !kind) return;
                             act(
                               () =>
                                 post({

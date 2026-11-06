@@ -174,8 +174,11 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   await dialog.getByRole('button', { name: 'Giảm giá', exact: true }).click();
   await dialog.getByRole('button', { name: '10%' }).click();
   await dialog.getByLabel('Lý do (bắt buộc)').fill('Khách thân thiết');
-  page.once('dialog', (d) => d.accept());
   await dialog.getByRole('button', { name: 'Ghi giảm giá' }).click();
+  await page
+    .getByRole('dialog', { name: /Giảm .* cho phiếu này/ })
+    .getByRole('button', { name: 'Ghi giảm giá' })
+    .click();
   await expect(dialog.getByText('Khách thân thiết')).toBeVisible();
   const due = await amountOf(owner, id);
   expect(due).toBeLessThan(total);
@@ -193,7 +196,10 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   await dialog.getByRole('button', { name: 'Hoàn tiền', exact: true }).click();
   await dialog.getByLabel('Số tiền hoàn (đồng)').fill('10000');
   await dialog.getByLabel('Lý do (bắt buộc)').fill('Máy lỗi 10 phút');
-  page.once('dialog', (d) => d.accept());
   await dialog.getByRole('button', { name: 'Xác nhận hoàn tiền' }).click();
+  await page
+    .getByRole('dialog', { name: /Hoàn .* cho khách/ })
+    .getByRole('button', { name: 'Hoàn tiền' })
+    .click();
   await expect(dialog.getByText('Máy lỗi 10 phút')).toBeVisible();
 });

@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from './kit';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
@@ -129,7 +130,13 @@ export function DiscountForm({
         className="primary"
         disabled={!valid || busy}
         onClick={async () => {
-          if (!window.confirm(`Giảm ${money(discount)} cho phiếu này?`)) return;
+          if (
+            !(await askConfirm({
+              title: `Giảm ${money(discount)} cho phiếu này?`,
+              confirmLabel: 'Ghi giảm giá',
+            }))
+          )
+            return;
           setBusy(true);
           setError('');
           try {
@@ -314,7 +321,13 @@ export function RefundForm({
         className="primary"
         disabled={!valid || busy}
         onClick={async () => {
-          if (!window.confirm(`Hoàn ${money(amount)} (${METHOD_LABELS[method]}) cho khách?`))
+          if (
+            !(await askConfirm({
+              title: `Hoàn ${money(amount)} (${METHOD_LABELS[method]}) cho khách?`,
+              confirmLabel: 'Hoàn tiền',
+              danger: true,
+            }))
+          )
             return;
           setBusy(true);
           setError('');

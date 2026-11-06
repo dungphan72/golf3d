@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { PageTabs } from '../../../app/ui/kit';
+import { Loading, PageTabs } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { call, errText, type Staff } from './api';
 import { LeadDetail } from './LeadDetail';
@@ -75,7 +75,7 @@ function ConfigScreen() {
         {error}
       </div>
     );
-  if (!s) return <p>Đang tải…</p>;
+  if (!s) return <Loading />;
   const num = (v: string, d: number) => (Number.isFinite(Number(v)) && v !== '' ? Number(v) : d);
   const save = async () => {
     setMsg('');
@@ -282,7 +282,7 @@ function ConfigScreen() {
           Tự tạo việc chăm sóc sau bán (3, 30, 90 ngày)
         </label>
       </div>
-      <p>
+      <p className="savebar">
         <button className="primary" onClick={save}>
           Lưu cấu hình
         </button>{' '}
@@ -386,7 +386,7 @@ export function CrmModule({ permissions }: { permissions: string[] }) {
         {cfg.error}
       </div>
     ) : (
-      <p>Đang tải…</p>
+      <Loading />
     );
   const shared: Shared = {
     now: clock,

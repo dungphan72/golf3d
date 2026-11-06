@@ -134,7 +134,10 @@ test('thêm, sửa, tắt và xóa khuyến mãi ngay trong màn hình Cài đ�
   await expect(page.getByText('Giảm 20%')).toBeVisible();
   await page.locator('.promo-editor').getByRole('button', { name: 'Tắt', exact: true }).click();
   await expect(page.getByText('đang tắt')).toBeVisible();
-  page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Xóa Giờ vàng thứ Ba' }).click();
+  await page
+    .getByRole('dialog', { name: /Xóa khuyến mãi/ })
+    .getByRole('button', { name: 'Xóa' })
+    .click();
   await expect(page.getByText('Chưa có chương trình khuyến mãi nào.')).toBeVisible();
 });

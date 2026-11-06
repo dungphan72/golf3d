@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Phone, MessageCircle, Copy, Check, Clock } from 'lucide-react';
-import { Chips, FilterBar } from './kit';
+import { Chips, FilterBar, askConfirm } from './kit';
 import {
   CALL_RESULTS,
   CALL_RESULT_LABELS,
@@ -1119,7 +1119,11 @@ export function ChannelsView({ manager }: { manager: boolean }) {
               onClick={async () => {
                 if (
                   d.tokens[kind] &&
-                  !window.confirm('Tạo mã mới sẽ làm mã cũ ngừng hoạt động. Tiếp tục?')
+                  !(await askConfirm({
+                    title: 'Tạo mã mới?',
+                    message: 'Tạo mã mới sẽ làm mã cũ ngừng hoạt động.',
+                    confirmLabel: 'Tạo mã mới',
+                  }))
                 )
                   return;
                 try {

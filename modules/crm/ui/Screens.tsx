@@ -1,6 +1,14 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Chips, DataTable, FilterBar } from '../../../app/ui/kit';
+import {
+  Chips,
+  DataTable,
+  FilterBar,
+  Loading,
+  StatusBadge,
+  useDialogs,
+  type Tone,
+} from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { NEXT_ACTION_LABELS, type NextAction } from '../core/calls';
 import { STAGES, STAGE_LABELS, type Stage } from '../core/stages';
@@ -35,6 +43,18 @@ export function useLoad<T>(url: string, every = 0) {
   }, [reload, every]);
   return { data, error, reload, setError };
 }
+const stageTone = (st: string): Tone =>
+  st === 'WON' ? 'ok' : st === 'LOST' ? 'muted' : st === 'NEW' ? 'warn' : 'info';
+const apptTone = (st: string): Tone =>
+  (
+    ({
+      PENDING: 'warn',
+      CONFIRMED: 'info',
+      ARRIVED: 'ok',
+      NO_SHOW: 'late',
+      CANCELLED: 'muted',
+    }) as Record<string, Tone>
+  )[st] ?? 'muted';
 const Err = ({ text }: { text: string }) =>
   text ? (
     <div className="error-box" role="alert">
@@ -59,7 +79,7 @@ export function OverviewScreen({
 }) {
   const { data, error } = useLoad<Overview>('/api/crm2/overview', 30_000);
   if (error) return <Err text={error} />;
-  if (!data) return <p>Đang tải…</p>;
+  if (!data) return <Loading />;
   const n = (s: string) => data.stages.find((x) => x.stage === s)?.n ?? 0;
   const total = data.stages.reduce((a, x) => a + x.n, 0);
   return (
@@ -123,7 +143,7 @@ export function OverviewScreen({
 export function WorkScreen({ s }: { s: Shared }) {
   const { data, error } = useLoad<{ leads: Lead[] }>('/api/crm2/leads?view=work', 15_000);
   if (error) return <Err text={error} />;
-  if (!data) return <p>Đang tải…</p>;
+  if (!data) return <Loading />;
   return (
     <DataTable
       rows={data.leads}
@@ -160,7 +180,15 @@ export function WorkScreen({ s }: { s: Shared }) {
             );
           },
         },
-        { key: 'st', header: 'Giai đoạn', cell: (r) => STAGE_LABELS[r.stage as Stage] ?? r.stage },
+        {
+          key: 'st',
+          header: 'Giai đoạn',
+          cell: (r) => (
+            <StatusBadge tone={stageTone(r.stage)}>
+              {STAGE_LABELS[r.stage as Stage] ?? r.stage}
+            </StatusBadge>
+          ),
+        },
         { key: 'c', header: 'Gọi hụt', align: 'right', cell: (r) => r.callAttempts },
       ]}
     />
@@ -175,7 +203,7 @@ export function PoolScreen({ s }: { s: Shared }) {
   const [picked, setPicked] = useState<string[]>([]);
   const [to, setTo] = useState('');
   if (error && !data) return <Err text={error} />;
-  if (!data) return <p>Đang tải…</p>;
+  if (!data) return <Loading />;
   const act = async (body: Record<string, unknown>) => {
     try {
       await call('/api/crm2/leads', body);
@@ -372,7 +400,11 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
             {
               key: 'st',
               header: 'Giai đoạn',
-              cell: (r) => STAGE_LABELS[r.stage as Stage] ?? r.stage,
+              cell: (r) => (
+                <StatusBadge tone={stageTone(r.stage)}>
+                  {STAGE_LABELS[r.stage as Stage] ?? r.stage}
+                </StatusBadge>
+              ),
             },
             { key: 'sv', header: 'Quan tâm', cell: (r) => r.targetService || '—' },
             {
@@ -560,7 +592,13 @@ export function AppointmentsScreen({ s }: { s: Shared }) {
             ),
           },
           { key: 'sv', header: 'Dịch vụ', cell: (r) => r.service || '—' },
-          { key: 'st', header: 'Trạng thái', cell: (r) => APPT_TEXT[r.status] ?? r.status },
+          {
+            key: 'st',
+            header: 'Trạng thái',
+            cell: (r) => (
+              <StatusBadge tone={apptTone(r.status)}>{APPT_TEXT[r.status] ?? r.status}</StatusBadge>
+            ),
+          },
           {
             key: 'a',
             header: '',
@@ -680,6 +718,7 @@ type Hold = {
   expiresAt: number | null;
 };
 export function HoldsScreen({ s }: { s: Shared }) {
+  const dlg = useDialogs();
   const { data, error, reload, setError } = useLoad<{ holds: Hold[] }>(
     '/api/crm2/sales?view=holds',
     30_000,
@@ -695,6 +734,7 @@ export function HoldsScreen({ s }: { s: Shared }) {
   };
   return (
     <>
+      {dlg.node}
       <Err text={error} />
       <DataTable
         rows={data?.holds ?? []}
@@ -742,10 +782,14 @@ export function HoldsScreen({ s }: { s: Shared }) {
                   {s.manager && (
                     <button
                       className="primary"
-                      onClick={() => {
-                        const v = window.prompt('Số tiền cọc (đồng):');
-                        const n = Number(String(v ?? '').replace(/\D/g, ''));
-                        if (n > 0) act({ action: 'deposit', id: r.id, amount: n });
+                      onClick={async () => {
+                        const v = await dlg.prompt({
+                          title: `Ghi cọc cho ${r.productName}`,
+                          label: 'Số tiền cọc (đồng)',
+                          numeric: true,
+                          confirmLabel: 'Ghi cọc',
+                        });
+                        if (v) act({ action: 'deposit', id: r.id, amount: Number(v) });
                       }}
                     >
                       Ghi cọc
@@ -881,6 +925,7 @@ export function OrdersScreen({ s }: { s: Shared }) {
 }
 
 function OrderPanel({ id, s, onClose }: { id: string; s: Shared; onClose: () => void }) {
+  const dlg = useDialogs();
   const { data, error, reload, setError } = useLoad<OrderDetail>(
     '/api/crm2/sales?view=order&id=' + id,
   );
@@ -893,11 +938,12 @@ function OrderPanel({ id, s, onClose }: { id: string; s: Shared; onClose: () => 
       setError(errText(e));
     }
   };
-  if (!data) return error ? <Err text={error} /> : <p>Đang tải…</p>;
+  if (!data) return error ? <Err text={error} /> : <Loading />;
   const { order, summary } = data;
   const live = order.status !== 'CANCELLED';
   return (
-    <div className="crm-lead">
+    <div className="crm-panel">
+      {dlg.node}
       <p>
         <button className="secondary" onClick={onClose}>
           ← Quay lại
@@ -961,10 +1007,16 @@ function OrderPanel({ id, s, onClose }: { id: string; s: Shared; onClose: () => 
               live && s.manager && r.status !== 'PAID' ? (
                 <button
                   className="primary"
-                  onClick={() => {
-                    const v = window.prompt('Số tiền thu (đồng):', String(r.amount - r.paidAmount));
-                    const n = Number(String(v ?? '').replace(/\D/g, ''));
-                    if (n > 0) act({ op: 'pay', paymentId: r.id, amount: n, method: 'Tiền mặt' });
+                  onClick={async () => {
+                    const v = await dlg.prompt({
+                      title: `Ghi thu ${r.label}`,
+                      label: 'Số tiền thu (đồng)',
+                      initial: String(r.amount - r.paidAmount),
+                      numeric: true,
+                      confirmLabel: 'Ghi thu',
+                    });
+                    if (v)
+                      act({ op: 'pay', paymentId: r.id, amount: Number(v), method: 'Tiền mặt' });
                   }}
                 >
                   Ghi thu
@@ -1015,9 +1067,15 @@ function OrderPanel({ id, s, onClose }: { id: string; s: Shared; onClose: () => 
             {data.cancel.allowed && (
               <button
                 className="secondary"
-                onClick={() => {
-                  const r = window.prompt('Lý do hủy đơn:');
-                  if (r && r.trim()) act({ op: 'cancel', reason: r.trim() });
+                onClick={async () => {
+                  const r = await dlg.prompt({
+                    title: `Hủy đơn ${order.code}`,
+                    label: 'Lý do hủy đơn',
+                    min: 2,
+                    danger: true,
+                    confirmLabel: 'Hủy đơn',
+                  });
+                  if (r) act({ op: 'cancel', reason: r });
                 }}
               >
                 Hủy đơn

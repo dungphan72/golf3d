@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { DataTable, FilterBar } from './kit';
+import { DataTable, FilterBar, askText } from './kit';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { LESSON_STATUS_LABELS } from '../../lib/coaching';
@@ -98,11 +98,17 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
     }
   }
   const activeCoaches = data?.coaches.filter((c) => c.active) ?? [];
-  const mark = (l: Lesson, status: 'done' | 'no_show' | 'cancelled') => {
+  const mark = async (l: Lesson, status: 'done' | 'no_show' | 'cancelled') => {
     const coachNote =
       status === 'cancelled'
         ? ''
-        : (window.prompt('Ghi chú buổi học (không bắt buộc):', l.coach_note) ?? '');
+        : await askText({
+            title: 'Ghi chú buổi học',
+            label: 'Ghi chú (không bắt buộc)',
+            initial: l.coach_note,
+            min: 0,
+          });
+    if (coachNote === null) return;
     return act(() => post({ action: 'lesson-status', id: l.id, status, coachNote }));
   };
   return (
@@ -209,8 +215,13 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                     <button
                       className="secondary"
                       disabled={busy}
-                      onClick={() => {
-                        const coachNote = window.prompt('Ghi chú buổi học:', l.coach_note);
+                      onClick={async () => {
+                        const coachNote = await askText({
+                          title: 'Ghi chú buổi học',
+                          label: 'Ghi chú',
+                          initial: l.coach_note,
+                          min: 0,
+                        });
                         if (coachNote !== null)
                           act(() => post({ action: 'lesson-note', id: l.id, coachNote }));
                       }}

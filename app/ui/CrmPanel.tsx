@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { Chips, DataTable, FilterBar, PageTabs } from './kit';
+import { Chips, DataTable, FilterBar, PageTabs, askText } from './kit';
 import { Phone, MessageCircle, Copy, Check } from 'lucide-react';
 import { money } from '../../lib/club';
 import {
@@ -226,10 +226,13 @@ function TaskCard({
           </select>
           <button
             className="secondary"
-            onClick={() => {
-              const reason = window.prompt('Lý do bỏ qua:');
-              if (reason && reason.trim().length >= 2)
-                act({ action: 'task-skip', id: task.id, reason: reason.trim() });
+            onClick={async () => {
+              const reason = await askText({
+                title: 'Bỏ qua việc này',
+                label: 'Lý do bỏ qua',
+                min: 2,
+              });
+              if (reason) act({ action: 'task-skip', id: task.id, reason });
             }}
           >
             Bỏ qua

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
-import { Chips, DataTable, FilterBar } from './kit';
+import { Chips, DataTable, FilterBar, askText } from './kit';
 
 type Row = {
   id: string;
@@ -128,9 +128,15 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
       {r.status === 'pending' && (
         <button
           disabled={busy}
-          onClick={() => {
-            const reason = window.prompt('Lý do từ chối (khách sẽ thấy):');
-            if (reason && reason.trim().length >= 3) act({ action: 'reject', id: r.id, reason });
+          onClick={async () => {
+            const reason = await askText({
+              title: 'Từ chối yêu cầu',
+              label: 'Lý do từ chối (khách sẽ thấy)',
+              min: 3,
+              danger: true,
+              confirmLabel: 'Từ chối',
+            });
+            if (reason) act({ action: 'reject', id: r.id, reason });
           }}
         >
           Từ chối

@@ -1684,3 +1684,237 @@
 .ds-root .crm-col h4 { display: flex; justify-content: space-between; margin: 0 0 0.5rem; font-size: 0.85rem; }
 .ds-root .crm-mini { display: grid; gap: 0.15rem; border: 1px solid var(--ds-line, #e5e7eb); border-radius: 6px; padding: 0.4rem 0.5rem; margin-bottom: 0.4rem; font-size: 0.8rem; }
 .ds-root .crm-mini .late { color: #b91c1c; }
+
+/* ================= UI polish layer (ui-ux-pro-max): tokens, focus, tables, CRM module ================= */
+.ds-root {
+  --ds-s1: 4px;
+  --ds-s2: 8px;
+  --ds-s3: 12px;
+  --ds-s4: 16px;
+  --ds-s5: 24px;
+  --ds-s6: 32px;
+  --ds-fs-sm: 13px;
+  --ds-fs-md: 15px;
+  --ds-fs-lg: 18px;
+  --ds-focus: #0b6b3a;
+  /* Status pairs (text on tinted background), each at least 4.5:1 */
+  --ds-ok-fg: #14532d;
+  --ds-ok-bg: #e7f5ec;
+  --ds-info-fg: #1e3a8a;
+  --ds-info-bg: #e8effc;
+  --ds-warn-fg: #7a4a00;
+  --ds-warn-bg: #fdf3d9;
+  --ds-late-fg: #8f1d14;
+  --ds-late-bg: #fdeceb;
+  --ds-muted-bg: #f1f4f2;
+}
+
+/* Visible keyboard focus everywhere */
+.ds-root :is(button, a, input, select, textarea, summary, [role='tab'], [tabindex]):focus-visible {
+  outline: 2px solid var(--ds-focus);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ds-root *,
+  .ds-root *::before,
+  .ds-root *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Touch targets */
+@media (pointer: coarse) {
+  .ds-root :is(.primary, .secondary, .ds-seg button, .ds-tabs button, select, input:not([type='checkbox'], [type='radio'])) {
+    min-height: 44px;
+  }
+  .ds-root .crm-chip {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Tables: sticky header, right-aligned numbers */
+.ds-root .ds-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  box-shadow: inset 0 -1px 0 var(--ds-line);
+}
+.ds-root table.ds-table {
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.ds-root table.ds-table th,
+.ds-root table.ds-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--ds-line);
+  white-space: nowrap;
+}
+.ds-root table.ds-table tr:last-child td {
+  border-bottom: 0;
+}
+.ds-root .ds-table td.right,
+.ds-root .ds-table th.right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.ds-root .ds-table button.link,
+.ds-root button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--ds-green-dark);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+  min-height: 0;
+}
+
+/* Loading, badges, fields, ask dialog */
+.ds-loading {
+  display: grid;
+  gap: 10px;
+  padding: 16px 4px;
+}
+.ds-skel {
+  display: block;
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eef2ef 25%, #f7f9f7 50%, #eef2ef 75%);
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.2s linear infinite;
+}
+@keyframes ds-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.ds-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: var(--ds-fs-sm);
+  font-weight: 600;
+  line-height: 1.5;
+  background: var(--ds-muted-bg);
+  color: var(--ds-text);
+  white-space: nowrap;
+}
+.ds-badge i {
+  font-style: normal;
+  font-size: 11px;
+}
+.ds-badge.ok { background: var(--ds-ok-bg); color: var(--ds-ok-fg); }
+.ds-badge.info { background: var(--ds-info-bg); color: var(--ds-info-fg); }
+.ds-badge.warn { background: var(--ds-warn-bg); color: var(--ds-warn-fg); }
+.ds-badge.late { background: var(--ds-late-bg); color: var(--ds-late-fg); }
+
+.ds-field {
+  display: grid;
+  gap: 6px;
+  font-size: var(--ds-fs-sm);
+  font-weight: 600;
+  color: var(--ds-text);
+}
+.ds-field small { font-weight: 400; color: var(--ds-muted); }
+.ds-field small.err { color: var(--ds-late-fg); font-weight: 600; }
+.ds-ask { max-width: 420px; width: calc(100vw - 32px); }
+.ds-ask .modal { display: grid; gap: var(--ds-s4); padding: var(--ds-s5); }
+.ds-ask h3 { margin: 0; font-size: var(--ds-fs-lg); }
+.ds-ask p { margin: 0; color: var(--ds-muted); }
+.ds-ask-actions { display: flex; justify-content: flex-end; gap: var(--ds-s2); }
+.ds-root .primary.danger { background: var(--ds-late-fg); border-color: var(--ds-late-fg); }
+
+/* ================= CRM module ================= */
+.ds-root .crm-panel { display: grid; gap: var(--ds-s4); }
+.ds-root .crm-panel h3 { margin: var(--ds-s3) 0 var(--ds-s2); font-size: var(--ds-fs-lg); }
+.ds-root .crm-panel h4 { margin: 0 0 var(--ds-s2); font-size: var(--ds-fs-md); }
+.ds-root .crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: var(--ds-s3);
+}
+.ds-root .crm-kpis > div {
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+  padding: var(--ds-s3) var(--ds-s4);
+  display: grid;
+  gap: 2px;
+}
+.ds-root .crm-kpis span { font-size: var(--ds-fs-sm); color: var(--ds-muted); }
+.ds-root .crm-kpis strong { font-size: 24px; color: var(--ds-text); font-variant-numeric: tabular-nums; }
+.ds-root .crm-kpis > div.late { border-color: var(--ds-late-fg); background: var(--ds-late-bg); }
+.ds-root .crm-kpis > div.late strong { color: var(--ds-late-fg); }
+.ds-root .crm-actions { display: flex; flex-wrap: wrap; gap: var(--ds-s2); align-items: center; }
+.ds-root .crm-actions input:not([type='checkbox']) { flex: 1 1 200px; min-width: 0; }
+.ds-root .crm-actions select { flex: 0 1 auto; max-width: 100%; }
+.ds-root .crm-meta { display: flex; flex-wrap: wrap; gap: var(--ds-s2) var(--ds-s3); align-items: center; color: var(--ds-muted); font-size: var(--ds-fs-sm); margin: 0; }
+.ds-root .crm-chip { display: inline-block; padding: 2px 10px; border: 1px solid var(--ds-line); border-radius: 999px; background: var(--ds-muted-bg); color: var(--ds-text); font-size: var(--ds-fs-sm); font-weight: 600; }
+.ds-root .crm-quote { margin: 0; padding: var(--ds-s2) var(--ds-s3); border-left: 3px solid var(--ds-green); background: var(--ds-muted-bg); border-radius: 0 8px 8px 0; }
+.ds-root .crm-sla { margin: 0; padding: var(--ds-s2) var(--ds-s3); border-radius: 8px; background: var(--ds-info-bg); color: var(--ds-info-fg); font-weight: 600; }
+.ds-root .crm-sla.late, .ds-root .crm-warn { background: var(--ds-late-bg); color: var(--ds-late-fg); }
+.ds-root .crm-warn { margin: 0; padding: var(--ds-s2) var(--ds-s3); border-radius: 8px; font-weight: 600; }
+.ds-root .late { color: var(--ds-late-fg); font-weight: 600; }
+
+/* Lead detail: two columns on wide screens, one column with a sticky action bar on phones */
+.ds-root .crm-detail { display: grid; gap: var(--ds-s4); }
+.ds-root .crm-detail .crm-side, .ds-root .crm-detail .crm-main { display: grid; gap: var(--ds-s4); align-content: start; min-width: 0; }
+.ds-root .crm-detail section { border: 1px solid var(--ds-line); border-radius: var(--ds-radius); padding: var(--ds-s3) var(--ds-s4); background: #fff; }
+.ds-root .crm-detail header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--ds-s3); align-items: center; }
+.ds-root .crm-detail ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+.ds-root .crm-history { max-height: 420px; overflow: auto; }
+@media (min-width: 1024px) {
+  .ds-root .crm-detail { grid-template-columns: minmax(0, 1.2fr) minmax(320px, 1fr); }
+}
+.ds-root .crm-stickybar { display: none; }
+@media (max-width: 760px) {
+  .ds-root .crm-stickybar {
+    display: flex;
+    gap: var(--ds-s2);
+    position: sticky;
+    bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    z-index: 5;
+    padding: var(--ds-s2);
+    background: #fff;
+    border-top: 1px solid var(--ds-line);
+  }
+  .ds-root .crm-stickybar a, .ds-root .crm-stickybar button { flex: 1; text-align: center; }
+}
+
+/* Pipeline board */
+.ds-root .crm-board { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(230px, 1fr); gap: var(--ds-s3); overflow-x: auto; padding-bottom: var(--ds-s2); scroll-snap-type: x proximity; }
+.ds-root .crm-col { background: var(--ds-muted-bg); border: 1px solid var(--ds-line); border-radius: var(--ds-radius); padding: var(--ds-s2); min-height: 8rem; scroll-snap-align: start; display: grid; align-content: start; gap: var(--ds-s2); }
+.ds-root .crm-col h4 { display: flex; justify-content: space-between; margin: 0; font-size: var(--ds-fs-sm); }
+.ds-root .crm-col h4 span { color: var(--ds-muted); font-weight: 600; }
+.ds-root .crm-mini { display: grid; gap: 2px; text-align: left; border: 1px solid var(--ds-line); border-radius: 8px; padding: var(--ds-s2) var(--ds-s3); background: #fff; font-size: var(--ds-fs-sm); cursor: pointer; min-height: 44px; transition: border-color 0.15s ease; }
+.ds-root .crm-mini:hover { border-color: var(--ds-green); }
+.ds-root .crm-mini span { color: var(--ds-muted); }
+.ds-root .crm-mini .late { color: var(--ds-late-fg); }
+
+/* Settings */
+.ds-root .settings-panel { display: grid; gap: var(--ds-s4); }
+.ds-root .settings-panel .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--ds-s3) var(--ds-s4); }
+.ds-root .settings-panel label { display: grid; gap: 6px; font-weight: 600; font-size: var(--ds-fs-sm); }
+.ds-root .settings-panel label.check, .ds-root .check { display: flex; align-items: center; gap: var(--ds-s2); font-weight: 500; min-height: 44px; }
+.ds-root .settings-panel .savebar { position: sticky; bottom: 0; background: #fff; border-top: 1px solid var(--ds-line); padding: var(--ds-s3) 0; display: flex; gap: var(--ds-s3); align-items: center; }
+@media (min-width: 1024px) {
+  .ds-root .crm-detail .crm-side { grid-column: 2; grid-row: 1; }
+  .ds-root .crm-detail .crm-main { grid-column: 1; grid-row: 1; }
+}
+.ds-ask :is(button, input, select):focus-visible { outline: 2px solid #0b6b3a; outline-offset: 2px; }
+.ds-ask .ds-field input { min-height: 40px; }
+.ds-root .crm-panel a svg { display: inline-block; vertical-align: -2px; }
+.ds-root .crm-panel > header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--ds-s3); align-items: center; }

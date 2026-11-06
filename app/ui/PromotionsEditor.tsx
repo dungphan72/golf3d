@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from './kit';
 import { useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import {
@@ -233,8 +234,14 @@ export function PromotionsEditor({
                 className="secondary icon-only"
                 aria-label={`Xóa ${p.name}`}
                 title="Xóa"
-                onClick={() => {
-                  if (window.confirm(`Xóa khuyến mãi "${p.name}"?`))
+                onClick={async () => {
+                  if (
+                    await askConfirm({
+                      title: `Xóa khuyến mãi "${p.name}"?`,
+                      confirmLabel: 'Xóa',
+                      danger: true,
+                    })
+                  )
                     onChange(promotions.filter((x) => x.id !== p.id));
                 }}
               >

@@ -6,6 +6,8 @@ import {
   memberInput,
 } from '../../../lib/server/member-service';
 import { can, type Permission } from '../../../lib/auth/permissions';
+import { originOf, requestNow } from '../../../lib/server/http';
+import { onPaid } from '../../../lib/server/lead-service';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
@@ -53,5 +55,14 @@ export async function POST(req: Request) {
   const needed = NEEDED[input.action];
   if (!needed || !can(auth.role, needed))
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
-  return sendResult(await applyMember(auth.tenant, auth.userId, input));
+  const result = await applyMember(auth.tenant, auth.userId, input);
+  // A round fully covered by a package is paid: send the receipt like any other payment.
+  if (result.status === 200 && input.action === 'redeem') {
+    try {
+      await onPaid(auth.tenant, [input.bookingId], originOf(req), requestNow(req));
+    } catch (e) {
+      console.error('receipt messages', e);
+    }
+  }
+  return sendResult(result);
 }

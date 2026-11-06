@@ -912,3 +912,75 @@ body:has(.app-shell) {
 .app-shell .crm-flow textarea {
   width: 100%;
 }
+
+/* ---------- CRM leads ---------- */
+.app-shell .crm-lead {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 8px;
+}
+.app-shell .crm-lead.late {
+  border-color: #b3261e;
+  box-shadow: inset 4px 0 0 #b3261e;
+}
+.app-shell .crm-lead.closed {
+  opacity: 0.65;
+}
+.app-shell .crm-lead header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: center;
+}
+.app-shell .crm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  margin: 0;
+  font-size: 12px;
+  color: var(--kv-muted);
+}
+.app-shell .crm-quote {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--kv-line);
+  font-size: 13px;
+}
+.app-shell .crm-sla {
+  margin: 0;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-weight: 600;
+  color: var(--kv-blue);
+}
+.app-shell .crm-sla.late,
+.app-shell .crm-warn {
+  color: #b3261e;
+}
+.app-shell .crm-kpis .late strong {
+  color: #b3261e;
+}
+.app-shell .crm-avail {
+  border: 1px solid var(--kv-line);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.app-shell .crm-avail p {
+  margin: 0;
+}
+.app-shell .crm-url {
+  word-break: break-all;
+  font-family: monospace;
+  font-size: 12px;
+}
+.app-shell .crm-consult {
+  display: grid;
+  gap: 8px;
+}

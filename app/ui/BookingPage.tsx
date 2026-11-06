@@ -122,12 +122,31 @@ export default function BookingPage({
     start: '',
     note: '',
     website: '',
+    consent: false,
   });
   const [captcha, setCaptcha] = useState('');
   const [captchaReset, setCaptchaReset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
+  // A link from the consultant (/book/slug?service=18&start=2026-11-10T10:00&guests=4&name=..&phone=..) fills the form.
+  useEffect(() => {
+    const q = new URLSearchParams(location.search);
+    const service = q.get('service');
+    setForm((f) => ({
+      ...f,
+      ...(service && ['gdr', '9', '18'].includes(service) ? { service } : {}),
+      ...(q.get('start') && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(q.get('start')!)
+        ? { start: q.get('start')! }
+        : {}),
+      ...(q.get('guests') && /^\d{1,4}$/.test(q.get('guests')!)
+        ? { guests: q.get('guests')! }
+        : {}),
+      ...(q.get('name') ? { name: q.get('name')!.slice(0, 100) } : {}),
+      ...(q.get('phone') ? { phone: q.get('phone')!.slice(0, 20) } : {}),
+      ...(q.get('vip') === '1' ? { vip: true } : {}),
+    }));
+  }, []);
   useEffect(() => {
     fetch('/api/public/booking?slug=' + encodeURIComponent(slug))
       .then(async (r) => {
@@ -177,6 +196,7 @@ export default function BookingPage({
           minutes: form.service === 'gdr' ? 60 : 0,
           note: form.note,
           website: form.website,
+          consent: form.consent,
           captcha,
         }),
       });
@@ -373,6 +393,14 @@ export default function BookingPage({
               value={form.website}
               onChange={(e) => setForm({ ...form, website: e.target.value })}
             />
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={form.consent}
+                onChange={(e) => setForm({ ...form, consent: e.target.checked })}
+              />
+              <span>Tôi đồng ý nhận tin ưu đãi từ câu lạc bộ (không bắt buộc)</span>
+            </label>
             {info.captchaSiteKey && (
               <TurnstileBox
                 siteKey={info.captchaSiteKey}

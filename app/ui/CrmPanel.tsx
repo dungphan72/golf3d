@@ -14,9 +14,14 @@ import {
   type Segment,
 } from '../../lib/crm';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
+import { LeadsView, AgentsView, ChannelsView } from './LeadPanel';
+import { LEAD_STATUS_LABELS, SOURCE_LABELS, type LeadSource } from '../../lib/leads';
 
 type Counts = { overdue: number; today: number; upcoming: number; doneWeek: number };
 type CustomerRow = {
+  email: string;
+  zalo_id: string;
+  marketing_consent: number;
   id: string;
   name: string;
   phone: string;
@@ -29,6 +34,42 @@ type CustomerRow = {
   open_tasks: number;
   account: number | null;
   segments: Segment[];
+};
+type LeadInfo = {
+  leads: {
+    id: string;
+    status: string;
+    source: string;
+    campaign: string;
+    need: string;
+    assignee_name: string | null;
+    due_at: number | null;
+    first_call_at: number | null;
+    received_at: number;
+  }[];
+  events: {
+    id: string;
+    kind: string;
+    detail: string;
+    created: number;
+    actor_name: string | null;
+  }[];
+};
+const EVENT_TEXT: Record<string, (d: Record<string, unknown>) => string> = {
+  received: (d) => `Tiếp nhận lead từ ${d.source}${d.campaign ? ` (${d.campaign})` : ''}`,
+  contact: (d) => `Khách liên hệ lại qua ${d.source}`,
+  assigned: (d) =>
+    `Giao cho ${d.to}${d.mode === 'reassigned' ? ' (chuyển vì nhân viên trước chưa gọi)' : ''}`,
+  queued: () => 'Vào hàng chờ: chưa có nhân viên trực',
+  overdue: (d) => `Quá hạn 5 phút${d.agent ? `: ${d.agent} chưa ghi nhận cuộc gọi` : ''}`,
+  call: (d) =>
+    `Cuộc gọi: ${d.label}${d.note ? `. ${d.note}` : ''}${d.seconds != null ? ` (phản hồi sau ${Math.round(Number(d.seconds) / 60)} phút)` : ''}`,
+  replied: (d) => `${d.label}${d.note ? `. ${d.note}` : ''}`,
+  claimed: () => 'Nhân viên nhận lead',
+  booked: () => 'Đã đặt lịch',
+  lost: (d) => `Không đặt: ${d.reason}`,
+  link_sent: (d) => (d.manual ? 'Tạo link đặt lịch (gửi thủ công)' : 'Gửi link đặt lịch cho khách'),
+  notify_gap: (d) => String(d.reason ?? 'Không có kênh thông báo'),
 };
 type Detail = {
   customer: CustomerRow;
@@ -356,6 +397,10 @@ function CustomerDetail({
   onChanged: () => void;
 }) {
   const [d, setD] = useState<Detail | null>(null);
+  const [lead, setLead] = useState<LeadInfo | null>(null);
+  const [contact, setContact] = useState({ email: '', zaloId: '' });
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
   const [channel, setChannel] = useState<Channel>('call');
   const [content, setContent] = useState('');
   const [title, setTitle] = useState('');
@@ -368,6 +413,14 @@ function CustomerDetail({
       )) as unknown as Detail;
       setD(v);
       setBirthday(v.customer.birthday);
+      setContact({ email: v.customer.email, zaloId: v.customer.zalo_id });
+      try {
+        setLead(
+          (await call('/api/crm/leads?customer=' + encodeURIComponent(id))) as unknown as LeadInfo,
+        );
+      } catch {
+        setLead(null);
+      }
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -514,6 +567,119 @@ function CustomerDetail({
               Thêm việc (ngày mai)
             </button>
           </div>
+        </>
+      )}
+      {lead && lead.leads.length > 0 && (
+        <>
+          <h4>Người phụ trách và hạn gọi</h4>
+          <ul className="crm-timeline">
+            {lead.leads.map((l) => (
+              <li key={l.id}>
+                <strong>{LEAD_STATUS_LABELS[l.status] ?? l.status}</strong> ·{' '}
+                {SOURCE_LABELS[l.source as LeadSource] ?? l.source}
+                {l.campaign ? ` · ${l.campaign}` : ''} · phụ trách: {l.assignee_name ?? 'chưa có'}
+                <br />
+                Nhận lúc {stamp(l.received_at)}
+                {l.first_call_at
+                  ? ` · đã liên hệ lúc ${stamp(l.first_call_at)}`
+                  : l.due_at
+                    ? ` · hạn gọi ${stamp(l.due_at)}`
+                    : ''}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {canWork && (
+        <>
+          <h4>Liên hệ và đồng ý nhận tin</h4>
+          <div className="crm-actions">
+            <input
+              aria-label="Email khách"
+              placeholder="Email"
+              value={contact.email}
+              onChange={(e) => setContact({ ...contact, email: e.target.value })}
+            />
+            <input
+              aria-label="Zalo ID khách"
+              placeholder="Zalo ID (để nhắn qua OA)"
+              value={contact.zaloId}
+              onChange={(e) => setContact({ ...contact, zaloId: e.target.value })}
+            />
+            <button
+              className="secondary"
+              onClick={() =>
+                act({
+                  action: 'contact-set',
+                  customerId: id,
+                  email: contact.email.trim(),
+                  zaloId: contact.zaloId.trim(),
+                })
+              }
+            >
+              Lưu liên hệ
+            </button>
+          </div>
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={c.marketing_consent === 1}
+              onChange={(e) =>
+                act({ action: 'consent-set', customerId: id, consent: e.target.checked })
+              }
+            />
+            Khách đồng ý nhận tin ưu đãi (tin đặt lịch, biên nhận, cảm ơn vẫn gửi khi chưa đồng ý)
+          </label>
+          <h4>Phản hồi sau buổi chơi</h4>
+          <div className="crm-actions">
+            <select
+              aria-label="Điểm hài lòng"
+              value={rating}
+              onChange={(e) => setRating(Number(e.target.value))}
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>
+                  {n} sao
+                </option>
+              ))}
+            </select>
+            <input
+              aria-label="Nhận xét của khách"
+              placeholder="Nhận xét của khách"
+              value={comment}
+              maxLength={600}
+              onChange={(e) => setComment(e.target.value)}
+            />
+            <button
+              className="secondary"
+              onClick={() =>
+                act({ action: 'feedback', customerId: id, rating, comment: comment.trim() }, () =>
+                  setComment(''),
+                )
+              }
+            >
+              Ghi nhận phản hồi
+            </button>
+          </div>
+          <p className="muted">
+            Từ 3 sao trở xuống là phản ánh: tự giao quản lý xử lý và báo quản lý ngay.
+          </p>
+        </>
+      )}
+      {lead && lead.events.length > 0 && (
+        <>
+          <h4>Lịch sử xử lý lead</h4>
+          <ul className="crm-timeline">
+            {lead.events.map((e) => {
+              const detail = JSON.parse(e.detail || '{}') as Record<string, unknown>;
+              return (
+                <li key={e.id}>
+                  {stamp(e.created)} · {(EVENT_TEXT[e.kind] ?? (() => e.kind))(detail)}
+                  {e.actor_name ? ` · ${e.actor_name}` : ''}
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
       <h4>Lịch sử chăm sóc</h4>
@@ -778,21 +944,31 @@ function FlowsView() {
   );
 }
 
-export function CrmPanel({ permissions }: { permissions: string[] }) {
+export function CrmPanel({
+  permissions,
+  initialCustomer = null,
+}: {
+  permissions: string[];
+  initialCustomer?: string | null;
+}) {
   const canWork = permissions.includes('crm.work');
   const canManage = permissions.includes('crm.manage');
-  const [tab, setTab] = useState<'tasks' | 'customers' | 'flows'>('tasks');
-  const [focus, setFocus] = useState<string | null>(null);
+  const [tab, setTab] = useState<'leads' | 'tasks' | 'customers' | 'agents' | 'channels' | 'flows'>(
+    initialCustomer ? 'customers' : 'leads',
+  );
+  const [focus, setFocus] = useState<string | null>(initialCustomer);
+  const tabs = [
+    ['leads', 'Lead mới'],
+    ['tasks', 'Việc cần làm'],
+    ['customers', 'Khách hàng'],
+    ['agents', 'Nhân sự nhận lead'],
+    ['channels', 'Kênh & tích hợp'],
+    ...(canManage ? [['flows', 'Quy trình tự động']] : []),
+  ] as const;
   return (
     <section className="crm-panel">
       <div className="tabs" role="tablist">
-        {(
-          [
-            ['tasks', 'Việc cần làm'],
-            ['customers', 'Khách hàng'],
-            ...(canManage ? [['flows', 'Quy trình tự động']] : []),
-          ] as const
-        ).map(([key, label]) => (
+        {tabs.map(([key, label]) => (
           <button
             key={key}
             role="tab"
@@ -804,6 +980,16 @@ export function CrmPanel({ permissions }: { permissions: string[] }) {
           </button>
         ))}
       </div>
+      {tab === 'leads' && (
+        <LeadsView
+          canWork={canWork}
+          manager={canManage}
+          onOpenCustomer={(id) => {
+            setFocus(id);
+            setTab('customers');
+          }}
+        />
+      )}
       {tab === 'tasks' && (
         <TasksView
           canWork={canWork}
@@ -816,6 +1002,8 @@ export function CrmPanel({ permissions }: { permissions: string[] }) {
       {tab === 'customers' && (
         <CustomersView key={focus ?? 'all'} canWork={canWork} focus={focus} />
       )}
+      {tab === 'agents' && <AgentsView manager={canManage} />}
+      {tab === 'channels' && <ChannelsView manager={canManage} />}
       {tab === 'flows' && canManage && <FlowsView />}
     </section>
   );

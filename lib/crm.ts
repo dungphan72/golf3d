@@ -73,8 +73,15 @@ export const CRM_RULES = [
 ] as const;
 export type CrmRuleId = (typeof CRM_RULES)[number]['id'];
 export const RULE_IDS = CRM_RULES.map((r) => r.id) as CrmRuleId[];
+const EXTRA_RULE_NAMES: Record<string, string> = {
+  manual: 'Việc thêm tay',
+  complaint: 'Xử lý phản ánh',
+  noshow: 'Khách không đến',
+};
 export const ruleName = (id: string) =>
-  CRM_RULES.find((r) => r.id === id)?.name ?? (id === 'manual' ? 'Việc thêm tay' : id);
+  CRM_RULES.find((r) => r.id === id)?.name ?? EXTRA_RULE_NAMES[id] ?? id;
+/** Rules whose message is a promotion: it is only sent to customers who agreed to receive them. */
+export const MARKETING_RULES = new Set(['comeback', 'pkg_low', 'points', 'birthday']);
 
 export type CrmSettings = {
   rules: Record<CrmRuleId, { enabled: boolean; value: number }>;
@@ -199,6 +206,27 @@ export const crmInput = z.discriminatedUnion('action', [
       birthday: z.string().regex(/^(\d{4}-[01]\d-[0-3]\d|[01]\d-[0-3]\d|)$/),
     })
     .strict(),
+  z.object({ action: z.literal('consent-set'), customerId: id, consent: z.boolean() }).strict(),
+  z
+    .object({
+      action: z.literal('contact-set'),
+      customerId: id,
+      email: z
+        .string()
+        .trim()
+        .max(200)
+        .regex(/^([^\s@]+@[^\s@]+\.[^\s@]+)?$/),
+      zaloId: z.string().trim().max(100),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('feedback'),
+      customerId: id,
+      rating: z.number().int().min(1).max(5),
+      comment: z.string().trim().max(600).default(''),
+    })
+    .strict(),
   z.object({ action: z.literal('settings-save'), settings: crmSettingsSchema }).strict(),
 ]);
 export type CrmInput = z.infer<typeof crmInput>;
@@ -220,6 +248,8 @@ export type CrmTask = {
   handled_at: number | null;
   handled_name: string | null;
   message: string;
+  /** The customer agreed to receive promotions. */
+  consent?: number;
   /** True when the task is assigned to the signed-in user. */
   mine?: boolean;
 };

@@ -150,6 +150,7 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
     .locator('aside')
     .getByRole('button', { name: /Chăm sóc KH/ })
     .click();
+  await page.getByRole('tab', { name: 'Việc cần làm' }).click();
   await expect(page.getByRole('tab', { name: 'Việc cần làm' })).toBeVisible();
 
   // A task: record the contact.

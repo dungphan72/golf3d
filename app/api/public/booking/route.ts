@@ -28,5 +28,5 @@ export async function POST(req: Request) {
   const ip = clientIp(req);
   if (!(await turnstilePasses(captcha, ip)))
     return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
-  return sendResult(await submitRequest(slug, rest, ip));
+  return sendResult(await submitRequest(slug, rest, ip, new URL(req.url).origin));
 }

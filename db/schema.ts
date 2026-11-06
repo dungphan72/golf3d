@@ -241,6 +241,11 @@ export const customers = sqliteTable(
     note: text('note').notNull().default(''),
     // 'YYYY-MM-DD' or 'MM-DD' (year unknown); empty when not given. Used by the CRM birthday flow.
     birthday: text('birthday').notNull().default(''),
+    email: text('email').notNull().default(''),
+    zaloId: text('zalo_id').notNull().default(''), // Zalo OA user id, to message the customer
+    // The customer agreed to receive promotions; service messages (booking, receipt, thanks) do not need it.
+    marketingConsent: integer('marketing_consent').notNull().default(0),
+    consentAt: integer('consent_at'),
     created: integer('created').notNull(),
   },
   (t) => [uniqueIndex('customer_phone').on(t.tenant, t.phone)],
@@ -591,4 +596,114 @@ export const crmInteractions = sqliteTable(
     created: integer('created').notNull(),
   },
   (t) => [index('crm_interaction_customer').on(t.tenant, t.customerId, t.created)],
+);
+
+// ---- CRM leads: inquiries from Facebook, Zalo OA, websites and ad forms, assigned to on-duty staff ----
+export const crmAgents = sqliteTable(
+  'crm_agents',
+  {
+    tenant: text('tenant').notNull(),
+    userId: text('user_id').notNull(),
+    receivesLeads: integer('receives_leads').notNull().default(0),
+    onDuty: integer('on_duty').notNull().default(0),
+    dutySince: integer('duty_since'),
+    lastAssigned: integer('last_assigned'), // round-robin: the longest-waiting agent gets the next lead
+    zaloId: text('zalo_id').notNull().default(''), // Zalo OA user id to notify the agent
+    email: text('email').notNull().default(''), // overrides the login email for notifications
+    updated: integer('updated').notNull(),
+  },
+  (t) => [uniqueIndex('crm_agent_user').on(t.tenant, t.userId)],
+);
+export const crmLeads = sqliteTable(
+  'crm_leads',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id'),
+    name: text('name').notNull().default(''),
+    phone: text('phone').notNull().default(''), // normalised; empty when the channel gave none
+    email: text('email').notNull().default(''),
+    zaloId: text('zalo_id').notNull().default(''),
+    source: text('source').notNull(), // facebook | zalo | website | ads | manual
+    campaign: text('campaign').notNull().default(''),
+    channelRef: text('channel_ref').notNull().default(''), // thread / lead id on the source channel, to reply there
+    need: text('need').notNull().default(''), // swing | 9 | 18 | group | other
+    guests: integer('guests').notNull().default(0),
+    preferredStart: integer('preferred_start'),
+    message: text('message').notNull().default(''),
+    status: text('status').notNull(), // queued | assigned | contacted | booked | lost
+    assignee: text('assignee'),
+    assignedAt: integer('assigned_at'),
+    dueAt: integer('due_at'), // first call is due 5 minutes after the lead was received
+    firstCallAt: integer('first_call_at'),
+    escalations: integer('escalations').notNull().default(0),
+    tried: text('tried').notNull().default('[]'), // staff who already had the lead
+    receivedAt: integer('received_at').notNull(),
+    updated: integer('updated').notNull(),
+    closedAt: integer('closed_at'),
+    lostReason: text('lost_reason').notNull().default(''),
+  },
+  (t) => [
+    index('crm_lead_status').on(t.tenant, t.status, t.dueAt),
+    index('crm_lead_phone').on(t.tenant, t.phone),
+  ],
+);
+export const crmLeadContacts = sqliteTable(
+  'crm_lead_contacts',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    leadId: text('lead_id').notNull(),
+    source: text('source').notNull(),
+    campaign: text('campaign').notNull().default(''),
+    extKey: text('ext_key').notNull(), // id of the event on the source channel: a retried webhook is ignored
+    message: text('message').notNull().default(''),
+    receivedAt: integer('received_at').notNull(),
+  },
+  (t) => [uniqueIndex('crm_contact_key').on(t.tenant, t.extKey), index('crm_contact_lead').on(t.leadId)],
+);
+export const crmLeadEvents = sqliteTable(
+  'crm_lead_events',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    leadId: text('lead_id').notNull(),
+    customerId: text('customer_id'),
+    kind: text('kind').notNull(),
+    actor: text('actor'),
+    detail: text('detail').notNull().default('{}'),
+    created: integer('created').notNull(),
+    ukey: text('ukey'), // makes system steps idempotent
+  },
+  (t) => [
+    uniqueIndex('crm_event_key').on(t.tenant, t.ukey),
+    index('crm_event_lead').on(t.leadId, t.created),
+    index('crm_event_customer').on(t.tenant, t.customerId, t.created),
+  ],
+);
+export const crmOutbox = sqliteTable(
+  'crm_outbox',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    ukey: text('ukey').notNull(), // one message per event and channel, even if the flow runs again
+    channel: text('channel').notNull(), // email | zalo
+    recipient: text('recipient').notNull(),
+    subject: text('subject').notNull().default(''),
+    body: text('body').notNull(),
+    kind: text('kind').notNull(),
+    audience: text('audience').notNull().default('staff'), // staff | customer
+    leadId: text('lead_id'),
+    customerId: text('customer_id'),
+    sendAt: integer('send_at').notNull(),
+    status: text('status').notNull(), // pending | sent | failed | cancelled | expired
+    attempts: integer('attempts').notNull().default(0),
+    lastError: text('last_error').notNull().default(''),
+    created: integer('created').notNull(),
+    sentAt: integer('sent_at'),
+  },
+  (t) => [
+    uniqueIndex('crm_outbox_key').on(t.tenant, t.ukey),
+    index('crm_outbox_status').on(t.status, t.sendAt),
+  ],
 );

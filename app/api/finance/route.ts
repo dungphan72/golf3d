@@ -2,6 +2,8 @@ import { authorize, sendResult, httpError, sameOrigin } from '../../auth-session
 import { financeInput } from '../../../lib/finance';
 import { loadFinance, applyFinance } from '../../../lib/server/finance-service';
 import { can } from '../../../lib/auth/permissions';
+import { originOf, requestNow } from '../../../lib/server/http';
+import { onPaid } from '../../../lib/server/lead-service';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const { auth, response } = await authorize('finance.view');
@@ -27,5 +29,17 @@ export async function POST(req: Request) {
       ? 'finance.shift'
       : 'finance.operate';
   if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
-  return sendResult(await applyFinance(auth.tenant, auth.userId, parsed.data));
+  const result = await applyFinance(auth.tenant, auth.userId, parsed.data);
+  // Payment confirmed: receipt now, thank-you tomorrow (queued once per booking, so a retry sends nothing twice).
+  if (result.status === 200 && ['pay', 'pay-split', 'pay-group'].includes(parsed.data.action)) {
+    const data = parsed.data;
+    const ids =
+      data.action === 'pay-group' ? data.bookingIds : 'bookingId' in data ? [data.bookingId] : [];
+    try {
+      await onPaid(auth.tenant, ids, originOf(req), requestNow(req));
+    } catch (e) {
+      console.error('receipt messages', e);
+    }
+  }
+  return sendResult(result);
 }

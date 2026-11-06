@@ -286,3 +286,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Kiểm thử: `tests/crm_sql_test.py`, `tests/crm.test.ts`, `tests/e2e/zz-crm.spec.ts` (API và giao diện).
 
 - Sửa lỗi CI e2e (run #4–#6): (1) bài đăng nhập sai và các bài đặt lịch dùng `x-forwarded-for` để giả nhiều địa chỉ IP, nhưng trên máy chủ GitHub có thêm `cf-connecting-ip` nên mọi yêu cầu cùng một IP; nay `clientIp()` (`lib/server/http.ts`) ưu tiên `x-forwarded-for` chỉ khi máy chủ test đặt `TRUST_FORWARDED_IP=1` (không đặt ở production, nơi vẫn dùng `cf-connecting-ip` do Cloudflare gán), và các bài test gửi kèm `cf-connecting-ip` cố định để mô phỏng. (2) Bài hội viên đặt lịch dùng "+2 ngày lúc 10:00" nên lỗi khi chạy trước 10:00 sáng (vượt giới hạn 2 ngày); đổi thành ngày mai.
+
+## v0.15.0 — CRM lead: nhận lead, phân nhân viên 5 phút, tư vấn, nhắc lịch, biên nhận
+
+- Nhận lead từ website (form đặt lịch của site này chạy sẵn; form 3dgolf.vn và form quảng cáo qua webhook có mã), Facebook Lead Ads và Zalo OA (webhook có chữ ký), lưu nguồn, chiến dịch, giờ nhận, gộp hồ sơ theo số điện thoại, giữ lịch sử từng lần liên hệ, chống xử lý trùng.
+- Phân luân phiên cho nhân viên đang trực và được bật nhận lead; hạn gọi 5 phút; quá hạn thì báo quản lý và chuyển người tiếp theo; hết người trực vào hàng chờ và báo quản lý; lead không có số giao phản hồi qua kênh gốc. Thông báo email + Zalo qua hàng gửi tin (outbox) có khóa chống trùng.
+- Tư vấn (lịch trống, báo giá, link đặt lịch điền sẵn), nhắc lịch trước 24 giờ và 2 giờ, đổi lịch, hủy, không đến; gia hạn có kiểm tra lịch; thu gộp phiếu; biên nhận sau thu tiền; tin cảm ơn sau 1 ngày; đồng ý nhận tin ưu đãi; phản hồi và phản ánh giao quản lý.
+- Migration 0017 (`crm_agents`, `crm_leads`, `crm_lead_contacts`, `crm_lead_events`, `crm_outbox`, cột email/zalo/đồng ý nhận tin của khách). Chi tiết vận hành và cấu hình kênh: `docs/CRM-LEAD.md`.
+- Sửa kèm theo: các route webhook đọc nội dung yêu cầu trước khi từ chối (workerd khởi động lại nếu bỏ dở nội dung).

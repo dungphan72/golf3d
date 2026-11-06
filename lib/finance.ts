@@ -59,6 +59,16 @@ export const financeInput = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
+      action: z.literal('pay-group'),
+      requestId,
+      // Several bills of one party (for example the lines of a group) collected together.
+      bookingIds: z.array(id).min(2).max(8),
+      method: z.enum(['cash', 'transfer', 'card']),
+      expectedTotal: money,
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('close'),
       shiftId: id,
       expectedVersion: z.number().int().min(0),

@@ -68,13 +68,13 @@ export const CRM_POINTS_SQL = `INSERT OR IGNORE INTO crm_tasks(${TASK_COLUMNS})
  WHERE p.tenant=? AND p.points>=?`;
 
 /** Open and recent tasks with the customer and the people involved. Binds: tenant, closedAfter. */
-export const CRM_TASKS_SQL = `SELECT t.id,t.customer_id,c.name,c.phone,t.rule,t.title,t.data,t.due,t.status,t.assignee,ua.name AS assignee_name,t.channel,t.note,t.created,t.handled_at,uh.name AS handled_name
+export const CRM_TASKS_SQL = `SELECT t.id,t.customer_id,c.name,c.phone,t.rule,t.title,t.data,t.due,t.status,t.assignee,ua.name AS assignee_name,t.channel,t.note,t.created,t.handled_at,uh.name AS handled_name,c.marketing_consent AS consent
  FROM crm_tasks t JOIN customers c ON c.id=t.customer_id AND c.tenant=t.tenant
  LEFT JOIN users ua ON ua.id=t.assignee LEFT JOIN users uh ON uh.id=t.handled_by
  WHERE t.tenant=? AND (t.status='open' OR t.handled_at>?) ORDER BY t.status='open' DESC, t.due ASC LIMIT 400`;
 
 /** Customers with their visit statistics. Binds: now-90d, tenant, search, like, like. */
-export const CRM_CUSTOMERS_SQL = `SELECT c.id,c.name,c.phone,c.birthday,c.created,
+export const CRM_CUSTOMERS_SQL = `SELECT c.id,c.name,c.phone,c.birthday,c.email,c.zalo_id,c.marketing_consent,c.created,
   (SELECT COUNT(*) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS visits,
   (SELECT MAX(v.finished) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS last_visit,
   (SELECT COALESCE(SUM(v.amount),0) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS spend,

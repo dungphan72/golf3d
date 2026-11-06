@@ -79,7 +79,7 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         ? reply({ ok: true, replayed: true })
         : error('Mã yêu cầu đã dùng với dữ liệu khác', 409);
     }
-    if (input.action === 'close') return null;
+    if (input.action === 'close' || input.action === 'pay-group') return null;
     if (input.action === 'pay-split') {
       const rows = (
         await db
@@ -184,6 +184,63 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         )
         .run();
       return reply({ ok: true });
+    }
+    if (input.action === 'pay-group') {
+      const ids = [...new Set(input.bookingIds)];
+      if (ids.length !== input.bookingIds.length) return error('Phiếu bị chọn trùng', 400);
+      const done = await db
+        .prepare('SELECT COUNT(*) AS n FROM finance_entries WHERE tenant=? AND request_id LIKE ?')
+        .bind(tenant, input.requestId + '-%')
+        .first<{ n: number }>();
+      if (done && done.n > 0) return reply({ ok: true, replayed: true });
+      const rows = (
+        await db
+          .prepare(
+            `SELECT id,status,amount FROM bookings WHERE tenant=? AND id IN (${ids.map(() => '?').join(',')})`,
+          )
+          .bind(tenant, ...ids)
+          .all<{ id: string; status: string; amount: number | null }>()
+      ).results;
+      if (rows.length !== ids.length) return error('Không tìm thấy một số phiếu', 404);
+      if (rows.some((r) => r.status !== 'finished' || r.amount == null || r.amount <= 0))
+        return error(
+          'Chỉ thu gộp các phiếu đã kết thúc, có số tiền hợp lệ và chưa thanh toán',
+          409,
+        );
+      for (const r of rows)
+        if ((await coveredByPackage(r.id)) > 0)
+          return error('Có phiếu đã trừ gói; hãy thu riêng phiếu đó', 409);
+      const total = rows.reduce((n, r) => n + (r.amount ?? 0), 0);
+      if (total !== input.expectedTotal)
+        return error(
+          'Tổng các phiếu vừa thay đổi. Xem lại và nhận đủ tiền trước khi xác nhận.',
+          409,
+        );
+      const open = await db
+        .prepare("SELECT id FROM shifts WHERE tenant=? AND status='open'")
+        .bind(tenant)
+        .first<{ id: string }>();
+      if (!open) return error('Hãy mở ca trước khi xác nhận thu tiền', 409);
+      await db.batch(
+        rows.map((r, i) =>
+          db
+            .prepare(INSERT_ENTRY_SQL)
+            .bind(
+              crypto.randomUUID(),
+              tenant,
+              open.id,
+              'payment',
+              input.method,
+              r.amount,
+              r.id,
+              input.requestId + '-' + i,
+              `Thu gộp ${rows.length} phiếu`,
+              actor,
+              now,
+            ),
+        ),
+      );
+      return reply({ ok: true, bookingIds: ids });
     }
     const booking = await db
       .prepare('SELECT id,status,amount FROM bookings WHERE tenant=? AND id=?')

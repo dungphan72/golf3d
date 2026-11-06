@@ -68,7 +68,15 @@ const SECONDARY = new Set([
 ]);
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
-    [view, setView] = useState('overview'),
+    // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file.
+    [deepLink] = useState(() => {
+      if (typeof location === 'undefined')
+        return { view: 'overview', customer: null as string | null };
+      const q = new URLSearchParams(location.search);
+      return { view: q.get('view') === 'crm' ? 'crm' : 'overview', customer: q.get('customer') };
+    }),
+    deepCustomer = deepLink.customer,
+    [view, setView] = useState(deepLink.view),
     [mode, setMode] = useState('staff'),
     [modal, setModal] = useState(false),
     [bookingRoom, setBookingRoom] = useState('line-1'),
@@ -688,7 +696,10 @@ export default function ClubApp() {
                     <MembersPanel permissions={data?.permissions ?? []} />
                   )}
                   {view === 'crm' && allowed('crm') && (
-                    <CrmPanel permissions={data?.permissions ?? []} />
+                    <CrmPanel
+                      permissions={data?.permissions ?? []}
+                      initialCustomer={deepCustomer}
+                    />
                   )}
                   {view === 'staff' && allowed('staff') && (
                     <StaffPanel actorRole={data?.role ?? ''} />

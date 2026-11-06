@@ -82,6 +82,20 @@ const server = spawn(
     // Lets tests act as different visitors for per-IP limits (never set in production).
     '--var',
     'TRUST_FORWARDED_IP:1',
+    // Message sending succeeds without network, so tests can follow a message to "sent".
+    '--var',
+    'E2E_MOCK_CHANNELS:1',
+    // Secrets for the signed webhooks (Facebook, Zalo) and the scheduler endpoint.
+    '--var',
+    'FB_APP_SECRET:e2e-fb-secret',
+    '--var',
+    'FB_VERIFY_TOKEN:e2e-fb-verify',
+    '--var',
+    'ZALO_APP_ID:e2e-zalo-app',
+    '--var',
+    'ZALO_APP_SECRET:e2e-zalo-secret',
+    '--var',
+    'CRON_SECRET:e2e-cron-secret',
   ],
   { cwd: root, shell, stdio: 'inherit' },
 );

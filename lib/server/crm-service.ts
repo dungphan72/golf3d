@@ -28,6 +28,7 @@ import {
   CRM_SET_BIRTHDAY_SQL,
 } from '../crm-sql';
 import { CUSTOMER_PACKAGES_SQL } from '../package-sql';
+import { alertManagers } from './lead-service';
 import { KIND_LABELS, POINTS_PER_FREE_ROUND, UNLIMITED, type GrantKind } from '../member';
 
 type R = ServiceResult;
@@ -305,6 +306,85 @@ export async function applyCrm(tenant: string, actor: string, input: CrmInput): 
         .bind(input.birthday, tenant, input.customerId)
         .run();
       return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy khách hàng', 404);
+    }
+    if (input.action === 'consent-set') {
+      const r = await d
+        .prepare('UPDATE customers SET marketing_consent=?,consent_at=? WHERE tenant=? AND id=?')
+        .bind(input.consent ? 1 : 0, input.consent ? now : null, tenant, input.customerId)
+        .run();
+      if (!r.meta.changes) return error('Không tìm thấy khách hàng', 404);
+      await d
+        .prepare(
+          "INSERT INTO crm_interactions(id,tenant,customer_id,task_id,channel,content,actor,created) VALUES (?,?,?,NULL,'note',?,?,?)",
+        )
+        .bind(
+          crypto.randomUUID(),
+          tenant,
+          input.customerId,
+          input.consent ? 'Khách đồng ý nhận tin ưu đãi' : 'Khách không nhận tin ưu đãi nữa',
+          actor,
+          now,
+        )
+        .run();
+      return reply({ ok: true });
+    }
+    if (input.action === 'contact-set') {
+      const r = await d
+        .prepare('UPDATE customers SET email=?,zalo_id=? WHERE tenant=? AND id=?')
+        .bind(input.email, input.zaloId, tenant, input.customerId)
+        .run();
+      return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy khách hàng', 404);
+    }
+    if (input.action === 'feedback') {
+      const customer = await d
+        .prepare('SELECT name,phone FROM customers WHERE tenant=? AND id=?')
+        .bind(tenant, input.customerId)
+        .first<{ name: string; phone: string }>();
+      if (!customer) return error('Không tìm thấy khách hàng', 404);
+      await d
+        .prepare(
+          "INSERT INTO crm_interactions(id,tenant,customer_id,task_id,channel,content,actor,created) VALUES (?,?,?,NULL,'note',?,?,?)",
+        )
+        .bind(
+          crypto.randomUUID(),
+          tenant,
+          input.customerId,
+          `Phản hồi ${input.rating}/5 sao${input.comment ? ': ' + input.comment : ''}`,
+          actor,
+          now,
+        )
+        .run();
+      // A low score is a complaint: a task for the managers, who are alerted right away.
+      if (input.rating <= 3) {
+        const taskId = crypto.randomUUID();
+        await d
+          .prepare(CRM_INSERT_TASK_SQL)
+          .bind(
+            taskId,
+            tenant,
+            input.customerId,
+            'complaint',
+            'complaint:' + taskId,
+            'Xử lý phản ánh của khách',
+            JSON.stringify({ ten: customer.name }),
+            now,
+            now,
+          )
+          .run();
+        await alertManagers(
+          tenant,
+          `complaint:${taskId}`,
+          `[Phản ánh] ${customer.name} chấm ${input.rating}/5`,
+          `Khách ${customer.name} (${customer.phone}) chấm ${input.rating}/5.
+${input.comment || 'Không có nhận xét'}
+Cần quản lý liên hệ xử lý.`,
+          'complaint',
+          input.customerId,
+          now,
+        );
+        return reply({ ok: true, complaintTask: taskId });
+      }
+      return reply({ ok: true });
     }
     if (input.action === 'note-add') {
       await d

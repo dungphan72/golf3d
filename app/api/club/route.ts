@@ -6,6 +6,8 @@ import {
   MAX_BODY,
 } from '../../../lib/server/club-service';
 import { can, permissionsOf, type Permission } from '../../../lib/auth/permissions';
+import { requestNow } from '../../../lib/server/http';
+import { afterClubAction } from '../../../lib/server/lead-service';
 export const dynamic = 'force-dynamic';
 
 const ACTION_PERMISSION: Record<string, Permission> = {
@@ -18,6 +20,9 @@ const ACTION_PERMISSION: Record<string, Permission> = {
   finish: 'session.operate',
   pay: 'finance.operate',
   support: 'support.handle',
+  'no-show': 'booking.cancel',
+  reschedule: 'booking.create',
+  extend: 'session.operate',
   'request-update': 'support.handle',
 };
 
@@ -46,7 +51,10 @@ export async function POST(req: Request) {
   if (!needed || !can(auth.role, needed))
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   try {
-    return sendResult(await runClubAction(auth.tenant, input));
+    const now = requestNow(req);
+    const result = await runClubAction(auth.tenant, input, now);
+    await afterClubAction(auth.tenant, input, result, now);
+    return sendResult(result);
   } catch (e) {
     console.error(e);
     return httpError(e instanceof Error ? e.message : 'Không thể xử lý yêu cầu', 500);

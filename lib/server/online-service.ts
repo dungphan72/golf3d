@@ -1,6 +1,7 @@
 import { db, loadConfig, type ServiceResult } from './common';
 import { turnstileSiteKey } from './turnstile';
 import { runClubAction } from './club-service';
+import { ingestLead, onBookingConfirmed } from './lead-lifecycle';
 import { planBooking } from '../booking';
 import { ready, rooms, type Config } from '../club';
 import { normalizePhone, validPhone } from '../member';
@@ -75,7 +76,12 @@ export async function publicInfo(slug: string): Promise<R> {
 
 const REPRESENTATIVE = { standard: 'line-1', vip: 'vip-1' } as const;
 
-export async function submitRequest(slug: string, raw: unknown, clientIp: string): Promise<R> {
+export async function submitRequest(
+  slug: string,
+  raw: unknown,
+  clientIp: string,
+  base = '',
+): Promise<R> {
   const parsed = publicRequestInput.safeParse(raw);
   if (!parsed.success) return error('Thông tin chưa hợp lệ. Vui lòng kiểm tra lại.');
   const input: PublicRequestInput = parsed.data;
@@ -124,10 +130,11 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
       guests: input.guests,
       lines: sizes.length,
     });
+    const requestId = crypto.randomUUID();
     await db()
       .prepare(INSERT_REQUEST_SQL)
       .bind(
-        crypto.randomUUID(),
+        requestId,
         site.tenant,
         await tokenId(code),
         input.name,
@@ -143,6 +150,31 @@ export async function submitRequest(slug: string, raw: unknown, clientIp: string
         now,
       )
       .run();
+    // Every booking request is also a lead: it is assigned to the on-duty agent who must call within 5 minutes.
+    try {
+      await ingestLead(
+        site.tenant,
+        {
+          source: 'website',
+          campaign: 'form-dat-lich',
+          extKey: 'booking-form:' + requestId,
+          name: input.name,
+          phone,
+          email: '',
+          zaloId: '',
+          need: input.service === 'gdr' ? 'swing' : input.service,
+          guests: input.guests > 0 ? input.guests : input.people,
+          preferredStart: input.start,
+          message: input.note,
+          consent: input.consent,
+          channelRef: '',
+        },
+        base,
+        now,
+      );
+    } catch (e) {
+      console.error('lead from booking request', e);
+    }
     return reply({ ok: true, code, total });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
@@ -341,6 +373,21 @@ export async function applyRequest(
       .prepare(CONFIRM_REQUEST_SQL)
       .bind(picked[0], made[0], actor, now, tenant, row.id, actor)
       .run();
+    try {
+      await onBookingConfirmed(
+        tenant,
+        { name: row.name, phone: row.phone },
+        made.map((id, i) => ({
+          id,
+          room: picked[i],
+          start: row.start,
+          service: row.service,
+          people: sizes[i],
+        })),
+      );
+    } catch (e) {
+      console.error('booking confirmation messages', e);
+    }
     return reply({ ok: true, bookingId: made[0], bookingIds: made });
   } catch (e) {
     console.error('apply request', e);

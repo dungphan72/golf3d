@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { quote, wholeQuote, type Config, type Booking, type Segment } from '../club';
 import { configSchema } from '../config';
-import { planBooking } from '../booking';
+import { planBooking, withinOpening } from '../booking';
 import { FINISH_SESSION_SQL } from '../fnb-sql';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 
@@ -18,6 +18,9 @@ export const clubInput = z.object({
     'pay',
     'cancel',
     'support',
+    'no-show',
+    'reschedule',
+    'extend',
   ]),
   value: z.record(z.string(), z.unknown()).optional(),
   id: z.string().max(100).optional(),
@@ -79,9 +82,13 @@ export async function loadDashboard(tenant: string, displayName: string) {
 }
 
 /** Applies one staff action. Pure business logic: no HTTP objects. */
-export async function runClubAction(tenant: string, input: ClubInput): Promise<ServiceResult> {
+export async function runClubAction(
+  tenant: string,
+  input: ClubInput,
+  nowArg = Date.now(),
+): Promise<ServiceResult> {
   const c = await loadConfig(tenant);
-  const now = Date.now();
+  const now = nowArg;
   if (input.action === 'settings') {
     if (input.value?.pricingRevision !== c.pricingRevision)
       return fail('Cấu hình đã thay đổi ở thiết bị khác. Hãy tải lại trước khi lưu.', 409);
@@ -267,6 +274,69 @@ export async function runClubAction(tenant: string, input: ClubInput): Promise<S
   } else if (input.action === 'cancel') {
     if (status !== 'booked') return fail('Chỉ hủy lịch chưa bắt đầu');
     status = 'cancelled';
+  } else if (input.action === 'no-show') {
+    // A customer who has not come 10 minutes after the start: the line is freed and the CRM follows up.
+    if (status !== 'booked') return fail('Chỉ ghi nhận không đến cho lịch chưa bắt đầu');
+    if (now < b.start + 10 * 60000) return fail('Chỉ ghi nhận khách không đến sau giờ hẹn 10 phút');
+    status = 'cancelled';
+  } else if (input.action === 'extend') {
+    if (b.service !== 'gdr') return fail('Chỉ gia hạn lượt luyện tập tính theo giờ');
+    if (!['booked', 'playing', 'paused'].includes(status))
+      return fail('Phiên không còn gia hạn được');
+    const minutes = Number(input.minutes);
+    if (!Number.isInteger(minutes) || minutes < 15 || minutes > 240 || minutes % 15 !== 0)
+      return fail('Gia hạn từ 15 đến 240 phút, mỗi bước 15 phút');
+    const clean = (snap.vip ? snap.config.vipClean : snap.config.clean) * 60000;
+    const newEnd = b.end + minutes * 60000;
+    // The next customer of this room must not be pushed back.
+    const clash = await db()
+      .prepare(
+        "SELECT start FROM bookings WHERE tenant=? AND room=? AND id<>? AND status<>'cancelled' AND start<? AND end>? ORDER BY start LIMIT 1",
+      )
+      .bind(tenant, b.room, b.id, newEnd, b.end)
+      .first<{ start: number }>();
+    if (clash)
+      return fail(
+        `Không gia hạn được: line này đã có khách đặt từ ${new Date(clash.start).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })}`,
+        409,
+      );
+    if (!withinOpening(b.start, newEnd - clean, c.open, c.close))
+      return fail('Gia hạn vượt giờ đóng cửa', 409);
+    const moved = await db()
+      .prepare(
+        "UPDATE bookings SET end=? WHERE tenant=? AND id=? AND end=? AND status IN ('booked','playing','paused')",
+      )
+      .bind(newEnd, tenant, b.id, b.end)
+      .run();
+    if (!moved.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    await audit(tenant, 'Gia hạn', `${b.id} +${minutes} phút`);
+    return ok({ end: newEnd });
+  } else if (input.action === 'reschedule') {
+    if (status !== 'booked') return fail('Chỉ đổi lịch chưa bắt đầu');
+    const clean = (snap.vip ? snap.config.vipClean : snap.config.clean) * 60000;
+    const created = await runClubAction(
+      tenant,
+      {
+        action: 'book',
+        room: input.room ?? b.room,
+        service: b.service as 'gdr' | '9' | '18',
+        start: input.start,
+        people: b.people,
+        minutes: b.service === 'gdr' ? Math.round((b.end - b.start - clean) / 60000) : 0,
+        customer: b.customer,
+        phone: b.phone,
+        expectedRevision: c.pricingRevision,
+      },
+      now,
+    );
+    if (created.status !== 200 || typeof created.body.id !== 'string') return created;
+    const cancelled = await runClubAction(tenant, { action: 'cancel', id: b.id }, now);
+    if (cancelled.status !== 200) {
+      await runClubAction(tenant, { action: 'cancel', id: created.body.id }, now);
+      return cancelled;
+    }
+    await audit(tenant, 'Đổi lịch', `${b.id} → ${created.body.id}`);
+    return ok({ id: created.body.id, previous: b.id });
   } else if (input.action === 'support') {
     if (!['playing', 'paused'].includes(status))
       return fail('Chỉ gửi hỗ trợ trong phiên đang sử dụng');

@@ -17,6 +17,8 @@ export const publicRequestInput = z
     start: z.number().int(),
     minutes: z.number().int().min(0).max(720).default(0),
     note: z.string().trim().max(300).default(''),
+    /** The customer agreed to receive promotions (not needed for booking messages). */
+    consent: z.boolean().default(false),
     website: z.string().max(0).default(''),
   })
   .strict();

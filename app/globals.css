@@ -1,15 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;450;500;550;600;650;700;750;800&display=swap');
 @import 'tailwindcss';
-:root {
-  --green: #0b4d14;
-  --accent: #f5b50a;
-  --ink: #1b3a22;
-  --muted: #839087;
-  --border: #e5e9e2;
-  --surface: #f4f7f1;
-  --light: #e8f3e8;
-  --white: #fff;
-}
 * {
   box-sizing: border-box;
 }

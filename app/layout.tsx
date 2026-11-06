@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
+import './tokens.css';
 import './globals.css';
-import './kiotviet.css';
-import './mobile.css';
 import './admin.css';
 export const metadata: Metadata = {
   title: 'Saigon Golf 3D Club — Play. Connect. Repeat.',

@@ -91,3 +91,26 @@ Mỗi giai đoạn: làm xong → chạy toàn bộ test (e2e, SQL, đơn vị) 
 ## Tiến độ
 
 Giai đoạn 1–8 đã hoàn thành và triển khai (chi tiết từng giai đoạn trong `docs/PROGRESS.md`). Giai đoạn 8: dọn khoảng 200 quy tắc CSS không còn phần tử nào dùng (`globals.css`, `kiotviet.css`, `mobile.css` giảm từ 82 KB xuống 63 KB), màn Huấn luyện dùng bảng chung, chỉnh lưới line và ô số trên điện thoại, kiểm tra ảnh chụp ở máy tính và điện thoại.
+
+---
+
+# Đợt 2 — Hợp nhất CSS và thành phần (bắt đầu 2026-11-06)
+
+Thiết bị chính ở quầy: **máy tính và điện thoại** (máy tính bảng là thứ yếu). Quyết định: làm **GĐ A–B trước**, xem kết quả rồi mới tiếp. Module CRM giữ lại là **crmx (module mới)**; mục "Chăm sóc KH" cũ sẽ gộp vào ở GĐ C.
+
+| GĐ | Việc | Trạng thái |
+|---|---|---|
+| A | Rà soát: ảnh chụp mọi màn ở điện thoại/máy tính, đo CSS còn dùng, lập danh sách lỗi | Xong (số liệu bên dưới) |
+| B | Gộp CSS: `tokens` + một tệp thành phần admin, thay `kiotviet.css`, `mobile.css`, phần staff của `globals.css`, `admin.css`; tách khỏi `landing.css` | B1 (gộp cơ học) xong: `tokens.css` + `globals.css` + `admin.css` (đã nhập kiotviet/mobile theo đúng thứ tự cascade). B2 (gộp định nghĩa trùng, bỏ `!important`) chưa |
+| C | Gộp hai mục CRM (giữ crmx) | Chờ sau B |
+| D | Chuyển panel lớn sang `kit.tsx` | Chờ |
+| E | Tối ưu thao tác tại quầy: máy tính (phím tắt, bảng dày) và điện thoại (vùng bấm 44 px, thanh hành động cố định) | Chờ |
+| F | Truy cập, test e2e, dọn mã chết, tài liệu | Chờ |
+
+## GĐ A — kết quả rà soát (2026-11-06)
+
+- `layout.tsx` nạp toàn cục 4 tệp: `globals.css` (40 KB) → `kiotviet.css` (18 KB) → `mobile.css` (2 KB) → `admin.css` (45 KB), tổng 105 KB cho khu quản lý; `landing.css` (25 KB) nạp riêng theo trang.
+- Mọi class đều còn được dùng (đợt 1 đã dọn mã chết). Vấn đề là **chồng lấn**: 40/79 class của `kiotviet.css`, 34/155 của `admin.css`, 19/19 của `mobile.css` cũng có trong `globals.css`; `admin.css` chồng thêm 37 class với `kiotviet.css`. Một thẻ/nút được định nghĩa ở 2–3 nơi, thứ tự nạp quyết định kết quả.
+- `!important`: 6 (admin), 5 (globals), 3 (landing).
+- Ảnh chụp gốc (máy tính 1440 px, điện thoại 390 px) đã chụp cho trang chủ và 9 màn máy tính. Còn thiếu nhóm Quản trị (nằm trong menu thả xuống) và các màn điện thoại ngoài trang chủ (menu "Thêm").
+- Trang chủ máy tính và điện thoại nhìn ổn; chưa thấy lỗi bố cục ở hai màn đã xem.

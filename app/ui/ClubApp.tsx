@@ -47,6 +47,7 @@ export default function ClubApp() {
     [leads, setLeads] = useState<
       { overdue: number; waiting: number; queued: number } | undefined
     >(),
+    [crm2, setCrm2] = useState<{ newUnhandled: number; overdueTasks: number } | undefined>(),
     [mobile, setMobile] = useState(false),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('facility');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
@@ -100,6 +101,15 @@ export default function ClubApp() {
         if (live) setLeads({ overdue, waiting: waiting.length - queued, queued });
       } catch {
         /* the home board just omits lead alerts */
+      }
+      try {
+        // The CRM module: new leads nobody has called yet, and tasks past their time.
+        const r = await fetch('/api/crm2/overview', { cache: 'no-store' });
+        if (!r.ok) return;
+        const v = (await r.json()) as { newUnhandled?: number; overdueTasks?: number };
+        if (live) setCrm2({ newUnhandled: v.newUnhandled ?? 0, overdueTasks: v.overdueTasks ?? 0 });
+      } catch {
+        /* same: no alert */
       }
     };
     poll();
@@ -285,6 +295,7 @@ export default function ClubApp() {
                       now={now}
                       canSeeMoney={allowed('finance')}
                       leads={leads}
+                      crm2={crm2}
                       onSelect={setSelected}
                       onBook={bookRoom}
                       onWalkIn={setWalkInRoom}

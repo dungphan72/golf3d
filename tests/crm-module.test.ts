@@ -37,6 +37,7 @@ import {
   sanitizeTiers,
 } from '../modules/crm/core/customers.ts';
 import { sanitizeSettings } from '../modules/crm/core/settings.ts';
+import { toInquiry } from '../modules/crm/core/website.ts';
 import { canSeeLead, canEditLead, maskForViewer } from '../modules/crm/core/access.ts';
 
 const H = 3_600_000;
@@ -426,4 +427,55 @@ test('quyền với lead và che số', () => {
   });
   assert.equal(maskForViewer(mgr, pooled).phone, '0399123999');
   assert.equal(maskForViewer(sale, { ...pooled, owner: 's1' }).masked, false);
+});
+
+test('lead từ form website: đọc số điện thoại, nhu cầu, giờ hẹn và ghi chú như cổng cũ', () => {
+  const base = {
+    name: 'An',
+    phone: '',
+    email: '',
+    need: '',
+    guests: 0,
+    message: '',
+    campaign: '',
+    consent: false,
+  };
+  // typed number, +84 form
+  assert.equal(toInquiry({ ...base, phone: '+84 912 345 678' }).phone, '0912345678');
+  // no number typed: one written in the message is used
+  const found = toInquiry({ ...base, message: 'Gọi em số 0987.654.321 nhé, em muốn tập swing' });
+  assert.equal(found.phone, '0987654321');
+  assert.equal(found.targetService, 'Luyện swing'); // guessed from the text
+  // an explicit need wins over the text
+  assert.equal(
+    toInquiry({ ...base, need: '18', message: 'chơi 9 hố' }).targetService,
+    'Game 18 hố',
+  );
+  assert.equal(toInquiry({ ...base, need: 'other' }).targetService, '');
+  // 2027-01-15 15:00 in Vietnam
+  const at = toInquiry({ ...base, preferredStart: Date.UTC(2027, 0, 15, 8, 0) });
+  assert.deepEqual([at.preferredDate, at.preferredTime], ['2027-01-15', '15:00']);
+  assert.deepEqual([toInquiry(base).preferredDate, toInquiry(base).preferredTime], ['', '']);
+  // what the module has no field for goes into the notes
+  const full = toInquiry({
+    ...base,
+    message: 'Muốn đi nhóm',
+    guests: 6,
+    campaign: 'thang-11',
+    consent: true,
+  });
+  assert.equal(
+    full.notes,
+    'Muốn đi nhóm\nSố khách: 6\nChiến dịch: thang-11\nKhách đồng ý nhận tin ưu đãi',
+  );
+  assert.equal(full.source, 'Website');
+  assert.equal(toInquiry({ ...base, message: 'x'.repeat(3000) }).notes.length, 2000);
+  assert.equal(toInquiry(base).notes, '');
+});
+
+test('cấu hình: lead từ form website mặc định vào CRM cũ, chỉ nhận đúng hai giá trị', () => {
+  assert.equal(sanitizeSettings(undefined).websiteLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ websiteLeads: 'CRM2' }).websiteLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ websiteLeads: 'crm2' }).websiteLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ websiteLeads: 7 }).websiteLeads, 'LEGACY');
 });

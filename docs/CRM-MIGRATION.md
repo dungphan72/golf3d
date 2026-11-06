@@ -91,9 +91,29 @@ Xóa **đúng** các dòng có mã bắt đầu bằng `mig-`; lead và hoạt �
 - Chạy qua `wrangler d1 execute --local` trên cơ sở dữ liệu cục bộ do bộ e2e tạo ra (29 lead, 31 tin khách gửi, 190 sự kiện): 29 lead và 219 hoạt động được nhập, 8 lead tạo trực tiếp trong CRM mới giữ nguyên, bảy truy vấn kiểm tra đạt, chạy lần hai không đổi, hoàn tác rồi nhập lại cho cùng kết quả, và màn CRM mới đọc, hiển thị và mở được hồ sơ lead đã nhập.
 - **Chưa chạy trên cơ sở dữ liệu thật.**
 
+## Cổng website: chuyển sang CRM mới bằng công tắc
+
+Cổng `POST /api/leads/website` (form trên 3dgolf.vn) đã chuyển được. Mặc định nó vẫn ghi vào CRM cũ; người quản lý bật trong **CRM → Cấu hình → "Lead từ form website (3dgolf.vn)"** (đổi sang "CRM mới"). Có hiệu lực ngay, tắt lại bất cứ lúc nào, không cần triển khai lại. Lead đã vào bên nào thì ở lại bên đó. Form phía website không phải sửa: câu trả lời vẫn là `{ ok, leadId, duplicate, status }`.
+
+**Trước khi bật, kiểm tra:**
+1. Bộ lập lịch đang gọi `POST /api/crm2/cron` (kèm `CRON_SECRET`), nếu không cảnh báo quá hạn và thu hồi lead không chạy.
+2. Nhân viên làm lead đã làm quen CRM mới và có vai trò đúng (`crm.work`); chế độ chia lead (CRM → Cấu hình) đã chọn đúng: tự chia hay đưa vào kho số.
+3. Đã biết các khác biệt dưới đây.
+
+| Khác biệt khi bật | Chi tiết |
+|---|---|
+| Chống gửi trùng | Cổng cũ chống trùng theo mã `id` của form. Module mới chống trùng theo số điện thoại (trong 365 ngày): một lần gửi lại thành "khách gửi lại", tăng số lần hỏi và tạo việc gọi cho người phụ trách. |
+| Đồng ý nhận tin | Không còn ghi vào hồ sơ khách (`customers.marketing_consent`); chỉ nằm trong ghi chú lead. Các nhắc tự sinh của CRM cũ dựa trên cờ này. |
+| Hạn gọi | Theo cài đặt của module mới (mặc định 15 phút, theo giờ làm việc nếu bật), không theo quy tắc 5 phút của bên cũ. |
+| Số khách, chiến dịch | Không có ô riêng, được ghi vào ghi chú ("Số khách: …", "Chiến dịch: …"). |
+| Lead không có số | Vẫn được nhận, vào kho số với số trống. |
+| Thông báo | Email báo nhân viên theo `notifyAssignEmail` của module mới; Zalo và hàng chờ gửi tin của bên cũ không dùng. |
+
+Trang chủ hiện thêm "N lead mới ở CRM chưa liên hệ" và "N việc CRM quá hạn" để lễ tân không bỏ sót.
+
 ## Việc còn lại để bỏ tab "Chăm sóc KH (cũ)"
 
-1. Chuyển bốn cổng nhận lead sang `ingestLead` của module mới, từng cổng một.
+1. Chuyển ba cổng còn lại (`/api/leads/facebook`, `/zalo`, `/ads`) sang `ingestLead` của module mới, từng cổng một.
 2. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
 3. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
 4. Chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.

@@ -37,6 +37,7 @@ type Settings = {
   appointments: { requireApproval: boolean };
   afterSales: { enabled: boolean };
   notifyAssignEmail: boolean;
+  websiteLeads: 'LEGACY' | 'CRM2';
   [k: string]: unknown;
 };
 type Config = {
@@ -127,6 +128,20 @@ function ConfigScreen() {
             <option value="AUTO">Tự động chia cho nhân viên</option>
             <option value="POOL">Đưa vào kho số để nhân viên tự nhận</option>
           </select>
+        </label>
+        <label>
+          Lead từ form website (3dgolf.vn)
+          <select
+            value={s.websiteLeads}
+            onChange={(e) => setS({ ...s, websiteLeads: e.target.value as 'LEGACY' | 'CRM2' })}
+          >
+            <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
+            <option value="CRM2">CRM mới (màn này)</option>
+          </select>
+          <small>
+            Chỉ đổi khi đã có nhân viên làm việc ở CRM mới và bộ lập lịch gọi /api/crm2/cron. Lead
+            đã vào bên cũ vẫn ở bên cũ; đổi lại bất cứ lúc nào.
+          </small>
         </label>
         <label>
           Hạn mức nhận số mỗi ngày

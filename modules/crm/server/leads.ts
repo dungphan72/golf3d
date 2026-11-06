@@ -16,6 +16,7 @@ import {
   type NextAction,
 } from '../core/calls';
 import { pickAssignee } from '../core/distribution';
+import { toInquiry, type WebsiteLead } from '../core/website';
 import { addWorkingMinutes, workMinutesBetween } from '../core/workhours';
 import { afterSalesPlan } from '../core/customers';
 import { canEditLead, canSeeLead, isManager, maskForViewer, type Actor } from '../core/access';
@@ -254,6 +255,30 @@ export async function ingestLead(
       );
   } else await addActivity(tenant, id, 'SYSTEM', 'Lead vào kho số', 'Hệ thống', now);
   return reply({ ok: true, id, duplicate: false, owner, pooled: !owner });
+}
+
+/**
+ * A lead posted by the website form through the old webhook (POST /api/leads/website). Same inquiry as any other,
+ * answered in the shape the website already expects: `{ leadId, duplicate, status }`.
+ */
+export async function ingestWebsiteLead(
+  tenant: string,
+  raw: WebsiteLead,
+  base: string,
+  now: number,
+) {
+  const r = await ingestLead(tenant, toInquiry(raw), base, now);
+  const b = r.body as {
+    id?: string;
+    duplicate?: boolean;
+    owner?: string | null;
+    blocked?: boolean;
+  };
+  return {
+    leadId: b.id ?? '', // a blocked number is dropped without telling the sender
+    duplicate: b.duplicate === true,
+    status: b.owner ? 'assigned' : 'queued',
+  };
 }
 
 // ---------------------------------------------------------------- reading

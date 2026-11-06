@@ -15,6 +15,7 @@ export function HomeBoard({
   now,
   canSeeMoney,
   leads,
+  crm2,
   onSelect,
   onBook,
   onWalkIn,
@@ -24,6 +25,7 @@ export function HomeBoard({
   now: number;
   canSeeMoney: boolean;
   leads?: { overdue: number; waiting: number; queued: number };
+  crm2?: { newUnhandled: number; overdueTasks: number };
   onSelect: (b: Booking) => void;
   onBook: (room: string) => void;
   onWalkIn: (room: string) => void;
@@ -89,6 +91,28 @@ export function HomeBoard({
             detail:
               leads.queued > 0 ? `${leads.queued} lead chưa có người trực` : 'Trong hạn gọi 5 phút',
             onClick: () => onGo('crm'),
+          },
+        ]
+      : []),
+    ...(crm2 && crm2.newUnhandled > 0
+      ? [
+          {
+            id: 'crm2-new',
+            icon: PhoneCall,
+            title: `${crm2.newUnhandled} lead mới ở CRM chưa liên hệ`,
+            detail: 'Mở CRM để gọi khách',
+            onClick: () => onGo('crmx'),
+          },
+        ]
+      : []),
+    ...(crm2 && crm2.overdueTasks > 0
+      ? [
+          {
+            id: 'crm2-overdue',
+            icon: PhoneCall,
+            title: `${crm2.overdueTasks} việc CRM quá hạn`,
+            detail: 'Xem trong Việc của tôi',
+            onClick: () => onGo('crmx'),
           },
         ]
       : []),

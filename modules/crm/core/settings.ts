@@ -38,6 +38,8 @@ export type CrmSettings = {
   afterSales: AfterSales;
   statuses: StatusCatalog;
   notifyAssignEmail: boolean;
+  /** Where leads from the website form (POST /api/leads/website) go: the old "Chăm sóc KH" or this module. */
+  websiteLeads: 'LEGACY' | 'CRM2';
 };
 
 const num = (v: unknown, min: number, max: number, def: number) => {
@@ -129,5 +131,6 @@ export function sanitizeSettings(raw: unknown): CrmSettings {
     },
     statuses: sanitizeCatalog(r.statuses),
     notifyAssignEmail: bool(r.notifyAssignEmail, true),
+    websiteLeads: r.websiteLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
   };
 }

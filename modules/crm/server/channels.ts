@@ -1,5 +1,6 @@
 import { db } from '../../../lib/server/common';
 import type { LeadInput } from '../../../lib/leads';
+import { adsInquiry, type AdsLead } from '../core/ads';
 import { facebookInquiry } from '../core/facebook';
 import { zaloInquiry } from '../core/zalo';
 import {
@@ -115,4 +116,19 @@ export function ingestFacebookLead(tenant: string, ev: LeadInput, base: string, 
     now,
     'form',
   );
+}
+
+/**
+ * A lead from an ad platform or automation tool. `extKey` is the old gate's key (the sender's `id`, else the platform and
+ * the contact within the same minute), so a retry is skipped; a second lead with a phone the module already knows joins
+ * that lead.
+ */
+export function ingestAdsLead(
+  tenant: string,
+  extKey: string,
+  raw: AdsLead,
+  base: string,
+  now: number,
+) {
+  return ingestChannelLead(tenant, { extKey, channelRef: '' }, adsInquiry(raw), base, now, 'form');
 }

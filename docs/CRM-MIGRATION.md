@@ -142,9 +142,19 @@ Migration thêm bảng `crm2_inbound` (nhớ mã từng sự kiện, vì Zalo g�
 | Cùng số điền thêm biểu mẫu | Gộp vào lead đã có, ghi "Khách gửi lại" với người gửi là Facebook. |
 | Thiếu chi tiết biểu mẫu | Chưa có `FB_PAGE_TOKEN` thì lead vẫn đến với lời nhắn "chưa lấy được chi tiết"; nhân viên xem ở Facebook. |
 
+## Cổng quảng cáo (Google, TikTok, Zapier, Make): chuyển bằng công tắc riêng
+
+`POST /api/leads/ads` (mã webhook "Quảng cáo") chuyển tương tự: **CRM → Cấu hình → "Lead từ quảng cáo"**, mặc định vẫn vào CRM cũ, độc lập với ba công tắc kia. Không cần migration mới. Mã webhook, giới hạn tốc độ và kiểm tra dữ liệu giữ nguyên.
+
+| Khác biệt khi bật | Chi tiết |
+|---|---|
+| Nguồn, chiến dịch | Nguồn của lead là "Quảng cáo". Tên nền tảng bên gửi đặt (tiktok, google, zapier…) ghi thành "Chiến dịch: …" trong ghi chú, trừ khi bên gửi có chiến dịch riêng. |
+| Chống gửi lại | Theo `id` của bên gửi; không có `id` thì theo nền tảng cộng liên hệ trong cùng một phút (như cổng cũ). |
+| Cùng số từ quảng cáo khác | Gộp vào lead đã có, ghi "Khách gửi lại" với người gửi là "Quảng cáo". |
+
 ## Việc còn lại để bỏ tab "Chăm sóc KH (cũ)"
 
-1. Chuyển cổng còn lại (`/api/leads/ads`: Google, TikTok, Zapier, Make) sang module mới (đã có sẵn `ingestChannelLead` dùng chung).
-2. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
-3. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
-4. Chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.
+Cả bốn cổng nhận lead (website, Zalo, Facebook, quảng cáo) đã chuyển được sang module mới bằng công tắc. Còn lại:
+1. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
+2. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
+3. Bật từng công tắc trên production, chạy nhập lịch sử lead cũ, chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.

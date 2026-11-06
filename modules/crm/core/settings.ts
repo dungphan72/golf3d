@@ -44,6 +44,8 @@ export type CrmSettings = {
   zaloLeads: 'LEGACY' | 'CRM2';
   /** Same for Facebook / Instagram Lead Ads (POST /api/leads/facebook). */
   facebookLeads: 'LEGACY' | 'CRM2';
+  /** Same for ad platforms and automation tools (POST /api/leads/ads). */
+  adsLeads: 'LEGACY' | 'CRM2';
 };
 
 const num = (v: unknown, min: number, max: number, def: number) => {
@@ -138,5 +140,6 @@ export function sanitizeSettings(raw: unknown): CrmSettings {
     websiteLeads: r.websiteLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
     zaloLeads: r.zaloLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
     facebookLeads: r.facebookLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
+    adsLeads: r.adsLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
   };
 }

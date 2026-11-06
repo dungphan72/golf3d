@@ -15,7 +15,8 @@ Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2
 - Cổng website (`/api/leads/website`) chuyển sang CRM mới bằng công tắc trong CRM → Cấu hình (mặc định vẫn vào CRM cũ): `modules/crm/core/website.ts`, `ingestWebsiteLead`, test `tests/e2e/zzzz-website-to-crm2.spec.ts`; trang chủ báo lead mới và việc quá hạn của CRM mới. Xem `docs/CRM-MIGRATION.md`.
 - Cổng Zalo OA chuyển sang CRM mới bằng công tắc riêng (mặc định cũ); migration `0020` thêm `crm2_inbound` và `crm2_leads.channel_ref`; `ingestChannelLead` dùng chung (nhớ sự kiện, gộp tin theo Zalo ID). Xem `docs/CRM-MIGRATION.md`.
 - Cổng Facebook / Instagram Lead Ads chuyển sang CRM mới bằng công tắc riêng (mặc định cũ), không cần migration mới; bảng dịch vụ dùng chung `core/services.ts`. Xem `docs/CRM-MIGRATION.md`.
-- Chưa làm: chuyển cổng quảng cáo, cấu hình kênh và thông báo nhân viên trong module mới, rồi bỏ tab cũ.
+- Cổng quảng cáo (`/api/leads/ads`) chuyển sang CRM mới bằng công tắc riêng (mặc định cũ), không cần migration mới; vậy cả bốn cổng nhận lead đã chuyển được. Xem `docs/CRM-MIGRATION.md`.
+- Chưa làm: cấu hình kênh và thông báo nhân viên trong module mới, bật các công tắc và nhập lịch sử lead cũ trên production, rồi bỏ tab cũ.
 
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar
 - Quản lý món theo nhóm, đơn vị, giá trước thuế/phí, VAT và phí F&B riêng; tạo/sửa/tạm ngưng, giữ lịch sử giá đơn đã gửi.

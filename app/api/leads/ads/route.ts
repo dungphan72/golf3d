@@ -2,6 +2,8 @@ import { overLimit } from '../../../../lib/server/throttle';
 import { sendResult, httpError, originOf, requestNow, clientIp } from '../../../../lib/server/http';
 import { adsLeadSchema, fromAds } from '../../../../lib/leads';
 import { intake, tenantForToken } from '../../../../lib/server/lead-intake';
+import { getSettings } from '../../../../modules/crm/server/store';
+import { ingestAdsLead } from '../../../../modules/crm/server/channels';
 export const dynamic = 'force-dynamic';
 
 /** Lead forms of ad platforms and automation tools. Needs the "Quảng cáo" token from the admin. */
@@ -22,7 +24,13 @@ export async function POST(req: Request) {
   const parsed = adsLeadSchema.safeParse(body);
   if (!parsed.success) return httpError('Thông tin chưa hợp lệ');
   const now = requestNow(req);
-  const r = await intake(tenant, fromAds(parsed.data, now), originOf(req), now);
+  const lead = fromAds(parsed.data, now);
+  // The club decides in CRM > Cấu hình where ad leads go; the old CRM stays the default.
+  if ((await getSettings(tenant)).adsLeads === 'CRM2') {
+    const r = await ingestAdsLead(tenant, lead.extKey, parsed.data, originOf(req), now);
+    return sendResult({ status: 200, body: { ok: true, ...r } });
+  }
+  const r = await intake(tenant, lead, originOf(req), now);
   return sendResult({
     status: 200,
     body: { ok: true, leadId: r.leadId, duplicate: r.duplicate, status: r.status },

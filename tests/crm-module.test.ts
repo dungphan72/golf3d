@@ -40,6 +40,7 @@ import { sanitizeSettings } from '../modules/crm/core/settings.ts';
 import { toInquiry } from '../modules/crm/core/website.ts';
 import { zaloInquiry } from '../modules/crm/core/zalo.ts';
 import { facebookInquiry } from '../modules/crm/core/facebook.ts';
+import { adsInquiry } from '../modules/crm/core/ads.ts';
 import { isService, serviceOf } from '../modules/crm/core/services.ts';
 import type { LeadInput } from '../lib/leads.ts';
 import { canSeeLead, canEditLead, maskForViewer } from '../modules/crm/core/access.ts';
@@ -557,4 +558,49 @@ test('cấu hình: lead Facebook mặc định vào CRM cũ và độc lập v�
   assert.equal(sanitizeSettings({ facebookLeads: true }).facebookLeads, 'LEGACY');
   const s = sanitizeSettings({ facebookLeads: 'CRM2', zaloLeads: 'CRM2' });
   assert.deepEqual([s.websiteLeads, s.zaloLeads, s.facebookLeads], ['LEGACY', 'CRM2', 'CRM2']);
+});
+
+test('lead quảng cáo: đọc như form website, nguồn là Quảng cáo, tên nền tảng làm chiến dịch', () => {
+  const base = {
+    name: 'Hà',
+    phone: '0912345678',
+    email: '',
+    need: '18',
+    guests: 0,
+    message: 'Muốn chơi 18 hố',
+    campaign: '',
+    consent: false,
+    source: 'tiktok',
+  };
+  const a = adsInquiry(base);
+  assert.deepEqual(
+    [a.fullName, a.phone, a.source, a.targetService],
+    ['Hà', '0912345678', 'Quảng cáo', 'Game 18 hố'],
+  );
+  assert.equal(a.notes, 'Muốn chơi 18 hố\nChiến dịch: tiktok');
+  // a campaign the sender names wins over the platform name
+  assert.equal(
+    adsInquiry({ ...base, campaign: 'khuyen-mai-11' }).notes,
+    'Muốn chơi 18 hố\nChiến dịch: khuyen-mai-11',
+  );
+  // number only in the message, need guessed from it
+  const guessed = adsInquiry({
+    ...base,
+    phone: '',
+    need: '',
+    message: 'Gọi em 0987.654.321, em muốn tập swing',
+  });
+  assert.equal(guessed.phone, '0987654321');
+  assert.equal(guessed.targetService, 'Luyện swing');
+});
+
+test('cấu hình: lead quảng cáo mặc định vào CRM cũ và độc lập với ba công tắc kia', () => {
+  assert.equal(sanitizeSettings(undefined).adsLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ adsLeads: 'CRM2' }).adsLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ adsLeads: 'ads' }).adsLeads, 'LEGACY');
+  const s = sanitizeSettings({ adsLeads: 'CRM2', facebookLeads: 'CRM2' });
+  assert.deepEqual(
+    [s.websiteLeads, s.zaloLeads, s.facebookLeads, s.adsLeads],
+    ['LEGACY', 'LEGACY', 'CRM2', 'CRM2'],
+  );
 });

@@ -40,6 +40,7 @@ type Settings = {
   websiteLeads: 'LEGACY' | 'CRM2';
   zaloLeads: 'LEGACY' | 'CRM2';
   facebookLeads: 'LEGACY' | 'CRM2';
+  adsLeads: 'LEGACY' | 'CRM2';
   [k: string]: unknown;
 };
 type Config = {
@@ -171,6 +172,20 @@ function ConfigScreen() {
           <small>
             Chiến dịch và mã biểu mẫu Facebook ghi trong ghi chú của lead. Mỗi lần khách gửi biểu
             mẫu chỉ tính một lần dù Facebook gửi lại.
+          </small>
+        </label>
+        <label>
+          Lead từ quảng cáo (Google, TikTok, Zapier, Make)
+          <select
+            value={s.adsLeads}
+            onChange={(e) => setS({ ...s, adsLeads: e.target.value as 'LEGACY' | 'CRM2' })}
+          >
+            <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
+            <option value="CRM2">CRM mới (màn này)</option>
+          </select>
+          <small>
+            Nguồn của lead là &quot;Quảng cáo&quot;; tên nền tảng gửi lên (tiktok, google...) ghi là
+            chiến dịch trong ghi chú nếu bên gửi không đặt chiến dịch riêng.
           </small>
         </label>
         <label>

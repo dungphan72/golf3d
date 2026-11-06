@@ -586,12 +586,17 @@ test('check-in, gia hạn có kiểm tra lịch, thu gộp, biên nhận và c�
     await post(owner, '/api/crm/availability', { service: 'gdr', start, guests: 1, vip: false })
   ).freeRooms as { id: string }[];
   expect(free.length).toBeGreaterThanOrEqual(2);
-  const a = await book(free[0].id, start);
-  const b = await book(free[1].id, start);
+  // Lines no other spec uses: a session another spec started a few minutes early leaves its line
+  // "cleaning" past its own booking window, which would make this check depend on the time of day.
+  const roomA = 'line-2';
+  const roomB = 'line-8';
+  expect(free.map((r) => r.id)).toEqual(expect.arrayContaining([roomA, roomB]));
+  const a = await book(roomA, start);
+  const b = await book(roomB, start);
   // A second customer takes line-6 right after: the first one cannot extend into it.
   // The next customer starts on the first 15-minute mark after this one's hour and the cleaning time.
   const cleaning = Math.ceil(((config.clean as number) * MIN) / 900_000) * 900_000;
-  await book(free[0].id, start + 60 * MIN + cleaning);
+  await book(roomA, start + 60 * MIN + cleaning);
   for (const x of [a, b]) {
     await post(owner, '/api/club', { action: 'start', id: x.id });
   }

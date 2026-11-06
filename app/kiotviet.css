@@ -984,3 +984,84 @@ body:has(.app-shell) {
   display: grid;
   gap: 8px;
 }
+
+/* ---------- Line states: playing = red, free = green, booking within 2 hours = yellow ---------- */
+.app-shell .room-card {
+  background: #fff;
+  border-top-width: 5px;
+  padding: 0;
+  overflow: hidden;
+}
+.app-shell .room-card.vip {
+  background: #fff;
+}
+.app-shell .room-card.free {
+  border-color: var(--kv-line);
+  border-top-color: #1f9d55;
+}
+.app-shell .room-card.occupied {
+  border-color: var(--kv-line);
+  border-top-color: #d93025;
+}
+.app-shell .room-card.soon {
+  border-color: var(--kv-line);
+  border-top-color: #f5b50a;
+}
+.app-shell .room-card.clean {
+  border-color: var(--kv-line);
+  border-top-color: #9aa5ad;
+}
+.app-shell .room-card .room-hit {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  padding: 14px 14px 0;
+  cursor: pointer;
+}
+.app-shell .room-card .room-status {
+  font-size: 12px;
+  font-weight: 650;
+}
+.app-shell .room-card.free .room-status {
+  color: #1f9d55;
+}
+.app-shell .room-card.occupied .room-status {
+  color: #d93025;
+}
+.app-shell .room-card.soon .room-status {
+  color: #a86f00;
+}
+.app-shell .room-card.clean .room-status {
+  color: #5b6770;
+}
+.app-shell .room-card .room-walkin {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 0 14px 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #1f9d55;
+  background: #fff;
+  color: #1f9d55;
+  font-weight: 650;
+  cursor: pointer;
+}
+.app-shell .room-card .room-walkin:hover {
+  background: #1f9d55;
+  color: #fff;
+}
+.legend i.free {
+  background: #1f9d55;
+}
+.legend i.inplay {
+  background: #d93025;
+}
+.legend i.reserved {
+  background: #f5b50a;
+}
+.legend i.cleaning {
+  background: #9aa5ad;
+}

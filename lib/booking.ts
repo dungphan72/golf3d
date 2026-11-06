@@ -24,7 +24,12 @@ export function withinOpening(start: number, end: number, open: string, close: s
   const position = m < until ? m + 1440 : m;
   return position >= from && position + duration <= until + 1440;
 }
-export function planBooking(input: BookingInput, c: Config, now: number) {
+export function planBooking(
+  input: BookingInput,
+  c: Config,
+  now: number,
+  opts: { walkIn?: boolean } = {},
+) {
   if (!ready(c))
     throw new Error('Hãy cấu hình giờ mở cửa, sức chứa, VAT và phí dịch vụ trước khi đặt thử.');
   const room = rooms.find((r) => r.id === input.room);
@@ -37,11 +42,12 @@ export function planBooking(input: BookingInput, c: Config, now: number) {
     people > Math.min(4, (room.vip ? c.vipCapacity : c.capacity)!)
   )
     throw new Error('Số người hoặc dịch vụ không hợp lệ');
+  // A walk-in customer starts this very moment; a booking is on a 15-minute mark in the future.
   if (
     !Number.isSafeInteger(start) ||
     start < now ||
     start > now + 90 * 86400000 ||
-    start % 900000 !== 0
+    (!opts.walkIn && start % 900000 !== 0)
   )
     throw new Error(
       'Giờ bắt đầu phải ở tương lai, cách nhau 15 phút và không quá 90 ngày cho nhân viên.',

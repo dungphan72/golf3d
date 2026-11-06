@@ -294,3 +294,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Tư vấn (lịch trống, báo giá, link đặt lịch điền sẵn), nhắc lịch trước 24 giờ và 2 giờ, đổi lịch, hủy, không đến; gia hạn có kiểm tra lịch; thu gộp phiếu; biên nhận sau thu tiền; tin cảm ơn sau 1 ngày; đồng ý nhận tin ưu đãi; phản hồi và phản ánh giao quản lý.
 - Migration 0017 (`crm_agents`, `crm_leads`, `crm_lead_contacts`, `crm_lead_events`, `crm_outbox`, cột email/zalo/đồng ý nhận tin của khách). Chi tiết vận hành và cấu hình kênh: `docs/CRM-LEAD.md`.
 - Sửa kèm theo: các route webhook đọc nội dung yêu cầu trước khi từ chối (workerd khởi động lại nếu bỏ dở nội dung).
+
+## Khách vãng lai vào chơi ngay và màu trạng thái line
+
+- Nút **Vào chơi ngay** trên thẻ line (trống hoặc sắp có khách): mở hộp thoại chọn hình thức (luyện tập/9 hố/18 hố), số người, thời lượng giữ line; tên và số điện thoại không bắt buộc (mặc định "Khách vãng lai"). Phiên chạy và tính tiền từ đúng lúc bấm, không cần đặt chỗ trước. Action `walkin` (quyền `session.operate`), báo giá theo bảng giá/khuyến mãi hiện hành.
+- Chặn trùng: line đang có phiên, hoặc có lịch đặt chồng thời gian giữ line (kể cả thời gian dọn) trả 409; thao tác chèn là một câu lệnh nguyên tử nên hai người bấm cùng lúc chỉ một người được.
+- Màu thẻ line trên Sơ đồ phòng: **xanh** = trống, **đỏ** = đang chơi, **vàng** = có khách đặt bắt đầu trong vòng 2 giờ (hiện còn bao nhiêu phút), **xám** = chờ thanh toán / đang dọn. Chú giải cập nhật. Giao diện nền trắng, màu thể hiện ở viền trên và chữ trạng thái.
+- Kiểm thử: `tests/e2e/flow2-walkin-ui.spec.ts`, `tests/e2e/zzzz-walkin.spec.ts`. Sửa luôn test check-in của lead để không phụ thuộc giờ trong ngày (chọn line cố định).

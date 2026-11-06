@@ -21,6 +21,7 @@ export const clubInput = z.object({
     'no-show',
     'reschedule',
     'extend',
+    'walkin',
   ]),
   value: z.record(z.string(), z.unknown()).optional(),
   id: z.string().max(100).optional(),
@@ -196,6 +197,78 @@ export async function runClubAction(
     if (!result.meta.changes)
       return fail('Phòng vừa có lịch trùng hoặc đang sử dụng. Vui lòng chọn giờ/phòng khác.', 409);
     await audit(tenant, 'Đặt lịch', `${room.name} · ${input.customer}`);
+    return ok({ id });
+  }
+  if (input.action === 'walkin') {
+    // A customer who walks in: the session starts and the meter runs now, with no prior booking.
+    const customer = (input.customer ?? '').trim() || 'Khách vãng lai';
+    const phone = (input.phone ?? '').trim();
+    if (customer.length < 2 || customer.length > 100) return fail('Tên khách không hợp lệ');
+    if (phone && !/^\+?[0-9 ()-]{8,20}$/.test(phone)) return fail('Số điện thoại không hợp lệ');
+    let plan;
+    try {
+      plan = planBooking(
+        {
+          room: input.room ?? '',
+          service: input.service ?? 'gdr',
+          start: now,
+          people: Number(input.people ?? 1),
+          minutes: Number(input.minutes ?? 60),
+        },
+        c,
+        now,
+        { walkIn: true },
+      );
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : 'Không bắt đầu được lượt chơi');
+    }
+    const { room, base, listBase, promo } = plan;
+    const clean = (room.vip ? c.vipClean : c.clean) * 60000;
+    const id = crypto.randomUUID();
+    const price = JSON.stringify({
+      config: c,
+      base,
+      listBase,
+      promo,
+      vip: room.vip,
+      version: 2,
+      ruleId: plan.ruleId,
+      ruleLabel: plan.ruleLabel,
+      pricingRevision: c.pricingRevision,
+      estimated: plan.bill,
+      walkIn: true,
+    });
+    const started = await db()
+      .prepare(
+        "INSERT INTO bookings(id,tenant,room,customer,phone,service,people,start,end,status,segments,started,price,created) SELECT ?,?,?,?,?,?,?,?,?,'playing','[]',?,?,? WHERE NOT EXISTS (SELECT 1 FROM bookings WHERE tenant=? AND room=? AND status <> 'cancelled' AND start < ? AND end > ?) AND NOT EXISTS (SELECT 1 FROM bookings WHERE tenant=? AND room=? AND status IN ('playing','paused'))",
+      )
+      .bind(
+        id,
+        tenant,
+        room.id,
+        customer,
+        phone,
+        input.service ?? 'gdr',
+        Number(input.people ?? 1),
+        now,
+        plan.end + clean,
+        now,
+        price,
+        now,
+        tenant,
+        room.id,
+        plan.end + clean,
+        now,
+        tenant,
+        room.id,
+      )
+      .run();
+    if (!started.meta.changes)
+      return fail(
+        'Line này đang có khách hoặc sắp có lịch đặt trong thời gian chơi. Hãy chọn line khác hoặc rút ngắn thời lượng.',
+        409,
+      );
+    await audit(tenant, 'Vào chơi ngay', `${room.name} · ${customer}`);
     return ok({ id });
   }
   if (input.action === 'request-update') {

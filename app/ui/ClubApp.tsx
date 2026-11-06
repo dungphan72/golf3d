@@ -54,6 +54,7 @@ import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmPanel } from './CrmPanel';
+import { WalkInDialog } from './WalkInDialog';
 // Less frequent screens live under "Quản lý khác" in the desktop top bar.
 const SECONDARY = new Set([
   'coaching',
@@ -80,6 +81,7 @@ export default function ClubApp() {
     [mode, setMode] = useState('staff'),
     [modal, setModal] = useState(false),
     [bookingRoom, setBookingRoom] = useState('line-1'),
+    [walkInRoom, setWalkInRoom] = useState<string | null>(null),
     [selected, setSelected] = useState<Booking | null>(null),
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
@@ -498,11 +500,11 @@ export default function ClubApp() {
                             </span>
                             <span>
                               <i className="reserved" />
-                              Đã đặt
+                              Có khách đặt trong 2 giờ tới
                             </span>
                             <span>
                               <i className="cleaning" />
-                              Đang dọn
+                              Chờ thanh toán / đang dọn
                             </span>
                           </div>
                           <RoomGrid
@@ -514,6 +516,7 @@ export default function ClubApp() {
                               setBookingRoom(r);
                               setModal(true);
                             }}
+                            onWalkIn={setWalkInRoom}
                           />
                         </div>
                         <aside className="right-column">
@@ -587,6 +590,7 @@ export default function ClubApp() {
                           setBookingRoom(r);
                           setModal(true);
                         }}
+                        onWalkIn={setWalkInRoom}
                       />
                     </>
                   )}
@@ -750,6 +754,16 @@ export default function ClubApp() {
           onClose={() => setModal(false)}
           onSave={async (v) => {
             if (await mutate({ action: 'book', ...v })) setModal(false);
+          }}
+        />
+      )}
+      {walkInRoom && (
+        <WalkInDialog
+          room={walkInRoom}
+          busy={busy}
+          onClose={() => setWalkInRoom(null)}
+          onStart={async (v) => {
+            if (await mutate({ action: 'walkin', ...v })) setWalkInRoom(null);
           }}
         />
       )}

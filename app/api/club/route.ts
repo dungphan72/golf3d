@@ -7,7 +7,7 @@ import {
 } from '../../../lib/server/club-service';
 import { can, permissionsOf, type Permission } from '../../../lib/auth/permissions';
 import { requestNow } from '../../../lib/server/http';
-import { afterClubAction } from '../../../lib/server/lead-service';
+import { afterClubAction } from '../../../lib/server/booking-messages';
 export const dynamic = 'force-dynamic';
 
 const ACTION_PERMISSION: Record<string, Permission> = {

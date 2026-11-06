@@ -13,6 +13,7 @@ import {
 import { recallLeads } from './leads';
 import { birthdayStep } from './customers';
 import { vnDate } from '../core/orders';
+import { dispatchDue } from '../../../lib/server/outbox-service';
 
 export type CronReport = {
   holdsExpired: number;
@@ -263,6 +264,11 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
       );
       rep.paymentReminders++;
     }
+  });
+
+  // Reminders and other customer / staff messages that have come due. The old lead sweep did this too; now the CRM cron owns it.
+  await step('outbox', async () => {
+    await dispatchDue(tenant, now, 100);
   });
 
   await setRuntime(tenant, 'cron', { ...rep, at: now }, now);

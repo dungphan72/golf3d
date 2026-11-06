@@ -378,3 +378,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 
 - Xem `docs/SECURITY-REVIEW.md`: tiêu đề bảo mật và CSP, mặc định an toàn cho header danh tính nền tảng, giới hạn dò mật khẩu theo địa chỉ, quản lý không thao tác được với quản lý khác, giới hạn webhook lead, mật khẩu yếu, so sánh khóa hằng thời gian, bớt lộ lỗi nội bộ.
 - Sửa bố cục form (nhân viên, thêm khách hàng, khuyến mãi và quyền lợi hội viên): tiêu đề form chiếm cả hàng, nhãn và ghi chú đọc được, ô nhập quyền lợi rộng, nút không bị kéo giãn.
+
+## Chuyển hết sang CRM mới, giai đoạn 2: tin nhắn đặt lịch tách khỏi CRM cũ
+
+- **`lib/server/booking-messages.ts`** giữ toàn bộ tin gửi khách quanh lịch đặt: thông tin đặt lịch và nhắc 24 giờ / 2 giờ, báo hủy, báo khách không đến, biên nhận và cảm ơn (nội dung, khóa chống gửi trùng và giờ gửi giữ nguyên). `club`, `finance`, `members`, `online-service` gọi module này; `lead-lifecycle.ts` đã bỏ.
+- Khi khách đặt lịch, lead đang mở của khách trong **CRM mới** chuyển sang Chốt (có ghi lịch sử); khách không đến thì tạo việc gọi lại trong CRM mới. Phía CRM cũ chỉ còn hai hàm `legacyBooked` / `legacyNoShowTask` để giữ bản ghi cũ khớp cho tới khi xóa.
+- Form đặt lịch online tạo lead theo công tắc "Lead từ website" (CRM mới hoặc cũ).
+- Cron của CRM mới (`/api/crm2/cron`) giờ cũng gửi hàng đợi tin đến hạn, nên nhắc lịch không còn phụ thuộc vào bước quét lead cũ. Việc gọi cron định kỳ vẫn do bộ lập lịch bên ngoài đảm nhiệm; cần trỏ nó sang `/api/crm2/cron` trước khi xóa `/api/cron/crm`.
+- Test mới `zzzz-booking-messages.spec.ts`.

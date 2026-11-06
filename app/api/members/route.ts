@@ -7,7 +7,7 @@ import {
 } from '../../../lib/server/member-service';
 import { can, type Permission } from '../../../lib/auth/permissions';
 import { originOf, requestNow } from '../../../lib/server/http';
-import { onPaid } from '../../../lib/server/lead-service';
+import { onPaid } from '../../../lib/server/booking-messages';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {

@@ -1,7 +1,7 @@
 import { db, loadConfig, audit, type ServiceResult } from './common';
 import { normalizePhone, validPhone } from '../member';
 import { CREATE_CUSTOMER_SQL } from '../package-sql';
-import { rooms, money, type Booking } from '../club';
+import { rooms, money } from '../club';
 import { planBooking } from '../booking';
 import { lineSizes } from '../online';
 import { can, type Role } from '../auth/permissions';
@@ -15,12 +15,6 @@ import {
   leadLink,
   staffLeadMessage,
   managerMessage,
-  bookingInfoMessage,
-  reminderMessage,
-  cancelMessage,
-  noShowMessage,
-  receiptMessage,
-  thanksMessage,
   bookingLinkMessage,
   type AgentRow,
   type LeadAction,
@@ -28,7 +22,7 @@ import {
   type LeadSource,
   type Need,
 } from '../leads';
-import { enqueue, cancelPending, dispatchDue, type Msg } from './outbox-service';
+import { enqueue, dispatchDue, type Msg } from './outbox-service';
 
 type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
@@ -1120,261 +1114,65 @@ async function sendBookingLink(
   return reply({ ok: true, url, queued, total: avail.total, manual: queued === 0 });
 }
 
-// ---------------------------------------------------------------- booking lifecycle messages
+// ---------------------------------------------------------------- old-CRM side of the booking hooks
+// The customer messages live in booking-messages.ts; these two only keep the old "Chăm sóc KH" records in step until it is removed.
 
-type BookingBrief = { id: string; room: string; start: number; service: string; people: number };
-const SERVICE_TEXT: Record<string, string> = {
-  gdr: 'Luyện tập',
-  '9': 'Game 9 hố',
-  '18': 'Game 18 hố',
-};
-const roomName = (id: string) => rooms.find((r) => r.id === id)?.name ?? id;
-
-async function customerChannels(tenant: string, phone: string) {
-  const p = normalizePhone(phone);
-  const c = await db()
-    .prepare(
-      'SELECT id,name,email,zalo_id,marketing_consent FROM customers WHERE tenant=? AND phone=?',
-    )
-    .bind(tenant, p)
-    .first<{
-      id: string;
-      name: string;
-      email: string;
-      zalo_id: string;
-      marketing_consent: number;
-    }>();
-  return c;
-}
-
-const customerMsgs = (
-  c: { id: string; email: string; zalo_id: string },
-  ukey: string,
-  m: { subject: string; body: string },
-  kind: string,
-  sendAt: number,
-  leadId: string | null = null,
-): Msg[] => [
-  {
-    ukey: `${ukey}:email`,
-    channel: 'email',
-    recipient: c.email,
-    subject: m.subject,
-    body: m.body,
-    kind,
-    audience: 'customer',
-    customerId: c.id,
-    leadId,
-    sendAt,
-  },
-  {
-    ukey: `${ukey}:zalo`,
-    channel: 'zalo',
-    recipient: c.zalo_id,
-    subject: m.subject,
-    body: m.body,
-    kind,
-    audience: 'customer',
-    customerId: c.id,
-    leadId,
-    sendAt,
-  },
-];
-
-/** After the receptionist confirms an online request: booking details now, reminders before the game. */
-export async function onBookingConfirmed(
+/** A confirmed booking closes the customer's open old-CRM lead. Returns that lead's id. */
+export async function legacyBooked(
   tenant: string,
-  who: { name: string; phone: string },
-  bookings: BookingBrief[],
-  now = Date.now(),
-) {
-  const config = await loadConfig(tenant);
-  const customer = await customerChannels(tenant, who.phone);
+  phone: string,
+  bookings: { id: string; start: number }[],
+  now: number,
+): Promise<string | null> {
   const lead = await db()
     .prepare(
       "SELECT * FROM crm_leads WHERE tenant=? AND phone=? AND status IN ('queued','assigned','contacted') ORDER BY received_at DESC LIMIT 1",
     )
-    .bind(tenant, normalizePhone(who.phone))
+    .bind(tenant, normalizePhone(phone))
     .first<Lead>();
+  if (!lead) return null;
   const first = bookings[0];
-  if (lead) {
-    await db()
-      .prepare(
-        "UPDATE crm_leads SET status='booked',stage='won',next_at=NULL,closed_at=?,updated=?,first_call_at=COALESCE(first_call_at,?) WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
-      )
-      .bind(now, now, now, lead.id, tenant)
-      .run();
-    await addEvent(
-      tenant,
-      lead,
-      'booked',
-      { bookingIds: bookings.map((b) => b.id), when: first.start },
-      now,
-      null,
-      `booked:${first.id}`,
-    );
-  }
-  if (!customer) return;
-  const rooms_ = bookings.map((b) => roomName(b.room)).join(', ');
-  const info = bookingInfoMessage(config.name, {
-    name: customer.name,
-    when: whenText(first.start),
-    room: rooms_,
-    service: SERVICE_TEXT[first.service] ?? first.service,
-    people: bookings.reduce((n, b) => n + b.people, 0),
-  });
-  const rem = reminderMessage(config.name, {
-    name: customer.name,
-    when: whenText(first.start),
-    room: rooms_,
-  });
-  const msgs: Msg[] = [
-    ...customerMsgs(customer, `bkinfo:${first.id}`, info, 'booking_info', now, lead?.id ?? null),
-  ];
-  if (first.start - DAY > now + 3_600_000)
-    msgs.push(
-      ...customerMsgs(
-        customer,
-        `remind24:${first.id}`,
-        rem,
-        'reminder',
-        first.start - DAY,
-        lead?.id ?? null,
-      ),
-    );
-  if (first.start - 2 * 3_600_000 > now)
-    msgs.push(
-      ...customerMsgs(
-        customer,
-        `remind2:${first.id}`,
-        rem,
-        'reminder',
-        first.start - 2 * 3_600_000,
-        lead?.id ?? null,
-      ),
-    );
-  await enqueue(tenant, msgs, now);
-  if (lead && !(customer.email || customer.zalo_id))
-    await addEvent(
-      tenant,
-      lead,
-      'notify_gap',
-      { reason: 'Khách chưa có email/Zalo: lễ tân gửi thông tin lịch thủ công' },
-      now,
-      null,
-      `gap-booking:${first.id}`,
-    );
-  await dispatchDue(tenant, now);
-}
-
-/** A cancelled or missed booking: its reminders stop and the customer is told once. */
-export async function onBookingEnded(
-  tenant: string,
-  b: { id: string; customer: string; phone: string; start: number },
-  kind: 'cancel' | 'no_show',
-  now = Date.now(),
-) {
-  await cancelPending(tenant, `remind24:${b.id}`);
-  await cancelPending(tenant, `remind2:${b.id}`);
-  const config = await loadConfig(tenant);
-  const customer = await customerChannels(tenant, b.phone);
-  if (!customer) return;
-  const m = (kind === 'cancel' ? cancelMessage : noShowMessage)(config.name, {
-    name: customer.name,
-    when: whenText(b.start),
-  });
-  await enqueue(
+  await db()
+    .prepare(
+      "UPDATE crm_leads SET status='booked',stage='won',next_at=NULL,closed_at=?,updated=?,first_call_at=COALESCE(first_call_at,?) WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
+    )
+    .bind(now, now, now, lead.id, tenant)
+    .run();
+  await addEvent(
     tenant,
-    customerMsgs(
-      customer,
-      `${kind}:${b.id}`,
-      m,
-      kind === 'cancel' ? 'booking_cancel' : 'no_show',
-      now,
-    ),
+    lead,
+    'booked',
+    { bookingIds: bookings.map((b) => b.id), when: first.start },
     now,
+    null,
+    `booked:${first.id}`,
   );
-  if (kind === 'no_show') {
-    await db()
-      .prepare(
-        "INSERT OR IGNORE INTO crm_tasks(id,tenant,customer_id,rule,key,title,data,due,status,assignee,channel,note,created,handled_by,handled_at) VALUES (?,?,?,'noshow',?,?,?,?,'open',NULL,NULL,'',?,NULL,NULL)",
-      )
-      .bind(
-        crypto.randomUUID(),
-        tenant,
-        customer.id,
-        `noshow:${b.id}`,
-        'Liên hệ khách không đến, hẹn lại lịch',
-        JSON.stringify({ ten: customer.name, ngay: whenText(b.start) }),
-        now,
-        now,
-      )
-      .run();
-  }
-  await dispatchDue(tenant, now);
+  return lead.id;
 }
 
-/** Payment confirmed: the receipt goes out, and the thank-you follows a day later. */
-export async function onPaid(tenant: string, bookingIds: string[], base: string, now = Date.now()) {
-  const d = db();
-  const config = await loadConfig(tenant);
-  for (const id of bookingIds) {
-    const b = await d
-      .prepare('SELECT * FROM bookings WHERE tenant=? AND id=?')
-      .bind(tenant, id)
-      .first<Booking>();
-    if (!b || b.status !== 'paid') continue;
-    const customer = await customerChannels(tenant, b.phone);
-    if (!customer) continue;
-    const entries = (
-      await d
-        .prepare(
-          "SELECT method,amount FROM finance_entries WHERE tenant=? AND booking_id=? AND kind='payment'",
-        )
-        .bind(tenant, id)
-        .all<{ method: string; amount: number }>()
-    ).results;
-    const discount = await d
-      .prepare('SELECT amount,reason FROM bill_discounts WHERE tenant=? AND booking_id=?')
-      .bind(tenant, id)
-      .first<{ amount: number; reason: string }>();
-    const methods: Record<string, string> = {
-      cash: 'tiền mặt',
-      transfer: 'chuyển khoản',
-      card: 'thẻ',
-      package: 'trừ gói',
-      mixed: 'nhiều hình thức',
-    };
-    const lines = [
-      `${SERVICE_TEXT[b.service] ?? b.service} · ${roomName(b.room)} · ${b.people} người`,
-      ...(discount ? [`Giảm giá: -${money(discount.amount)} (${discount.reason})`] : []),
-      ...entries.map((e) => `Đã thu ${methods[e.method] ?? e.method}: ${money(e.amount)}`),
-    ];
-    const receipt = receiptMessage(config.name, {
-      name: customer.name,
-      when: whenText(b.finished ?? now),
-      lines,
-      total: money(entries.reduce((n, e) => n + e.amount, 0) || (b.amount ?? 0)),
-      method: methods[b.payment ?? ''] ?? b.payment ?? '',
-    });
-    const consent = customer.marketing_consent === 1;
-    const thanks = thanksMessage(config.name, {
-      name: customer.name,
-      rebook:
-        consent && config.onlineSlug && base
-          ? `${base.replace(/\/$/, '')}/book/${config.onlineSlug}`
-          : undefined,
-    });
-    await enqueue(
+/** The old task list's "customer did not come" follow-up. */
+export async function legacyNoShowTask(
+  tenant: string,
+  customer: { id: string; name: string },
+  bookingId: string,
+  whenLabel: string,
+  now: number,
+) {
+  await db()
+    .prepare(
+      "INSERT OR IGNORE INTO crm_tasks(id,tenant,customer_id,rule,key,title,data,due,status,assignee,channel,note,created,handled_by,handled_at) VALUES (?,?,?,'noshow',?,?,?,?,'open',NULL,NULL,'',?,NULL,NULL)",
+    )
+    .bind(
+      crypto.randomUUID(),
       tenant,
-      [
-        ...customerMsgs(customer, `receipt:${id}`, receipt, 'receipt', now),
-        ...customerMsgs(customer, `thanks:${id}`, thanks, 'thanks', (b.finished ?? now) + DAY),
-      ],
+      customer.id,
+      `noshow:${bookingId}`,
+      'Liên hệ khách không đến, hẹn lại lịch',
+      JSON.stringify({ ten: customer.name, ngay: whenLabel }),
       now,
-    );
-  }
-  await dispatchDue(tenant, now);
+      now,
+    )
+    .run();
 }
 
 // ---------------------------------------------------------------- reading for the screens
@@ -1484,44 +1282,4 @@ export async function loadAgents(tenant: string): Promise<R> {
       notifyEmail: s.agent_email,
     })),
   });
-}
-
-/** Customer messages that follow a change to a booking made on the dashboard. Never fails the action itself. */
-export async function afterClubAction(
-  tenant: string,
-  input: { action: string; id?: string },
-  result: { status: number; body: Record<string, unknown> },
-  now: number,
-) {
-  if (result.status !== 200 || !input.id) return;
-  try {
-    const row = async (id: string) =>
-      db()
-        .prepare(
-          'SELECT id,customer,phone,start,room,service,people FROM bookings WHERE tenant=? AND id=?',
-        )
-        .bind(tenant, id)
-        .first<{
-          id: string;
-          customer: string;
-          phone: string;
-          start: number;
-          room: string;
-          service: string;
-          people: number;
-        }>();
-    if (input.action === 'cancel' || input.action === 'no-show') {
-      const b = await row(input.id);
-      if (b) await onBookingEnded(tenant, b, input.action === 'cancel' ? 'cancel' : 'no_show', now);
-    } else if (input.action === 'reschedule' && typeof result.body.id === 'string') {
-      const old = await row(input.id);
-      const next = await row(result.body.id);
-      await cancelPending(tenant, `remind24:${input.id}`);
-      await cancelPending(tenant, `remind2:${input.id}`);
-      if (old && next)
-        await onBookingConfirmed(tenant, { name: next.customer, phone: next.phone }, [next], now);
-    }
-  } catch (e) {
-    console.error('booking follow-up', e);
-  }
 }

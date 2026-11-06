@@ -3,7 +3,7 @@ import { financeInput } from '../../../lib/finance';
 import { loadFinance, applyFinance } from '../../../lib/server/finance-service';
 import { can } from '../../../lib/auth/permissions';
 import { originOf, requestNow } from '../../../lib/server/http';
-import { onPaid } from '../../../lib/server/lead-service';
+import { onPaid } from '../../../lib/server/booking-messages';
 export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const { auth, response } = await authorize('finance.view');

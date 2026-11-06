@@ -978,7 +978,7 @@ body:has(.app-shell) {
 .ds-nav-item.selected svg {
   color: var(--ds-green);
 }
-.ds-badge {
+.ds-count {
   margin-left: auto;
   min-width: 22px;
   height: 22px;
@@ -2051,7 +2051,7 @@ body:has(.app-shell) {
 .ds-menu-item.selected svg {
   color: var(--ds-green);
 }
-.ds-menu-item .ds-badge {
+.ds-menu-item .ds-count {
   margin-left: 2px;
 }
 .ds-drop {
@@ -3160,5 +3160,12 @@ body:has(.app-shell) {
     font-size: 13px;
     color: var(--ds-muted);
     white-space: normal;
+  }
+}
+
+/* Two-column line grid on phones: a long status ("Chờ thanh toán") drops under the line name instead of being cut. */
+@media (max-width: 640px) {
+  .rc-head {
+    flex-wrap: wrap;
   }
 }

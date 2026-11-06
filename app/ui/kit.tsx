@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { createRoot } from 'react-dom/client';
 
 /** Shared building blocks for the staff screens: page tabs, filter bar, chips, data table. */
@@ -211,6 +211,42 @@ export function Loading({ rows = 3, label = 'Đang tải' }: { rows?: number; la
       {Array.from({ length: rows }, (_, i) => (
         <span key={i} className="ds-skel" style={{ width: `${92 - i * 14}%` }} />
       ))}
+    </div>
+  );
+}
+
+/** A modal sheet opened with showModal(): focus is trapped, Esc and the close button call onClose. */
+export function ModalDialog({
+  label,
+  onClose,
+  className = '',
+  children,
+}: {
+  label: string;
+  onClose: () => void;
+  /** Extra class for the inner sheet, e.g. "session". */
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    ref.current?.showModal();
+  }, []);
+  return (
+    <dialog className="native-dialog" ref={ref} onCancel={onClose} aria-label={label}>
+      <section className={('modal ' + className).trim()}>{children}</section>
+    </dialog>
+  );
+}
+
+/** Title row of a ModalDialog with the close button. */
+export function DialogHeading({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+  return (
+    <div className="modal-heading">
+      <h2>{children}</h2>
+      <button className="icon-btn" onClick={onClose} aria-label="Đóng">
+        <X />
+      </button>
     </div>
   );
 }

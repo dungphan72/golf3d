@@ -141,7 +141,7 @@ export function Sidebar({
                   >
                     <Icon size={20} />
                     <span>{label}</span>
-                    {(badges[key] ?? 0) > 0 && <b className="ds-badge">{badges[key]}</b>}
+                    {(badges[key] ?? 0) > 0 && <b className="ds-count">{badges[key]}</b>}
                   </button>
                 ))}
               </div>
@@ -449,7 +449,7 @@ export function AppHeader({
             >
               <Icon size={18} />
               <span>{label}</span>
-              {(badges[k] ?? 0) > 0 && <b className="ds-badge">{badges[k]}</b>}
+              {(badges[k] ?? 0) > 0 && <b className="ds-count">{badges[k]}</b>}
             </button>
           );
         })}

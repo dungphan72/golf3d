@@ -22,7 +22,7 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   return (await response.json()) as Record<string, any>;
 }
 const nav = (page: Page, name: RegExp | string) =>
-  page.locator('aside').getByRole('button', { name });
+  page.locator('.ds-menubar').getByRole('button', { name });
 
 /** All-day prices so the tests do not depend on the time of day they run. */
 function allDayRules() {
@@ -241,8 +241,7 @@ test('phân quyền: thu ngân chỉ làm được việc của thu ngân', asyn
   const view = await ctx.newPage();
   await view.goto('/quan-ly');
   await expect(view.getByRole('heading', { name: 'Sơ đồ phòng', level: 1 })).toBeVisible();
-  await expect(nav(view, /Cài đặt cơ sở/)).toHaveCount(0);
-  await expect(nav(view, /Nhân viên/)).toHaveCount(0);
+  await expect(nav(view, /Quản trị/)).toHaveCount(0);
   await expect(nav(view, /Hội viên/)).toBeVisible();
   await ctx.close();
 });

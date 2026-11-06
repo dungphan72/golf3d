@@ -161,7 +161,7 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   await page.getByLabel('Tìm khách hoặc phiếu').fill('');
   // A finished session waits for payment on its room card: one click opens the bill.
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Sơ đồ phòng/ })
     .click();
   const card = page.locator('.room-card', { hasText: 'Khách Giao Diện' });

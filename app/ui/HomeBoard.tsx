@@ -1,18 +1,9 @@
 'use client';
 import { useState } from 'react';
-import {
-  Bell,
-  PhoneCall,
-  CalendarClock,
-  Globe,
-  Wallet,
-  Grid2X2,
-  CircleDollarSign,
-  CalendarDays,
-} from 'lucide-react';
+import { Bell, PhoneCall, CalendarClock, Globe, Wallet } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { time, type Data } from './shared';
-import { RoomGrid } from './widgets';
+import { RoomGrid, roomInfo } from './widgets';
 
 const SOON = 60 * 60_000; // a booking due within the hour needs the front desk's attention
 
@@ -119,14 +110,12 @@ export function HomeBoard({
       key: 'playing',
       label: 'Đang chơi',
       value: `${playing.length}/${rooms.length}`,
-      icon: Grid2X2,
-      onClick: () => setFilter('all'),
+      onClick: () => setFilter('occupied'),
     },
     {
       key: 'unpaid',
-      label: 'Chờ thanh toán',
-      value: String(unpaid.length),
-      icon: CircleDollarSign,
+      label: 'Chờ thu',
+      value: `${unpaid.length} phiếu`,
       onClick: () => onGo('invoices'),
       warn: unpaid.length > 0,
     },
@@ -134,7 +123,6 @@ export function HomeBoard({
       key: 'today',
       label: 'Lịch hôm nay',
       value: String(todayCount),
-      icon: CalendarDays,
       onClick: () => onGo('bookings'),
     },
     ...(canSeeMoney
@@ -143,67 +131,51 @@ export function HomeBoard({
             key: 'money',
             label: 'Thực thu hôm nay',
             value: money(data.todayReceipts),
-            icon: Wallet,
             onClick: () => onGo('finance'),
           },
         ]
       : []),
   ];
+  const counts: Record<string, number> = { free: 0, occupied: 0, soon: 0, due: 0 };
+  for (const r of rooms) {
+    const st = roomInfo(r.id, b, now).state;
+    counts[st === 'clean' ? 'due' : st]++;
+  }
 
   return (
     <div className="ds-home">
-      <div className="ds-tiles">
-        {tiles.map(({ key, label, value, icon: Icon, onClick, warn }) => (
-          <button key={key} className={'ds-tile' + (warn ? ' warn' : '')} onClick={onClick}>
-            <span className="ds-tile-icon">
-              <Icon size={22} />
-            </span>
-            <span className="ds-tile-text">
-              <small>{label}</small>
-              <strong>{value}</strong>
-            </span>
+      <div className="ds-statbar">
+        {tiles.map(({ key, label, value, onClick, warn }) => (
+          <button key={key} className={warn ? 'warn' : ''} onClick={onClick}>
+            <small>{label}</small>
+            <strong>{value}</strong>
           </button>
         ))}
       </div>
       <div className="ds-home-grid">
-        <section className="ds-home-rooms" aria-label="Sơ đồ phòng">
-          <div className="ds-toolbar">
-            <div className="ds-seg" role="tablist">
+        <section className="ds-panel" aria-label="Sơ đồ phòng">
+          <div className="ds-panel-head">
+            <h2>Sơ đồ line</h2>
+            <div className="ds-seg" role="group" aria-label="Lọc theo trạng thái">
               {(
                 [
-                  ['all', `Tất cả · ${rooms.length}`],
-                  ['standard', `Line tiêu chuẩn · ${rooms.filter((r) => !r.vip).length}`],
-                  ['vip', `Phòng VIP · ${rooms.filter((r) => r.vip).length}`],
+                  ['all', 'Tất cả', rooms.length, ''],
+                  ['free', 'Trống', counts.free, 'free'],
+                  ['occupied', 'Đang chơi', counts.occupied, 'inplay'],
+                  ['soon', 'Sắp có khách', counts.soon, 'reserved'],
+                  ['due', 'Chờ thu / dọn', counts.due, 'cleaning'],
                 ] as const
-              ).map(([v, t]) => (
+              ).map(([v, t, n, dot]) => (
                 <button
                   key={v}
-                  role="tab"
-                  aria-selected={filter === v}
+                  aria-pressed={filter === v}
                   className={filter === v ? 'active' : ''}
                   onClick={() => setFilter(v)}
                 >
-                  {t}
+                  {dot && <i className={'dot ' + dot} />}
+                  {t} · {n}
                 </button>
               ))}
-            </div>
-            <div className="ds-legend">
-              <span>
-                <i className="free" />
-                Trống
-              </span>
-              <span>
-                <i className="inplay" />
-                Đang chơi
-              </span>
-              <span>
-                <i className="reserved" />
-                Khách đặt trong 2 giờ
-              </span>
-              <span>
-                <i className="cleaning" />
-                Chờ thanh toán / dọn
-              </span>
             </div>
           </div>
           <RoomGrid
@@ -215,17 +187,19 @@ export function HomeBoard({
             onWalkIn={onWalkIn}
           />
         </section>
-        <aside className="ds-tasks" aria-label="Việc cần làm ngay">
-          <h2>
-            Việc cần làm ngay
-            {tasks.length > 0 && <b>{tasks.length}</b>}
-          </h2>
+        <aside className="ds-panel ds-tasks" aria-label="Việc cần làm ngay">
+          <div className="ds-panel-head">
+            <h2>
+              Việc cần làm ngay
+              {tasks.length > 0 && <b>{tasks.length}</b>}
+            </h2>
+          </div>
           {tasks.length ? (
             <ul>
               {tasks.map(({ id, icon: Icon, title, detail, onClick }) => (
                 <li key={id}>
                   <button onClick={onClick}>
-                    <Icon size={20} />
+                    <Icon size={18} />
                     <span>
                       <strong>{title}</strong>
                       <small>{detail}</small>

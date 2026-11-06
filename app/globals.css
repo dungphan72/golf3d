@@ -388,77 +388,19 @@ h3 {
   border-color: #7fa17d;
   transform: translateY(-2px);
 }
-.room-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  color: #9ba68e;
-  height: 20px;
-}
-.room-type {
-  font-size: 6px;
-  letter-spacing: 1px;
-  font-weight: 550;
-}
-.room-number {
-  color: #acb69e;
-  font-size: 12px;
-  font-weight: 500;
-}
 .room-card h3 {
   font-size: 15px;
   font-weight: 550;
   margin: 15px 0 9px;
   letter-spacing: -0.2px;
 }
-.room-status {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: #79916e;
-  font-size: 9px;
-}
-.room-status i {
-  width: 5px;
-  height: 5px;
-  background: #8baa79;
-  border-radius: 50%;
-}
-.room-bottom {
-  border-top: 1px solid #edf0e7;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 18px;
-  padding: 10px 0;
-  color: #9da591;
-  font-size: 7px;
-  gap: 5px;
-}
-.room-bottom span {
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-}
 .room-card.vip {
   background: #f5f1e6;
   border-color: #e4dac2;
 }
-.room-card.vip .room-top {
-  color: #ab8a45;
-}
 .room-card.occupied {
   background: #e8f0e6;
   border-color: #afc7aa;
-}
-.room-card.occupied .room-status {
-  color: #0f6a1a;
-}
-.room-card.occupied .room-status i {
-  background: #0f6a1a;
-}
-.room-card.clean .room-status {
-  color: #8898a3;
 }
 .golf-art {
   position: relative;
@@ -619,13 +561,6 @@ td small {
   font-size: 10px;
   line-height: 1.9;
   margin-top: 8px;
-}
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 22px;
-  gap: 16px;
 }
 .tabs {
   display: flex;
@@ -1047,11 +982,6 @@ select:focus {
     margin-top: 21px;
     font-size: 17px;
   }
-  .room-bottom {
-    margin-top: 22px;
-    padding: 13px 0;
-    font-size: 9px;
-  }
   .golf-art {
     height: 215px;
   }
@@ -1192,22 +1122,6 @@ select:focus {
   .room-card h3 {
     font-size: 18px;
     margin: 16px 0 10px;
-  }
-  .room-type {
-    font-size: 7px;
-  }
-  .room-status {
-    font-size: 10px;
-  }
-  .room-bottom {
-    font-size: 8px;
-    padding: 11px 0;
-    margin-top: 19px;
-  }
-  .toolbar {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 12px;
   }
   .tabs {
     width: 100%;

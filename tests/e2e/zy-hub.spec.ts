@@ -7,7 +7,7 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online v�
 }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  const nav = (name: RegExp) => page.locator('aside').getByRole('button', { name });
+  const nav = (name: RegExp) => page.locator('.ds-menubar').getByRole('button', { name });
 
   // One menu entry holds the booking list and the two request queues as tabs.
   await expect(nav(/Đặt online/)).toHaveCount(0);
@@ -50,8 +50,12 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online v�
 test('Cài đặt cơ sở chia tab; Báo cáo, Nhân viên, Nhật ký dùng bảng chung', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  const nav = (name: RegExp) => page.locator('aside').getByRole('button', { name });
-  await nav(/Cài đặt cơ sở/).click();
+  const nav = (name: RegExp) => page.locator('.ds-menubar').getByRole('button', { name });
+  const admin = async (name: RegExp) => {
+    await page.locator('.ds-menubar').getByRole('button', { name: 'Quản trị' }).click();
+    await page.getByRole('menuitem', { name }).click();
+  };
+  await admin(/Cài đặt cơ sở/);
   for (const tab of ['Cơ sở', 'Giá', 'Khuyến mãi', 'Đặt lịch', 'Thanh toán'])
     await expect(page.getByRole('tab', { name: tab, exact: true })).toBeVisible();
   await expect(page.getByLabel('Tên cơ sở')).toBeVisible();
@@ -65,8 +69,8 @@ test('Cài đặt cơ sở chia tab; Báo cáo, Nhân viên, Nhật ký dùng b�
   await page.getByRole('button', { name: '7 ngày' }).click();
   await expect(page.locator('.ds-tile-main').getByText('Tổng thu')).toBeVisible();
 
-  await nav(/Nhân viên/).click();
+  await admin(/Nhân viên/);
   await expect(page.getByRole('columnheader', { name: 'Vai trò' })).toBeVisible();
-  await nav(/Nhật ký/).click();
+  await admin(/Nhật ký/);
   await expect(page.getByRole('columnheader', { name: 'Hành động' })).toBeVisible();
 });

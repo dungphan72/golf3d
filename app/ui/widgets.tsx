@@ -1,21 +1,60 @@
 'use client';
-import { Flag, CalendarDays, ArrowUpRight, Plus, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronRight } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { labels, time, date } from './shared';
 import { DataTable } from './kit';
+
 const SOON_MS = 2 * 3_600_000; // a booking within 2 hours turns the line yellow
 
-/** Line states: playing = red, free = green, a booking within 2 hours = yellow, waiting for payment or cleaning = grey. */
+export type RoomState = 'free' | 'occupied' | 'soon' | 'due' | 'clean';
+
+/** What is going on in one line right now. */
+export function roomInfo(roomId: string, bookings: Booking[], now: number) {
+  const mine = bookings.filter((b) => b.room === roomId);
+  const live = mine.find((b) => ['playing', 'paused'].includes(b.status));
+  // A finished session waiting for payment is opened from the card, so the bill can be collected.
+  const due = mine.find((b) => b.status === 'finished');
+  const clean = mine.find((b) => b.status === 'paid' && b.end > now);
+  const next = mine
+    .filter((b) => b.status === 'booked' && b.end > now)
+    .sort((a, c) => a.start - c.start)[0];
+  const soon = !live && !due && next && next.start - now <= SOON_MS ? next : undefined;
+  const state: RoomState = live
+    ? 'occupied'
+    : due
+      ? 'due'
+      : clean
+        ? 'clean'
+        : soon
+          ? 'soon'
+          : 'free';
+  return { live, due, next, soon, state };
+}
+
+const STATE_FILTER: Record<string, RoomState[]> = {
+  all: ['free', 'occupied', 'soon', 'due', 'clean'],
+  free: ['free'],
+  occupied: ['occupied'],
+  soon: ['soon'],
+  due: ['due', 'clean'],
+};
+
+const hm = (ms: number) => {
+  const m = Math.max(0, Math.floor(ms / 60_000));
+  return m >= 60 ? `${Math.floor(m / 60)}g${String(m % 60).padStart(2, '0')}` : `${m} phút`;
+};
+
+/** Compact line cards. Playing = red, free = green, due within 2 hours = yellow, waiting = grey. */
 export function RoomGrid({
   bookings,
-  filter,
+  filter = 'all',
   now,
   onSelect,
   onBook,
   onWalkIn,
 }: {
   bookings: Booking[];
-  filter: string;
+  filter?: string;
   now: number;
   onSelect: (b: Booking) => void;
   onBook: (room: string) => void;
@@ -23,103 +62,59 @@ export function RoomGrid({
 }) {
   return (
     <div className="room-grid">
-      {rooms
-        .filter((r) => filter === 'all' || (filter === 'vip' ? r.vip : !r.vip))
-        .map((r) => {
-          const live = bookings.find(
-            (b) => b.room === r.id && ['playing', 'paused'].includes(b.status),
-          );
-          // A finished session waiting for payment is opened from the card, so the bill can be collected.
-          const due = bookings.find((b) => b.room === r.id && b.status === 'finished');
-          const clean = bookings.find(
-            (b) => b.room === r.id && ['finished', 'paid'].includes(b.status) && b.end > now,
-          );
-          const next = bookings
-            .filter((b) => b.room === r.id && b.status === 'booked' && b.end > now)
-            .sort((a, b) => a.start - b.start)[0];
-          const soon = !live && !due && next && next.start - now <= SOON_MS ? next : undefined;
-          const state = live ? 'occupied' : due || clean ? 'clean' : soon ? 'soon' : 'free';
-          const item = live ?? due ?? next;
-          const minutesLeft = soon ? Math.round((soon.start - now) / 60_000) : 0;
-          const canWalkIn = state === 'free' || state === 'soon';
-          return (
-            <article
-              className={'room-card ' + state + (r.vip ? ' vip' : '')}
-              key={r.id}
-              data-state={state}
+      {rooms.map((r) => {
+        const { live, due, next, soon, state } = roomInfo(r.id, bookings, now);
+        if (!STATE_FILTER[filter].includes(state)) return null;
+        const open = live ?? due ?? next;
+        const chip = live
+          ? labels[live.status]
+          : due
+            ? 'Chờ thanh toán'
+            : state === 'clean'
+              ? 'Đang dọn'
+              : soon
+                ? soon.start > now
+                  ? `Còn ${Math.max(1, Math.round((soon.start - now) / 60_000))} phút`
+                  : 'Khách chưa đến'
+                : 'Trống';
+        const info = live
+          ? `${live.customer} · ${hm(now - (live.started ?? live.start))}`
+          : due
+            ? `${due.customer}${due.amount != null ? ' · ' + money(due.amount) : ''}`
+            : next
+              ? `${next.customer} · ${soon ? '' : date(next.start) + ' '}${time(next.start)}`
+              : '';
+        const canStart = state === 'free' || state === 'soon';
+        return (
+          <article
+            className={'room-card ' + state + (r.vip ? ' vip' : '')}
+            key={r.id}
+            data-state={state}
+          >
+            <button
+              type="button"
+              className="room-hit"
+              onClick={() => (open ? onSelect(open) : onBook(r.id))}
             >
-              <button
-                type="button"
-                className="room-hit"
-                onClick={() => (item ? onSelect(item) : onBook(r.id))}
-              >
-                <div className="room-top">
-                  <span className="room-type">
-                    {r.vip ? 'PHÒNG VIP' : r.left ? 'TAY TRÁI' : 'LUYỆN TẬP'}
-                  </span>
-                  {r.vip ? (
-                    <Flag size={17} />
-                  ) : (
-                    <span className="room-number">{r.id.split('-')[1].padStart(2, '0')}</span>
-                  )}
-                </div>
-                <h3>{r.name}</h3>
-                <span className="room-status">
-                  {live
-                    ? labels[live.status]
-                    : due
-                      ? 'Chờ thanh toán'
-                      : clean
-                        ? 'Đang dọn'
-                        : soon
-                          ? minutesLeft > 0
-                            ? `Sắp có khách · còn ${minutesLeft} phút`
-                            : 'Khách đặt chưa đến'
-                          : 'Trống'}
-                </span>
-                <div className="room-bottom">
-                  {live ? (
-                    <>
-                      <span>{live.customer}</span>
-                      <span>{time(live.start)}</span>
-                    </>
-                  ) : due ? (
-                    <>
-                      <span>{due.customer} · bấm để thu tiền</span>
-                      <ArrowUpRight size={14} />
-                    </>
-                  ) : next ? (
-                    <>
-                      <span>
-                        {soon ? `${soon.customer} · ` : 'Có lịch '}
-                        {date(next.start)} · {time(next.start)}
-                      </span>
-                      <ArrowUpRight size={14} />
-                    </>
-                  ) : (
-                    <>
-                      <span>
-                        {r.vip
-                          ? 'Không gian riêng tư'
-                          : r.left
-                            ? 'Dành cho golfer tay trái'
-                            : 'Chọn để đặt lịch'}
-                      </span>
-                      <Plus size={15} />
-                    </>
-                  )}
-                </div>
-              </button>
-              <div className="room-actions">
+              <span className="rc-head">
+                <strong>{r.name}</strong>
+                {r.left && <em>Tay trái</em>}
+                <span className="rc-chip">{chip}</span>
+              </span>
+              <span className="rc-info">{info || '\u00a0'}</span>
+            </button>
+            <div className="room-actions">
+              {canStart && (
                 <button
                   type="button"
                   className="room-walkin"
-                  disabled={!canWalkIn}
                   onClick={() => onWalkIn(r.id)}
                   aria-label={`Bắt đầu ${r.name}`}
                 >
                   Bắt đầu
                 </button>
+              )}
+              {(canStart || state === 'clean') && (
                 <button
                   type="button"
                   className="room-book"
@@ -128,10 +123,21 @@ export function RoomGrid({
                 >
                   Đặt lịch
                 </button>
-              </div>
-            </article>
-          );
-        })}
+              )}
+              {state === 'occupied' && (
+                <button type="button" className="room-open" onClick={() => open && onSelect(open)}>
+                  Chi tiết
+                </button>
+              )}
+              {state === 'due' && (
+                <button type="button" className="room-pay" onClick={() => open && onSelect(open)}>
+                  Thu tiền
+                </button>
+              )}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

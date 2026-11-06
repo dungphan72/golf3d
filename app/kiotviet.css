@@ -814,22 +814,6 @@ body:has(.app-shell) {
   padding: 14px 14px 0;
   cursor: pointer;
 }
-.app-shell .room-card .room-status {
-  font-size: 12px;
-  font-weight: 650;
-}
-.app-shell .room-card.free .room-status {
-  color: #1f9d55;
-}
-.app-shell .room-card.occupied .room-status {
-  color: #d93025;
-}
-.app-shell .room-card.soon .room-status {
-  color: #a86f00;
-}
-.app-shell .room-card.clean .room-status {
-  color: #5b6770;
-}
 .app-shell .room-card .room-actions {
   display: flex;
   gap: 8px;

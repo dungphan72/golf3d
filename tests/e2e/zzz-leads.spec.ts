@@ -499,9 +499,10 @@ test('tư vấn: lịch trống, báo giá, link đặt lịch, xác nhận, đ�
   expect(oldBooking.status).toBe('cancelled');
   const afterMove = await outbox('tuvan@example.com');
   expect(afterMove.filter((m) => m.kind === 'booking_info')).toHaveLength(2);
-  expect(afterMove.filter((m) => m.kind === 'reminder' && m.status === 'pending')).toHaveLength(
-    pending.length,
-  ); // only the new booking's remain
+  // Only the new booking's reminders remain (which ones are due depends on the time of day).
+  const stillPending = afterMove.filter((m) => m.kind === 'reminder' && m.status === 'pending');
+  expect(stillPending.every((m) => String(m.body).includes('14:30'))).toBe(true);
+  expect(stillPending.some((m) => String(m.body).includes('14:00'))).toBe(false);
 
   // Cancel: the customer is told and the reminders of that booking are cancelled.
   await post(owner, '/api/club', { action: 'cancel', id: moved.id });
@@ -690,7 +691,7 @@ test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và 
       .getByText(/lead .*(chờ gọi|chưa gọi)/),
   ).toBeVisible();
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Chăm sóc KH/ })
     .click();
   await expect(page.getByRole('tab', { name: 'Lead mới' })).toBeVisible();

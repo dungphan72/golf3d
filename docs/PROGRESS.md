@@ -346,3 +346,12 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Dọn CSS: bỏ 209 quy tắc trong `globals.css`, `kiotviet.css`, `mobile.css` mà không lớp nào trong mã nguồn còn dùng (thanh menu ngang cũ, tiêu đề trang, nút nổi, thanh dưới cũ, thẻ trang trí, Lộ trình…); ba tệp giảm từ 82 KB còn 63 KB. Kiểm bằng toàn bộ test e2e và ảnh chụp trang chủ khách, trang quản lý ở máy tính và điện thoại.
 - Huấn luyện: bảng buổi học và bộ lọc HLV dùng thành phần chung.
 - Điện thoại: lưới line một cột khi màn hẹp để hai nút Bắt đầu / Đặt lịch không bị xuống dòng; ô số liệu gọn hơn.
+
+## Bố cục lại giao diện quản lý: thanh menu trên cùng kiểu KiotViet
+
+- **Hai hàng ở trên cùng** (`AppHeader` trong `app/ui/AdminShell.tsx`): hàng 1 là logo, ô tìm kiếm, nút Đặt lịch, trạng thái kết nối, tải lại, chuông hỗ trợ, tài khoản (Tài khoản, Xem như khách hàng); hàng 2 là thanh menu: Sơ đồ phòng, Lịch đặt, Hóa đơn, Thực đơn & kho, Chăm sóc KH, Hội viên, Huấn luyện, Ca & sổ tiền, Báo cáo và mục thả xuống **Quản trị** (Cài đặt cơ sở, Nhân viên, Nhật ký). Mục đang mở gạch chân xanh, số việc chờ hiện ngay trên mục. Bỏ menu dọc bên trái trên máy tính; máy tính bảng và điện thoại vẫn dùng ngăn kéo và thanh dưới.
+- **Trang đầu chia khu vực rõ**: dải số liệu một hàng (Đang chơi, Chờ thu, Lịch hôm nay, Thực thu), khung "Sơ đồ line" có viền, khung "Việc cần làm ngay" có viền.
+- **Line nhỏ gọn** (`RoomGrid`): mỗi thẻ chỉ có tên line, trạng thái, một dòng thông tin (khách + giờ chơi / số tiền / giờ đặt) và nút theo trạng thái: Trống hoặc sắp có khách là Bắt đầu và Đặt lịch, đang chơi là Chi tiết, chờ thanh toán là Thu tiền, đang dọn là Đặt lịch. Bỏ nhãn "LUYỆN TẬP" lặp trên từng thẻ, số thứ tự trùng tên, chú giải màu riêng: bộ lọc trạng thái (Tất cả, Trống, Đang chơi, Sắp có khách, Chờ thu / dọn) kiêm chú giải và có số đếm.
+- Tiêu đề trang không còn lặp với menu (vẫn có cho trình đọc màn hình; hiện trên điện thoại).
+- Cài đặt: mỗi khối là một khung có viền; nút Lưu dính ở cuối.
+- Dọn thêm CSS không dùng; test e2e cập nhật theo menu mới; sửa test lead phụ thuộc giờ trong ngày (nhắc lịch).

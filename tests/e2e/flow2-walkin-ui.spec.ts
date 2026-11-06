@@ -7,7 +7,7 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Sơ đồ phòng/ })
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:

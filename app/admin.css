@@ -170,24 +170,6 @@
   display: flex;
   flex-direction: column;
 }
-.ds-top {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 64px;
-  padding: 8px 24px;
-  background: #fff;
-  border-bottom: 1px solid var(--ds-line);
-}
-.ds-top h1 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-  white-space: nowrap;
-}
 .ds-iconbtn {
   position: relative;
   width: 42px;
@@ -371,16 +353,6 @@
   border-color: var(--ds-yellow);
   border-width: 2px;
 }
-.ds-tile-icon {
-  width: 44px;
-  height: 44px;
-  flex: none;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--ds-line);
-  border-radius: 10px;
-  color: var(--ds-green);
-}
 .ds-tile-text small {
   display: block;
   color: var(--ds-muted);
@@ -396,14 +368,6 @@
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 24px;
   align-items: start;
-}
-.ds-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
 }
 .ds-seg {
   display: inline-flex;
@@ -425,58 +389,13 @@
   color: var(--ds-green-dark);
   font-weight: 650;
 }
-.ds-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  font-size: 13px;
-  color: var(--ds-muted);
-}
-.ds-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-.ds-legend i {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-.ds-legend i.free {
-  background: var(--ds-green);
-}
-.ds-legend i.inplay {
-  background: var(--ds-red);
-}
-.ds-legend i.reserved {
-  background: var(--ds-yellow);
-}
-.ds-legend i.cleaning {
-  background: var(--ds-grey);
-}
 .ds-home .room-grid {
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
 }
-.ds-root .room-card .room-type {
-  font-size: 11px;
-  letter-spacing: 0.08em;
-}
-.ds-root .room-card .room-number {
-  font-size: 15px;
-}
 .ds-root .room-card h3 {
   font-size: 19px;
   margin: 10px 0 6px;
-}
-.ds-root .room-card .room-status {
-  font-size: 14px;
-  font-weight: 650;
-}
-.ds-root .room-card .room-bottom {
-  font-size: 13px;
-  margin-top: 12px;
-  padding: 10px 0;
 }
 .ds-root .room-card .room-actions {
   margin-top: 4px;
@@ -606,10 +525,6 @@
   .ds-iconbtn.ds-menu {
     display: inline-grid;
   }
-  .ds-top {
-    padding: 8px 14px;
-    gap: 10px;
-  }
   .ds-main {
     padding: 16px 14px 96px;
   }
@@ -668,13 +583,6 @@
   }
 }
 @media (max-width: 760px) {
-  .ds-top {
-    flex-wrap: wrap;
-  }
-  .ds-top h1 {
-    font-size: 18px;
-    flex: 1;
-  }
   .ds-search {
     order: 5;
     flex: 1 1 100%;
@@ -700,9 +608,6 @@
   }
   .ds-home .room-grid {
     grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-    gap: 10px;
-  }
-  .ds-legend {
     gap: 10px;
   }
 }
@@ -1177,7 +1082,500 @@
   .ds-tile-text strong {
     font-size: 17px;
   }
-  .ds-tile-icon {
+}
+
+/* =====================================================================
+ * Layout v2: two-row header (utility bar + menu bar), panels, compact lines
+ * ===================================================================== */
+.ds-root {
+  display: block;
+}
+.ds-body {
+  display: block;
+}
+.ds-side {
+  display: none;
+}
+.ds-head {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: #fff;
+  border-bottom: 1px solid var(--ds-line);
+}
+.ds-head-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 56px;
+  padding: 8px 20px;
+}
+.ds-head .ds-brand {
+  flex: none;
+  font-size: 15px;
+}
+.ds-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ds-head .ds-search {
+  flex: 1;
+  max-width: 420px;
+  margin-left: 8px;
+}
+.ds-head .ds-top-actions {
+  margin-left: auto;
+}
+.ds-menubar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 0 14px;
+  border-top: 1px solid var(--ds-line);
+}
+.ds-menu-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 14px;
+  background: #fff;
+  color: var(--ds-text);
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+}
+.ds-menu-item svg {
+  color: var(--ds-muted);
+}
+.ds-menu-item:hover {
+  color: var(--ds-green-dark);
+}
+.ds-menu-item.selected {
+  color: var(--ds-green-dark);
+  border-bottom-color: var(--ds-green);
+}
+.ds-menu-item.selected svg {
+  color: var(--ds-green);
+}
+.ds-menu-item .ds-badge {
+  margin-left: 2px;
+}
+.ds-drop {
+  position: relative;
+}
+.ds-drop-list {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 210px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(20, 50, 35, 0.14);
+  z-index: 60;
+}
+.ds-drop-list.right {
+  left: auto;
+  right: 0;
+}
+.ds-drop-list button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  background: #fff;
+  border-radius: 6px;
+  text-align: left;
+  font-size: 15px;
+  color: var(--ds-text);
+}
+.ds-drop-list button:hover,
+.ds-drop-list button.selected {
+  box-shadow: inset 3px 0 0 var(--ds-green);
+}
+.ds-drop-list button svg {
+  color: var(--ds-muted);
+}
+.ds-drop-head {
+  padding: 8px 12px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.ds-drop-head strong,
+.ds-drop-head small {
+  display: block;
+}
+.ds-drop-head small {
+  color: var(--ds-muted);
+  font-size: 12px;
+}
+.ds-user-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 42px;
+  padding: 0 8px;
+  background: #fff;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ds-text);
+}
+.ds-user-btn:hover {
+  border-color: var(--ds-line);
+}
+.ds-main {
+  max-width: 1760px;
+  padding: 16px 20px 32px;
+}
+
+/* ---------- Home: stat strip + panels ---------- */
+.ds-statbar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.ds-statbar button {
+  display: block;
+  padding: 10px 16px;
+  background: #fff;
+  text-align: left;
+  color: var(--ds-text);
+  border-right: 1px solid var(--ds-line);
+}
+.ds-statbar button:last-child {
+  border-right: 0;
+}
+.ds-statbar button:hover {
+  box-shadow: inset 0 -3px 0 var(--ds-green);
+}
+.ds-statbar small {
+  display: block;
+  font-size: 13px;
+  color: var(--ds-muted);
+}
+.ds-statbar strong {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.ds-statbar .warn strong {
+  color: #a86f00;
+}
+.ds-home-grid {
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+}
+.ds-panel {
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+}
+.ds-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--ds-line);
+}
+.ds-panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.ds-panel .ds-seg button {
+  height: 34px;
+  padding: 0 11px;
+  font-size: 13px;
+}
+.ds-seg .dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.ds-seg .dot.free {
+  background: var(--ds-green);
+}
+.ds-seg .dot.inplay {
+  background: var(--ds-red);
+}
+.ds-seg .dot.reserved {
+  background: var(--ds-yellow);
+}
+.ds-seg .dot.cleaning {
+  background: var(--ds-grey);
+}
+.ds-panel.ds-tasks {
+  position: sticky;
+  top: 112px;
+  padding: 0;
+}
+.ds-panel.ds-tasks ul {
+  padding: 10px;
+  max-height: calc(100vh - 220px);
+}
+.ds-panel.ds-tasks .ds-tasks-empty {
+  padding: 14px;
+}
+.ds-panel.ds-tasks li button {
+  padding: 9px 10px;
+}
+.ds-panel.ds-tasks li strong {
+  font-size: 14px;
+}
+.ds-panel.ds-tasks li small {
+  font-size: 12.5px;
+}
+
+/* ---------- Compact line cards ---------- */
+.ds-home .room-grid,
+.ds-panel .room-grid {
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+.ds-root .room-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  border-radius: 8px;
+  border-top-width: 4px;
+  overflow: hidden;
+}
+.ds-root .room-card:hover {
+  transform: none;
+}
+.ds-root .room-card.due {
+  border-top-color: var(--ds-grey);
+}
+.ds-root .room-card .room-hit {
+  display: block;
+  width: 100%;
+  padding: 9px 11px 2px;
+  background: transparent;
+  text-align: left;
+  color: inherit;
+}
+.rc-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.rc-head strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+.rc-head em {
+  font-style: normal;
+  font-size: 11px;
+  padding: 0 5px;
+  border: 1px solid var(--ds-line);
+  border-radius: 4px;
+  color: var(--ds-muted);
+}
+.rc-chip {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.room-card.free .rc-chip {
+  color: var(--ds-green);
+}
+.room-card.occupied .rc-chip {
+  color: var(--ds-red);
+}
+.room-card.soon .rc-chip {
+  color: #a86f00;
+}
+.room-card.due .rc-chip,
+.room-card.clean .rc-chip {
+  color: #5b6770;
+}
+.rc-info {
+  display: block;
+  margin-top: 3px;
+  min-height: 18px;
+  font-size: 13px;
+  color: var(--ds-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-root .room-card .room-actions {
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 6px 10px 10px;
+}
+.ds-root .room-card .room-actions button {
+  flex: 1;
+  min-height: 34px;
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 650;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.ds-root .room-card .room-open {
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  color: var(--ds-text);
+}
+.ds-root .room-card .room-open:hover {
+  border-color: var(--ds-green);
+}
+.ds-root .room-card .room-pay {
+  background: var(--ds-green);
+  border: 1px solid var(--ds-green);
+  color: #fff;
+}
+
+/* ---------- Settings: one bordered panel per block ---------- */
+.ds-root .settings-section {
+  display: block;
+  padding: 16px 18px;
+  margin: 0 0 14px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+  background: #fff;
+}
+.ds-root .settings-section > div:first-child {
+  margin-bottom: 14px;
+}
+.ds-root .settings-section h2 {
+  font-size: 17px;
+}
+.ds-root .settings-section > div:first-child p {
+  margin-top: 4px;
+  font-size: 13.5px;
+  color: var(--ds-muted);
+}
+.ds-root .form-footer.sticky-save {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  background: #fff;
+  border-top: 1px solid var(--ds-line);
+}
+
+/* ---------- Tablet / phone ---------- */
+@media (max-width: 1024px) {
+  .ds-side {
+    display: flex;
+  }
+  .ds-menubar {
     display: none;
   }
+  .ds-head-row {
+    padding: 8px 12px;
+    gap: 10px;
+  }
+  .ds-title {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    font-size: 18px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .ds-head .ds-brand span,
+  .ds-head .ds-brand small,
+  .ds-uname {
+    display: none;
+  }
+  .ds-panel.ds-tasks {
+    position: static;
+  }
+  .ds-home-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ds-root .form-footer.sticky-save {
+    bottom: 64px;
+  }
+}
+@media (max-width: 760px) {
+  .ds-head-row {
+    flex-wrap: wrap;
+  }
+  .ds-head .ds-search {
+    order: 5;
+    flex: 1 1 100%;
+    max-width: none;
+    margin: 0;
+  }
+  .ds-home .room-grid,
+  .ds-panel .room-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 10px;
+    gap: 8px;
+  }
+  .ds-statbar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ds-statbar button:nth-child(2n) {
+    border-right: 0;
+  }
+  .ds-statbar button:nth-child(n + 3) {
+    border-top: 1px solid var(--ds-line);
+  }
+  .ds-panel .ds-seg {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    max-width: 100%;
+  }
+  .ds-panel .ds-seg button {
+    white-space: nowrap;
+  }
+}
+
+.ds-menu-item {
+  padding: 0 10px;
+  font-size: 14px;
+  gap: 6px;
+}
+.ds-menubar {
+  gap: 0;
+}
+.rc-head {
+  flex-wrap: nowrap;
+}
+.rc-head strong {
+  white-space: nowrap;
+}
+.rc-chip {
+  font-size: 11.5px;
+}
+.ds-root .badge {
+  font-size: 12px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
 }

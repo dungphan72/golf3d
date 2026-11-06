@@ -105,7 +105,7 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
   await finishedRound(owner, 'line-6', 'Khách chia UI');
   await page.goto('/quan-ly');
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Lịch đặt/ })
     .click();
   await page.getByText('Khách chia UI').first().click();

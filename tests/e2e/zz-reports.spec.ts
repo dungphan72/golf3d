@@ -26,7 +26,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
 
   await page.goto('/quan-ly');
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Báo cáo/ })
     .click();
   await expect(page.getByText('Doanh thu theo ngày')).toBeVisible();
@@ -46,9 +46,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
   expect(log.rows.length).toBeGreaterThan(0);
   expect(log.rows.every((r: { action: string }) => r.action === 'Ghi sổ tiền')).toBe(true);
   await page.goto('/quan-ly');
-  await page
-    .locator('aside')
-    .getByRole('button', { name: /Nhật ký/ })
-    .click();
+  await page.locator('.ds-menubar').getByRole('button', { name: 'Quản trị' }).click();
+  await page.getByRole('menuitem', { name: /Nhật ký/ }).click();
   await expect(page.getByRole('cell', { name: 'Ghi sổ tiền' }).first()).toBeVisible();
 });

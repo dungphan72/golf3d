@@ -10,7 +10,7 @@ import { PageTabs } from './kit';
 import { type Data } from './shared';
 import { BookingsHub, HUB_VIEWS, InvoiceList } from './BookingsHub';
 import { HomeBoard } from './HomeBoard';
-import { BottomBar, NAV_LABEL, NAV_PARENT, Sidebar, TopBar } from './AdminShell';
+import { BottomBar, AppHeader, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
@@ -212,16 +212,25 @@ export default function ClubApp() {
         }}
       />
       <div className="ds-body">
-        <TopBar
+        <AppHeader
           title={
             mode === 'customer'
               ? 'Xem như khách hàng'
-              : (NAV_LABEL[NAV_PARENT[view] ?? view] ?? 'Sơ đồ phòng')
+              : (NAV_LABEL[NAV_PARENT[view] ?? view] ?? NAV_LABEL.account)
           }
+          view={view}
+          visible={visibleNav}
+          badges={badges}
+          user={data?.user ?? ''}
+          role={data?.role ?? ''}
           connection={error ? 'Mất kết nối' : data ? 'Trực tuyến' : 'Đang kết nối…'}
           online={!error && !!data}
           bookings={b}
           pending={pending.length}
+          onGo={(key) => {
+            setMode('staff');
+            go(key);
+          }}
           onMenu={() => setMobile(true)}
           onBook={openBooking}
           onRefresh={load}
@@ -230,6 +239,7 @@ export default function ClubApp() {
             go('support');
           }}
           onPick={setSelected}
+          onCustomerView={() => setMode('customer')}
         />
         <main className="ds-main">
           {error && (

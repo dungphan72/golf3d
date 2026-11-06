@@ -147,7 +147,7 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page
-    .locator('aside')
+    .locator('.ds-menubar')
     .getByRole('button', { name: /Chăm sóc KH/ })
     .click();
   await page.getByRole('tab', { name: 'Việc cần làm' }).click();

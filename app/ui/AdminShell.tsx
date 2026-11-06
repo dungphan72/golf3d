@@ -1,12 +1,14 @@
 'use client';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   Award,
   Bell,
   CalendarDays,
   ChartColumn,
+  ChevronDown,
   GraduationCap,
+  Globe,
   Grid2X2,
   HeartHandshake,
   Menu,
@@ -230,58 +232,227 @@ export function GlobalSearch({
   );
 }
 
-export function TopBar({
+/** A drop-down in the menu bar; closes on outside click or Escape. */
+function DropMenu({
+  label,
+  icon,
+  active,
+  align = 'left',
+  className = 'ds-menu-item',
+  children,
+}: {
+  label: ReactNode;
+  icon?: ReactNode;
+  active?: boolean;
+  align?: 'left' | 'right';
+  className?: string;
+  children: (close: () => void) => ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!ref.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  return (
+    <div className="ds-drop" ref={ref}>
+      <button
+        className={className + (active ? ' selected' : '')}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen(!open)}
+      >
+        {icon}
+        {label}
+        <ChevronDown size={15} />
+      </button>
+      {open && (
+        <div className={'ds-drop-list ' + align} role="menu">
+          {children(() => setOpen(false))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Menu items shown straight on the menu bar; the rest sit under "Quản trị". */
+const MAIN_KEYS = [
+  'rooms',
+  'bookings',
+  'invoices',
+  'fnb',
+  'crm',
+  'members',
+  'coaching',
+  'finance',
+  'reports',
+];
+const ADMIN_KEYS = ['settings', 'staff', 'audit'];
+const ALL_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items);
+const item = (k: string) => ALL_ITEMS.find((i) => i.key === k)!;
+
+/** Two rows, KiotViet style: utility bar (brand, search, actions) above the menu bar. */
+export function AppHeader({
   title,
+  view,
+  visible,
+  badges,
+  user,
+  role,
   connection,
   online,
   bookings,
   pending,
+  onGo,
   onMenu,
   onBook,
   onRefresh,
   onSupport,
   onPick,
+  onCustomerView,
 }: {
   title: string;
+  view: string;
+  visible: (key: string) => boolean;
+  badges: Record<string, number>;
+  user: string;
+  role: string;
   connection: string;
   online: boolean;
   bookings: Booking[];
   pending: number;
+  onGo: (key: string) => void;
   onMenu: () => void;
   onBook: () => void;
   onRefresh: () => void;
   onSupport: () => void;
   onPick: (b: Booking) => void;
+  onCustomerView: () => void;
 }) {
+  const active = NAV_PARENT[view] ?? view;
+  const admin = ADMIN_KEYS.filter(visible).map(item);
+  const name = user.split('@')[0] || 'Chủ cơ sở';
   return (
-    <header className="ds-top">
-      <button className="ds-iconbtn ds-menu" aria-label="Mở menu" onClick={onMenu}>
-        <Menu size={24} />
-      </button>
-      <h1>{title}</h1>
-      <GlobalSearch bookings={bookings} onPick={onPick} />
-      <div className="ds-top-actions">
-        <button className="ds-primary" aria-label="Đặt lịch" onClick={onBook}>
-          <Plus size={19} />
-          <span>Đặt lịch</span>
+    <header className="ds-head">
+      <div className="ds-head-row">
+        <button className="ds-iconbtn ds-menu" aria-label="Mở menu" onClick={onMenu}>
+          <Menu size={24} />
         </button>
-        <span className={'ds-conn' + (online ? ' on' : '')} title={connection}>
-          <i />
-          <span>{connection}</span>
-        </span>
-        <button className="ds-iconbtn" aria-label="Tải lại" title="Tải lại" onClick={onRefresh}>
-          <RefreshCw size={19} />
-        </button>
-        <button
-          className="ds-iconbtn ds-bell"
-          aria-label="Yêu cầu hỗ trợ"
-          title="Yêu cầu hỗ trợ"
-          onClick={onSupport}
-        >
-          <Bell size={20} />
-          {pending > 0 && <b>{pending}</b>}
-        </button>
+        <Link className="ds-brand" href="/quan-ly" aria-label={BRAND.name + ' — trang chủ'}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={BRAND.logo} alt="" width={34} height={34} />
+          <span>
+            {BRAND.short}
+            <small>{BRAND.sub}</small>
+          </span>
+        </Link>
+        <h1 className="ds-title">{title}</h1>
+        <GlobalSearch bookings={bookings} onPick={onPick} />
+        <div className="ds-top-actions">
+          <button className="ds-primary" aria-label="Đặt lịch" onClick={onBook}>
+            <Plus size={19} />
+            <span>Đặt lịch</span>
+          </button>
+          <span className={'ds-conn' + (online ? ' on' : '')} title={connection}>
+            <i />
+            <span>{connection}</span>
+          </span>
+          <button className="ds-iconbtn" aria-label="Tải lại" title="Tải lại" onClick={onRefresh}>
+            <RefreshCw size={19} />
+          </button>
+          <button
+            className="ds-iconbtn ds-bell"
+            aria-label="Yêu cầu hỗ trợ"
+            title="Yêu cầu hỗ trợ"
+            onClick={onSupport}
+          >
+            <Bell size={20} />
+            {pending > 0 && <b>{pending}</b>}
+          </button>
+          <DropMenu
+            className="ds-user-btn"
+            align="right"
+            label={<span className="ds-uname">{name}</span>}
+            icon={<span className="ds-avatar">{(name[0] ?? 'D').toUpperCase()}</span>}
+          >
+            {(close) => (
+              <>
+                <div className="ds-drop-head">
+                  <strong>{name}</strong>
+                  {role && <small>{role}</small>}
+                </div>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    close();
+                    onGo('account');
+                  }}
+                >
+                  <ShieldCheck size={17} /> Tài khoản
+                </button>
+                <button
+                  role="menuitem"
+                  onClick={() => {
+                    close();
+                    onCustomerView();
+                  }}
+                >
+                  <Globe size={17} /> Xem như khách hàng
+                </button>
+              </>
+            )}
+          </DropMenu>
+        </div>
       </div>
+      <nav className="ds-menubar" aria-label="Menu chính">
+        {MAIN_KEYS.filter(visible).map((k) => {
+          const { label, icon: Icon } = item(k);
+          return (
+            <button
+              key={k}
+              className={'ds-menu-item' + (active === k ? ' selected' : '')}
+              aria-current={active === k ? 'page' : undefined}
+              onClick={() => onGo(k)}
+            >
+              <Icon size={18} />
+              <span>{label}</span>
+              {(badges[k] ?? 0) > 0 && <b className="ds-badge">{badges[k]}</b>}
+            </button>
+          );
+        })}
+        {admin.length > 0 && (
+          <DropMenu
+            label="Quản trị"
+            icon={<Settings size={18} />}
+            active={ADMIN_KEYS.includes(active)}
+          >
+            {(close) =>
+              admin.map(({ key, label, icon: Icon }) => (
+                <button
+                  key={key}
+                  role="menuitem"
+                  className={active === key ? 'selected' : ''}
+                  onClick={() => {
+                    close();
+                    onGo(key);
+                  }}
+                >
+                  <Icon size={17} /> {label}
+                </button>
+              ))
+            }
+          </DropMenu>
+        )}
+      </nav>
     </header>
   );
 }

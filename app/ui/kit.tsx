@@ -131,6 +131,8 @@ export type Column<T> = {
   cell: (row: T) => ReactNode;
   align?: 'right';
   className?: string;
+  /** Hidden on phones, so the columns that matter fit without sideways scrolling. */
+  hideOnPhone?: boolean;
 };
 
 /** One table for every list: same header, row, hover, empty state. */
@@ -142,6 +144,7 @@ export function DataTable<T>({
   emptyText,
   onRowClick,
   rowActive,
+  label = 'Bảng dữ liệu',
 }: {
   columns: Column<T>[];
   rows: T[];
@@ -150,15 +153,25 @@ export function DataTable<T>({
   emptyText?: string;
   onRowClick?: (row: T) => void;
   rowActive?: (row: T) => boolean;
+  /** Names the scrollable region for screen readers. */
+  label?: string;
 }) {
   if (!rows.length) return <EmptyState title={empty} text={emptyText} />;
   return (
-    <div className="table-wrap ds-table">
+    // Focusable so keyboard users can scroll a table that is wider than the screen.
+    <div className="table-wrap ds-table" role="region" aria-label={label} tabIndex={0}>
       <table>
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key} className={c.align === 'right' ? 'right' : undefined}>
+              <th
+                key={c.key}
+                className={
+                  [c.align === 'right' && 'right', c.hideOnPhone && 'hide-phone']
+                    .filter(Boolean)
+                    .join(' ') || undefined
+                }
+              >
                 {c.header || <span className="sr-only">Thao tác</span>}
               </th>
             ))}
@@ -174,7 +187,11 @@ export function DataTable<T>({
               {columns.map((c) => (
                 <td
                   key={c.key}
-                  className={(c.align === 'right' ? 'right ' : '') + (c.className ?? '')}
+                  className={
+                    (c.align === 'right' ? 'right ' : '') +
+                    (c.hideOnPhone ? 'hide-phone ' : '') +
+                    (c.className ?? '')
+                  }
                 >
                   {c.cell(r)}
                 </td>
@@ -222,11 +239,13 @@ export function KpiTile({
   hint?: string;
 }) {
   return (
-    <div className={'ds-tile' + (tone ? ' ' + tone : '')}>
-      <small>{label}</small>
-      <strong>{value}</strong>
-      {hint && <small>{hint}</small>}
-    </div>
+    <article className={'ds-tile' + (tone ? ' ' + tone : '')}>
+      <span className="ds-tile-text">
+        <small>{label}</small>
+        <strong>{value}</strong>
+        {hint && <small>{hint}</small>}
+      </span>
+    </article>
   );
 }
 

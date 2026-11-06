@@ -1,19 +1,19 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import {
-  Wallet,
-  Plus,
-  Banknote,
-  ArrowDownLeft,
-  ArrowUpRight,
-  LockKeyhole,
-  RefreshCw,
-  ShieldCheck,
-} from 'lucide-react';
+import { Plus, Banknote, LockKeyhole, RefreshCw, ShieldCheck } from 'lucide-react';
 import { money } from '../../lib/club';
-import { reconciliation, shiftTotals } from '../../lib/finance';
+import { reconciliation, shiftTotals, type Entry } from '../../lib/finance';
+import { DataTable, EmptyState, FilterBar, KpiTile, StatusBadge } from './kit';
 import { type FinanceData, when, methods } from './finance/shared';
 import { FinanceDialog } from './finance/FinanceDialog';
+
+type ClosedRow = { label: string; counted: number; difference: number };
+const KIND_TEXT: Record<string, string> = {
+  payment: 'Thu tiền dịch vụ',
+  cash_in: 'Nộp vào quỹ',
+  refund: 'Hoàn tiền cho khách',
+  cash_out: 'Chi / rút tiền mặt',
+};
 
 export default function FinancePanel({ onChanged }: { onChanged: () => Promise<void> }) {
   const [data, setData] = useState<FinanceData | null>(null),
@@ -96,28 +96,30 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
     : null;
   return (
     <section className="finance-panel">
-      <div className="ds-filterbar">
-        <div className="ds-filter-right">
-          <button
-            data-tip="Tải lại"
-            aria-label="Tải lại"
-            className="secondary icon-only"
-            onClick={load}
-            disabled={loading || busy}
-          >
-            <RefreshCw size={15} />
-            <span className="btn-label">Tải lại</span>
-          </button>
-          <button
-            className="primary"
-            disabled={!!active || busy || loading || !data}
-            onClick={() => setForm('open')}
-          >
-            <Plus size={16} />
-            Mở ca
-          </button>
-        </div>
-      </div>
+      <FilterBar
+        right={
+          <>
+            <button
+              data-tip="Tải lại"
+              aria-label="Tải lại"
+              className="secondary icon-only"
+              onClick={load}
+              disabled={loading || busy}
+            >
+              <RefreshCw size={15} />
+              <span className="btn-label">Tải lại</span>
+            </button>
+            <button
+              className="primary"
+              disabled={!!active || busy || loading || !data}
+              onClick={() => setForm('open')}
+            >
+              <Plus size={16} />
+              Mở ca
+            </button>
+          </>
+        }
+      />
       {error && (
         <div className="error-box" role="alert">
           {error}
@@ -129,10 +131,7 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
         </div>
       )}
       {!data ? (
-        <div className="empty">
-          <Wallet size={28} />
-          <h3>{error ? 'Chưa tải được dữ liệu ca' : 'Đang tải sổ ca…'}</h3>
-        </div>
+        <EmptyState title={error ? 'Chưa tải được dữ liệu ca' : 'Đang tải sổ ca…'} />
       ) : (
         <>
           <div className="finance-select">
@@ -154,15 +153,10 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
             {active && <span className="badge playing">Đang mở: {active.name}</span>}
           </div>
           {!shift || !summary ? (
-            <div className="empty">
-              <h3 role="heading" aria-level={2}>
-                Bắt đầu ca làm việc đầu tiên
-              </h3>
-              <p>
-                Kiểm đếm tiền mặt đầu ca rồi bấm “Mở ca”. Mọi khoản thu mới sẽ được gắn với ca đang
-                mở.
-              </p>
-            </div>
+            <EmptyState
+              title="Bắt đầu ca làm việc đầu tiên"
+              text="Kiểm đếm tiền mặt đầu ca rồi bấm “Mở ca”. Mọi khoản thu mới sẽ được gắn với ca đang mở."
+            />
           ) : (
             <>
               <div className="shift-banner">
@@ -203,17 +197,14 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                   <ShieldCheck size={30} />
                 )}
               </div>
-              <div className="finance-stats">
+              <div className="ds-tiles">
                 {[
                   ['Tiền mặt đầu ca', shift.opening_cash],
                   ['Thực thu dịch vụ', summary.receipts],
                   ['Tiền mặt dự kiến trong quỹ', summary.expectedCash],
                   ['Thu chuyển khoản / thẻ', summary.expectedTransfer + summary.expectedCard],
                 ].map(([t, n]) => (
-                  <article key={String(t)}>
-                    <span>{t}</span>
-                    <strong>{money(Number(n))}</strong>
-                  </article>
+                  <KpiTile key={String(t)} label={String(t)} value={money(Number(n))} />
                 ))}
               </div>
               <div className="cash-breakdown">
@@ -250,25 +241,47 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
               {shift.status === 'closed' && (
                 <div className="closed-summary">
                   <h3>Kết quả đối soát</h3>
-                  {[
-                    ['Tiền mặt', shift.counted_cash, summary.cashDifference],
-                    ['Chuyển khoản', shift.counted_transfer, summary.transferDifference],
-                    ['Thẻ', shift.counted_card, summary.cardDifference],
-                  ].map(([label, counted, difference]) => (
-                    <div key={String(label)}>
-                      <span>{label}</span>
-                      <strong>{money(Number(counted))}</strong>
-                      <span
-                        className={
-                          Number(difference) === 0 ? 'balance-match' : 'balance-difference'
-                        }
-                      >
-                        {Number(difference) === 0
-                          ? 'Khớp sổ'
-                          : `Chênh ${money(Number(difference))}`}
-                      </span>
-                    </div>
-                  ))}
+                  <DataTable
+                    columns={[
+                      { key: 'method', header: 'Hình thức', cell: (r: ClosedRow) => r.label },
+                      {
+                        key: 'counted',
+                        header: 'Đã đếm',
+                        align: 'right',
+                        cell: (r) => money(r.counted),
+                      },
+                      {
+                        key: 'diff',
+                        header: 'Đối soát',
+                        cell: (r) =>
+                          r.difference === 0 ? (
+                            <StatusBadge tone="ok">Khớp sổ</StatusBadge>
+                          ) : (
+                            <StatusBadge tone="late">Chênh {money(r.difference)}</StatusBadge>
+                          ),
+                      },
+                    ]}
+                    rows={[
+                      {
+                        label: 'Tiền mặt',
+                        counted: shift.counted_cash ?? 0,
+                        difference: summary.cashDifference,
+                      },
+                      {
+                        label: 'Chuyển khoản',
+                        counted: shift.counted_transfer ?? 0,
+                        difference: summary.transferDifference,
+                      },
+                      {
+                        label: 'Thẻ',
+                        counted: shift.counted_card ?? 0,
+                        difference: summary.cardDifference,
+                      },
+                    ]}
+                    rowKey={(r) => r.label}
+                    label="Kết quả đối soát"
+                    empty="Chưa có số đối soát"
+                  />
                   {shift.note && <p>Ghi chú bàn giao: {shift.note}</p>}
                   <small>Ca đã khóa; không mở lại hoặc sửa số liệu trực tiếp.</small>
                 </div>
@@ -283,45 +296,43 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
                     : 'Tổng hợp toàn bộ giao dịch của ca'}
                 </span>
               </div>
-              <div className="finance-entries">
-                {data.entries.length ? (
-                  data.entries.map((e) => (
-                    <article key={e.id}>
-                      <span className={'entry-icon ' + e.kind}>
-                        {e.kind === 'cash_out' || e.kind === 'refund' ? (
-                          <ArrowUpRight size={18} />
-                        ) : (
-                          <ArrowDownLeft size={18} />
-                        )}
-                      </span>
-                      <div>
-                        <strong>
-                          {e.kind === 'payment'
-                            ? 'Thu tiền dịch vụ'
-                            : e.kind === 'cash_in'
-                              ? 'Nộp vào quỹ'
-                              : e.kind === 'refund'
-                                ? 'Hoàn tiền cho khách'
-                                : 'Chi / rút tiền mặt'}
-                        </strong>
-                        <p>{e.note}</p>
-                        <small>
-                          {when(e.created)} · {methods[e.method]}
+              <DataTable
+                columns={[
+                  { key: 'when', header: 'Thời gian', cell: (e: Entry) => when(e.created) },
+                  {
+                    key: 'kind',
+                    header: 'Loại',
+                    cell: (e) => (
+                      <>
+                        {KIND_TEXT[e.kind] ?? KIND_TEXT.cash_out}
+                        <small className="show-phone">
+                          {methods[e.method]}
+                          {e.note ? ' · ' + e.note : ''}
                         </small>
-                      </div>
-                      <b>
-                        {e.kind === 'cash_out' || e.kind === 'refund' ? '−' : '+'}
-                        {money(e.amount)}
-                      </b>
-                    </article>
-                  ))
-                ) : (
-                  <div className="empty">
-                    <h3>Chưa có giao dịch trong ca</h3>
-                    <p>Tiền đầu ca được ghi riêng, không phải doanh thu dịch vụ.</p>
-                  </div>
-                )}
-              </div>
+                      </>
+                    ),
+                  },
+                  {
+                    key: 'method',
+                    header: 'Hình thức',
+                    hideOnPhone: true,
+                    cell: (e) => methods[e.method],
+                  },
+                  { key: 'note', header: 'Ghi chú', hideOnPhone: true, cell: (e) => e.note },
+                  {
+                    key: 'amount',
+                    header: 'Số tiền',
+                    align: 'right',
+                    cell: (e) =>
+                      (e.kind === 'cash_out' || e.kind === 'refund' ? '−' : '+') + money(e.amount),
+                  },
+                ]}
+                rows={data.entries}
+                rowKey={(e) => e.id}
+                label="Sổ giao dịch"
+                empty="Chưa có giao dịch trong ca"
+                emptyText="Tiền đầu ca được ghi riêng, không phải doanh thu dịch vụ."
+              />
             </>
           )}
           <p className="form-note">

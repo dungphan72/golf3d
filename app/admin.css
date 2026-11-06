@@ -3145,3 +3145,20 @@ body:has(.app-shell) {
     align-items: center;
   }
 }
+
+/* Tables on phones: drop the columns marked hideOnPhone and show the compact line under the main cell. */
+.ds-table .show-phone {
+  display: none;
+}
+@media (max-width: 640px) {
+  .ds-table .hide-phone {
+    display: none;
+  }
+  .ds-table .show-phone {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--ds-muted);
+    white-space: normal;
+  }
+}

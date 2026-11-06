@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { DataTable } from './kit';
+import { DataTable, ModalDialog } from './kit';
 import { operationKey } from '../../lib/finance';
 import type { StockItem, StockMovement } from '../../lib/stock';
 const kinds: Record<string, string> = {
@@ -21,11 +21,7 @@ export default function StockPanel() {
     [qty, setQty] = useState('1'),
     [note, setNote] = useState(''),
     [low, setLow] = useState('5');
-  const key = useRef(operationKey()),
-    dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    if (selected) dialog.current?.showModal();
-  }, [selected]);
+  const key = useRef(operationKey());
   const load = useCallback(async () => {
     try {
       const r = await fetch('/api/stock', { cache: 'no-store' });
@@ -175,97 +171,86 @@ export default function StockPanel() {
         ]}
       />
       {selected && (
-        <dialog
-          ref={dialog}
-          className="native-dialog"
-          onCancel={(e) => {
-            if (busy) e.preventDefault();
-            else setSelected(null);
-          }}
-        >
-          <section className="modal" role="dialog" aria-modal="true" aria-label="Ghi nhận kho">
-            <div className="stock-form">
-              <h2>{selected.name}</h2>
-              {notice && (
-                <div className="info-strip" role="status">
-                  {notice}
-                </div>
-              )}
-              <p>
-                Đơn vị: {selected.unit}. Đã bật theo dõi sẽ giữ sổ kho và khóa đơn vị; đổi đơn vị
-                cần tạo mã món mới.
-              </p>
-              <label>
-                Ngưỡng cảnh báo
-                <input
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step="1"
-                  value={low}
-                  disabled={busy}
-                  onChange={(e) => setLow(e.target.value)}
-                />
-              </label>
-              <button
-                className="secondary"
-                disabled={busy || !/^\d+$/.test(low)}
-                onClick={() => save(true)}
-              >
-                {selected.low_level === null ? 'Bật theo dõi từ tồn 0' : 'Lưu ngưỡng cảnh báo'}
-              </button>
-              {selected.low_level !== null && (
-                <>
-                  <label>
-                    Loại phiếu
-                    <select value={kind} disabled={busy} onChange={(e) => setKind(e.target.value)}>
-                      {Object.entries(kinds)
-                        .filter(([k]) => k !== 'sale')
-                        .map(([k, v]) => (
-                          <option key={k} value={k}>
-                            {v}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <label>
-                    Số lượng ({selected.unit})
-                    <input
-                      type="number"
-                      min="1"
-                      max="1000000"
-                      step="1"
-                      value={qty}
-                      disabled={busy}
-                      onChange={(e) => setQty(e.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Lý do / tham chiếu nhập hàng
-                    <textarea
-                      value={note}
-                      maxLength={300}
-                      disabled={busy}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                  </label>
-                  <button
-                    className="primary"
-                    disabled={
-                      busy || note.trim().length < 5 || !/^\d+$/.test(qty) || Number(qty) < 1
-                    }
-                    onClick={() => save()}
-                  >
-                    Ghi nhận phiếu kho
-                  </button>
-                </>
-              )}
-              <button className="secondary" disabled={busy} onClick={() => setSelected(null)}>
-                Đóng
-              </button>
-            </div>
-          </section>
-        </dialog>
+        <ModalDialog label="Ghi nhận kho" onClose={() => setSelected(null)} locked={busy}>
+          <div className="stock-form">
+            <h2>{selected.name}</h2>
+            {notice && (
+              <div className="info-strip" role="status">
+                {notice}
+              </div>
+            )}
+            <p>
+              Đơn vị: {selected.unit}. Đã bật theo dõi sẽ giữ sổ kho và khóa đơn vị; đổi đơn vị cần
+              tạo mã món mới.
+            </p>
+            <label>
+              Ngưỡng cảnh báo
+              <input
+                type="number"
+                min="0"
+                max="1000000"
+                step="1"
+                value={low}
+                disabled={busy}
+                onChange={(e) => setLow(e.target.value)}
+              />
+            </label>
+            <button
+              className="secondary"
+              disabled={busy || !/^\d+$/.test(low)}
+              onClick={() => save(true)}
+            >
+              {selected.low_level === null ? 'Bật theo dõi từ tồn 0' : 'Lưu ngưỡng cảnh báo'}
+            </button>
+            {selected.low_level !== null && (
+              <>
+                <label>
+                  Loại phiếu
+                  <select value={kind} disabled={busy} onChange={(e) => setKind(e.target.value)}>
+                    {Object.entries(kinds)
+                      .filter(([k]) => k !== 'sale')
+                      .map(([k, v]) => (
+                        <option key={k} value={k}>
+                          {v}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                <label>
+                  Số lượng ({selected.unit})
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000000"
+                    step="1"
+                    value={qty}
+                    disabled={busy}
+                    onChange={(e) => setQty(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Lý do / tham chiếu nhập hàng
+                  <textarea
+                    value={note}
+                    maxLength={300}
+                    disabled={busy}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
+                </label>
+                <button
+                  className="primary"
+                  disabled={busy || note.trim().length < 5 || !/^\d+$/.test(qty) || Number(qty) < 1}
+                  onClick={() => save()}
+                >
+                  Ghi nhận phiếu kho
+                </button>
+              </>
+            )}
+            <button className="secondary" disabled={busy} onClick={() => setSelected(null)}>
+              Đóng
+            </button>
+          </div>
+        </ModalDialog>
       )}
     </section>
   );

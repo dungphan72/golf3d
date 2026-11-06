@@ -219,11 +219,14 @@ export function Loading({ rows = 3, label = 'Đang tải' }: { rows?: number; la
 export function ModalDialog({
   label,
   onClose,
+  locked = false,
   className = '',
   children,
 }: {
   label: string;
   onClose: () => void;
+  /** While true (a save is running) Esc does not close the dialog. */
+  locked?: boolean;
   /** Extra class for the inner sheet, e.g. "session". */
   className?: string;
   children: ReactNode;
@@ -233,18 +236,47 @@ export function ModalDialog({
     ref.current?.showModal();
   }, []);
   return (
-    <dialog className="native-dialog" ref={ref} onCancel={onClose} aria-label={label}>
+    <dialog
+      className="native-dialog"
+      ref={ref}
+      onCancel={(e) => (locked ? e.preventDefault() : onClose())}
+      aria-label={label}
+    >
       <section className={('modal ' + className).trim()}>{children}</section>
     </dialog>
   );
 }
 
-/** Title row of a ModalDialog with the close button. */
-export function DialogHeading({ onClose, children }: { onClose: () => void; children: ReactNode }) {
+/** Title row of a ModalDialog with the close button; `eyebrow` is the small line above the title. */
+export function DialogHeading({
+  onClose,
+  eyebrow,
+  locked = false,
+  children,
+}: {
+  onClose: () => void;
+  eyebrow?: string;
+  locked?: boolean;
+  children: ReactNode;
+}) {
+  const title = <h2>{children}</h2>;
   return (
     <div className="modal-heading">
-      <h2>{children}</h2>
-      <button className="icon-btn" onClick={onClose} aria-label="Đóng">
+      {eyebrow ? (
+        <div>
+          <span className="eyebrow">{eyebrow}</span>
+          {title}
+        </div>
+      ) : (
+        title
+      )}
+      <button
+        className="icon-btn"
+        type="button"
+        disabled={locked}
+        onClick={onClose}
+        aria-label="Đóng"
+      >
         <X />
       </button>
     </div>

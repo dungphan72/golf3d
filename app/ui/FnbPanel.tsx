@@ -1,8 +1,8 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { PageTabs } from './kit';
+import { useRef, useState } from 'react';
+import { DialogHeading, ModalDialog, PageTabs } from './kit';
 import StockPanel from './StockPanel';
-import { Plus, X, UtensilsCrossed, Pencil, RefreshCw } from 'lucide-react';
+import { Plus, UtensilsCrossed, Pencil, RefreshCw } from 'lucide-react';
 import { money, rooms } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { foodLabels, type FoodOrder, type FoodLine, type MenuItem } from '../../lib/fnb';
@@ -267,138 +267,120 @@ function ItemEditor({
   onClose: () => void;
   onSave: (v: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null),
-    key = useRef(operationKey());
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
+  const key = useRef(operationKey());
   return (
-    <dialog
-      ref={dialog}
-      className="native-dialog"
-      onCancel={(e) => {
-        if (busy) e.preventDefault();
-        else onClose();
-      }}
-    >
-      <section className="modal">
-        <div className="modal-heading">
-          <h2>{item ? 'Sửa món' : 'Thêm món mới'}</h2>
-          <button className="icon-btn" disabled={busy} onClick={onClose} aria-label="Đóng">
-            <X />
+    <ModalDialog label={item ? 'Sửa món' : 'Thêm món mới'} onClose={onClose} locked={busy}>
+      <DialogHeading onClose={onClose} locked={busy}>
+        {item ? 'Sửa món' : 'Thêm món mới'}
+      </DialogHeading>
+      {message && (
+        <div className="info-strip" role="status">
+          {message}
+        </div>
+      )}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          onSave({
+            action: item ? 'item-update' : 'item-create',
+            ...(item ? { id: item.id, expectedVersion: item.version } : { requestId: key.current }),
+            name: f.get('name'),
+            category: f.get('category'),
+            unit: f.get('unit'),
+            price: Number(f.get('price')),
+            feeBps: Math.round(Number(f.get('fee')) * 100),
+            vatBps: Math.round(Number(f.get('vat')) * 100),
+            active: f.get('active') === 'on',
+          });
+        }}
+      >
+        <div className="form-grid">
+          <label>
+            Tên món
+            <input
+              name="name"
+              defaultValue={item?.name ?? ''}
+              minLength={2}
+              maxLength={100}
+              required
+            />
+          </label>
+          <label>
+            Nhóm món
+            <select name="category" defaultValue={item?.category ?? 'drink'}>
+              {Object.entries(categories).map(([v, t]) => (
+                <option value={v} key={v}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Đơn vị
+            <input
+              name="unit"
+              defaultValue={item?.unit ?? ''}
+              placeholder="Ly, chai, phần…"
+              maxLength={20}
+              required
+            />
+          </label>
+          <label>
+            Giá trước VAT/phí (₫)
+            <input
+              type="number"
+              name="price"
+              min="1"
+              max="100000000"
+              step="1"
+              required
+              defaultValue={item?.price ?? ''}
+            />
+          </label>
+          <label>
+            Phí phục vụ F&B (%)
+            <input
+              name="fee"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              required
+              defaultValue={item ? item.fee_bps / 100 : ''}
+            />
+          </label>
+          <label>
+            VAT món (%)
+            <input
+              name="vat"
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              required
+              defaultValue={item ? item.vat_bps / 100 : ''}
+            />
+          </label>
+          <label className="menu-active">
+            <input type="checkbox" name="active" defaultChecked={item ? !!item.active : true} />
+            Cho phép gọi món
+          </label>
+        </div>
+        <p className="form-note">
+          Nhập 0 nếu thực tế không thu. Đơn đã gửi giữ giá cũ; tạm ngưng bán không hủy đơn đã có.
+          Không áp phí giờ chơi lần nữa lên tiền món.
+        </p>
+        <div className="form-footer">
+          <button type="button" className="secondary" disabled={busy} onClick={onClose}>
+            Để sau
+          </button>
+          <button className="primary" disabled={busy}>
+            {busy ? 'Đang lưu…' : 'Lưu món'}
           </button>
         </div>
-        {message && (
-          <div className="info-strip" role="status">
-            {message}
-          </div>
-        )}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            onSave({
-              action: item ? 'item-update' : 'item-create',
-              ...(item
-                ? { id: item.id, expectedVersion: item.version }
-                : { requestId: key.current }),
-              name: f.get('name'),
-              category: f.get('category'),
-              unit: f.get('unit'),
-              price: Number(f.get('price')),
-              feeBps: Math.round(Number(f.get('fee')) * 100),
-              vatBps: Math.round(Number(f.get('vat')) * 100),
-              active: f.get('active') === 'on',
-            });
-          }}
-        >
-          <div className="form-grid">
-            <label>
-              Tên món
-              <input
-                name="name"
-                defaultValue={item?.name ?? ''}
-                minLength={2}
-                maxLength={100}
-                required
-              />
-            </label>
-            <label>
-              Nhóm món
-              <select name="category" defaultValue={item?.category ?? 'drink'}>
-                {Object.entries(categories).map(([v, t]) => (
-                  <option value={v} key={v}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Đơn vị
-              <input
-                name="unit"
-                defaultValue={item?.unit ?? ''}
-                placeholder="Ly, chai, phần…"
-                maxLength={20}
-                required
-              />
-            </label>
-            <label>
-              Giá trước VAT/phí (₫)
-              <input
-                type="number"
-                name="price"
-                min="1"
-                max="100000000"
-                step="1"
-                required
-                defaultValue={item?.price ?? ''}
-              />
-            </label>
-            <label>
-              Phí phục vụ F&B (%)
-              <input
-                name="fee"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                required
-                defaultValue={item ? item.fee_bps / 100 : ''}
-              />
-            </label>
-            <label>
-              VAT món (%)
-              <input
-                name="vat"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                required
-                defaultValue={item ? item.vat_bps / 100 : ''}
-              />
-            </label>
-            <label className="menu-active">
-              <input type="checkbox" name="active" defaultChecked={item ? !!item.active : true} />
-              Cho phép gọi món
-            </label>
-          </div>
-          <p className="form-note">
-            Nhập 0 nếu thực tế không thu. Đơn đã gửi giữ giá cũ; tạm ngưng bán không hủy đơn đã có.
-            Không áp phí giờ chơi lần nữa lên tiền món.
-          </p>
-          <div className="form-footer">
-            <button type="button" className="secondary" disabled={busy} onClick={onClose}>
-              Để sau
-            </button>
-            <button className="primary" disabled={busy}>
-              {busy ? 'Đang lưu…' : 'Lưu món'}
-            </button>
-          </div>
-        </form>
-      </section>
-    </dialog>
+      </form>
+    </ModalDialog>
   );
 }
 function CancelOrder({
@@ -414,60 +396,44 @@ function CancelOrder({
   onClose: () => void;
   onSave: (v: Record<string, unknown>) => Promise<boolean>;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   return (
-    <dialog
-      ref={dialog}
-      className="native-dialog"
-      onCancel={(e) => {
-        if (busy) e.preventDefault();
-        else onClose();
-      }}
-    >
-      <section className="modal">
-        <div className="modal-heading">
-          <h2>Hủy đơn #{order.id.slice(-6)}</h2>
-          <button className="icon-btn" disabled={busy} onClick={onClose} aria-label="Đóng">
-            <X />
+    <ModalDialog label="Hủy đơn" onClose={onClose} locked={busy}>
+      <DialogHeading onClose={onClose} locked={busy}>
+        Hủy đơn #{order.id.slice(-6)}
+      </DialogHeading>
+      {message && (
+        <div className="info-strip" role="status">
+          {message}
+        </div>
+      )}
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave({
+            action: 'transition',
+            id: order.id,
+            expectedVersion: order.version,
+            status: 'cancelled',
+            reason: new FormData(e.currentTarget).get('reason'),
+          });
+        }}
+      >
+        <label className="order-note">
+          Lý do hủy
+          <input name="reason" minLength={5} maxLength={300} required />
+        </label>
+        <p className="form-note">
+          Chỉ hủy khi chưa phục vụ. Món đã phục vụ cần quy trình duyệt điều chỉnh riêng.
+        </p>
+        <div className="form-footer">
+          <button type="button" className="secondary" onClick={onClose} disabled={busy}>
+            Để sau
+          </button>
+          <button className="primary" disabled={busy}>
+            Xác nhận hủy
           </button>
         </div>
-        {message && (
-          <div className="info-strip" role="status">
-            {message}
-          </div>
-        )}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onSave({
-              action: 'transition',
-              id: order.id,
-              expectedVersion: order.version,
-              status: 'cancelled',
-              reason: new FormData(e.currentTarget).get('reason'),
-            });
-          }}
-        >
-          <label className="order-note">
-            Lý do hủy
-            <input name="reason" minLength={5} maxLength={300} required />
-          </label>
-          <p className="form-note">
-            Chỉ hủy khi chưa phục vụ. Món đã phục vụ cần quy trình duyệt điều chỉnh riêng.
-          </p>
-          <div className="form-footer">
-            <button type="button" className="secondary" onClick={onClose} disabled={busy}>
-              Để sau
-            </button>
-            <button className="primary" disabled={busy}>
-              Xác nhận hủy
-            </button>
-          </div>
-        </form>
-      </section>
-    </dialog>
+      </form>
+    </ModalDialog>
   );
 }

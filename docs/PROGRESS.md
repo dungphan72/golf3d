@@ -9,7 +9,8 @@ Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2
 - **Thao tác tại quầy**: phím `/` (tìm kiếm) và `N` (đặt lịch) trên máy tính; vùng bấm tối thiểu 44 px trên cảm ứng, có test e2e bảo vệ.
 - **Truy cập**: axe-core 0 lỗi ở các màn nhân viên (kể cả ca đang mở/đã đóng và hộp thoại phiên với dữ liệu thật), sửa tương phản chữ, tiêu đề, liên kết "Bỏ qua đến nội dung".
 - **CI**: sửa test CRM bị giới hạn 10 lần/10 phút theo địa chỉ khi chạy trên máy CI.
-- Chưa làm: sáu hộp thoại còn lại chuyển sang `ModalDialog`; chuyển dữ liệu CRM cũ sang module mới rồi bỏ tab cũ.
+- Hộp thoại: bảy hộp (phiên, đặt lịch, vào chơi ngay, ghi nhận kho, sửa món, hủy đơn, ca) dùng chung `ModalDialog` (khóa Esc khi đang lưu, có tên cho trình đọc màn hình).
+- Chưa làm: chuyển dữ liệu CRM cũ sang module mới rồi bỏ tab cũ.
 
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar
 - Quản lý món theo nhóm, đơn vị, giá trước thuế/phí, VAT và phí F&B riêng; tạo/sửa/tạm ngưng, giữ lịch sử giá đơn đã gửi.

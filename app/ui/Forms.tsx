@@ -1,6 +1,7 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
-import { X, Flag, Check, ArrowRight, Save } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Flag, Check, ArrowRight, Save } from 'lucide-react';
+import { DialogHeading, ModalDialog } from './kit';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
 import { OffersField } from './OffersField';
@@ -39,10 +40,6 @@ export function BookingForm({
     [start, setStart] = useState(local),
     [people, setPeople] = useState(1),
     [minutes, setMinutes] = useState(60);
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    ref.current?.showModal();
-  }, []);
   let estimate: ReturnType<typeof planBooking> | null = null,
     estimateError = '';
   try {
@@ -62,176 +59,167 @@ export function BookingForm({
     estimateError = e instanceof Error ? e.message : 'Chưa có báo giá';
   }
   return (
-    <dialog className="native-dialog" ref={ref} onCancel={onClose}>
-      <section className="modal">
-        <div className="modal-heading">
-          <div>
-            <span className="eyebrow">MỘT TRẢI NGHIỆM MỚI</span>
-            <h2>Tạo lịch đặt</h2>
+    <ModalDialog label="Tạo lịch đặt" onClose={onClose}>
+      <DialogHeading onClose={onClose} eyebrow="MỘT TRẢI NGHIỆM MỚI">
+        Tạo lịch đặt
+      </DialogHeading>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const f = new FormData(e.currentTarget);
+          onSave({
+            room,
+            service,
+            expectedRevision: config.pricingRevision,
+            start: Date.parse(start + ':00+07:00'),
+            people,
+            minutes,
+            customer: f.get('customer'),
+            phone: f.get('phone'),
+          });
+        }}
+      >
+        {!ready(config) && (
+          <div className="info-strip">
+            Cần hoàn tất giờ mở cửa, sức chứa, VAT và phí dịch vụ trong Cài đặt trước khi tạo lịch.
           </div>
-          <button className="icon-btn" type="button" onClick={onClose} aria-label="Đóng">
-            <X />
-          </button>
+        )}
+        <h3 className="form-label">01 / Chọn không gian</h3>
+        <div className="room-picker">
+          {rooms.map((r) => (
+            <button
+              type="button"
+              key={r.id}
+              onClick={() => setRoom(r.id)}
+              className={room === r.id ? 'chosen' : ''}
+            >
+              <Flag size={15} />
+              {r.name}
+              {r.left && <small>Tay trái</small>}
+              {room === r.id && <Check size={14} />}
+            </button>
+          ))}
         </div>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const f = new FormData(e.currentTarget);
-            onSave({
-              room,
-              service,
-              expectedRevision: config.pricingRevision,
-              start: Date.parse(start + ':00+07:00'),
-              people,
-              minutes,
-              customer: f.get('customer'),
-              phone: f.get('phone'),
-            });
-          }}
-        >
-          {!ready(config) && (
-            <div className="info-strip">
-              Cần hoàn tất giờ mở cửa, sức chứa, VAT và phí dịch vụ trong Cài đặt trước khi tạo
-              lịch.
-            </div>
-          )}
-          <h3 className="form-label">01 / Chọn không gian</h3>
-          <div className="room-picker">
-            {rooms.map((r) => (
-              <button
-                type="button"
-                key={r.id}
-                onClick={() => setRoom(r.id)}
-                className={room === r.id ? 'chosen' : ''}
-              >
-                <Flag size={15} />
-                {r.name}
-                {r.left && <small>Tay trái</small>}
-                {room === r.id && <Check size={14} />}
-              </button>
-            ))}
-          </div>
-          <h3 className="form-label">02 / Lịch chơi</h3>
-          <div className="form-grid">
+        <h3 className="form-label">02 / Lịch chơi</h3>
+        <div className="form-grid">
+          <label>
+            Dịch vụ
+            <select value={service} onChange={(e) => setService(e.target.value)}>
+              <option value="gdr">Luyện tập</option>
+              <option value="9">Chơi 9 hố</option>
+              <option value="18">Chơi 18 hố</option>
+            </select>
+          </label>
+          <label>
+            Ngày, giờ bắt đầu (Việt Nam)
+            <input
+              type="datetime-local"
+              step="900"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              required
+            />
+          </label>
+          <label>
+            Số người
+            <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
+              {[1, 2, 3, 4].map((n) => (
+                <option key={n} value={n}>
+                  {n} người
+                </option>
+              ))}
+            </select>
+          </label>
+          {service === 'gdr' && (
             <label>
-              Dịch vụ
-              <select value={service} onChange={(e) => setService(e.target.value)}>
-                <option value="gdr">Luyện tập</option>
-                <option value="9">Chơi 9 hố</option>
-                <option value="18">Chơi 18 hố</option>
-              </select>
-            </label>
-            <label>
-              Ngày, giờ bắt đầu (Việt Nam)
-              <input
-                type="datetime-local"
-                step="900"
-                value={start}
-                onChange={(e) => setStart(e.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Số người
-              <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
-                {[1, 2, 3, 4].map((n) => (
+              Thời lượng giữ chỗ
+              <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
+                {[60, 90, 120, 150, 180, 210, 240].map((n) => (
                   <option key={n} value={n}>
-                    {n} người
+                    {n} phút
                   </option>
                 ))}
               </select>
             </label>
-            {service === 'gdr' && (
-              <label>
-                Thời lượng giữ chỗ
-                <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
-                  {[60, 90, 120, 150, 180, 210, 240].map((n) => (
-                    <option key={n} value={n}>
-                      {n} phút
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </div>
-          <div className="booking-estimate" aria-live="polite">
-            <h3>Báo giá trước khi xác nhận</h3>
-            {estimate ? (
-              <>
-                <p>
-                  {service === 'gdr'
-                    ? 'Ước tính theo thời lượng giữ chỗ; thanh toán theo thời gian thực tế.'
-                    : `Giá trọn lượt theo giờ đã chọn · ${estimate.ruleLabel}`}
-                </p>
-                {estimate.bill.lines.map((line, i) => (
-                  <div key={i}>
-                    <span>
-                      {line.label} · {line.minutes.toFixed(1)} phút × {money(line.rate)}/giờ
-                    </span>
-                    <strong>{money(line.amount)}</strong>
-                  </div>
-                ))}
-                <div>
-                  <span>Tiền dịch vụ</span>
-                  <strong>{money(estimate.bill.subtotal)}</strong>
-                </div>
-                <div>
+          )}
+        </div>
+        <div className="booking-estimate" aria-live="polite">
+          <h3>Báo giá trước khi xác nhận</h3>
+          {estimate ? (
+            <>
+              <p>
+                {service === 'gdr'
+                  ? 'Ước tính theo thời lượng giữ chỗ; thanh toán theo thời gian thực tế.'
+                  : `Giá trọn lượt theo giờ đã chọn · ${estimate.ruleLabel}`}
+              </p>
+              {estimate.bill.lines.map((line, i) => (
+                <div key={i}>
                   <span>
-                    Phí dịch vụ (
-                    {config.feeMode === 'fixed' ? money(config.fee ?? 0) : `${config.fee ?? 0}%`})
+                    {line.label} · {line.minutes.toFixed(1)} phút × {money(line.rate)}/giờ
                   </span>
-                  <strong>{money(estimate.bill.fee)}</strong>
+                  <strong>{money(line.amount)}</strong>
                 </div>
-                <div>
-                  <span>VAT ({config.vat ?? 0}%)</span>
-                  <strong>{money(estimate.bill.vat)}</strong>
-                </div>
-                <div className="estimate-total">
-                  <span>Tổng dự kiến</span>
-                  <strong>{money(estimate.bill.total)}</strong>
-                </div>
-                <small>
-                  Đơn giá tính chính xác đến thời gian thực, làm tròn tiền đến 1 đồng. VAT tính sau
-                  phí dịch vụ.
-                </small>
-              </>
-            ) : (
-              <p role="status">{estimateError}</p>
-            )}
-          </div>
-          <h3 className="form-label">03 / Thông tin khách</h3>
-          <div className="form-grid">
-            <label>
-              Họ và tên
-              <input
-                name="customer"
-                placeholder="Tên khách hàng"
-                minLength={2}
-                maxLength={100}
-                required
-              />
-            </label>
-            <label>
-              Số điện thoại
-              <input name="phone" type="tel" placeholder="+84…" required />
-            </label>
-          </div>
-          <p className="form-note">
-            Nhân viên tạo lịch trong bản thử nội bộ. Đặt online bắt buộc đăng nhập golfer sẽ được mở
-            sau khi kết nối OTP. Lịch và giá được kiểm tra lại trên máy chủ.
-          </p>
-          <div className="form-footer">
-            <button className="secondary" type="button" onClick={onClose}>
-              Để sau
-            </button>
-            <button className="primary" disabled={busy || !ready(config) || !estimate}>
-              {busy ? 'Đang lưu…' : 'Xác nhận lịch đặt'}
-              <ArrowRight size={17} />
-            </button>
-          </div>
-        </form>
-      </section>
-    </dialog>
+              ))}
+              <div>
+                <span>Tiền dịch vụ</span>
+                <strong>{money(estimate.bill.subtotal)}</strong>
+              </div>
+              <div>
+                <span>
+                  Phí dịch vụ (
+                  {config.feeMode === 'fixed' ? money(config.fee ?? 0) : `${config.fee ?? 0}%`})
+                </span>
+                <strong>{money(estimate.bill.fee)}</strong>
+              </div>
+              <div>
+                <span>VAT ({config.vat ?? 0}%)</span>
+                <strong>{money(estimate.bill.vat)}</strong>
+              </div>
+              <div className="estimate-total">
+                <span>Tổng dự kiến</span>
+                <strong>{money(estimate.bill.total)}</strong>
+              </div>
+              <small>
+                Đơn giá tính chính xác đến thời gian thực, làm tròn tiền đến 1 đồng. VAT tính sau
+                phí dịch vụ.
+              </small>
+            </>
+          ) : (
+            <p role="status">{estimateError}</p>
+          )}
+        </div>
+        <h3 className="form-label">03 / Thông tin khách</h3>
+        <div className="form-grid">
+          <label>
+            Họ và tên
+            <input
+              name="customer"
+              placeholder="Tên khách hàng"
+              minLength={2}
+              maxLength={100}
+              required
+            />
+          </label>
+          <label>
+            Số điện thoại
+            <input name="phone" type="tel" placeholder="+84…" required />
+          </label>
+        </div>
+        <p className="form-note">
+          Nhân viên tạo lịch trong bản thử nội bộ. Đặt online bắt buộc đăng nhập golfer sẽ được mở
+          sau khi kết nối OTP. Lịch và giá được kiểm tra lại trên máy chủ.
+        </p>
+        <div className="form-footer">
+          <button className="secondary" type="button" onClick={onClose}>
+            Để sau
+          </button>
+          <button className="primary" disabled={busy || !ready(config) || !estimate}>
+            {busy ? 'Đang lưu…' : 'Xác nhận lịch đặt'}
+            <ArrowRight size={17} />
+          </button>
+        </div>
+      </form>
+    </ModalDialog>
   );
 }
 export type SettingsTab = 'facility' | 'price' | 'promo' | 'booking' | 'payment';

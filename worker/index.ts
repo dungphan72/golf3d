@@ -1,6 +1,8 @@
 import handler from 'vinext/server/fetch-handler';
 import { runWithConnectorBinding } from '../lib/connector-context';
 import type { ConnectorBinding } from '../lib/connector-contract.mjs';
+import { db } from '../lib/server/common';
+import { runCrmCron } from '../modules/crm/server/cron';
 
 // Content-Security-Policy for HTML pages. Next's inline bootstrap scripts need 'unsafe-inline';
 // everything else is limited to this site plus the few services the pages use.
@@ -38,7 +40,26 @@ function harden(request: Request, res: Response) {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
 }
 
+/** Cloudflare Cron Trigger (every 5 minutes): the CRM's background work for every club, including due customer messages. */
+async function runScheduled(controller: ScheduledController, base: string) {
+  const tenants = (
+    await db().prepare('SELECT DISTINCT tenant FROM memberships').all<{ tenant: string }>()
+  ).results;
+  for (const t of tenants) {
+    try {
+      await runCrmCron(t.tenant, base, controller.scheduledTime);
+    } catch (e) {
+      console.error('scheduled crm cron', t.tenant, e);
+    }
+  }
+}
+
 const worker = {
+  async scheduled(controller: ScheduledController, env: Cloudflare.Env, ctx: ExecutionContext) {
+    // Links in staff messages need the site address; the deploy script sets it (PUBLIC_BASE_URL).
+    const base = String((env as unknown as Record<string, unknown>).PUBLIC_BASE_URL ?? '');
+    ctx.waitUntil(runScheduled(controller, base.replace(/\/$/, '')));
+  },
   fetch(
     request: Request,
     env: Cloudflare.Env,

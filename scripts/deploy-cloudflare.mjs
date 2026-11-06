@@ -38,8 +38,11 @@ config.d1_databases = [
 config.vars = {
   ...(config.vars ?? {}),
   DISABLE_SITES_IDENTITY: '1',
+  ...(process.env.PUBLIC_BASE_URL ? { PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL } : {}),
   ...(process.env.TURNSTILE_SITE_KEY ? { TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY } : {}),
 };
+// Background work (reminders, task alerts) runs from Cloudflare itself, so no outside scheduler or secret is needed.
+config.triggers = { crons: ['*/5 * * * *'] };
 config.workers_dev = process.env.CUSTOM_DOMAIN ? false : true;
 if (process.env.CUSTOM_DOMAIN)
   config.routes = [{ pattern: process.env.CUSTOM_DOMAIN, custom_domain: true }];

@@ -71,7 +71,7 @@ test('đăng nhập: sai mật khẩu bị từ chối, đúng thì vào đượ
   await expect(page.getByText('Email hoặc mật khẩu không đúng')).toBeVisible();
   await page.getByLabel('Mật khẩu').fill(OWNER.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page.getByText('Một ngày chơi tốt lành.')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Sơ đồ phòng', level: 1 })).toBeVisible();
 });
 
 test('cấu hình cơ sở và nạp danh mục gói', async ({ request }) => {
@@ -236,7 +236,7 @@ test('phân quyền: thu ngân chỉ làm được việc của thu ngân', asyn
 
   const view = await ctx.newPage();
   await view.goto('/quan-ly');
-  await expect(view.getByText('Một ngày chơi tốt lành.')).toBeVisible();
+  await expect(view.getByRole('heading', { name: 'Sơ đồ phòng', level: 1 })).toBeVisible();
   await expect(nav(view, /Cài đặt cơ sở/)).toHaveCount(0);
   await expect(nav(view, /Nhân viên/)).toHaveCount(0);
   await expect(nav(view, /Hội viên/)).toBeVisible();
@@ -331,10 +331,6 @@ test('huấn luyện: xếp lịch chống trùng, HLV chỉ thấy và đánh d
 
   const view = await ctx.newPage();
   await view.goto('/quan-ly');
-  await view
-    .locator('aside')
-    .getByRole('button', { name: /Quản lý khác/ })
-    .click();
   await nav(view, /Huấn luyện/).click();
   await expect(view.getByText('Học viên A')).toBeVisible();
   await expect(view.getByText('Ghi chú HLV: Cần tập grip')).toBeVisible();

@@ -115,8 +115,10 @@ test('khuyến mãi nhập trong cài đặt: tự áp vào báo giá, hiện tr
 test('thêm, sửa, tắt và xóa khuyến mãi ngay trong màn hình Cài đặt', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside').getByRole('button', { name: 'Quản lý khác' }).first().click();
-  await page.locator('.nav-more-list .nav-item', { hasText: 'Cài đặt cơ sở' }).click();
+  await page
+    .locator('aside')
+    .getByRole('button', { name: /Cài đặt cơ sở/ })
+    .click();
 
   await page.getByRole('button', { name: 'Thêm khuyến mãi' }).click();
   await page.getByLabel('Tên chương trình').fill('Giờ vàng thứ Ba');

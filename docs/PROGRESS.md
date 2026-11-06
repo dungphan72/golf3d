@@ -301,3 +301,10 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Chặn trùng: line đang có phiên, hoặc có lịch đặt chồng thời gian giữ line (kể cả thời gian dọn) trả 409; thao tác chèn là một câu lệnh nguyên tử nên hai người bấm cùng lúc chỉ một người được.
 - Màu thẻ line trên Sơ đồ phòng: **xanh** = trống, **đỏ** = đang chơi, **vàng** = có khách đặt bắt đầu trong vòng 2 giờ (hiện còn bao nhiêu phút), **xám** = chờ thanh toán / đang dọn. Chú giải cập nhật. Giao diện nền trắng, màu thể hiện ở viền trên và chữ trạng thái.
 - Kiểm thử: `tests/e2e/flow2-walkin-ui.spec.ts`, `tests/e2e/zzzz-walkin.spec.ts`. Sửa luôn test check-in của lead để không phụ thuộc giờ trong ngày (chọn line cố định).
+
+## Nâng cấp giao diện quản lý: giai đoạn 1–3 (xem docs/UI-REDESIGN-PLAN.md)
+
+- **Khung mới** (`app/ui/AdminShell.tsx`, `app/admin.css`): menu trái gom 5 nhóm (Vận hành, Bán hàng, Khách hàng, Tài chính, Quản trị), mỗi mục một biểu tượng, hiện số việc chờ ở Đặt online, Yêu cầu hỗ trợ, Hóa đơn; thanh trên có tên trang, ô tìm khách/số điện thoại/line (mở thẳng phiếu), nút Đặt lịch, trạng thái kết nối, tải lại, chuông. Máy tính bảng và điện thoại: menu là ngăn kéo, thanh dưới 4 mục (Phòng, Lịch đặt, Thu tiền, Thêm).
+- **Trang đầu hợp nhất** (`app/ui/HomeBoard.tsx`, mục "Sơ đồ phòng"): 4 ô số (đang chơi, chờ thanh toán, lịch hôm nay, thực thu), lưới line duy nhất, cột "Việc cần làm ngay" (phiên chờ thu tiền, khách sắp đến trong 1 giờ hoặc chưa đến, yêu cầu hỗ trợ, đặt online chờ xác nhận).
+- **Đã bỏ**: trang Tổng quan trùng, tiêu đề 3 tầng và khẩu hiệu, thẻ trang trí, thẻ "Sẵn sàng đón khách", nút nổi Tạo lịch đặt, trang Lộ trình hệ thống, dải "bản thử nội bộ", chân trang, chữ tiếng Anh trên thẻ line; mục "Quản lý khác" (mọi mục hiện thẳng trong nhóm).
+- Chữ và nút lớn hơn (chữ từ 14px, nút cao từ 40px). CSS cũ của các phần đã bỏ chưa xóa, sẽ dọn ở giai đoạn 8.

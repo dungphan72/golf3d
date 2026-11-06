@@ -1,46 +1,16 @@
 'use client';
 import { useEffect, useState } from 'react';
-import {
-  Flag,
-  LayoutDashboard,
-  CalendarDays,
-  Grid2X2,
-  ReceiptText,
-  Settings,
-  ChevronDown,
-  ArrowUpRight,
-  Plus,
-  Search,
-  Bell,
-  MapPin,
-  ArrowRight,
-  Check,
-  Headphones,
-  UtensilsCrossed,
-  Wallet,
-  ChartColumn,
-  Menu,
-  X,
-  RefreshCw,
-  ShieldCheck,
-  BookOpen,
-  ChevronRight,
-  Users,
-  ScrollText,
-  Award,
-  Globe,
-  GraduationCap,
-  HeartHandshake,
-} from 'lucide-react';
-import { rooms, defaults, money, type Booking } from '../../lib/club';
+import { Bell, Check, Search, X } from 'lucide-react';
+import { rooms, defaults, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
 import FnbPanel from './FnbPanel';
 import StockPanel from './StockPanel';
 import { BookingForm } from './Forms';
 import { SettingsForm } from './Forms';
-import Link from 'next/link';
 import { time, type Data } from './shared';
-import { Stat, RoomGrid, BookingTable, Empty, Roadmap } from './widgets';
+import { BookingTable, Empty } from './widgets';
+import { HomeBoard } from './HomeBoard';
+import { BottomBar, NAV_LABEL, Sidebar, TopBar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
@@ -50,31 +20,18 @@ import { AuditPanel } from './AuditPanel';
 import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
 import { OnlineRequests } from './OnlineRequests';
-import { BRAND } from '../../lib/brand';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmPanel } from './CrmPanel';
 import { WalkInDialog } from './WalkInDialog';
-// Less frequent screens live under "Quản lý khác" in the desktop top bar.
-const SECONDARY = new Set([
-  'coaching',
-  'fnb',
-  'stock',
-  'support',
-  'roadmap',
-  'settings',
-  'staff',
-  'audit',
-  'account',
-]);
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file.
     [deepLink] = useState(() => {
       if (typeof location === 'undefined')
-        return { view: 'overview', customer: null as string | null };
+        return { view: 'rooms', customer: null as string | null };
       const q = new URLSearchParams(location.search);
-      return { view: q.get('view') === 'crm' ? 'crm' : 'overview', customer: q.get('customer') };
+      return { view: q.get('view') === 'crm' ? 'crm' : 'rooms', customer: q.get('customer') };
     }),
     deepCustomer = deepLink.customer,
     [view, setView] = useState(deepLink.view),
@@ -86,11 +43,9 @@ export default function ClubApp() {
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
     [busy, setBusy] = useState(false),
-    [filter, setFilter] = useState('all'),
     [search, setSearch] = useState(''),
     [now, setNow] = useState(() => Date.now()),
-    [mobile, setMobile] = useState(false),
-    [moreOpen, setMoreOpen] = useState(false);
+    [mobile, setMobile] = useState(false);
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
@@ -161,33 +116,7 @@ export default function ClubApp() {
   }
   const c = data?.config ?? defaults,
     b = data?.bookings ?? [],
-    active = b.filter((x) => ['playing', 'paused'].includes(x.status)),
     pending = data?.requests.filter((x) => x.status !== 'done') ?? [];
-  const today = new Date(now + 7 * 3600000).toISOString().slice(0, 10),
-    todayBookings = b.filter(
-      (x) => new Date(x.start + 7 * 3600000).toISOString().slice(0, 10) === today,
-    );
-  const revenue = data?.todayReceipts ?? 0;
-  const navigation = [
-    ['overview', 'Tổng quan', LayoutDashboard],
-    ['rooms', 'Sơ đồ phòng', Grid2X2],
-    ['bookings', 'Lịch đặt', CalendarDays],
-    ['invoices', 'Hóa đơn', ReceiptText],
-    ['finance', 'Ca & sổ tiền', Wallet],
-    ['reports', 'Báo cáo', ChartColumn],
-    ['fnb', 'Thực đơn & bếp', UtensilsCrossed],
-    ['stock', 'Kho F&B', Grid2X2],
-    ['online', 'Đặt online', Globe],
-    ['coaching', 'Huấn luyện', GraduationCap],
-    ['members', 'Hội viên', Award],
-    ['crm', 'Chăm sóc KH', HeartHandshake],
-    ['support', 'Yêu cầu hỗ trợ', Headphones],
-    ['roadmap', 'Lộ trình hệ thống', BookOpen],
-    ['settings', 'Cài đặt cơ sở', Settings],
-    ['staff', 'Nhân viên', Users],
-    ['audit', 'Nhật ký', ScrollText],
-    ['account', 'Tài khoản', ShieldCheck],
-  ] as const;
   const needs: Record<string, string> = {
     finance: 'finance.view',
     reports: 'finance.view',
@@ -206,26 +135,6 @@ export default function ClubApp() {
     setData(null);
     setAuthState('login');
   }
-  const titles: Record<string, string> = {
-    overview: 'Một ngày chơi tốt lành.',
-    rooms: 'Không gian & phiên chơi',
-    bookings: 'Lịch đặt sân',
-    invoices: 'Hóa đơn & thanh toán',
-    finance: 'Đối soát rõ ràng, bàn giao an tâm.',
-    fnb: 'Món ngon, phục vụ đúng lúc.',
-    stock: 'Kho rõ ràng, phục vụ an tâm.',
-    online: 'Yêu cầu đặt lịch từ khách',
-    coaching: 'Lịch dạy của huấn luyện viên',
-    reports: 'Báo cáo doanh thu',
-    members: 'Hội viên, gói và điểm thưởng',
-    crm: 'Chăm sóc khách hàng tự động',
-    support: 'Trung tâm hỗ trợ',
-    roadmap: 'Lộ trình phát triển',
-    settings: 'Thiết lập cơ sở',
-    staff: 'Nhân viên & phân quyền',
-    audit: 'Nhật ký hoạt động',
-    account: 'Tài khoản của bạn',
-  };
   function go(v: string) {
     setView(v);
     setMobile(false);
@@ -242,149 +151,52 @@ export default function ClubApp() {
         <AccountPanel forced onChanged={load} onLogout={signOut} />
       </div>
     );
-  const renderNav = ([key, label, Icon]: (typeof navigation)[number]) => (
-    <button
-      key={key}
-      className={view === key ? 'nav-item selected' : 'nav-item'}
-      onClick={() => {
-        setMoreOpen(false);
-        go(key);
-      }}
-    >
-      <Icon size={19} />
-      <span>{label}</span>
-      {key === 'support' && pending.length > 0 && <b className="count">{pending.length}</b>}
-      {key === 'online' && (data?.onlinePending ?? 0) > 0 && (
-        <b className="count">{data?.onlinePending}</b>
-      )}
-    </button>
-  );
+  const badges: Record<string, number> = {
+    support: pending.length,
+    online: data?.onlinePending ?? 0,
+    invoices: b.filter((x) => x.status === 'finished').length,
+  };
+  const visibleNav = (key: string) => allowed(key);
+  const bookRoom = (r: string) => {
+    setBookingRoom(r);
+    setModal(true);
+  };
   return (
-    <div className="app-shell">
-      <aside className={'sidebar ' + (mobile ? 'mobile-open' : '')}>
-        <Link className="brand" href="/quan-ly" aria-label={BRAND.name + ' — trang chủ'}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="brand-logo" src={BRAND.logo} alt="" width={46} height={46} />
-          <span>
-            {BRAND.short}
-            <small className="gold">{BRAND.sub}</small>
-          </span>
-        </Link>
-        <button className="location-switch" onClick={() => go('settings')}>
-          <span className="location-icon">
-            <MapPin size={17} />
-          </span>
-          <span>
-            Bình Trưng<small>Cơ sở đầu tiên</small>
-          </span>
-          <ChevronDown size={15} />
-        </button>
-        <div className="nav-label">KHÔNG GIAN LÀM VIỆC</div>
-        <nav>
-          {navigation.filter(([key]) => allowed(key) && !SECONDARY.has(key)).map(renderNav)}
-          {navigation.some(([key]) => allowed(key) && SECONDARY.has(key)) && (
-            <div className={'nav-more' + (moreOpen ? ' open' : '')}>
-              <button
-                type="button"
-                className={'nav-item nav-more-toggle' + (SECONDARY.has(view) ? ' selected' : '')}
-                aria-expanded={moreOpen}
-                onClick={() => setMoreOpen(!moreOpen)}
-              >
-                <Menu size={17} />
-                <span>Quản lý khác</span>
-                <ChevronDown size={14} />
-              </button>
-              <div className="nav-more-list">
-                {navigation.filter(([key]) => allowed(key) && SECONDARY.has(key)).map(renderNav)}
-              </div>
-            </div>
-          )}
-        </nav>
-        <div className="sidebar-bottom">
-          <div className="club-note">
-            <Flag size={21} />
-            <p>
-              Chơi tốt hơn.
-              <br />
-              Vận hành thông minh hơn.
-            </p>
-            <span>SAIGON GOLF 3D CLUB · V0.6</span>
-          </div>
-          <button
-            className="nav-item"
-            title={mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}
-            onClick={() => {
-              setMode(mode === 'staff' ? 'customer' : 'staff');
-              go('overview');
-            }}
-          >
-            <ArrowUpRight size={18} />
-            <span>{mode === 'staff' ? 'Trải nghiệm khách hàng' : 'Về trang quản lý'}</span>
-          </button>
-          <div className="profile">
-            <span className="avatar">D</span>
-            <div>
-              <strong>{data?.user?.split('@')[0] || 'Chủ cơ sở'}</strong>
-              <small>Không gian riêng tư</small>
-            </div>
-            <ShieldCheck size={17} />
-          </div>
-        </div>
-      </aside>
-      <div className="workspace">
-        <header className="topbar">
-          <div className="breadcrumb">
-            <button
-              className="icon-btn mobile-menu"
-              aria-label="Mở menu"
-              onClick={() => setMobile(!mobile)}
-            >
-              <Menu size={22} />
-            </button>
-            <span>{BRAND.name}</span>
-            <ChevronRight size={14} />
-            <strong>
-              {mode === 'customer'
-                ? 'Trải nghiệm khách hàng'
-                : navigation.find((x) => x[0] === view)?.[1]}
-            </strong>
-          </div>
-          <div className="top-actions">
-            <span
-              className="connection"
-              data-tip={
-                error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'
-              }
-            >
-              <i />
-              <span className="btn-label">
-                {error ? 'Cần kiểm tra kết nối' : data ? 'Đồng bộ trực tuyến' : 'Đang kết nối…'}
-              </span>
-            </span>
-            <button className="icon-btn" aria-label="Tải lại" data-tip="Tải lại" onClick={load}>
-              <RefreshCw size={18} />
-            </button>
-            <button
-              className="icon-btn notification"
-              aria-label="Yêu cầu hỗ trợ"
-              onClick={() => go('support')}
-            >
-              <Bell size={19} />
-              {pending.length > 0 && <i />}
-            </button>
-            <span className="avatar small">D</span>
-          </div>
-        </header>
-        <div className="pilot">
-          <span>
-            <ShieldCheck size={14} /> BẢN THỬ NỘI BỘ
-          </span>
-          <p>Dữ liệu được lưu trên máy chủ. Chưa mở nhận khách công khai.</p>
-          <button onClick={() => go('roadmap')}>
-            Xem tiến độ <ArrowUpRight size={13} />
-          </button>
-        </div>
-        <main>
+    <div className="app-shell ds-root">
+      <Sidebar
+        open={mobile}
+        view={view}
+        visible={visibleNav}
+        badges={badges}
+        user={data?.user ?? ''}
+        role={data?.role ?? ''}
+        onGo={(key) => {
+          setMode('staff');
+          go(key);
+        }}
+        onClose={() => setMobile(false)}
+        onCustomerView={() => {
+          setMode('customer');
+          setMobile(false);
+        }}
+      />
+      <div className="ds-body">
+        <TopBar
+          title={mode === 'customer' ? 'Xem như khách hàng' : (NAV_LABEL[view] ?? 'Sơ đồ phòng')}
+          connection={error ? 'Mất kết nối' : data ? 'Trực tuyến' : 'Đang kết nối…'}
+          online={!error && !!data}
+          bookings={b}
+          pending={pending.length}
+          onMenu={() => setMobile(true)}
+          onBook={openBooking}
+          onRefresh={load}
+          onSupport={() => {
+            setMode('staff');
+            go('support');
+          }}
+          onPick={setSelected}
+        />
+        <main className="ds-main">
           {error && (
             <div className="error-box" role="alert">
               {error}
@@ -397,11 +209,15 @@ export default function ClubApp() {
             </div>
           )}
           {!data && !error ? (
-            <div className="loading">Đang tải không gian Saigon Golf 3D Club…</div>
+            <div className="loading">Đang tải dữ liệu…</div>
           ) : (
             <>
               {mode === 'customer' ? (
                 <>
+                  <div className="ds-banner">
+                    <span>Bạn đang xem giao diện của khách hàng.</span>
+                    <button onClick={() => setMode('staff')}>Về trang quản lý</button>
+                  </div>
                   <CustomerHome
                     onBook={openBooking}
                     onSession={() => {
@@ -413,186 +229,16 @@ export default function ClubApp() {
                 </>
               ) : (
                 <>
-                  <div className="page-heading">
-                    <div>
-                      <div className="eyebrow">
-                        {view === 'overview'
-                          ? 'SAIGON GOLF / CLUB OPERATIONS'
-                          : 'SAIGON GOLF / WORKSPACE'}
-                      </div>
-                      <h1>{titles[view]}</h1>
-                      <p>
-                        {view === 'overview'
-                          ? 'Mọi hoạt động tại cơ sở, trong một tầm nhìn.'
-                          : view === 'settings'
-                            ? 'Thiết lập chính sách trước khi mở cửa đón khách.'
-                            : 'Quản lý liền mạch, phục vụ trọn vẹn.'}
-                      </p>
-                    </div>
-                    <div className="heading-actions">
-                      <span className="date-display">
-                        <CalendarDays size={16} />
-                        {new Date(now).toLocaleDateString('vi-VN', {
-                          timeZone: 'Asia/Ho_Chi_Minh',
-                          weekday: 'short',
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })}
-                      </span>
-                      <button
-                        className="primary fab"
-                        aria-label="Tạo lịch đặt"
-                        onClick={openBooking}
-                      >
-                        <Plus size={18} />
-                        <span className="fab-label">Tạo lịch đặt</span>
-                      </button>
-                    </div>
-                  </div>
-                  {view === 'overview' && (
-                    <>
-                      <div className="stats">
-                        <Stat
-                          title="Thực thu hôm nay"
-                          value={money(revenue)}
-                          sub="Theo thời điểm thu · sổ tiền v0.3"
-                          icon={<Wallet size={20} />}
-                        />
-                        <Stat
-                          title="Phòng đang sử dụng"
-                          value={`${active.length}`}
-                          suffix="/ 12"
-                          sub={`${12 - active.length} phòng / line chưa chạy phiên`}
-                          icon={<Grid2X2 size={20} />}
-                        />
-                        <Stat
-                          title="Lịch đặt hôm nay"
-                          value={`${todayBookings.filter((x) => x.status !== 'cancelled').length}`}
-                          sub="Tổng lượt đã ghi nhận"
-                          icon={<CalendarDays size={20} />}
-                        />
-                        <Stat
-                          title="Yêu cầu đang chờ"
-                          value={`${pending.length}`}
-                          sub="Hỗ trợ khách tại cơ sở"
-                          icon={<Headphones size={20} />}
-                        />
-                      </div>
-                      <div className="overview-grid">
-                        <div>
-                          <div className="section-heading">
-                            <h2>
-                              Sơ đồ phòng & line tập <span>12</span>
-                            </h2>
-                            <button onClick={() => go('rooms')}>
-                              Xem tất cả <ArrowRight size={15} />
-                            </button>
-                          </div>
-                          <div className="legend">
-                            <span>
-                              <i className="free" />
-                              Trống
-                            </span>
-                            <span>
-                              <i className="inplay" />
-                              Đang chơi
-                            </span>
-                            <span>
-                              <i className="reserved" />
-                              Có khách đặt trong 2 giờ tới
-                            </span>
-                            <span>
-                              <i className="cleaning" />
-                              Chờ thanh toán / đang dọn
-                            </span>
-                          </div>
-                          <RoomGrid
-                            bookings={b}
-                            filter="all"
-                            now={now}
-                            onSelect={(x) => setSelected(x)}
-                            onBook={(r) => {
-                              setBookingRoom(r);
-                              setModal(true);
-                            }}
-                            onWalkIn={setWalkInRoom}
-                          />
-                        </div>
-                        <aside className="right-column">
-                          <div className="daily-card">
-                            <span className="eyebrow">YOUR NEXT GREAT SHOT</span>
-                            <h2>
-                              Mỗi cú swing.
-                              <br />
-                              Một trải nghiệm.
-                            </h2>
-                            <div className="golf-art">
-                              <div className="orbit o1" />
-                              <div className="orbit o2" />
-                              <div className="green" />
-                              <span className="pole" />
-                              <span className="flag" />
-                              <span className="ball" />
-                            </div>
-                            <span className="art-caption">SAIGON GOLF 3D CLUB · BÌNH TRƯNG</span>
-                          </div>
-                          <div className="quick-card">
-                            <h3>Sẵn sàng đón khách?</h3>
-                            <p>Hoàn tất giờ hoạt động, sức chứa và thuế/phí để bắt đầu đặt thử.</p>
-                            <button onClick={() => go('settings')}>
-                              Thiết lập cơ sở <ArrowUpRight size={16} />
-                            </button>
-                          </div>
-                        </aside>
-                      </div>
-                      <div className="section-heading">
-                        <h2>Lịch sắp tới</h2>
-                        <button onClick={() => go('bookings')}>
-                          Quản lý lịch đặt <ArrowRight size={15} />
-                        </button>
-                      </div>
-                      <BookingTable
-                        bookings={b
-                          .filter((x) => x.status === 'booked')
-                          .sort((a, b) => a.start - b.start)
-                          .slice(0, 5)}
-                        onSelect={setSelected}
-                      />
-                    </>
-                  )}
-                  {view === 'rooms' && (
-                    <>
-                      <div className="toolbar">
-                        <div className="tabs">
-                          {[
-                            ['all', 'Tất cả · 12'],
-                            ['standard', 'Line tiêu chuẩn · 10'],
-                            ['vip', 'Phòng VIP · 2'],
-                          ].map(([v, t]) => (
-                            <button
-                              key={v}
-                              className={filter === v ? 'active' : ''}
-                              onClick={() => setFilter(v)}
-                            >
-                              {t}
-                            </button>
-                          ))}
-                        </div>
-                        <span className="muted">Cập nhật mỗi 15 giây</span>
-                      </div>
-                      <RoomGrid
-                        bookings={b}
-                        filter={filter}
-                        now={now}
-                        onSelect={setSelected}
-                        onBook={(r) => {
-                          setBookingRoom(r);
-                          setModal(true);
-                        }}
-                        onWalkIn={setWalkInRoom}
-                      />
-                    </>
+                  {view === 'rooms' && data && (
+                    <HomeBoard
+                      data={data}
+                      now={now}
+                      canSeeMoney={allowed('finance')}
+                      onSelect={setSelected}
+                      onBook={bookRoom}
+                      onWalkIn={setWalkInRoom}
+                      onGo={go}
+                    />
                   )}
                   {view === 'bookings' && (
                     <>
@@ -690,7 +336,6 @@ export default function ClubApp() {
                       <SepaySettings />
                     </>
                   )}
-                  {view === 'roadmap' && <Roadmap audit={data?.audit ?? []} />}
                   {view === 'online' && allowed('online') && <OnlineRequests onChanged={load} />}
                   {view === 'reports' && allowed('reports') && <ReportsPanel />}
                   {view === 'coaching' && allowed('coaching') && (
@@ -714,37 +359,16 @@ export default function ClubApp() {
               )}
             </>
           )}
-          <footer>
-            <span>
-              SAIGON GOLF 3D CLUB <i /> Play. Connect. Repeat.
-            </span>
-            <span>250 Lương Đình Của · Bình Trưng, TP.HCM</span>
-          </footer>
         </main>
-        <nav className="bottom-nav">
-          {[
-            ['overview', 'Trang chủ', LayoutDashboard],
-            ['bookings', 'Lịch đặt', CalendarDays],
-            ['rooms', 'Đang chơi', Flag],
-            ['support', 'Hỗ trợ', Headphones],
-            ['finance', 'Ca & quỹ', Wallet],
-          ].map(([v, t, I]) => {
-            const Icon = I as typeof Flag;
-            return (
-              <button
-                key={String(v)}
-                className={view === v ? 'active' : ''}
-                onClick={() => {
-                  setMode('staff');
-                  go(String(v));
-                }}
-              >
-                <Icon size={21} />
-                <span>{String(t)}</span>
-              </button>
-            );
-          })}
-        </nav>
+        <BottomBar
+          view={view}
+          badges={badges}
+          onGo={(key) => {
+            setMode('staff');
+            go(key);
+          }}
+          onMore={() => setMobile(true)}
+        />
       </div>
       {modal && (
         <BookingForm

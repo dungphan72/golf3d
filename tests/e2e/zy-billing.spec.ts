@@ -153,6 +153,12 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   const id = await finishedRound(owner, 'line-10', 'Khách Giao Diện');
   const total = await amountOf(owner, id);
   await page.goto('/quan-ly');
+  // The home board lists the unpaid session under "Việc cần làm ngay"; the top search finds it too.
+  const tasks = page.getByRole('complementary', { name: 'Việc cần làm ngay' });
+  await expect(tasks.getByText('Thu tiền · Khách Giao Diện')).toBeVisible();
+  await page.getByLabel('Tìm khách hoặc phiếu').fill('Giao Diện');
+  await expect(page.getByRole('option', { name: /Khách Giao Diện/ })).toBeVisible();
+  await page.getByLabel('Tìm khách hoặc phiếu').fill('');
   // A finished session waits for payment on its room card: one click opens the bill.
   await page
     .locator('aside')

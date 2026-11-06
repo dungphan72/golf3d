@@ -1,34 +1,7 @@
 'use client';
 import { Flag, CalendarDays, ArrowUpRight, Plus, ChevronRight } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
-import { labels, time, date, type Data } from './shared';
-export function Stat({
-  title,
-  value,
-  sub,
-  icon,
-  suffix,
-}: {
-  title: string;
-  value: string;
-  sub: string;
-  icon: React.ReactNode;
-  suffix?: string;
-}) {
-  return (
-    <article className="stat">
-      <div>
-        <span>{title}</span>
-        <span className="stat-icon">{icon}</span>
-      </div>
-      <strong>
-        {value}
-        <small>{suffix}</small>
-      </strong>
-      <p>{sub}</p>
-    </article>
-  );
-}
+import { labels, time, date } from './shared';
 const SOON_MS = 2 * 3_600_000; // a booking within 2 hours turns the line yellow
 
 /** Line states: playing = red, free = green, a booking within 2 hours = yellow, waiting for payment or cleaning = grey. */
@@ -81,7 +54,7 @@ export function RoomGrid({
               >
                 <div className="room-top">
                   <span className="room-type">
-                    {r.vip ? 'PRIVATE ROOM' : r.left ? 'LEFT-HANDED' : 'LUYỆN TẬP'}
+                    {r.vip ? 'PHÒNG VIP' : r.left ? 'TAY TRÁI' : 'LUYỆN TẬP'}
                   </span>
                   {r.vip ? (
                     <Flag size={17} />
@@ -228,67 +201,5 @@ export function Empty({ title, text }: { title: string; text: string }) {
       <h3>{title}</h3>
       <p>{text}</p>
     </div>
-  );
-}
-export function Roadmap({ audit }: { audit: Data['audit'] }) {
-  return (
-    <>
-      <div className="info-strip">
-        Bản 0.4 · Chạy thử nội bộ bằng danh tính Sites. Chưa thay thế phần mềm vận hành chính thức.
-      </div>
-      <div className="roadmap-grid">
-        {[
-          [
-            '01',
-            'Đặt lịch & phiên chơi',
-            'Đang chạy thử',
-            'Lịch đặt lưu D1, chống trùng, phiên chơi, bảng giá ngày/giờ/lễ, gói theo nhóm, phí cố định/%, báo giá trước đặt, thanh toán thủ công và hỗ trợ cơ bản.',
-          ],
-          [
-            '02',
-            'Vận hành tại cơ sở',
-            'Đang triển khai',
-            'Đã có mở/đóng ca, sổ tiền và đối soát. Đã có gọi món tại phiên và bếp/bar. Còn phân quyền chi tiết, QR gọi món khách hàng, kho, nhà cung cấp, luân chuyển hàng, chuyển phòng và quy trình duyệt tài chính.',
-          ],
-          [
-            '03',
-            'Khách hàng & kinh doanh',
-            'Chưa triển khai',
-            'OTP golfer, hội viên, ví, gói giờ/lượt, HLV, CRM, giải đấu, báo cáo lợi nhuận, Zalo/email/SMS và hóa đơn điện tử.',
-          ],
-          [
-            '04',
-            'Nền tảng SaaS',
-            'Chưa triển khai',
-            'Chủ cơ sở tự đăng ký, phân quyền tổ chức/chi nhánh, thương hiệu riêng, gói thuê bao, tên miền, onboarding và kiểm thử cách ly dữ liệu.',
-          ],
-        ].map(([n, t, s, d]) => (
-          <article key={n} className="roadmap-card">
-            <span>{n}</span>
-            <div>
-              <small>{s}</small>
-              <h2>{t}</h2>
-              <p>{d}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-      <h2 className="audit-title">Nhật ký gần đây</h2>
-      <div className="audit-list">
-        {audit.length ? (
-          audit.map((a) => (
-            <div key={a.id}>
-              <span>
-                {date(a.created)} · {time(a.created)}
-              </span>
-              <strong>{a.action}</strong>
-              <small>{a.detail}</small>
-            </div>
-          ))
-        ) : (
-          <p className="muted">Chưa có thao tác được ghi nhận.</p>
-        )}
-      </div>
-    </>
   );
 }

@@ -166,12 +166,15 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
   await page.getByRole('tab', { name: 'Khách hàng' }).click();
   await page.locator('tbody tr', { hasText: 'Khách Sinh Nhật' }).click();
   await expect(page.getByRole('heading', { name: 'Khách Sinh Nhật' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Chăm sóc' }).click();
   await page.getByLabel('Nội dung ghi chú').fill('Quan tâm thẻ tháng');
   await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+  await page.getByRole('tab', { name: 'Lịch sử' }).click();
   await expect(page.getByText('Quan tâm thẻ tháng')).toBeVisible();
 
   // The automatic flows and their message templates.
-  await page.getByRole('tab', { name: 'Quy trình tự động' }).click();
+  await page.getByRole('tab', { name: 'Thiết lập' }).click();
+  await page.getByRole('button', { name: 'Quy trình tự động' }).click();
   await expect(page.getByText('Chúc mừng sinh nhật').first()).toBeVisible();
   await page.getByLabel('Chi tiêu từ (đồng) thì gắn nhóm VIP').fill('8000000');
   await page.getByRole('button', { name: 'Lưu quy trình' }).click();

@@ -42,6 +42,9 @@ export default function ClubApp() {
     [toast, setToast] = useState(''),
     [busy, setBusy] = useState(false),
     [now, setNow] = useState(() => Date.now()),
+    [leads, setLeads] = useState<
+      { overdue: number; waiting: number; queued: number } | undefined
+    >(),
     [mobile, setMobile] = useState(false);
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
@@ -73,6 +76,36 @@ export default function ClubApp() {
     }, 15000);
     return () => clearInterval(id);
   }, []);
+  const canSeeLeads = !!data?.permissions?.includes('crm.view');
+  useEffect(() => {
+    if (!canSeeLeads) return;
+    let live = true;
+    const poll = async () => {
+      try {
+        const r = await fetch('/api/crm/leads', { cache: 'no-store' });
+        if (!r.ok) return;
+        const v = (await r.json()) as {
+          leads: { status: string; due_at: number | null; first_call_at: number | null }[];
+          now: number;
+        };
+        const open = v.leads.filter((l) => !['booked', 'lost'].includes(l.status));
+        const waiting = open.filter((l) => l.first_call_at == null);
+        const queued = waiting.filter((l) => l.status === 'queued').length;
+        const overdue = waiting.filter(
+          (l) => l.status === 'assigned' && l.due_at != null && l.due_at < v.now,
+        ).length;
+        if (live) setLeads({ overdue, waiting: waiting.length - queued, queued });
+      } catch {
+        /* the home board just omits lead alerts */
+      }
+    };
+    poll();
+    const id = setInterval(poll, 30_000);
+    return () => {
+      live = false;
+      clearInterval(id);
+    };
+  }, [canSeeLeads]);
   useEffect(() => {
     if (toast) {
       const id = setTimeout(() => setToast(''), 4500);
@@ -234,6 +267,7 @@ export default function ClubApp() {
                       data={data}
                       now={now}
                       canSeeMoney={allowed('finance')}
+                      leads={leads}
                       onSelect={setSelected}
                       onBook={bookRoom}
                       onWalkIn={setWalkInRoom}

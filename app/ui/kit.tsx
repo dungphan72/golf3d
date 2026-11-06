@@ -122,12 +122,16 @@ export function DataTable<T>({
   rowKey,
   empty,
   emptyText,
+  onRowClick,
+  rowActive,
 }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T) => string;
   empty: string;
   emptyText?: string;
+  onRowClick?: (row: T) => void;
+  rowActive?: (row: T) => boolean;
 }) {
   if (!rows.length) return <EmptyState title={empty} text={emptyText} />;
   return (
@@ -144,7 +148,11 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={rowKey(r)}>
+            <tr
+              key={rowKey(r)}
+              className={(onRowClick ? 'clickable ' : '') + (rowActive?.(r) ? 'selected' : '')}
+              onClick={onRowClick ? () => onRowClick(r) : undefined}
+            >
               {columns.map((c) => (
                 <td
                   key={c.key}

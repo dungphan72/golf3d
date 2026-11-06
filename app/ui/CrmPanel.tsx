@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
+import { Chips, DataTable, FilterBar, PageTabs } from './kit';
 import { Phone, MessageCircle, Copy, Check } from 'lucide-react';
 import { money } from '../../lib/club';
 import {
@@ -406,6 +407,7 @@ function CustomerDetail({
   const [title, setTitle] = useState('');
   const [birthday, setBirthday] = useState('');
   const [error, setError] = useState('');
+  const [sub, setSub] = useState('overview');
   const load = useCallback(async () => {
     try {
       const v = (await call(
@@ -492,7 +494,16 @@ function CustomerDetail({
           <strong>{c.points}</strong>
         </div>
       </div>
-      {canWork && (
+      <PageTabs
+        value={sub}
+        onChange={setSub}
+        tabs={[
+          { key: 'overview', label: 'Tổng quan' },
+          { key: 'care', label: 'Chăm sóc' },
+          { key: 'history', label: 'Lịch sử' },
+        ]}
+      />
+      {sub === 'overview' && canWork && (
         <div className="crm-actions">
           <label>
             Ngày sinh
@@ -513,7 +524,7 @@ function CustomerDetail({
           </button>
         </div>
       )}
-      {canWork && (
+      {sub === 'care' && canWork && (
         <>
           <h4>Ghi nhận liên hệ</h4>
           <div className="crm-actions">
@@ -569,7 +580,7 @@ function CustomerDetail({
           </div>
         </>
       )}
-      {lead && lead.leads.length > 0 && (
+      {sub === 'overview' && lead && lead.leads.length > 0 && (
         <>
           <h4>Người phụ trách và hạn gọi</h4>
           <ul className="crm-timeline">
@@ -590,7 +601,7 @@ function CustomerDetail({
           </ul>
         </>
       )}
-      {canWork && (
+      {sub === 'overview' && canWork && (
         <>
           <h4>Liên hệ và đồng ý nhận tin</h4>
           <div className="crm-actions">
@@ -630,6 +641,10 @@ function CustomerDetail({
             />
             Khách đồng ý nhận tin ưu đãi (tin đặt lịch, biên nhận, cảm ơn vẫn gửi khi chưa đồng ý)
           </label>
+        </>
+      )}
+      {sub === 'care' && canWork && (
+        <>
           <h4>Phản hồi sau buổi chơi</h4>
           <div className="crm-actions">
             <select
@@ -666,7 +681,7 @@ function CustomerDetail({
           </p>
         </>
       )}
-      {lead && lead.events.length > 0 && (
+      {sub === 'history' && lead && lead.events.length > 0 && (
         <>
           <h4>Lịch sử xử lý lead</h4>
           <ul className="crm-timeline">
@@ -682,53 +697,73 @@ function CustomerDetail({
           </ul>
         </>
       )}
-      <h4>Lịch sử chăm sóc</h4>
-      <ul className="crm-timeline">
-        {d.interactions.map((i) => (
-          <li key={i.id}>
-            <strong>{CHANNEL_LABELS[i.channel]}</strong> · {stamp(i.created)}
-            {i.actor_name ? ` · ${i.actor_name}` : ''}
-            <br />
-            {i.content}
-          </li>
-        ))}
-        {!d.interactions.length && <li>Chưa có liên hệ nào được ghi nhận.</li>}
-      </ul>
-      <h4>Việc chăm sóc</h4>
-      <ul className="crm-timeline">
-        {d.tasks.map((t) => (
-          <li key={t.id}>
-            <strong>{t.title}</strong> ·{' '}
-            {t.status === 'open' ? 'đang chờ' : t.status === 'done' ? 'đã liên hệ' : 'đã bỏ qua'}
-            {t.status === 'open' && <> · {dueText(t.due, d.now)}</>}
-          </li>
-        ))}
-        {!d.tasks.length && <li>Chưa có việc nào.</li>}
-      </ul>
-      <h4>Gói và thẻ</h4>
-      <ul className="crm-timeline">
-        {d.packages.map((p) => (
-          <li key={p.id}>
-            <strong>{p.name}</strong> · hạn {day(p.expires)} ·{' '}
-            {(JSON.parse(p.balances ?? '[]') as { kind: GrantKind; remaining: number }[])
-              .map(
-                (b) =>
-                  `${b.remaining >= UNLIMITED ? 'không giới hạn' : b.remaining} ${KIND_LABELS[b.kind].toLowerCase()}`,
-              )
-              .join(', ')}
-          </li>
-        ))}
-        {!d.packages.length && <li>Chưa có gói.</li>}
-      </ul>
-      <h4>Các buổi chơi gần đây</h4>
-      <ul className="crm-timeline">
-        {d.visits.map((v) => (
-          <li key={v.id}>
-            {day(v.finished)} · {SERVICE[v.service] ?? v.service} · {money(v.amount)}
-          </li>
-        ))}
-        {!d.visits.length && <li>Chưa có buổi chơi đã thanh toán.</li>}
-      </ul>
+      {sub === 'history' && (
+        <>
+          <h4>Lịch sử chăm sóc</h4>
+          <ul className="crm-timeline">
+            {d.interactions.map((i) => (
+              <li key={i.id}>
+                <strong>{CHANNEL_LABELS[i.channel]}</strong> · {stamp(i.created)}
+                {i.actor_name ? ` · ${i.actor_name}` : ''}
+                <br />
+                {i.content}
+              </li>
+            ))}
+            {!d.interactions.length && <li>Chưa có liên hệ nào được ghi nhận.</li>}
+          </ul>
+        </>
+      )}
+      {sub === 'care' && (
+        <>
+          <h4>Việc chăm sóc</h4>
+          <ul className="crm-timeline">
+            {d.tasks.map((t) => (
+              <li key={t.id}>
+                <strong>{t.title}</strong> ·{' '}
+                {t.status === 'open'
+                  ? 'đang chờ'
+                  : t.status === 'done'
+                    ? 'đã liên hệ'
+                    : 'đã bỏ qua'}
+                {t.status === 'open' && <> · {dueText(t.due, d.now)}</>}
+              </li>
+            ))}
+            {!d.tasks.length && <li>Chưa có việc nào.</li>}
+          </ul>
+        </>
+      )}
+      {sub === 'overview' && (
+        <>
+          <h4>Gói và thẻ</h4>
+          <ul className="crm-timeline">
+            {d.packages.map((p) => (
+              <li key={p.id}>
+                <strong>{p.name}</strong> · hạn {day(p.expires)} ·{' '}
+                {(JSON.parse(p.balances ?? '[]') as { kind: GrantKind; remaining: number }[])
+                  .map(
+                    (b) =>
+                      `${b.remaining >= UNLIMITED ? 'không giới hạn' : b.remaining} ${KIND_LABELS[b.kind].toLowerCase()}`,
+                  )
+                  .join(', ')}
+              </li>
+            ))}
+            {!d.packages.length && <li>Chưa có gói.</li>}
+          </ul>
+        </>
+      )}
+      {sub === 'overview' && (
+        <>
+          <h4>Các buổi chơi gần đây</h4>
+          <ul className="crm-timeline">
+            {d.visits.map((v) => (
+              <li key={v.id}>
+                {day(v.finished)} · {SERVICE[v.service] ?? v.service} · {money(v.amount)}
+              </li>
+            ))}
+            {!d.visits.length && <li>Chưa có buổi chơi đã thanh toán.</li>}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
@@ -760,76 +795,70 @@ function CustomersView({ canWork, focus }: { canWork: boolean; focus: string | n
   return (
     <div className="crm-customers">
       <div>
-        <div className="crm-filters">
-          <input
-            type="search"
-            placeholder="Tìm theo tên hoặc số điện thoại"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <select
-            aria-label="Nhóm khách"
+        <FilterBar
+          search={query}
+          onSearch={setQuery}
+          placeholder="Tìm theo tên hoặc số điện thoại"
+          label="Tìm khách hàng"
+        >
+          <Chips
             value={segment}
-            onChange={(e) => setSegment(e.target.value as 'all' | Segment)}
-          >
-            <option value="all">Tất cả nhóm</option>
-            {(Object.keys(SEGMENT_LABELS) as Segment[]).map((s) => (
-              <option key={s} value={s}>
-                {SEGMENT_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </div>
+            onChange={(v) => setSegment(v as 'all' | Segment)}
+            options={[
+              { key: 'all', label: 'Tất cả' },
+              ...(Object.keys(SEGMENT_LABELS) as Segment[]).map((k) => ({
+                key: k,
+                label: SEGMENT_LABELS[k],
+              })),
+            ]}
+          />
+        </FilterBar>
         {error && (
           <div className="error-box" role="alert">
             {error}
           </div>
         )}
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Khách</th>
-                <th>Nhóm</th>
-                <th>Lần chơi</th>
-                <th>Gần nhất</th>
-                <th>Chi tiêu</th>
-              </tr>
-            </thead>
-            <tbody>
-              {shown.map((c) => (
-                <tr
-                  key={c.id}
-                  className={c.id === selected ? 'selected' : ''}
-                  onClick={() => setSelected(c.id)}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <td>
+        {rows && (
+          <DataTable
+            rows={shown}
+            rowKey={(c) => c.id}
+            empty="Chưa có khách phù hợp"
+            onRowClick={(c) => setSelected(c.id)}
+            rowActive={(c) => c.id === selected}
+            columns={[
+              {
+                key: 'name',
+                header: 'Khách',
+                cell: (c) => (
+                  <>
                     <strong>{c.name}</strong>
-                    <br />
-                    <small>{c.phone}</small>
-                    {c.open_tasks > 0 && <b className="crm-dot"> · {c.open_tasks} việc</b>}
-                  </td>
-                  <td>
-                    {c.segments.map((s) => (
-                      <span key={s} className={'crm-chip seg-' + s}>
-                        {SEGMENT_LABELS[s]}
-                      </span>
-                    ))}
-                  </td>
-                  <td>{c.visits}</td>
-                  <td>{c.last_visit ? day(c.last_visit) : '—'}</td>
-                  <td>{money(c.spend)}</td>
-                </tr>
-              ))}
-              {rows && !shown.length && (
-                <tr>
-                  <td colSpan={5}>Chưa có khách phù hợp</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    <small>
+                      {c.phone}
+                      {c.open_tasks > 0 && <b className="crm-dot"> · {c.open_tasks} việc</b>}
+                    </small>
+                  </>
+                ),
+              },
+              {
+                key: 'seg',
+                header: 'Nhóm',
+                cell: (c) =>
+                  c.segments.map((x) => (
+                    <span key={x} className={'crm-chip seg-' + x}>
+                      {SEGMENT_LABELS[x]}
+                    </span>
+                  )),
+              },
+              { key: 'visits', header: 'Lần chơi', cell: (c) => c.visits },
+              {
+                key: 'last',
+                header: 'Gần nhất',
+                cell: (c) => (c.last_visit ? day(c.last_visit) : '—'),
+              },
+              { key: 'spend', header: 'Chi tiêu', align: 'right', cell: (c) => money(c.spend) },
+            ]}
+          />
+        )}
       </div>
       {selected && (
         <CustomerDetail
@@ -953,33 +982,23 @@ export function CrmPanel({
 }) {
   const canWork = permissions.includes('crm.work');
   const canManage = permissions.includes('crm.manage');
-  const [tab, setTab] = useState<'leads' | 'tasks' | 'customers' | 'agents' | 'channels' | 'flows'>(
+  const [tab, setTab] = useState<'leads' | 'tasks' | 'customers' | 'setup'>(
     initialCustomer ? 'customers' : 'leads',
   );
+  const [setup, setSetup] = useState<'agents' | 'channels' | 'flows'>('agents');
   const [focus, setFocus] = useState<string | null>(initialCustomer);
-  const tabs = [
-    ['leads', 'Lead mới'],
-    ['tasks', 'Việc cần làm'],
-    ['customers', 'Khách hàng'],
-    ['agents', 'Nhân sự nhận lead'],
-    ['channels', 'Kênh & tích hợp'],
-    ...(canManage ? [['flows', 'Quy trình tự động']] : []),
-  ] as const;
   return (
     <section className="crm-panel">
-      <div className="tabs" role="tablist">
-        {tabs.map(([key, label]) => (
-          <button
-            key={key}
-            role="tab"
-            aria-selected={tab === key}
-            className={tab === key ? 'active' : ''}
-            onClick={() => setTab(key as typeof tab)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      <PageTabs
+        value={tab}
+        onChange={(k) => setTab(k as typeof tab)}
+        tabs={[
+          { key: 'leads', label: 'Lead mới' },
+          { key: 'tasks', label: 'Việc cần làm' },
+          { key: 'customers', label: 'Khách hàng' },
+          { key: 'setup', label: 'Thiết lập' },
+        ]}
+      />
       {tab === 'leads' && (
         <LeadsView
           canWork={canWork}
@@ -1002,9 +1021,24 @@ export function CrmPanel({
       {tab === 'customers' && (
         <CustomersView key={focus ?? 'all'} canWork={canWork} focus={focus} />
       )}
-      {tab === 'agents' && <AgentsView manager={canManage} />}
-      {tab === 'channels' && <ChannelsView manager={canManage} />}
-      {tab === 'flows' && canManage && <FlowsView />}
+      {tab === 'setup' && (
+        <>
+          <FilterBar>
+            <Chips
+              value={setup}
+              onChange={(k) => setSetup(k as typeof setup)}
+              options={[
+                { key: 'agents', label: 'Nhân sự nhận lead' },
+                { key: 'channels', label: 'Kênh & tích hợp' },
+                ...(canManage ? [{ key: 'flows', label: 'Quy trình tự động' }] : []),
+              ]}
+            />
+          </FilterBar>
+          {setup === 'agents' && <AgentsView manager={canManage} />}
+          {setup === 'channels' && <ChannelsView manager={canManage} />}
+          {setup === 'flows' && canManage && <FlowsView />}
+        </>
+      )}
     </section>
   );
 }

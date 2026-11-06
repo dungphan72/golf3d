@@ -323,3 +323,13 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - **Hóa đơn**: mở sẵn bộ lọc Chờ thu, hiện tổng số phiếu và số tiền còn phải thu; bỏ dòng thông báo lặp.
 - **Thực đơn & kho**: Kho là tab thứ ba của màn hình Thực đơn & bếp (bỏ mục menu Kho); bỏ tiêu đề và đoạn giới thiệu lặp; bảng kho và lịch sử kho dùng `DataTable`.
 - Mọi bảng danh sách ở các màn này có cùng tiêu đề cột, dòng, trạng thái rỗng; trên điện thoại hàng bộ lọc cuộn ngang.
+
+## Nâng cấp giao diện quản lý: giai đoạn 6 (Khách hàng)
+
+- **Chăm sóc KH**: 6 tab rút còn 4 (Lead mới, Việc cần làm, Khách hàng, Thiết lập); Nhân sự nhận lead, Kênh & tích hợp, Quy trình tự động thành ba lựa chọn trong tab Thiết lập.
+- **Hồ sơ khách một màn hình**: số liệu nằm trên cùng, bên dưới ba tab: **Tổng quan** (người phụ trách và hạn gọi, liên hệ và đồng ý nhận tin, ngày sinh, gói và thẻ, buổi chơi gần đây), **Chăm sóc** (ghi nhận liên hệ, thêm việc, phản hồi sau buổi chơi, việc chăm sóc), **Lịch sử** (lịch sử xử lý lead, lịch sử chăm sóc).
+- Danh sách khách dùng `FilterBar`, nhóm khách dạng chip và `DataTable` (bấm dòng để mở hồ sơ).
+- **Hội viên**: hai tab Khách & hội viên, Danh mục gói (bỏ tiêu đề lặp).
+- **Việc cần làm ngay** trên trang đầu có thêm lead quá 5 phút chưa gọi và lead mới đang chờ gọi (cho người có quyền xem CRM; cập nhật mỗi 30 giây).
+- Sửa biểu tượng điện thoại/Zalo bị xuống dòng trong thẻ lead và hồ sơ khách.
+- Huấn luyện: chưa đổi bên trong (làm ở giai đoạn 8 cùng bảng còn lại).

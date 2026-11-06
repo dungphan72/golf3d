@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import {
   Bell,
+  PhoneCall,
   CalendarClock,
   Globe,
   Wallet,
@@ -22,6 +23,7 @@ export function HomeBoard({
   data,
   now,
   canSeeMoney,
+  leads,
   onSelect,
   onBook,
   onWalkIn,
@@ -30,6 +32,7 @@ export function HomeBoard({
   data: Data;
   now: number;
   canSeeMoney: boolean;
+  leads?: { overdue: number; waiting: number; queued: number };
   onSelect: (b: Booking) => void;
   onBook: (room: string) => void;
   onWalkIn: (room: string) => void;
@@ -75,6 +78,29 @@ export function HomeBoard({
           onClick: () => onGo('support'),
         };
       }),
+    ...(leads && leads.overdue > 0
+      ? [
+          {
+            id: 'lead-overdue',
+            icon: PhoneCall,
+            title: `${leads.overdue} lead quá 5 phút chưa gọi`,
+            detail: 'Gọi ngay để không mất khách',
+            onClick: () => onGo('crm'),
+          },
+        ]
+      : []),
+    ...(leads && leads.waiting > 0
+      ? [
+          {
+            id: 'lead-waiting',
+            icon: PhoneCall,
+            title: `${leads.waiting} lead mới đang chờ gọi`,
+            detail:
+              leads.queued > 0 ? `${leads.queued} lead chưa có người trực` : 'Trong hạn gọi 5 phút',
+            onClick: () => onGo('crm'),
+          },
+        ]
+      : []),
     ...((data.onlinePending ?? 0) > 0
       ? [
           {

@@ -683,6 +683,12 @@ test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và 
   ).json();
   expect(r.ok).toBe(true);
   await page.goto('/quan-ly');
+  // A lead waiting for its first call shows up on the home board.
+  await expect(
+    page
+      .getByRole('complementary', { name: 'Việc cần làm ngay' })
+      .getByText(/lead .*(chờ gọi|chưa gọi)/),
+  ).toBeVisible();
   await page
     .locator('aside')
     .getByRole('button', { name: /Chăm sóc KH/ })
@@ -698,14 +704,16 @@ test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và 
   await expect(card.getByText('Đã liên hệ').first()).toBeVisible();
   await expect(card.getByText(/Cần gọi trong/)).toHaveCount(0);
 
-  await page.getByRole('tab', { name: 'Nhân sự nhận lead' }).click();
+  await page.getByRole('tab', { name: 'Thiết lập' }).click();
+  await page.getByRole('button', { name: 'Nhân sự nhận lead' }).click();
   await expect(page.getByLabel(/^Nhận lead /).first()).toBeVisible();
-  await page.getByRole('tab', { name: 'Kênh & tích hợp' }).click();
+  await page.getByRole('button', { name: 'Kênh & tích hợp' }).click();
   await expect(page.getByText('Form website 3dgolf.vn')).toBeVisible();
   await expect(page.getByText('Facebook Lead Ads (webhook)')).toBeVisible();
   await expect(page.getByText('Hàng gửi tin')).toBeVisible();
   await page.getByRole('tab', { name: 'Lead mới' }).click();
   await card.getByRole('button', { name: 'Hồ sơ khách' }).click();
   await expect(page.getByRole('heading', { name: 'Người phụ trách và hạn gọi' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Lịch sử' }).click();
   await expect(page.getByRole('heading', { name: 'Lịch sử xử lý lead' })).toBeVisible();
 });

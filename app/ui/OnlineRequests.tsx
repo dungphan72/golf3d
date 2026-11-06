@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
+import { Chips, DataTable, FilterBar } from './kit';
 
 type Row = {
   id: string;
@@ -36,6 +37,7 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
   const [data, setData] = useState<Listing | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [filter, setFilter] = useState('pending');
   // Chosen room for each line of a request (a group of more than 4 needs one room per line).
   const [room, setRoom] = useState<Record<string, string[]>>({});
 
@@ -73,6 +75,71 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
       setBusy(false);
     }
   }
+  const actions = (r: Row) => (
+    <div className="ds-cell-actions">
+      {r.status === 'pending' && !r.late && (
+        <>
+          {r.freeRooms.length >= (r.quote.lines ?? 1) ? (
+            <>
+              {Array.from({ length: r.quote.lines ?? 1 }, (_, i) => {
+                const chosen =
+                  room[r.id] ?? r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
+                return (
+                  <select
+                    key={i}
+                    aria-label={`Phòng cho line ${i + 1}`}
+                    value={chosen[i]}
+                    onChange={(e) => {
+                      const next = [...chosen];
+                      next[i] = e.target.value;
+                      setRoom({ ...room, [r.id]: next });
+                    }}
+                  >
+                    {r.freeRooms.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.name}
+                      </option>
+                    ))}
+                  </select>
+                );
+              })}{' '}
+              <button
+                className="primary"
+                disabled={busy}
+                onClick={() => {
+                  const chosen =
+                    room[r.id] ?? r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
+                  act({
+                    action: 'confirm',
+                    id: r.id,
+                    room: chosen[0],
+                    extraRooms: chosen.slice(1),
+                  });
+                }}
+              >
+                Xác nhận
+              </button>
+            </>
+          ) : (
+            <span>Không đủ phòng trống ({r.quote.lines ?? 1} line)</span>
+          )}{' '}
+        </>
+      )}
+      {r.status === 'pending' && (
+        <button
+          disabled={busy}
+          onClick={() => {
+            const reason = window.prompt('Lý do từ chối (khách sẽ thấy):');
+            if (reason && reason.trim().length >= 3) act({ action: 'reject', id: r.id, reason });
+          }}
+        >
+          Từ chối
+        </button>
+      )}
+    </div>
+  );
+  const pendingCount = data?.requests.filter((r) => r.status === 'pending').length ?? 0;
+  const rows = (data?.requests ?? []).filter((r) => filter === 'all' || r.status === 'pending');
   return (
     <section className="online-panel">
       {error && (
@@ -90,117 +157,76 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
           Đường dẫn cho khách: <code>/book/{data.slug}</code>
         </p>
       )}
-      <table>
-        <thead>
-          <tr>
-            <th>Khách</th>
-            <th>Yêu cầu</th>
-            <th>Trạng thái</th>
-            <th>Xử lý</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data?.requests.map((r) => (
-            <tr key={r.id}>
-              <td>
-                <strong>{r.name}</strong>
-                <br />
-                <a href={'tel:' + r.phone}>{r.phone}</a>
-              </td>
-              <td>
-                {SERVICE[r.service]}
-                {r.service === 'gdr' ? ` ${r.minutes}′` : ''} · {r.vip ? 'VIP' : 'line tiêu chuẩn'}{' '}
-                · {r.quote.guests || r.people} người
-                {(r.quote.guests ?? 0) > 4 && (
-                  <b> (nhóm, {r.quote.lines ?? Math.ceil(r.quote.guests! / 4)} line)</b>
-                )}
-                <br />
-                {when(r.start)}
-                {r.quote.total != null && <> · tạm tính {money(r.quote.total)}</>}
-                {r.note && (
-                  <>
-                    <br />
-                    <em>{r.note}</em>
-                  </>
-                )}
-              </td>
-              <td>
-                {REQUEST_STATUS_LABELS[r.status] ?? r.status}
-                {r.status === 'rejected' && r.reason ? ` — ${r.reason}` : ''}
-                {r.late && <b> · đã quá giờ</b>}
-              </td>
-              <td>
-                {r.status === 'pending' && !r.late && (
-                  <>
-                    {r.freeRooms.length >= (r.quote.lines ?? 1) ? (
-                      <>
-                        {Array.from({ length: r.quote.lines ?? 1 }, (_, i) => {
-                          const chosen =
-                            room[r.id] ?? r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
-                          return (
-                            <select
-                              key={i}
-                              aria-label={`Phòng cho line ${i + 1}`}
-                              value={chosen[i]}
-                              onChange={(e) => {
-                                const next = [...chosen];
-                                next[i] = e.target.value;
-                                setRoom({ ...room, [r.id]: next });
-                              }}
-                            >
-                              {r.freeRooms.map((f) => (
-                                <option key={f.id} value={f.id}>
-                                  {f.name}
-                                </option>
-                              ))}
-                            </select>
-                          );
-                        })}{' '}
-                        <button
-                          className="primary"
-                          disabled={busy}
-                          onClick={() => {
-                            const chosen =
-                              room[r.id] ??
-                              r.freeRooms.slice(0, r.quote.lines ?? 1).map((f) => f.id);
-                            act({
-                              action: 'confirm',
-                              id: r.id,
-                              room: chosen[0],
-                              extraRooms: chosen.slice(1),
-                            });
-                          }}
-                        >
-                          Xác nhận
-                        </button>
-                      </>
-                    ) : (
-                      <span>Không đủ phòng trống ({r.quote.lines ?? 1} line)</span>
-                    )}{' '}
-                  </>
-                )}
-                {r.status === 'pending' && (
-                  <button
-                    disabled={busy}
-                    onClick={() => {
-                      const reason = window.prompt('Lý do từ chối (khách sẽ thấy):');
-                      if (reason && reason.trim().length >= 3)
-                        act({ action: 'reject', id: r.id, reason });
-                    }}
-                  >
-                    Từ chối
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-          {data && !data.requests.length && (
-            <tr>
-              <td colSpan={4}>Chưa có yêu cầu đặt online</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      <FilterBar>
+        <Chips
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { key: 'pending', label: 'Chờ xác nhận', count: pendingCount },
+            { key: 'all', label: 'Tất cả', count: data?.requests.length ?? 0 },
+          ]}
+        />
+      </FilterBar>
+      {data && (
+        <DataTable
+          rows={rows}
+          rowKey={(r) => r.id}
+          empty={
+            filter === 'pending'
+              ? 'Không có yêu cầu nào chờ xác nhận'
+              : 'Chưa có yêu cầu đặt online'
+          }
+          columns={[
+            {
+              key: 'who',
+              header: 'Khách',
+              cell: (r) => (
+                <>
+                  <strong>{r.name}</strong>
+                  <small>
+                    <a href={'tel:' + r.phone}>{r.phone}</a>
+                  </small>
+                </>
+              ),
+            },
+            {
+              key: 'req',
+              header: 'Yêu cầu',
+              cell: (r) => (
+                <>
+                  {SERVICE[r.service]}
+                  {r.service === 'gdr' ? ` ${r.minutes}′` : ''} ·{' '}
+                  {r.vip ? 'VIP' : 'line tiêu chuẩn'} · {r.quote.guests || r.people} người
+                  {(r.quote.guests ?? 0) > 4 && (
+                    <b> (nhóm, {r.quote.lines ?? Math.ceil(r.quote.guests! / 4)} line)</b>
+                  )}
+                  <small>
+                    {when(r.start)}
+                    {r.quote.total != null && <> · tạm tính {money(r.quote.total)}</>}
+                  </small>
+                  {r.note && (
+                    <small>
+                      <em>{r.note}</em>
+                    </small>
+                  )}
+                </>
+              ),
+            },
+            {
+              key: 'status',
+              header: 'Trạng thái',
+              cell: (r) => (
+                <>
+                  {REQUEST_STATUS_LABELS[r.status] ?? r.status}
+                  {r.status === 'rejected' && r.reason ? ` — ${r.reason}` : ''}
+                  {r.late && <b> · đã quá giờ</b>}
+                </>
+              ),
+            },
+            { key: 'act', header: 'Xử lý', cell: (r) => actions(r) },
+          ]}
+        />
+      )}
     </section>
   );
 }

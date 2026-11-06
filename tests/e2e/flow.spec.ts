@@ -180,10 +180,14 @@ test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách th�
   await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 
   await page.goto('/quan-ly');
-  await nav(page, /Đặt online/).click();
+  await nav(page, /Lịch đặt/).click();
+  await page.getByRole('tab', { name: /Đặt online/ }).click();
   const row = page.getByRole('row', { name: /Khách Online/ });
   await expect(row).toBeVisible();
   await row.getByRole('button', { name: 'Xác nhận' }).click();
+  // A confirmed request leaves the "Chờ xác nhận" list and stays under "Tất cả".
+  await expect(row).toHaveCount(0);
+  await page.getByRole('button', { name: /^Tất cả/ }).click();
   await expect(row.getByText('Đã xác nhận lịch')).toBeVisible();
 
   await customer.reload();

@@ -2,6 +2,7 @@
 import { Flag, CalendarDays, ArrowUpRight, Plus, ChevronRight } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { labels, time, date } from './shared';
+import { DataTable } from './kit';
 const SOON_MS = 2 * 3_600_000; // a booking within 2 hours turns the line yellow
 
 /** Line states: playing = red, free = green, a booking within 2 hours = yellow, waiting for payment or cleaning = grey. */
@@ -137,61 +138,71 @@ export function RoomGrid({
 export function BookingTable({
   bookings,
   onSelect,
+  empty = 'Chưa có lượt đặt nào',
 }: {
   bookings: Booking[];
   onSelect: (b: Booking) => void;
+  empty?: string;
 }) {
-  if (!bookings.length)
-    return (
-      <Empty
-        title="Chưa có lịch trong danh sách"
-        text="Tạo lịch đặt đầu tiên để bắt đầu quản lý trải nghiệm tại Saigon Golf 3D Club."
-      />
-    );
   return (
-    <div className="table-wrap">
-      <table className="bookings-table">
-        <thead>
-          <tr>
-            <th>Khách hàng</th>
-            <th>Phòng / Line</th>
-            <th>Ngày & giờ</th>
-            <th>Dịch vụ</th>
-            <th>Trạng thái</th>
-            <th>Thành tiền</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {bookings.map((b) => (
-            <tr key={b.id}>
-              <td>
-                <button className="customer-name" onClick={() => onSelect(b)}>
-                  {b.customer}
-                </button>
-                <small>{b.phone}</small>
-              </td>
-              <td>{rooms.find((r) => r.id === b.room)?.name}</td>
-              <td>
-                {date(b.start)} · {time(b.start)}
-              </td>
-              <td>
-                {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'} · {b.people} người
-              </td>
-              <td>
-                <span className={'badge ' + b.status}>{labels[b.status]}</span>
-              </td>
-              <td>{b.amount == null ? '—' : money(b.amount)}</td>
-              <td>
-                <button className="icon-btn" aria-label="Mở chi tiết" onClick={() => onSelect(b)}>
-                  <ChevronRight size={17} />
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      rows={bookings}
+      rowKey={(b) => b.id}
+      empty={empty}
+      columns={[
+        {
+          key: 'customer',
+          header: 'Khách hàng',
+          cell: (b) => (
+            <>
+              <button className="customer-name" onClick={() => onSelect(b)}>
+                {b.customer}
+              </button>
+              <small>{b.phone}</small>
+            </>
+          ),
+        },
+        { key: 'room', header: 'Line', cell: (b) => rooms.find((r) => r.id === b.room)?.name },
+        {
+          key: 'when',
+          header: 'Ngày & giờ',
+          cell: (b) => (
+            <>
+              {date(b.start)} · {time(b.start)}
+            </>
+          ),
+        },
+        {
+          key: 'service',
+          header: 'Dịch vụ',
+          cell: (b) => (
+            <>
+              {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'} · {b.people} người
+            </>
+          ),
+        },
+        {
+          key: 'status',
+          header: 'Trạng thái',
+          cell: (b) => <span className={'badge ' + b.status}>{labels[b.status]}</span>,
+        },
+        {
+          key: 'amount',
+          header: 'Thành tiền',
+          align: 'right',
+          cell: (b) => (b.amount == null ? '—' : money(b.amount)),
+        },
+        {
+          key: 'open',
+          header: '',
+          cell: (b) => (
+            <button className="icon-btn" aria-label="Mở chi tiết" onClick={() => onSelect(b)}>
+              <ChevronRight size={17} />
+            </button>
+          ),
+        },
+      ]}
+    />
   );
 }
 export function Empty({ title, text }: { title: string; text: string }) {

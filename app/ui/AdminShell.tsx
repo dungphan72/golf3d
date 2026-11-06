@@ -6,14 +6,11 @@ import {
   Bell,
   CalendarDays,
   ChartColumn,
-  Globe,
   GraduationCap,
   Grid2X2,
-  Headphones,
   HeartHandshake,
   Menu,
   MoreHorizontal,
-  Package,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -41,16 +38,13 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'rooms', label: 'Sơ đồ phòng', icon: Grid2X2 },
       { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
-      { key: 'online', label: 'Đặt online', icon: Globe },
-      { key: 'support', label: 'Yêu cầu hỗ trợ', icon: Headphones },
     ],
   },
   {
     label: 'Bán hàng',
     items: [
       { key: 'invoices', label: 'Hóa đơn', icon: ReceiptText },
-      { key: 'fnb', label: 'Thực đơn & bếp', icon: UtensilsCrossed },
-      { key: 'stock', label: 'Kho', icon: Package },
+      { key: 'fnb', label: 'Thực đơn & kho', icon: UtensilsCrossed },
     ],
   },
   {
@@ -82,6 +76,12 @@ export const NAV_GROUPS: NavGroup[] = [
 export const NAV_LABEL: Record<string, string> = Object.fromEntries(
   NAV_GROUPS.flatMap((g) => g.items.map((i) => [i.key, i.label])),
 );
+/** Screens that live as tabs inside another menu entry: they highlight and title as their parent. */
+export const NAV_PARENT: Record<string, string> = {
+  online: 'bookings',
+  support: 'bookings',
+  stock: 'fnb',
+};
 
 export function Sidebar({
   open,
@@ -104,6 +104,7 @@ export function Sidebar({
   onClose: () => void;
   onCustomerView: () => void;
 }) {
+  const active = NAV_PARENT[view] ?? view;
   return (
     <>
       {open && <div className="ds-scrim" onClick={onClose} aria-hidden="true" />}
@@ -131,8 +132,8 @@ export function Sidebar({
                 {items.map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
-                    className={'ds-nav-item' + (view === key ? ' selected' : '')}
-                    aria-current={view === key ? 'page' : undefined}
+                    className={'ds-nav-item' + (active === key ? ' selected' : '')}
+                    aria-current={active === key ? 'page' : undefined}
                     onClick={() => onGo(key)}
                   >
                     <Icon size={20} />

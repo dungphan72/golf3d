@@ -1,16 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Bell, Check, Search, X } from 'lucide-react';
-import { rooms, defaults, type Booking } from '../../lib/club';
+import { Check, X } from 'lucide-react';
+import { defaults, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
 import FnbPanel from './FnbPanel';
-import StockPanel from './StockPanel';
 import { BookingForm } from './Forms';
 import { SettingsForm } from './Forms';
-import { time, type Data } from './shared';
-import { BookingTable, Empty } from './widgets';
+import { type Data } from './shared';
+import { BookingsHub, HUB_VIEWS, InvoiceList } from './BookingsHub';
 import { HomeBoard } from './HomeBoard';
-import { BottomBar, NAV_LABEL, Sidebar, TopBar } from './AdminShell';
+import { BottomBar, NAV_LABEL, NAV_PARENT, Sidebar, TopBar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
@@ -19,7 +18,6 @@ import { StaffPanel } from './StaffPanel';
 import { AuditPanel } from './AuditPanel';
 import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
-import { OnlineRequests } from './OnlineRequests';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmPanel } from './CrmPanel';
@@ -43,7 +41,6 @@ export default function ClubApp() {
     [error, setError] = useState(''),
     [toast, setToast] = useState(''),
     [busy, setBusy] = useState(false),
-    [search, setSearch] = useState(''),
     [now, setNow] = useState(() => Date.now()),
     [mobile, setMobile] = useState(false);
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
@@ -152,8 +149,7 @@ export default function ClubApp() {
       </div>
     );
   const badges: Record<string, number> = {
-    support: pending.length,
-    online: data?.onlinePending ?? 0,
+    bookings: pending.length + (data?.onlinePending ?? 0),
     invoices: b.filter((x) => x.status === 'finished').length,
   };
   const visibleNav = (key: string) => allowed(key);
@@ -182,7 +178,11 @@ export default function ClubApp() {
       />
       <div className="ds-body">
         <TopBar
-          title={mode === 'customer' ? 'Xem như khách hàng' : (NAV_LABEL[view] ?? 'Sơ đồ phòng')}
+          title={
+            mode === 'customer'
+              ? 'Xem như khách hàng'
+              : (NAV_LABEL[NAV_PARENT[view] ?? view] ?? 'Sơ đồ phòng')
+          }
           connection={error ? 'Mất kết nối' : data ? 'Trực tuyến' : 'Đang kết nối…'}
           online={!error && !!data}
           bookings={b}
@@ -240,90 +240,19 @@ export default function ClubApp() {
                       onGo={go}
                     />
                   )}
-                  {view === 'bookings' && (
-                    <>
-                      <div className="toolbar">
-                        <div className="search">
-                          <Search size={17} />
-                          <input
-                            aria-label="Tìm lịch đặt"
-                            placeholder="Tìm tên, điện thoại…"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                          />
-                        </div>
-                        <span className="muted">{b.length} lượt đặt</span>
-                      </div>
-                      <BookingTable
-                        bookings={b.filter((x) =>
-                          (x.customer + ' ' + x.phone).toLowerCase().includes(search.toLowerCase()),
-                        )}
-                        onSelect={setSelected}
-                      />
-                    </>
+                  {HUB_VIEWS.includes(view as (typeof HUB_VIEWS)[number]) && data && (
+                    <BookingsHub
+                      view={view}
+                      onView={go}
+                      data={data}
+                      busy={busy}
+                      canOnline={allowed('online')}
+                      onSelect={setSelected}
+                      onMutate={mutate}
+                      onChanged={load}
+                    />
                   )}
-                  {view === 'invoices' && (
-                    <>
-                      <div className="info-strip">
-                        Phiếu thanh toán nội bộ · Kết nối hóa đơn điện tử chưa được cấu hình.
-                      </div>
-                      <BookingTable
-                        bookings={b.filter((x) => ['finished', 'paid'].includes(x.status))}
-                        onSelect={setSelected}
-                      />
-                    </>
-                  )}
-                  {view === 'support' && (
-                    <div className="support-list">
-                      {data?.requests.length ? (
-                        data.requests.map((r) => {
-                          const booking = b.find((x) => x.id === r.booking);
-                          return (
-                            <article className="support-card" key={r.id}>
-                              <span className="support-icon">
-                                <Bell size={23} />
-                              </span>
-                              <div>
-                                <h3>{r.kind}</h3>
-                                <p>
-                                  {rooms.find((x) => x.id === booking?.room)?.name} ·{' '}
-                                  {booking?.customer} · {time(r.created)}
-                                </p>
-                                <span className={'badge ' + r.status}>
-                                  {r.status === 'new'
-                                    ? 'Chờ tiếp nhận'
-                                    : r.status === 'received'
-                                      ? 'Đang xử lý'
-                                      : 'Hoàn thành'}
-                                </span>
-                              </div>
-                              {r.status !== 'done' && (
-                                <button
-                                  className="primary"
-                                  disabled={busy}
-                                  onClick={() =>
-                                    mutate({
-                                      action: 'request-update',
-                                      id: r.id,
-                                      status: r.status === 'new' ? 'received' : 'done',
-                                    })
-                                  }
-                                >
-                                  {r.status === 'new' ? 'Tiếp nhận' : 'Hoàn thành'}
-                                </button>
-                              )}
-                            </article>
-                          );
-                        })
-                      ) : (
-                        <Empty
-                          title="Mọi yêu cầu đã được chăm sóc"
-                          text="Yêu cầu hỗ trợ từ phiên chơi sẽ xuất hiện tại đây."
-                        />
-                      )}
-                    </div>
-                  )}
-                  {view === 'stock' && <StockPanel />}
+                  {view === 'invoices' && <InvoiceList bookings={b} onSelect={setSelected} />}
                   {view === 'fnb' && <FnbPanel onChanged={load} />}
                   {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
                   {view === 'settings' && allowed('settings') && (
@@ -336,7 +265,6 @@ export default function ClubApp() {
                       <SepaySettings />
                     </>
                   )}
-                  {view === 'online' && allowed('online') && <OnlineRequests onChanged={load} />}
                   {view === 'reports' && allowed('reports') && <ReportsPanel />}
                   {view === 'coaching' && allowed('coaching') && (
                     <CoachingPanel permissions={data?.permissions ?? []} />
@@ -361,7 +289,7 @@ export default function ClubApp() {
           )}
         </main>
         <BottomBar
-          view={view}
+          view={NAV_PARENT[view] ?? view}
           badges={badges}
           onGo={(key) => {
             setMode('staff');

@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { PageTabs } from './kit';
+import StockPanel from './StockPanel';
 import { Plus, X, UtensilsCrossed, Pencil, RefreshCw } from 'lucide-react';
 import { money, rooms } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
@@ -48,46 +50,40 @@ export default function FnbPanel({ onChanged }: { onChanged: () => Promise<void>
     pending = orders.filter((o) => ['new', 'preparing', 'ready'].includes(o.status));
   return (
     <section className="fnb-panel">
-      <div className="finance-toolbar">
-        <div>
-          <h2>
-            <UtensilsCrossed size={20} />
-            Thực đơn & bếp / bar
-          </h2>
-          <p>
-            Giá và thuế/phí do chủ cơ sở nhập. Gọi món từ chi tiết phiên đang chơi; đơn đã phục vụ
-            được gộp vào phiếu.
-          </p>
+      <PageTabs
+        value={tab}
+        onChange={setTab}
+        tabs={[
+          { key: 'kitchen', label: 'Bếp / bar', count: pending.length },
+          { key: 'menu', label: `Thực đơn · ${food.data?.menu.length ?? 0}` },
+          { key: 'stock', label: 'Kho' },
+        ]}
+      />
+      {tab !== 'stock' && (
+        <div className="ds-filterbar">
+          <div className="ds-filter-right">
+            <button
+              aria-label="Tải lại"
+              className="secondary"
+              onClick={food.reload}
+              disabled={busy || food.loading}
+            >
+              <RefreshCw size={15} /> Tải lại
+            </button>
+            {tab === 'menu' && (
+              <button
+                className="primary"
+                disabled={!food.data || busy}
+                onClick={() => setEditor('new')}
+              >
+                <Plus size={16} />
+                Thêm món
+              </button>
+            )}
+          </div>
         </div>
-        <div className="heading-actions">
-          <button
-            data-tip="Tải lại"
-            aria-label="Tải lại"
-            className="secondary icon-only"
-            onClick={food.reload}
-            disabled={busy || food.loading}
-          >
-            <RefreshCw size={15} />
-            <span className="btn-label">Tải lại</span>
-          </button>
-          <button
-            className="primary"
-            disabled={!food.data || busy}
-            onClick={() => setEditor('new')}
-          >
-            <Plus size={16} />
-            Thêm món
-          </button>
-        </div>
-      </div>
-      <div className="tabs">
-        <button className={tab === 'kitchen' ? 'active' : ''} onClick={() => setTab('kitchen')}>
-          Bếp / bar · {pending.length}
-        </button>
-        <button className={tab === 'menu' ? 'active' : ''} onClick={() => setTab('menu')}>
-          Thực đơn · {food.data?.menu.length ?? 0}
-        </button>
-      </div>
+      )}
+      {tab === 'stock' && <StockPanel />}
       {food.error && (
         <div className="error-box" role="alert">
           {food.error}

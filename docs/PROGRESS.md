@@ -315,3 +315,11 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Khung Thu tiền: trả bằng gói và mã QR chuyển khoản (nếu có) → ba nút lớn Tiền mặt, Chuyển khoản đã đối soát, Thẻ tại quầy → Giảm giá, Chia nhiều hình thức thanh toán. Phiếu đã thu: Hoàn tiền, In phiếu.
 - Bỏ lặp: dòng "Tổng tiền chơi" trùng "Tiền dịch vụ", dòng "Trọn lượt" thứ hai, dòng chữ nhỏ giải thích giá (gom vào mục "Cách tính" thu gọn), dòng "CHI TIẾT PHIÊN CHƠI".
 - Sửa lỗi in phiếu sau khi đổi khung ở giai đoạn 2: khi in chỉ còn hộp thoại phiếu, ẩn menu và thanh trên.
+
+## Nâng cấp giao diện quản lý: giai đoạn 5 (Lịch đặt, Hóa đơn, Thực đơn, Kho)
+
+- **Bộ thành phần dùng chung** `app/ui/kit.tsx`: `PageTabs` (tab trang), `Chips` (bộ lọc có số đếm), `FilterBar` (ô tìm kiếm + bộ lọc + nút bên phải), `DataTable` (một kiểu bảng, một kiểu trạng thái rỗng), `EmptyState`.
+- **Lịch đặt** (`app/ui/BookingsHub.tsx`): một mục menu, ba tab: Lịch đặt (tìm kiếm + lọc Tất cả/Sắp tới/Đang chơi/Chờ thanh toán/Đã thanh toán/Đã hủy, có số đếm), Đặt online (lọc Chờ xác nhận/Tất cả), Yêu cầu hỗ trợ (lọc Đang chờ/Tất cả). Mục "Đặt online" và "Yêu cầu hỗ trợ" trong menu đã bỏ; số việc chờ hiện ở mục Lịch đặt và trên tab.
+- **Hóa đơn**: mở sẵn bộ lọc Chờ thu, hiện tổng số phiếu và số tiền còn phải thu; bỏ dòng thông báo lặp.
+- **Thực đơn & kho**: Kho là tab thứ ba của màn hình Thực đơn & bếp (bỏ mục menu Kho); bỏ tiêu đề và đoạn giới thiệu lặp; bảng kho và lịch sử kho dùng `DataTable`.
+- Mọi bảng danh sách ở các màn này có cùng tiêu đề cột, dòng, trạng thái rỗng; trên điện thoại hàng bộ lọc cuộn ngang.

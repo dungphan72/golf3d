@@ -1,5 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { DataTable } from './kit';
 import { operationKey } from '../../lib/finance';
 import type { StockItem, StockMovement } from '../../lib/stock';
 const kinds: Record<string, string> = {
@@ -96,83 +97,83 @@ export default function StockPanel() {
           {notice}
         </div>
       )}
-      <div className="section-heading">
-        <h2>Tồn kho F&B</h2>
-        <button className="secondary" onClick={load}>
-          Tải lại
-        </button>
-      </div>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Món / đơn vị</th>
-              <th>Tồn thực tế</th>
-              <th>Đang giữ</th>
-              <th>Khả dụng</th>
-              <th>Thao tác</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((i) => (
-              <tr key={i.id}>
-                <td>
-                  <strong>{i.name}</strong>
-                  <small>{i.unit}</small>
-                </td>
-                <td>{i.low_level === null ? 'Chưa theo dõi' : i.on_hand}</td>
-                <td>{i.low_level === null ? '—' : i.reserved}</td>
-                <td>
-                  {i.low_level === null ? (
-                    '—'
-                  ) : (
-                    <span className={'badge ' + (i.available <= i.low_level ? 'paused' : 'served')}>
-                      {i.available}
-                      {i.available <= i.low_level ? ' · Sắp hết' : ''}
-                    </span>
-                  )}
-                </td>
-                <td>
-                  <button className="secondary" onClick={() => choose(i)}>
-                    {i.low_level === null ? 'Bật theo dõi' : 'Nhập / điều chỉnh'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {!data.items.length && <p>Thêm món trong Thực đơn & bếp trước khi thiết lập kho.</p>}
-      <h2>Lịch sử kho gần nhất</h2>
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Thời điểm</th>
-              <th>Món</th>
-              <th>Loại</th>
-              <th>Thay đổi</th>
-              <th>Lý do</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.movements.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  {new Date(m.created).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
-                </td>
-                <td>{m.item_name}</td>
-                <td>{kinds[m.kind]}</td>
-                <td>
-                  {m.delta > 0 ? '+' : ''}
-                  {m.delta} {m.unit}
-                </td>
-                <td>{m.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <DataTable
+        rows={data.items}
+        rowKey={(i) => i.id}
+        empty="Chưa có món để theo dõi kho"
+        emptyText="Thêm món trong tab Thực đơn trước khi thiết lập kho."
+        columns={[
+          {
+            key: 'name',
+            header: 'Món / đơn vị',
+            cell: (i) => (
+              <>
+                <strong>{i.name}</strong>
+                <small>{i.unit}</small>
+              </>
+            ),
+          },
+          {
+            key: 'onhand',
+            header: 'Tồn thực tế',
+            cell: (i) => (i.low_level === null ? 'Chưa theo dõi' : i.on_hand),
+          },
+          {
+            key: 'reserved',
+            header: 'Đang giữ',
+            cell: (i) => (i.low_level === null ? '—' : i.reserved),
+          },
+          {
+            key: 'available',
+            header: 'Khả dụng',
+            cell: (i) =>
+              i.low_level === null ? (
+                '—'
+              ) : (
+                <span className={'badge ' + (i.available <= i.low_level ? 'paused' : 'served')}>
+                  {i.available}
+                  {i.available <= i.low_level ? ' · Sắp hết' : ''}
+                </span>
+              ),
+          },
+          {
+            key: 'act',
+            header: '',
+            cell: (i) => (
+              <button className="secondary" onClick={() => choose(i)}>
+                {i.low_level === null ? 'Bật theo dõi' : 'Nhập / điều chỉnh'}
+              </button>
+            ),
+          },
+        ]}
+      />
+      <h2 className="ds-subhead">Lịch sử kho gần nhất</h2>
+      <DataTable
+        rows={data.movements}
+        rowKey={(m) => m.id}
+        empty="Chưa có biến động kho"
+        columns={[
+          {
+            key: 'time',
+            header: 'Thời điểm',
+            cell: (m) =>
+              new Date(m.created).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' }),
+          },
+          { key: 'item', header: 'Món', cell: (m) => m.item_name },
+          { key: 'kind', header: 'Loại', cell: (m) => kinds[m.kind] },
+          {
+            key: 'delta',
+            header: 'Thay đổi',
+            cell: (m) => (
+              <>
+                {m.delta > 0 ? '+' : ''}
+                {m.delta} {m.unit}
+              </>
+            ),
+          },
+          { key: 'note', header: 'Lý do', cell: (m) => m.note },
+        ]}
+      />
       {selected && (
         <dialog
           ref={dialog}

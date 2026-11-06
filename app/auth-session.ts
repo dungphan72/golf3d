@@ -12,11 +12,13 @@ import { sendResult, httpError } from '../lib/server/http';
 
 /**
  * While hosted on OpenAI Sites the platform injects a trusted identity header. Anywhere else that
- * header is attacker-controlled, so a deployment MUST set DISABLE_SITES_IDENTITY=1.
+ * header is attacker-controlled (anyone can send it and become the owner), so it is trusted only
+ * when a deployment explicitly sets ENABLE_SITES_IDENTITY=1 and does not set DISABLE_SITES_IDENTITY.
  */
 export function sitesIdentityEnabled() {
-  const flag = (env as unknown as Record<string, unknown>).DISABLE_SITES_IDENTITY;
-  return !(flag === '1' || flag === 1 || flag === 'true' || flag === true);
+  const vars = env as unknown as Record<string, unknown>;
+  const on = (v: unknown) => v === '1' || v === 1 || v === 'true' || v === true;
+  return on(vars.ENABLE_SITES_IDENTITY) && !on(vars.DISABLE_SITES_IDENTITY);
 }
 
 export async function sessionToken() {

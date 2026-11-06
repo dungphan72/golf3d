@@ -1579,3 +1579,101 @@
   border-radius: 6px;
   white-space: nowrap;
 }
+
+/* ---------- Forms: readable labels, full-width headings, sane buttons ---------- */
+.ds-root .form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px 16px;
+  align-items: end;
+}
+.ds-root .form-grid > .form-label,
+.ds-root .form-grid > h3,
+.ds-root .form-grid > .form-note,
+.ds-root .form-grid > p,
+.ds-root .form-grid > fieldset {
+  grid-column: 1 / -1;
+}
+.ds-root .form-label {
+  margin: 4px 0 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ds-text);
+}
+.ds-root .form-grid label,
+.ds-root .four-cols label {
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--ds-muted);
+}
+.ds-root .form-grid small,
+.ds-root .offers-field small,
+.ds-root .holiday-label small {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ds-muted);
+}
+.ds-root .form-grid > button {
+  justify-self: start;
+  min-width: 160px;
+  min-height: 42px;
+  padding: 0 18px;
+}
+.ds-root .form-note {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-muted);
+}
+.ds-root .settings-section p {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ds-muted);
+}
+.ds-root .offers-field,
+.ds-root .holiday-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+  font-size: 14px;
+  color: var(--ds-text);
+}
+.ds-root textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ds-text);
+  font-size: 15px;
+  line-height: 1.45;
+  resize: vertical;
+}
+.ds-root .staff-panel > form,
+.ds-root .members-grid form.form-grid {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--ds-line);
+  border-radius: var(--ds-radius);
+}
+.ds-root .customer-list {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.ds-root .customer-list button {
+  width: 100%;
+  min-height: 42px;
+  padding: 8px 12px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--ds-line);
+  border-radius: 8px;
+}
+.ds-root .customer-list button.selected {
+  border-color: var(--ds-green);
+}

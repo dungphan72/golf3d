@@ -1,4 +1,5 @@
-import { sendResult, httpError, originOf, requestNow } from '../../../../lib/server/http';
+import { overLimit } from '../../../../lib/server/throttle';
+import { sendResult, httpError, originOf, requestNow, clientIp } from '../../../../lib/server/http';
 import { websiteLeadSchema, fromWebsite } from '../../../../lib/leads';
 import { intake, tenantForToken } from '../../../../lib/server/lead-intake';
 export const dynamic = 'force-dynamic';
@@ -20,6 +21,8 @@ export async function POST(req: Request) {
   const raw = await req.text().catch(() => '');
   const tenant = await tenantForToken('website', req.headers.get('x-lead-token'));
   if (!tenant) return withCors(httpError('Mã webhook không hợp lệ hoặc chưa được tạo', 401));
+  if (await overLimit('lead_website', clientIp(req), 10 * 60_000, 20))
+    return withCors(httpError('Quá nhiều yêu cầu, thử lại sau ít phút', 429));
   let body: unknown;
   try {
     if (raw.length > 6000) return withCors(httpError('Yêu cầu quá lớn', 413));

@@ -1,6 +1,7 @@
 import { sendResult, httpError, originOf, requestNow } from '../../../../lib/server/http';
 import { secret } from '../../../../lib/server/providers';
 import { db } from '../../../../lib/server/common';
+import { safeEqual } from '../../../../lib/server/throttle';
 import { sweepLeads } from '../../../../lib/server/lead-service';
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +12,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   const expected = secret('CRON_SECRET');
   if (!expected) return httpError('Chưa cấu hình CRON_SECRET', 503);
-  if (req.headers.get('authorization') !== `Bearer ${expected}`)
+  if (!safeEqual(req.headers.get('authorization') ?? '', `Bearer ${expected}`))
     return httpError('Không được phép', 401);
   const tenants = (await db().prepare('SELECT tenant FROM settings').all<{ tenant: string }>())
     .results;

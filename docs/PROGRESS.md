@@ -355,3 +355,8 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Tiêu đề trang không còn lặp với menu (vẫn có cho trình đọc màn hình; hiện trên điện thoại).
 - Cài đặt: mỗi khối là một khung có viền; nút Lưu dính ở cuối.
 - Dọn thêm CSS không dùng; test e2e cập nhật theo menu mới; sửa test lead phụ thuộc giờ trong ngày (nhắc lịch).
+
+## Rà soát bảo mật và sửa bố cục form
+
+- Xem `docs/SECURITY-REVIEW.md`: tiêu đề bảo mật và CSP, mặc định an toàn cho header danh tính nền tảng, giới hạn dò mật khẩu theo địa chỉ, quản lý không thao tác được với quản lý khác, giới hạn webhook lead, mật khẩu yếu, so sánh khóa hằng thời gian, bớt lộ lỗi nội bộ.
+- Sửa bố cục form (nhân viên, thêm khách hàng, khuyến mãi và quyền lợi hội viên): tiêu đề form chiếm cả hàng, nhãn và ghi chú đọc được, ô nhập quyền lợi rộng, nút không bị kéo giãn.

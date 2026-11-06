@@ -53,6 +53,7 @@ test('managers cannot assign owner; staff roles cannot assign anyone', () => {
   assert.ok(canAssignRole('owner', 'owner'));
   assert.ok(canAssignRole('manager', 'cashier'));
   assert.ok(!canAssignRole('manager', 'owner'));
+  assert.ok(!canAssignRole('manager', 'manager')); // no lateral takeover of another manager
   assert.ok(!canAssignRole('cashier', 'sale'));
 });
 test('isRole rejects unknown values', () => {
@@ -89,4 +90,18 @@ test('session tokens are unique and hashed deterministically', async () => {
   assert.equal(await tokenId(t1), await tokenId(t1));
   assert.notEqual(await tokenId(t1), t1);
   assert.equal(temporaryPassword().length, 12);
+});
+
+test('common and name-based passwords are rejected', () => {
+  for (const bad of [
+    '12345678',
+    'password123',
+    'Password123',
+    'owner1234',
+    'aaaaaaaa',
+    'qwertyuiop',
+  ])
+    assert.ok(passwordProblem(bad, 'owner@example.com'), bad);
+  assert.equal(passwordProblem('Sân-golf-3D-xanh-2026', 'owner@example.com'), null);
+  assert.equal(passwordProblem('e2e-owner-password', 'owner@e2e.test'), null);
 });

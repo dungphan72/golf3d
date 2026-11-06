@@ -1,5 +1,6 @@
 import { sendResult, httpError, originOf, requestNow } from '../../../../lib/server/http';
 import { fromFacebookFields } from '../../../../lib/leads';
+import { safeEqual } from '../../../../lib/server/throttle';
 import { facebookSignatureOk, fetchFacebookLead, secret } from '../../../../lib/server/providers';
 import { intake } from '../../../../lib/server/lead-intake';
 import { publicTenant } from '../../../../lib/server/member-account-service';
@@ -9,7 +10,11 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const p = new URL(req.url).searchParams;
   const expected = secret('FB_VERIFY_TOKEN');
-  if (expected && p.get('hub.mode') === 'subscribe' && p.get('hub.verify_token') === expected)
+  if (
+    expected &&
+    p.get('hub.mode') === 'subscribe' &&
+    safeEqual(p.get('hub.verify_token') ?? '', expected)
+  )
     return new Response(p.get('hub.challenge') ?? '', { status: 200 });
   return httpError('Không xác minh được', 403);
 }

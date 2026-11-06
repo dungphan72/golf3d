@@ -4,6 +4,32 @@
 const ITERATIONS = 100_000;
 const MIN_LENGTH = 8;
 const MAX_LENGTH = 200;
+const COMMON_PASSWORDS = new Set([
+  'password',
+  'password1',
+  'password123',
+  'passw0rd',
+  'qwerty123',
+  'qwertyuiop',
+  'iloveyou',
+  '12345678',
+  '123456789',
+  '1234567890',
+  '11111111',
+  '00000000',
+  'abc12345',
+  'abcd1234',
+  'admin123',
+  'admin1234',
+  'letmein1',
+  'welcome1',
+  'matkhau123',
+  'matkhau1',
+  'golf1234',
+  'golf3d123',
+  'saigongolf',
+  'saigon123',
+]);
 
 const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
 const fromBase64 = (value: string) => Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
@@ -37,6 +63,14 @@ export function passwordProblem(password: string, email = ''): string | null {
   if (email && password.toLowerCase() === email.toLowerCase())
     return 'Mật khẩu không được trùng email';
   if (/^(.)\1+$/.test(password)) return 'Mật khẩu quá đơn giản';
+  const lower = password.toLowerCase();
+  if (COMMON_PASSWORDS.has(lower) || /^(?:0?123456789?|abcdefgh?|qwertyui)/.test(lower))
+    return 'Mật khẩu quá phổ biến, hãy chọn mật khẩu khác';
+  // The email's name part with digits or symbols added is still easy to guess.
+  const letters = (v: string) => v.toLowerCase().replace(/[^a-z]/g, '');
+  const local = letters(email.split('@')[0] ?? '');
+  if (local.length >= 4 && letters(password) === local)
+    return 'Mật khẩu không được chỉ là phần tên trong email';
   return null;
 }
 

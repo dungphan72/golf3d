@@ -97,5 +97,6 @@ export const permissionsOf = (role: Role): Permission[] => [...GRANTS[role]];
 /** Managers may manage staff but never create, change or remove owners. */
 export function canAssignRole(actor: Role, target: Role) {
   if (!can(actor, 'staff.manage')) return false;
-  return actor === 'owner' || target !== 'owner';
+  // Only the owner creates, edits or resets managers and other owners; a manager handles the staff below.
+  return actor === 'owner' || (target !== 'owner' && target !== 'manager');
 }

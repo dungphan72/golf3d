@@ -10,6 +10,7 @@ import {
   temporaryPassword,
 } from '../auth/password';
 import { isRole, canAssignRole, type Role } from '../auth/permissions';
+import { noteAttempt, recentAttempts } from './throttle';
 
 export type AuthUser = {
   userId: string;
@@ -44,7 +45,22 @@ type UserRow = {
 export type LoginOutcome =
   { ok: true; token: string; user: AuthUser } | { ok: false; result: ServiceResult };
 
-export async function login(emailInput: string, password: string): Promise<LoginOutcome> {
+const LOGIN_WINDOW_MS = 15 * 60_000;
+const LOGIN_FAILS_PER_IP = 20; // wrong passwords from one address in 15 minutes, across all accounts
+
+export async function login(
+  emailInput: string,
+  password: string,
+  ip = 'unknown',
+): Promise<LoginOutcome> {
+  if (
+    ip !== 'unknown' &&
+    (await recentAttempts('staff_login_fail', ip, LOGIN_WINDOW_MS)) >= LOGIN_FAILS_PER_IP
+  )
+    return {
+      ok: false,
+      result: fail('Đăng nhập sai quá nhiều lần từ thiết bị này. Thử lại sau ít phút.', 429),
+    };
   const email = normalizeEmail(emailInput);
   const row = validEmail(email)
     ? await db().prepare('SELECT * FROM users WHERE email=?').bind(email).first<UserRow>()
@@ -52,6 +68,7 @@ export async function login(emailInput: string, password: string): Promise<Login
   const now = Date.now();
   if (!row || !row.active) {
     await verifyPassword(password, DUMMY_HASH);
+    if (ip !== 'unknown') await noteAttempt('staff_login_fail', ip);
     return { ok: false, result: fail(BAD_LOGIN, 401) };
   }
   if (row.locked_until > now)
@@ -60,6 +77,7 @@ export async function login(emailInput: string, password: string): Promise<Login
       result: fail('Tài khoản tạm khóa do nhập sai nhiều lần. Thử lại sau ít phút.', 429),
     };
   if (!(await verifyPassword(password, row.password_hash))) {
+    if (ip !== 'unknown') await noteAttempt('staff_login_fail', ip);
     const failures = row.failed_count + 1;
     await db()
       .prepare('UPDATE users SET failed_count=?,locked_until=? WHERE id=?')

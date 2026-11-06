@@ -58,6 +58,6 @@ export async function POST(req: Request) {
     return sendResult(result);
   } catch (e) {
     console.error(e);
-    return httpError(e instanceof Error ? e.message : 'Không thể xử lý yêu cầu', 500);
+    return httpError('Không thể xử lý yêu cầu. Vui lòng thử lại.', 500);
   }
 }

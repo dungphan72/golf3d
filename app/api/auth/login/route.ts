@@ -7,6 +7,7 @@ import {
   sessionCookie,
   sitesIdentityEnabled,
 } from '../../../auth-session';
+import { clientIp } from '../../../../lib/server/http';
 export const dynamic = 'force-dynamic';
 
 const input = z.object({ email: z.string().max(200), password: z.string().min(1).max(200) });
@@ -25,7 +26,7 @@ export async function POST(req: Request) {
   } catch {
     return httpError('Dữ liệu không hợp lệ');
   }
-  const outcome = await login(body.email, body.password);
+  const outcome = await login(body.email, body.password, clientIp(req));
   if (!outcome.ok) return sendResult(outcome.result);
   const response = sendResult({
     status: 200,

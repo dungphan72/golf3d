@@ -19,7 +19,7 @@ export function clientIp(req: Request) {
   const forwarded = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
   const trusted =
     String((env as unknown as Record<string, unknown>).TRUST_FORWARDED_IP ?? '') === '1';
-  return (trusted && forwarded) || req.headers.get('cf-connecting-ip') || forwarded || 'unknown';
+  return (trusted && forwarded) || req.headers.get('cf-connecting-ip') || 'unknown';
 }
 
 /** The origin the request came in on, used for links in notifications. */

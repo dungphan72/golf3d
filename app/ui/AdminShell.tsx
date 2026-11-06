@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
+  Contact,
   Award,
   Bell,
   CalendarDays,
@@ -52,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Khách hàng',
     items: [
+      { key: 'crmx', label: 'CRM', icon: Contact },
       { key: 'crm', label: 'Chăm sóc KH', icon: HeartHandshake },
       { key: 'members', label: 'Hội viên', icon: Award },
       { key: 'coaching', label: 'Huấn luyện', icon: GraduationCap },
@@ -290,6 +292,7 @@ const MAIN_KEYS = [
   'bookings',
   'invoices',
   'fnb',
+  'crmx',
   'crm',
   'members',
   'coaching',

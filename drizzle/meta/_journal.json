@@ -134,6 +134,13 @@
       "when": 1793955046078,
       "tag": "0018_broken_radioactive_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1793957773958,
+      "tag": "0019_windy_celestials",
+      "breakpoints": true
     }
   ]
 }

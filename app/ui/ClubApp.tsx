@@ -21,6 +21,7 @@ import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
+import { CrmModule } from '../../modules/crm/ui/CrmApp';
 import { CrmPanel } from './CrmPanel';
 import { WalkInDialog } from './WalkInDialog';
 export default function ClubApp() {
@@ -157,6 +158,7 @@ export default function ClubApp() {
     audit: 'staff.manage',
     members: 'member.view',
     crm: 'crm.view',
+    crmx: 'crm.view',
     online: 'booking.create',
     coaching: 'coach.view',
   };
@@ -329,6 +331,9 @@ export default function ClubApp() {
                   )}
                   {view === 'members' && allowed('members') && (
                     <MembersPanel permissions={data?.permissions ?? []} />
+                  )}
+                  {view === 'crmx' && allowed('crmx') && (
+                    <CrmModule permissions={data?.permissions ?? []} />
                   )}
                   {view === 'crm' && allowed('crm') && (
                     <CrmPanel

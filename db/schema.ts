@@ -717,3 +717,260 @@ export const crmOutbox = sqliteTable(
     index('crm_outbox_status').on(t.status, t.sendAt),
   ],
 );
+
+// ---- CRM module (modules/crm): service consultation from first inquiry to sale ----
+export const crm2Settings = sqliteTable('crm2_settings', {
+  tenant: text('tenant').primaryKey(),
+  value: text('value').notNull(),
+  updated: integer('updated').notNull(),
+});
+export const crm2Runtime = sqliteTable(
+  'crm2_runtime',
+  {
+    tenant: text('tenant').notNull(),
+    key: text('key').notNull(),
+    value: text('value').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_runtime_key').on(t.tenant, t.key)],
+);
+export const crm2Staff = sqliteTable(
+  'crm2_staff',
+  {
+    tenant: text('tenant').notNull(),
+    userId: text('user_id').notNull(),
+    team: text('team').notNull().default(''),
+    isLeader: integer('is_leader').notNull().default(0),
+    extension: text('extension').notNull().default(''),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_staff_user').on(t.tenant, t.userId)],
+);
+export const crm2Leads = sqliteTable(
+  'crm2_leads',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    fullName: text('full_name').notNull(),
+    phone: text('phone').notNull(),
+    phoneNorm: text('phone_norm').notNull().default(''),
+    email: text('email').notNull().default(''),
+    notes: text('notes').notNull().default(''),
+    source: text('source').notNull().default(''),
+    targetService: text('target_service').notNull().default(''), // service or package of interest
+    preferredDate: text('preferred_date').notNull().default(''),
+    preferredTime: text('preferred_time').notNull().default(''),
+    stage: text('stage').notNull().default('NEW'),
+    statusId: text('status_id').notNull().default('khach-moi'),
+    owner: text('owner'), // user id; null = in the pool
+    ownedAt: integer('owned_at'),
+    claimedBy: text('claimed_by'),
+    claimedAt: integer('claimed_at'),
+    pooledAt: integer('pooled_at'),
+    lostReason: text('lost_reason').notNull().default(''),
+    expectedValue: integer('expected_value').notNull().default(0),
+    budget: integer('budget').notNull().default(0),
+    lastContactAt: integer('last_contact_at'),
+    inquiryCount: integer('inquiry_count').notNull().default(1),
+    nextAction: text('next_action').notNull().default('NEW'),
+    nextDue: integer('next_due'),
+    callAttempts: integer('call_attempts').notNull().default(0),
+    lastResult: text('last_result').notNull().default(''),
+    labels: text('labels').notNull().default('[]'),
+    slaAlertedAt: integer('sla_alerted_at'),
+    staleTaskAt: integer('stale_task_at'),
+    firstResponseAt: integer('first_response_at'),
+    firstResponseBy: text('first_response_by'),
+    firstResponseMin: integer('first_response_min'),
+    firstResponseWorkMin: integer('first_response_work_min'),
+    wonAt: integer('won_at'),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    index('crm2_lead_phone').on(t.tenant, t.phoneNorm),
+    index('crm2_lead_owner').on(t.tenant, t.owner, t.nextAction, t.nextDue),
+    index('crm2_lead_stage').on(t.tenant, t.stage),
+  ],
+);
+export const crm2Activities = sqliteTable(
+  'crm2_activities',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    leadId: text('lead_id').notNull(),
+    type: text('type').notNull(), // NOTE CALL ZALO EMAIL VISIT STAGE ASSIGN INQUIRY SYSTEM CHAT HOLD
+    content: text('content').notNull().default(''),
+    meta: text('meta').notNull().default('{}'),
+    actor: text('actor').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('crm2_activity_lead').on(t.tenant, t.leadId, t.created)],
+);
+export const crm2Tasks = sqliteTable(
+  'crm2_tasks',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    leadId: text('lead_id'),
+    title: text('title').notNull(),
+    type: text('type').notNull().default('FOLLOW_UP'), // CALL VISIT FOLLOW_UP OTHER
+    dueAt: integer('due_at'),
+    doneAt: integer('done_at'),
+    assignee: text('assignee'),
+    createdBy: text('created_by').notNull().default(''),
+    remindedAt: integer('reminded_at'),
+    ukey: text('ukey'), // makes system tasks idempotent
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    index('crm2_task_assignee').on(t.tenant, t.assignee, t.doneAt, t.dueAt),
+    uniqueIndex('crm2_task_ukey').on(t.tenant, t.ukey),
+  ],
+);
+export const crm2BlockedPhones = sqliteTable(
+  'crm2_blocked_phones',
+  {
+    tenant: text('tenant').notNull(),
+    phoneNorm: text('phone_norm').notNull(),
+    reason: text('reason').notNull().default(''),
+    addedBy: text('added_by').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_blocked_key').on(t.tenant, t.phoneNorm)],
+);
+export const crm2Appointments = sqliteTable(
+  'crm2_appointments',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    leadId: text('lead_id').notNull(),
+    owner: text('owner'),
+    service: text('service').notNull().default(''),
+    at: integer('at').notNull(),
+    status: text('status').notNull().default('CONFIRMED'),
+    note: text('note').notNull().default(''),
+    createdBy: text('created_by').notNull().default(''),
+    approvedBy: text('approved_by'),
+    decidedAt: integer('decided_at'),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    index('crm2_appt_at').on(t.tenant, t.at),
+    index('crm2_appt_lead').on(t.tenant, t.leadId),
+  ],
+);
+export const crm2Products = sqliteTable(
+  'crm2_products',
+  {
+    tenant: text('tenant').notNull(),
+    code: text('code').notNull(),
+    name: text('name').notNull(),
+    listPrice: integer('list_price').notNull().default(0),
+    limited: integer('limited').notNull().default(0), // 1 = only one customer can hold it at a time
+    active: integer('active').notNull().default(1),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_product_code').on(t.tenant, t.code)],
+);
+export const crm2Holds = sqliteTable(
+  'crm2_holds',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    productCode: text('product_code').notNull(),
+    productName: text('product_name').notNull().default(''),
+    limited: integer('limited').notNull().default(0),
+    leadId: text('lead_id').notNull(),
+    leadName: text('lead_name').notNull().default(''),
+    kind: text('kind').notNull().default('HOLD'), // HOLD | DEPOSIT
+    amount: integer('amount').notNull().default(0),
+    status: text('status').notNull().default('ACTIVE'), // ACTIVE CONVERTED EXPIRED RELEASED CANCELLED
+    expiresAt: integer('expires_at'),
+    note: text('note').notNull().default(''),
+    createdBy: text('created_by').notNull().default(''),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    index('crm2_hold_lead').on(t.tenant, t.leadId),
+    uniqueIndex('crm2_hold_active')
+      .on(t.tenant, t.productCode)
+      .where(sql`status = 'ACTIVE' AND limited = 1`),
+  ],
+);
+export const crm2Orders = sqliteTable(
+  'crm2_orders',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    code: text('code').notNull(), // BK2026-0001
+    leadId: text('lead_id').notNull(),
+    holdId: text('hold_id'),
+    productCode: text('product_code').notNull().default(''),
+    productName: text('product_name').notNull().default(''),
+    limited: integer('limited').notNull().default(0),
+    listPrice: integer('list_price').notNull().default(0),
+    discount: integer('discount').notNull().default(0),
+    price: integer('price').notNull(),
+    status: text('status').notNull().default('ACTIVE'), // ACTIVE COMPLETED CANCELLED
+    note: text('note').notNull().default(''),
+    createdBy: text('created_by').notNull().default(''),
+    cancelledAt: integer('cancelled_at'),
+    cancelReason: text('cancel_reason').notNull().default(''),
+    refundDue: integer('refund_due').notNull().default(0),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    uniqueIndex('crm2_order_code').on(t.tenant, t.code),
+    index('crm2_order_lead').on(t.tenant, t.leadId),
+    // A limited product has at most one live order.
+    uniqueIndex('crm2_order_active')
+      .on(t.tenant, t.productCode)
+      .where(sql`status IN ('ACTIVE','COMPLETED') AND limited = 1`),
+  ],
+);
+export const crm2OrderPayments = sqliteTable(
+  'crm2_order_payments',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    orderId: text('order_id').notNull(),
+    kind: text('kind').notNull().default('INSTALLMENT'), // DEPOSIT INSTALLMENT FINAL
+    label: text('label').notNull().default(''),
+    amount: integer('amount').notNull(),
+    paidAmount: integer('paid_amount').notNull().default(0),
+    dueDate: text('due_date'),
+    paidAt: integer('paid_at'),
+    method: text('method').notNull().default(''),
+    status: text('status').notNull().default('PLANNED'), // PLANNED PARTIAL PAID CANCELLED
+    note: text('note').notNull().default(''),
+    remindedAt: integer('reminded_at'),
+    createdBy: text('created_by').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('crm2_payment_order').on(t.tenant, t.orderId, t.dueDate)],
+);
+export const crm2CustomerProfiles = sqliteTable(
+  'crm2_customer_profiles',
+  {
+    tenant: text('tenant').notNull(),
+    phoneNorm: text('phone_norm').notNull(),
+    code: text('code').notNull(), // KH-000001
+    birthday: text('birthday').notNull().default(''), // YYYY-MM-DD or MM-DD
+    gender: text('gender').notNull().default(''),
+    occupation: text('occupation').notNull().default(''),
+    interests: text('interests').notNull().default('[]'),
+    note: text('note').notNull().default(''),
+    birthdayTaskYear: integer('birthday_task_year'),
+    updatedBy: text('updated_by').notNull().default(''),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [
+    uniqueIndex('crm2_profile_phone').on(t.tenant, t.phoneNorm),
+    uniqueIndex('crm2_profile_code').on(t.tenant, t.code),
+  ],
+);

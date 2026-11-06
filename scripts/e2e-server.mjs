@@ -95,7 +95,7 @@ const server = spawn(
     '--var',
     'ZALO_APP_SECRET:e2e-zalo-secret',
     '--var',
-    'CRON_SECRET:e2e-cron-secret',
+    'CRON_SECRET:e2e-cron-secret-0123456789',
   ],
   { cwd: root, shell, stdio: 'inherit' },
 );

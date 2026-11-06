@@ -146,10 +146,8 @@ test('chăm sóc khách hàng: việc tự sinh từ phiếu đã thu, không tr
 test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trình tự động', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Chăm sóc KH/ })
-    .click();
+  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.getByRole('tab', { name: 'Chăm sóc KH (cũ)' }).click();
   await page.getByRole('tab', { name: 'Việc cần làm' }).click();
   await expect(page.getByRole('tab', { name: 'Việc cần làm' })).toBeVisible();
 
@@ -163,10 +161,11 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
   await expect(page.getByText('Đã xử lý gần đây')).toBeVisible();
 
   // Customer file from the customers tab.
-  await page.getByRole('tab', { name: 'Khách hàng' }).click();
+  // The legacy screens sit under the CRM tabs, so their own tab bar is the last one.
+  await page.getByRole('tab', { name: 'Khách hàng' }).last().click();
   await page.locator('tbody tr', { hasText: 'Khách Sinh Nhật' }).click();
   await expect(page.getByRole('heading', { name: 'Khách Sinh Nhật' })).toBeVisible();
-  await page.getByRole('tab', { name: 'Chăm sóc' }).click();
+  await page.getByRole('tab', { name: 'Chăm sóc', exact: true }).click();
   await page.getByLabel('Nội dung ghi chú').fill('Quan tâm thẻ tháng');
   await page.getByRole('button', { name: 'Lưu', exact: true }).click();
   await page.getByRole('tab', { name: 'Lịch sử' }).click();

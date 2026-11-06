@@ -840,10 +840,8 @@ test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và 
       .getByRole('complementary', { name: 'Việc cần làm ngay' })
       .getByText(/lead .*(chờ gọi|chưa gọi)/),
   ).toBeVisible();
-  await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Chăm sóc KH/ })
-    .click();
+  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.getByRole('tab', { name: 'Chăm sóc KH (cũ)' }).click();
   await expect(page.getByRole('tab', { name: 'Lead mới' })).toBeVisible();
   const card = page.locator('.crm-lead', { hasText: 'Khách Giao Diện Lead' });
   await expect(card).toBeVisible();

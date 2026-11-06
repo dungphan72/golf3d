@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Loading, PageTabs } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { call, errText, type Staff } from './api';
@@ -367,15 +367,23 @@ function ConfigScreen() {
   );
 }
 
-export function CrmModule({ permissions }: { permissions: string[] }) {
+export function CrmModule({
+  permissions,
+  legacy = null,
+  initialTab = 'overview',
+}: {
+  permissions: string[];
+  /** The older "Chăm sóc KH" screens, kept as a tab until their data moves to the crm2 tables. */
+  legacy?: ReactNode;
+  initialTab?: string;
+}) {
   const manager = permissions.includes('crm.manage');
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState(initialTab);
   const [lead, setLead] = useState<string | null>(null);
   const [bump, setBump] = useState(0);
   const [clock, setClock] = useState(0);
   const cfg = useLoad<Config>('/api/crm2/config', 120_000);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- start the clock on mount
     setClock(Date.now());
     const t = setInterval(() => setClock(Date.now()), 15_000);
     return () => clearInterval(t);
@@ -429,6 +437,7 @@ export function CrmModule({ permissions }: { permissions: string[] }) {
           { key: 'holds', label: 'Giữ chỗ' },
           { key: 'orders', label: 'Đơn bán' },
           { key: 'config', label: 'Cấu hình', hidden: !manager },
+          { key: 'legacy', label: 'Chăm sóc KH (cũ)', hidden: !legacy },
         ]}
       />
       <div key={`${tab}-${bump}`}>
@@ -443,6 +452,7 @@ export function CrmModule({ permissions }: { permissions: string[] }) {
         {tab === 'holds' && <HoldsScreen s={shared} />}
         {tab === 'orders' && <OrdersScreen s={shared} />}
         {tab === 'config' && manager && <ConfigScreen />}
+        {tab === 'legacy' && legacy}
       </div>
     </section>
   );

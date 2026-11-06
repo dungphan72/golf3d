@@ -332,13 +332,17 @@ export default function ClubApp() {
                   {view === 'members' && allowed('members') && (
                     <MembersPanel permissions={data?.permissions ?? []} />
                   )}
-                  {view === 'crmx' && allowed('crmx') && (
-                    <CrmModule permissions={data?.permissions ?? []} />
-                  )}
-                  {view === 'crm' && allowed('crm') && (
-                    <CrmPanel
+                  {(view === 'crmx' || view === 'crm') && allowed('crmx') && (
+                    <CrmModule
+                      key={view}
                       permissions={data?.permissions ?? []}
-                      initialCustomer={deepCustomer}
+                      initialTab={view === 'crm' ? 'legacy' : 'overview'}
+                      legacy={
+                        <CrmPanel
+                          permissions={data?.permissions ?? []}
+                          initialCustomer={deepCustomer}
+                        />
+                      }
                     />
                   )}
                   {view === 'staff' && allowed('staff') && (

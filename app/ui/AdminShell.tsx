@@ -11,7 +11,6 @@ import {
   GraduationCap,
   Globe,
   Grid2X2,
-  HeartHandshake,
   Menu,
   MoreHorizontal,
   Plus,
@@ -54,7 +53,6 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'Khách hàng',
     items: [
       { key: 'crmx', label: 'CRM', icon: Contact },
-      { key: 'crm', label: 'Chăm sóc KH', icon: HeartHandshake },
       { key: 'members', label: 'Hội viên', icon: Award },
       { key: 'coaching', label: 'Huấn luyện', icon: GraduationCap },
     ],
@@ -85,6 +83,7 @@ export const NAV_PARENT: Record<string, string> = {
   online: 'bookings',
   support: 'bookings',
   stock: 'fnb',
+  crm: 'crmx',
 };
 
 export function Sidebar({
@@ -293,7 +292,6 @@ const MAIN_KEYS = [
   'invoices',
   'fnb',
   'crmx',
-  'crm',
   'members',
   'coaching',
   'finance',

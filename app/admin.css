@@ -830,11 +830,11 @@ body:has(.app-shell) {
   background: #fff;
 }
 .app-shell .room-card .room-walkin {
-  border: 1px solid #1f9d55;
-  color: #1f9d55;
+  border: 1px solid #17623d;
+  color: #17623d;
 }
 .app-shell .room-card .room-walkin:hover:not(:disabled) {
-  background: #1f9d55;
+  background: #17623d;
   color: #fff;
 }
 .app-shell .room-card .room-walkin:disabled {
@@ -2262,7 +2262,7 @@ body:has(.app-shell) {
   letter-spacing: -0.3px;
 }
 .ds-statbar .warn strong {
-  color: #a86f00;
+  color: #8a5a00;
 }
 .ds-home-grid {
   grid-template-columns: minmax(0, 1fr) 320px;
@@ -2385,7 +2385,7 @@ body:has(.app-shell) {
   color: var(--ds-red);
 }
 .room-card.soon .rc-chip {
-  color: #a86f00;
+  color: #8a5a00;
 }
 .room-card.due .rc-chip,
 .room-card.clean .rc-chip {
@@ -3200,4 +3200,23 @@ body:has(.app-shell) {
     width: 44px;
     height: 44px;
   }
+}
+
+/* Skip link: hidden until a keyboard user tabs to it. */
+.ds-skip {
+  position: absolute;
+  top: -48px;
+  left: 8px;
+  z-index: 100;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--ds-green-dark);
+  color: #fff;
+  font-weight: 650;
+}
+.ds-skip:focus {
+  top: 8px;
+}
+.ds-main:focus {
+  outline: none;
 }

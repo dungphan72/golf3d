@@ -178,7 +178,9 @@ export default function FinancePanel({ onChanged }: { onChanged: () => Promise<v
           </div>
           {!shift || !summary ? (
             <div className="empty">
-              <h3>Bắt đầu ca làm việc đầu tiên</h3>
+              <h3 role="heading" aria-level={2}>
+                Bắt đầu ca làm việc đầu tiên
+              </h3>
               <p>
                 Kiểm đếm tiền mặt đầu ca rồi bấm “Mở ca”. Mọi khoản thu mới sẽ được gắn với ca đang
                 mở.

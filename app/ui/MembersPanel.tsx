@@ -169,7 +169,9 @@ export function MembersPanel({ permissions }: { permissions: string[] }) {
                   }, 'Đã thêm khách hàng');
                 }}
               >
-                <h3 className="form-label">Thêm khách hàng</h3>
+                <h3 className="form-label" role="heading" aria-level={2}>
+                  Thêm khách hàng
+                </h3>
                 <label>
                   Họ tên
                   <input

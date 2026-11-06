@@ -100,7 +100,9 @@ export function OverviewScreen({
           </div>
         ))}
       </div>
-      <h3>Phễu 30 ngày</h3>
+      <h3 role="heading" aria-level={2}>
+        Phễu 30 ngày
+      </h3>
       <DataTable
         rows={STAGES.map((s) => ({ s, n: n(s) }))}
         rowKey={(r) => r.s}

@@ -130,7 +130,7 @@ export default function FnbPanel({ onChanged }: { onChanged: () => Promise<void>
           <div className="kitchen-board">
             {(['new', 'preparing', 'ready'] as const).map((status) => (
               <section key={status}>
-                <h3>
+                <h3 role="heading" aria-level={2}>
                   {foodLabels[status]}{' '}
                   <span>{orders.filter((o) => o.status === status).length}</span>
                 </h3>

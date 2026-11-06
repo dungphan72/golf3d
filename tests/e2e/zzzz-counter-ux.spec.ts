@@ -45,3 +45,15 @@ test.describe('điện thoại', () => {
     }
   });
 });
+
+test('bàn phím: liên kết "Bỏ qua đến nội dung" chuyển tiêu điểm vào vùng chính', async ({
+  page,
+}) => {
+  expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  await page.goto('/quan-ly');
+  const skip = page.getByRole('link', { name: 'Bỏ qua đến nội dung' });
+  await skip.focus();
+  await expect(skip).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('main#noi-dung')).toBeFocused();
+});

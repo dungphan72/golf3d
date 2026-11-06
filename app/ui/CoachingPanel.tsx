@@ -257,7 +257,9 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
             });
           }}
         >
-          <h3 className="form-label">Xếp buổi học</h3>
+          <h3 className="form-label" role="heading" aria-level={2}>
+            Xếp buổi học
+          </h3>
           <label>
             HLV
             <select

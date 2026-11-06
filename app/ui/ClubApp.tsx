@@ -214,6 +214,9 @@ export default function ClubApp() {
         }}
       />
       <div className="ds-body">
+        <a className="ds-skip" href="#noi-dung">
+          Bỏ qua đến nội dung
+        </a>
         <AppHeader
           title={
             mode === 'customer'
@@ -243,7 +246,7 @@ export default function ClubApp() {
           onPick={setSelected}
           onCustomerView={() => setMode('customer')}
         />
-        <main className="ds-main">
+        <main className="ds-main" id="noi-dung" tabIndex={-1}>
           {error && (
             <div className="error-box" role="alert">
               {error}

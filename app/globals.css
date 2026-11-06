@@ -535,7 +535,7 @@ td small {
   border: 1px dashed #d6decf;
   border-radius: 9px;
   padding: 37px 22px;
-  color: #98a48a;
+  color: #5d6c63;
   background: #f9faf6;
 }
 .empty svg {
@@ -620,7 +620,7 @@ footer i {
   background: #ecefdf;
   border: 1px solid #dfe5cb;
   border-radius: 7px;
-  color: #788459;
+  color: #566138;
   font-size: 11px;
   line-height: 1.8;
   margin-bottom: 22px;
@@ -777,7 +777,7 @@ select:focus {
   background: white;
   padding: 12px 6px;
   font-size: 10px;
-  color: #718864;
+  color: #4d6342;
 }
 .room-picker button small {
   font-size: 7px;
@@ -1887,7 +1887,7 @@ select:focus {
 }
 .kitchen-empty {
   font-size: 10px;
-  color: #97a58a;
+  color: #5d6c63;
   padding: 20px 0;
   text-align: center;
 }

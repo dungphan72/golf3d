@@ -159,7 +159,7 @@ export function DataTable<T>({
           <tr>
             {columns.map((c) => (
               <th key={c.key} className={c.align === 'right' ? 'right' : undefined}>
-                {c.header}
+                {c.header || <span className="sr-only">Thao tác</span>}
               </th>
             ))}
           </tr>

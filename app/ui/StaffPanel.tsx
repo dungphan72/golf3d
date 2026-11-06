@@ -142,7 +142,9 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
           }, email);
         }}
       >
-        <h3 className="form-label">Thêm nhân viên</h3>
+        <h3 className="form-label" role="heading" aria-level={2}>
+          Thêm nhân viên
+        </h3>
         <label>
           Họ tên
           <input value={name} onChange={(e) => setName(e.target.value)} required minLength={2} />

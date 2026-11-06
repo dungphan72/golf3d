@@ -503,32 +503,32 @@ td small {
   padding: 5px 8px;
   border-radius: 4px;
   background: #edf1e6;
-  color: #7b8e65;
+  color: #4f6340;
   white-space: nowrap;
 }
 .badge.playing,
 .badge.received {
   background: #e0eedf;
-  color: #3a784a;
+  color: #2c6a3c;
 }
 .badge.booked,
 .badge.new {
   background: #f5edcf;
-  color: #9d8545;
+  color: #6e5a1f;
 }
 .badge.finished,
 .badge.paused {
   background: #eee7d9;
-  color: #8e7647;
+  color: #6b5528;
 }
 .badge.cancelled {
   background: #f3e5df;
-  color: #a77360;
+  color: #8a4f3a;
 }
 .badge.paid,
 .badge.done {
   background: #e4eee9;
-  color: #387759;
+  color: #2d6347;
 }
 .empty {
   text-align: center;
@@ -709,7 +709,7 @@ select:focus {
 }
 .sticky-save small {
   font-size: 10px;
-  color: #89997a;
+  color: #5d6c63;
 }
 .package-row {
   margin-bottom: 18px;
@@ -1386,7 +1386,7 @@ select:focus {
 }
 .booking-estimate p {
   font-size: 10px;
-  color: #70835f;
+  color: #4d6342;
   line-height: 1.8;
   margin-bottom: 12px;
 }

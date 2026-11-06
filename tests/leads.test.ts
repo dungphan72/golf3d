@@ -9,6 +9,8 @@ import {
   fromWebsite,
   fromZaloEvent,
   leadInput,
+  nextStep,
+  MISSED_WAITS,
   leadLink,
   needFromText,
   phoneInText,
@@ -235,4 +237,65 @@ test('facebook and zalo signatures are checked against the app secret', async ()
     true,
     'header may omit the mac= prefix',
   );
+});
+
+test('kết quả cuộc gọi quyết định giai đoạn và việc kế tiếp', () => {
+  const now = 1_000_000_000;
+  const H = 3_600_000;
+  // Missed calls: 2 hours, then 1 day, then 2 days, and the count keeps growing.
+  let missed = 0;
+  for (const wait of MISSED_WAITS) {
+    const s = nextStep('no_answer', { now, missed }) as Exclude<
+      ReturnType<typeof nextStep>,
+      { error: string }
+    >;
+    assert.equal(s.nextAt, now + wait);
+    assert.equal(s.reached, false);
+    assert.equal(s.stage, null);
+    missed = s.missed;
+  }
+  assert.equal(missed, 3);
+  const busy = nextStep('busy', { now, missed: 5 }) as { nextAt: number; missed: number };
+  assert.equal(busy.nextAt, now + MISSED_WAITS[2]);
+  assert.equal(busy.missed, 6);
+
+  const thinking = nextStep('thinking', { now, missed: 2 }) as {
+    stage: string;
+    nextAt: number;
+    missed: number;
+    reached: boolean;
+  };
+  assert.deepEqual(
+    [thinking.stage, thinking.nextAt, thinking.missed, thinking.reached],
+    ['qualified', now + 48 * H, 0, true],
+  );
+  assert.equal(
+    (nextStep('need_more', { now, missed: 0 }) as { nextAt: number }).nextAt,
+    now + 24 * H,
+  );
+  assert.equal((nextStep('trial_done', { now, missed: 0 }) as { stage: string }).stage, 'visited');
+
+  // A meeting needs a time in the future.
+  assert.ok('error' in (nextStep('trial', { now, missed: 0 }) as object));
+  assert.ok('error' in (nextStep('trial', { now, missed: 0, at: now - 1 }) as object));
+  assert.ok('error' in (nextStep('trial_moved', { now, missed: 0 }) as object));
+  const trial = nextStep('trial', { now, missed: 0, at: now + 5 * H }) as {
+    stage: string;
+    nextAt: number;
+  };
+  assert.deepEqual([trial.stage, trial.nextAt], ['trial', now + 5 * H]);
+
+  // Wrong number and no need close the lead with a reason.
+  assert.match((nextStep('wrong_number', { now, missed: 0 }) as { lost: string }).lost, /Sai số/);
+  assert.match((nextStep('no_need', { now, missed: 0 }) as { lost: string }).lost, /nhu cầu/);
+});
+
+test('chuyển giai đoạn và hồ sơ lead: kiểm tra đầu vào', () => {
+  assert.ok(leadInput.safeParse({ action: 'stage', id: 'x', stage: 'qualified' }).success);
+  assert.equal(leadInput.safeParse({ action: 'stage', id: 'x', stage: 'bogus' }).success, false);
+  assert.ok(
+    leadInput.safeParse({ action: 'profile', id: 'x', tags: ['VIP'], budget: 5000000 }).success,
+  );
+  assert.equal(leadInput.safeParse({ action: 'profile', id: 'x', budget: -1 }).success, false);
+  assert.equal(leadInput.safeParse({ action: 'profile', id: 'x', extra: 1 }).success, false);
 });

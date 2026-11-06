@@ -36,15 +36,147 @@ export const LEAD_STATUS_LABELS: Record<string, string> = {
   booked: 'Đã đặt lịch',
   lost: 'Không đặt',
 };
-export const CALL_RESULTS = ['answered', 'no_answer', 'busy', 'wrong_number', 'callback'] as const;
+export const CALL_RESULTS = [
+  'answered',
+  'need_more',
+  'thinking',
+  'trial',
+  'trial_moved',
+  'trial_done',
+  'callback',
+  'no_answer',
+  'busy',
+  'wrong_number',
+  'no_need',
+] as const;
 export type CallResult = (typeof CALL_RESULTS)[number];
 export const CALL_RESULT_LABELS: Record<CallResult, string> = {
   answered: 'Đã nghe máy, đã tư vấn',
+  need_more: 'Có nhu cầu, cần tư vấn tiếp',
+  thinking: 'Khách cần suy nghĩ thêm',
+  trial: 'Hẹn đến trải nghiệm',
+  trial_moved: 'Khách dời lịch trải nghiệm',
+  trial_done: 'Đã gặp khách, đã trải nghiệm',
+  callback: 'Khách hẹn gọi lại',
   no_answer: 'Không nghe máy',
   busy: 'Máy bận',
   wrong_number: 'Sai số',
-  callback: 'Khách hẹn gọi lại',
+  no_need: 'Không có nhu cầu',
 };
+
+/** Pipeline of a service consultation, from the first inquiry to the sale. */
+export const STAGES = [
+  'new',
+  'contacted',
+  'qualified',
+  'trial',
+  'visited',
+  'deposit',
+  'won',
+  'lost',
+] as const;
+export type Stage = (typeof STAGES)[number];
+export const STAGE_LABELS: Record<Stage, string> = {
+  new: 'Mới',
+  contacted: 'Đã liên hệ',
+  qualified: 'Có nhu cầu',
+  trial: 'Hẹn trải nghiệm',
+  visited: 'Đã trải nghiệm',
+  deposit: 'Giữ chỗ, đặt cọc',
+  won: 'Chốt dịch vụ',
+  lost: 'Không thành',
+};
+export const stageLabel = (s: string) => STAGE_LABELS[s as Stage] ?? s;
+export const LOST_REASONS = [
+  'Không liên lạc được',
+  'Chưa có nhu cầu',
+  'Giá cao hoặc ngân sách',
+  'Chọn nơi khác',
+  'Ở xa, đi lại bất tiện',
+  'Khác',
+] as const;
+export const LEAD_TAGS = ['VIP', 'Doanh nghiệp', 'Người mới chơi', 'Cần HLV', 'Nhạy cảm về giá'];
+
+const HOUR = 3_600_000;
+/** Wait before calling again after a call nobody answered: 2 hours, 1 day, 2 days. */
+export const MISSED_WAITS = [2 * HOUR, 24 * HOUR, 48 * HOUR];
+export const MAX_MISSED = 3;
+const MISSED_RESULTS = new Set<CallResult>(['no_answer', 'busy']);
+
+export type NextStep = {
+  /** The stage the lead moves to; null keeps the current one. */
+  stage: Stage | null;
+  nextAt: number | null;
+  nextNote: string;
+  /** Set when the call closes the lead as lost. */
+  lost: string | null;
+  missed: number;
+  /** The customer was reached (the lead counts as contacted). */
+  reached: boolean;
+};
+
+/**
+ * What a call result means for the pipeline: the stage, when to follow up, and whether the lead is
+ * over. `at` is the agreed time of a meeting. Returns an error text when the result needs more input.
+ */
+export function nextStep(
+  result: CallResult,
+  o: { now: number; missed: number; at?: number | null },
+): NextStep | { error: string } {
+  const keep = { stage: null, nextAt: null, nextNote: '', lost: null, missed: 0, reached: true };
+  if (MISSED_RESULTS.has(result)) {
+    const missed = o.missed + 1;
+    const wait = MISSED_WAITS[Math.min(missed, MAX_MISSED) - 1];
+    return {
+      ...keep,
+      reached: false,
+      missed,
+      nextAt: o.now + wait,
+      nextNote: `Gọi lại lần ${Math.min(missed, MAX_MISSED)}`,
+    };
+  }
+  switch (result) {
+    case 'answered':
+      return { ...keep, stage: 'contacted' };
+    case 'callback':
+      return {
+        ...keep,
+        stage: 'contacted',
+        nextAt: o.at ?? o.now + 24 * HOUR,
+        nextNote: 'Khách hẹn gọi lại',
+      };
+    case 'need_more':
+      return { ...keep, stage: 'qualified', nextAt: o.now + 24 * HOUR, nextNote: 'Tư vấn tiếp' };
+    case 'thinking':
+      return {
+        ...keep,
+        stage: 'qualified',
+        nextAt: o.now + 48 * HOUR,
+        nextNote: 'Hỏi lại khách sau khi suy nghĩ',
+      };
+    case 'trial':
+    case 'trial_moved':
+      if (o.at == null || o.at <= o.now) return { error: 'Chọn ngày giờ trải nghiệm ở tương lai' };
+      return { ...keep, stage: 'trial', nextAt: o.at, nextNote: 'Buổi trải nghiệm' };
+    case 'trial_done':
+      return {
+        ...keep,
+        stage: 'visited',
+        nextAt: o.now + 24 * HOUR,
+        nextNote: 'Bám sát sau trải nghiệm',
+      };
+    case 'wrong_number':
+      return { ...keep, stage: 'lost', lost: 'Sai số, số không liên lạc được' };
+    case 'no_need':
+      return { ...keep, stage: 'lost', lost: 'Chưa có nhu cầu' };
+    default:
+      return { ...keep };
+  }
+}
+
+/** Sort key for the work desk: what is overdue first, then what is due soonest. */
+export const workDue = (l: { next_at: number | null; due_at: number | null }) =>
+  l.next_at ?? l.due_at ?? Number.MAX_SAFE_INTEGER;
 
 export type LeadInput = {
   source: LeadSource;
@@ -362,6 +494,8 @@ export const leadInput = z.discriminatedUnion('action', [
       action: z.literal('call'),
       id,
       result: z.enum(CALL_RESULTS),
+      /** Agreed time of a meeting or call-back, in ms. */
+      at: z.number().int().positive().optional(),
       note: z.string().trim().max(600).default(''),
     })
     .strict(),
@@ -378,6 +512,26 @@ export const leadInput = z.discriminatedUnion('action', [
     .object({ action: z.literal('booked'), id, note: z.string().trim().max(300).default('') })
     .strict(),
   z.object({ action: z.literal('claim'), id }).strict(),
+  z
+    .object({
+      action: z.literal('stage'),
+      id,
+      stage: z.enum(STAGES),
+      reason: z.string().trim().max(300).default(''),
+      dealValue: z.number().int().min(0).max(10_000_000_000).default(0),
+      at: z.number().int().positive().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal('profile'),
+      id,
+      interest: z.string().trim().max(200).default(''),
+      budget: z.number().int().min(0).max(10_000_000_000).default(0),
+      tags: z.array(z.string().trim().min(1).max(30)).max(10).default([]),
+      note: z.string().trim().max(1000).default(''),
+    })
+    .strict(),
   z
     .object({
       action: z.literal('create'),

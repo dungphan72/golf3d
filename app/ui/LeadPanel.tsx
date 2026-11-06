@@ -1,10 +1,17 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { Phone, MessageCircle, Copy, Check, Clock } from 'lucide-react';
+import { Chips, FilterBar } from './kit';
 import {
   CALL_RESULTS,
   CALL_RESULT_LABELS,
   LEAD_STATUS_LABELS,
+  LEAD_TAGS,
+  LOST_REASONS,
+  STAGES,
+  STAGE_LABELS,
+  workDue,
+  stageLabel,
   NEEDS,
   NEED_LABELS,
   SOURCE_LABELS,
@@ -20,6 +27,7 @@ type Lead = {
   phone: string;
   source: LeadSource;
   campaign: string;
+  lost_reason: string;
   channel_ref: string;
   need: string;
   guests: number;
@@ -32,6 +40,23 @@ type Lead = {
   received_at: number;
   contacts: number;
   marketing_consent: number | null;
+  stage: string;
+  interest: string;
+  budget: number;
+  tags: string;
+  note: string;
+  deal_value: number;
+  next_at: number | null;
+  next_note: string;
+  missed: number;
+};
+const tagsOf = (l: Lead): string[] => {
+  try {
+    const v = JSON.parse(l.tags) as unknown;
+    return Array.isArray(v) ? v.map(String) : [];
+  } catch {
+    return [];
+  }
 };
 type Avail = {
   lines: number;
@@ -222,7 +247,17 @@ function LeadCard({
   onChanged: () => void;
   onOpenCustomer: (id: string) => void;
 }) {
-  const [mode, setMode] = useState<'' | 'call' | 'consult'>('');
+  const [mode, setMode] = useState<'' | 'call' | 'consult' | 'stage' | 'profile'>('');
+  const [at, setAt] = useState('');
+  const [stageTo, setStageTo] = useState('qualified');
+  const [reason, setReason] = useState<string>(LOST_REASONS[0]);
+  const [dealValue, setDealValue] = useState('');
+  const [prof, setProf] = useState({
+    interest: lead.interest,
+    budget: lead.budget ? String(lead.budget) : '',
+    tags: tagsOf(lead),
+    note: lead.note,
+  });
   const [result, setResult] = useState<CallResult>('answered');
   const [note, setNote] = useState('');
   const [channel, setChannel] = useState(
@@ -273,7 +308,11 @@ function LeadCard({
             </b>
           )}
         </div>
-        <span className={'crm-chip lead-' + lead.status}>{LEAD_STATUS_LABELS[lead.status]}</span>
+        <span className={'crm-chip lead-' + lead.status}>
+          {lead.status === 'queued' || lead.status === 'assigned' || lead.stage === 'new'
+            ? LEAD_STATUS_LABELS[lead.status]
+            : stageLabel(lead.stage)}
+        </span>
       </header>
       <p className="crm-meta">
         <span className="crm-chip">{SOURCE_LABELS[lead.source]}</span>
@@ -287,7 +326,32 @@ function LeadCard({
         <span>· phụ trách: {lead.assignee_name ?? 'chưa có'}</span>
         {lead.marketing_consent === 1 && <span className="crm-chip">Đồng ý nhận tin ưu đãi</span>}
       </p>
+      {(lead.interest || tagsOf(lead).length > 0 || lead.budget > 0) && (
+        <p className="crm-meta">
+          {lead.interest && <span>Quan tâm: {lead.interest}</span>}
+          {lead.budget > 0 && <span>· ngân sách {lead.budget.toLocaleString('vi-VN')}đ</span>}
+          {tagsOf(lead).map((t) => (
+            <span key={t} className="crm-chip">
+              {t}
+            </span>
+          ))}
+        </p>
+      )}
+      {lead.note && <p className="crm-quote">Ghi chú: {lead.note}</p>}
       {lead.message && <p className="crm-quote">{lead.message}</p>}
+      {open && lead.next_at != null && (
+        <p className={lead.next_at < now ? 'crm-sla late' : 'crm-sla'}>
+          <Clock size={14} /> {lead.next_note || 'Việc kế tiếp'}: {stamp(lead.next_at)}
+          {lead.next_at < now ? ' (đã quá hạn)' : ''}
+          {lead.missed > 0 && ` · đã gọi hụt ${lead.missed} lần`}
+        </p>
+      )}
+      {!open && lead.stage === 'won' && lead.deal_value > 0 && (
+        <p className="crm-meta">Giá trị đã chốt: {lead.deal_value.toLocaleString('vi-VN')}đ</p>
+      )}
+      {!open && lead.stage === 'lost' && lead.lost_reason && (
+        <p className="crm-meta">Lý do không thành: {lead.lost_reason}</p>
+      )}
       {waiting && lead.status === 'assigned' && remaining != null && (
         <p className={overdue ? 'crm-sla late' : 'crm-sla'}>
           <Clock size={14} />{' '}
@@ -330,20 +394,16 @@ function LeadCard({
             </button>
           )}
           {canAct && (
-            <button className="secondary" onClick={() => act({ action: 'booked', id: lead.id })}>
-              Đã đặt lịch
+            <button className="secondary" onClick={() => setMode(mode === 'stage' ? '' : 'stage')}>
+              Chuyển giai đoạn
             </button>
           )}
           {canAct && (
             <button
               className="secondary"
-              onClick={() => {
-                const reason = window.prompt('Lý do khách không đặt:');
-                if (reason && reason.trim().length >= 2)
-                  act({ action: 'lost', id: lead.id, reason: reason.trim() });
-              }}
+              onClick={() => setMode(mode === 'profile' ? '' : 'profile')}
             >
-              Không đặt
+              Nhu cầu, nhãn
             </button>
           )}
         </div>
@@ -370,6 +430,15 @@ function LeadCard({
               ))}
             </select>
           )}
+          {!noPhone && ['trial', 'trial_moved', 'callback'].includes(result) && (
+            <input
+              aria-label={result === 'callback' ? 'Giờ gọi lại' : 'Giờ trải nghiệm'}
+              type="datetime-local"
+              step={900}
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+            />
+          )}
           <input
             aria-label="Ghi chú cuộc gọi"
             placeholder="Ghi chú (nhu cầu, hẹn lịch...)"
@@ -383,8 +452,130 @@ function LeadCard({
               act(
                 noPhone
                   ? { action: 'replied', id: lead.id, channel, note }
-                  : { action: 'call', id: lead.id, result, note },
+                  : { action: 'call', id: lead.id, result, note, ...(at ? { at: toMs(at) } : {}) },
               )
+            }
+          >
+            Lưu
+          </button>
+          <button className="secondary" onClick={() => setMode('')}>
+            Hủy
+          </button>
+        </div>
+      )}
+      {mode === 'stage' && canAct && (
+        <div className="crm-actions">
+          <select
+            aria-label="Giai đoạn mới"
+            value={stageTo}
+            onChange={(e) => setStageTo(e.target.value)}
+          >
+            {STAGES.filter((st) => st !== lead.stage).map((st) => (
+              <option key={st} value={st}>
+                {STAGE_LABELS[st]}
+              </option>
+            ))}
+          </select>
+          {stageTo === 'trial' && (
+            <input
+              aria-label="Giờ trải nghiệm"
+              type="datetime-local"
+              step={900}
+              value={at}
+              onChange={(e) => setAt(e.target.value)}
+            />
+          )}
+          {stageTo === 'won' && (
+            <input
+              aria-label="Giá trị dịch vụ đã chốt (đồng)"
+              inputMode="numeric"
+              placeholder="Giá trị đã chốt (đồng)"
+              value={dealValue}
+              onChange={(e) => setDealValue(e.target.value.replace(/\D/g, ''))}
+            />
+          )}
+          {stageTo === 'lost' && (
+            <select
+              aria-label="Lý do không thành"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            >
+              {LOST_REASONS.map((r) => (
+                <option key={r}>{r}</option>
+              ))}
+            </select>
+          )}
+          <button
+            className="primary"
+            onClick={() =>
+              act({
+                action: 'stage',
+                id: lead.id,
+                stage: stageTo,
+                ...(stageTo === 'lost' ? { reason } : {}),
+                ...(stageTo === 'won' ? { dealValue: Number(dealValue) || 0 } : {}),
+                ...(stageTo === 'trial' && at ? { at: toMs(at) } : {}),
+              })
+            }
+          >
+            Chuyển
+          </button>
+          <button className="secondary" onClick={() => setMode('')}>
+            Hủy
+          </button>
+        </div>
+      )}
+      {mode === 'profile' && canAct && (
+        <div className="crm-actions">
+          <input
+            aria-label="Dịch vụ quan tâm"
+            placeholder="Dịch vụ quan tâm"
+            value={prof.interest}
+            maxLength={200}
+            onChange={(e) => setProf({ ...prof, interest: e.target.value })}
+          />
+          <input
+            aria-label="Ngân sách (đồng)"
+            inputMode="numeric"
+            placeholder="Ngân sách (đồng)"
+            value={prof.budget}
+            onChange={(e) => setProf({ ...prof, budget: e.target.value.replace(/\D/g, '') })}
+          />
+          <div className="crm-meta">
+            {LEAD_TAGS.map((t) => (
+              <label key={t} className="check">
+                <input
+                  type="checkbox"
+                  checked={prof.tags.includes(t)}
+                  onChange={(e) =>
+                    setProf({
+                      ...prof,
+                      tags: e.target.checked ? [...prof.tags, t] : prof.tags.filter((x) => x !== t),
+                    })
+                  }
+                />{' '}
+                {t}
+              </label>
+            ))}
+          </div>
+          <input
+            aria-label="Ghi chú về khách"
+            placeholder="Ghi chú về khách"
+            value={prof.note}
+            maxLength={1000}
+            onChange={(e) => setProf({ ...prof, note: e.target.value })}
+          />
+          <button
+            className="primary"
+            onClick={() =>
+              act({
+                action: 'profile',
+                id: lead.id,
+                interest: prof.interest,
+                budget: Number(prof.budget) || 0,
+                tags: prof.tags,
+                note: prof.note,
+              })
             }
           >
             Lưu
@@ -414,6 +605,8 @@ export function LeadsView({
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', need: '' as '' | Need, message: '' });
   const [duty, setDuty] = useState<boolean | null>(null);
+  const [view, setView] = useState<'list' | 'desk' | 'board'>('list');
+  const [stageFilter, setStageFilter] = useState('all');
   // A once-a-second clock drives the 5-minute countdowns (kept in state so render stays pure).
   const [clock, setClock] = useState(0);
   useEffect(() => {
@@ -556,28 +749,106 @@ export function LeadsView({
           </button>
         </div>
       )}
-      {open.length ? (
-        open.map((l) => (
-          <LeadCard
-            key={l.id}
-            lead={l}
-            now={now}
-            me={data.mine}
-            manager={manager}
-            onChanged={load}
-            onOpenCustomer={onOpenCustomer}
+      <FilterBar>
+        <Chips
+          value={view}
+          onChange={(k) => setView(k as typeof view)}
+          options={[
+            { key: 'list', label: 'Danh sách' },
+            { key: 'desk', label: 'Bàn làm việc' },
+            { key: 'board', label: 'Pipeline' },
+          ]}
+        />
+        {view === 'list' && (
+          <Chips
+            value={stageFilter}
+            onChange={setStageFilter}
+            options={[
+              { key: 'all', label: 'Mọi giai đoạn', count: open.length },
+              ...STAGES.filter((st) => st !== 'won' && st !== 'lost').map((st) => ({
+                key: st,
+                label: STAGE_LABELS[st],
+                count: open.filter((l) => l.stage === st).length,
+              })),
+            ]}
           />
-        ))
-      ) : (
-        <div className="empty">
-          <h3>Chưa có lead đang xử lý</h3>
-          <p>
-            Lead từ Facebook, Zalo, website và form quảng cáo tự xuất hiện ở đây và được giao cho
-            nhân viên đang trực.
-          </p>
+        )}
+      </FilterBar>
+      {view === 'board' && (
+        <div className="crm-board">
+          {STAGES.map((st) => {
+            const col = data.leads.filter((l) => l.stage === st);
+            return (
+              <section key={st} className="crm-col" aria-label={STAGE_LABELS[st]}>
+                <h4>
+                  {STAGE_LABELS[st]} <span>{col.length}</span>
+                </h4>
+                {col.map((l) => (
+                  <div key={l.id} className="crm-mini">
+                    <strong>{l.name || l.phone || 'Khách chưa có tên'}</strong>
+                    <span>{NEED_LABELS[l.need as Need] ?? 'Nhu cầu chưa rõ'}</span>
+                    {l.next_at != null && st !== 'won' && st !== 'lost' && (
+                      <span className={l.next_at < now ? 'late' : ''}>
+                        {l.next_note || 'Kế tiếp'}: {stamp(l.next_at)}
+                      </span>
+                    )}
+                    <span>{l.assignee_name ?? 'Chưa có người phụ trách'}</span>
+                  </div>
+                ))}
+              </section>
+            );
+          })}
         </div>
       )}
-      {closed.length > 0 && (
+      {view === 'desk' &&
+        (() => {
+          const mineOrAll = open
+            .filter((l) => l.status !== 'queued' && (manager || l.assignee === data.mine))
+            .sort((a, b) => workDue(a) - workDue(b));
+          return mineOrAll.length ? (
+            mineOrAll.map((l) => (
+              <LeadCard
+                key={l.id}
+                lead={l}
+                now={now}
+                me={data.mine}
+                manager={manager}
+                onChanged={load}
+                onOpenCustomer={onOpenCustomer}
+              />
+            ))
+          ) : (
+            <div className="empty">
+              <h3>Không còn việc đến hạn</h3>
+              <p>Khách cần gọi hoặc gặp sẽ hiện ở đây, việc gấp nhất lên đầu.</p>
+            </div>
+          );
+        })()}
+      {view === 'list' &&
+        (open.filter((l) => stageFilter === 'all' || l.stage === stageFilter).length ? (
+          open
+            .filter((l) => stageFilter === 'all' || l.stage === stageFilter)
+            .map((l) => (
+              <LeadCard
+                key={l.id}
+                lead={l}
+                now={now}
+                me={data.mine}
+                manager={manager}
+                onChanged={load}
+                onOpenCustomer={onOpenCustomer}
+              />
+            ))
+        ) : (
+          <div className="empty">
+            <h3>Chưa có lead đang xử lý</h3>
+            <p>
+              Lead từ Facebook, Zalo, website và form quảng cáo tự xuất hiện ở đây và được giao cho
+              nhân viên đang trực.
+            </p>
+          </div>
+        ))}
+      {view === 'list' && closed.length > 0 && (
         <details>
           <summary>Đã đóng 3 ngày qua ({closed.length})</summary>
           {closed.map((l) => (
@@ -922,5 +1193,169 @@ export function ChannelsView({ manager }: { manager: boolean }) {
         </table>
       </div>
     </div>
+  );
+}
+
+type Report = {
+  days: number;
+  total: number;
+  stages: { stage: string; n: number }[];
+  sources: { source: string; leads: number; won: number; lost: number; value: number }[];
+  lost: { reason: string; n: number }[];
+  agents: {
+    user_id: string | null;
+    name: string;
+    leads: number;
+    called: number;
+    won: number;
+    value: number;
+    avg_ms: number | null;
+  }[];
+};
+const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) + '%' : '0%');
+const minutes = (ms: number | null) =>
+  ms == null
+    ? '—'
+    : ms < 60_000
+      ? Math.round(ms / 1000) + ' giây'
+      : Math.round(ms / 60_000) + ' phút';
+
+export function LeadReportView() {
+  const [days, setDays] = useState('30');
+  const [r, setR] = useState<Report | null>(null);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    let live = true;
+    call('/api/crm/leads?report=' + days)
+      .then((v) => {
+        if (live) {
+          setR(v as unknown as Report);
+          setError('');
+        }
+      })
+      .catch((e) => live && setError(e instanceof Error ? e.message : String(e)));
+    return () => {
+      live = false;
+    };
+  }, [days]);
+  if (error)
+    return (
+      <div className="error-box" role="alert">
+        {error}
+      </div>
+    );
+  if (!r) return <p>Đang tải…</p>;
+  const count = (st: string) => r.stages.find((x) => x.stage === st)?.n ?? 0;
+  const won = count('won');
+  const reached = r.total - count('new');
+  return (
+    <>
+      <FilterBar>
+        <Chips
+          value={days}
+          onChange={setDays}
+          options={[
+            { key: '7', label: '7 ngày' },
+            { key: '30', label: '30 ngày' },
+            { key: '90', label: '90 ngày' },
+          ]}
+        />
+      </FilterBar>
+      <div className="crm-kpis">
+        {[
+          ['Lead nhận được', String(r.total)],
+          ['Đã liên hệ được', pct(reached, r.total)],
+          ['Chốt dịch vụ', String(won)],
+          ['Tỷ lệ chốt', pct(won, r.total)],
+        ].map(([label, v]) => (
+          <div key={label}>
+            <span>{label}</span>
+            <strong>{v}</strong>
+          </div>
+        ))}
+      </div>
+      <h3>Phễu tư vấn</h3>
+      <table className="ds-table">
+        <thead>
+          <tr>
+            <th>Giai đoạn</th>
+            <th>Số lead</th>
+            <th>Tỷ lệ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {STAGES.map((st) => (
+            <tr key={st}>
+              <td>{STAGE_LABELS[st]}</td>
+              <td>{count(st)}</td>
+              <td>{pct(count(st), r.total)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3>Hiệu quả theo nguồn</h3>
+      <table className="ds-table">
+        <thead>
+          <tr>
+            <th>Nguồn</th>
+            <th>Lead</th>
+            <th>Chốt</th>
+            <th>Tỷ lệ chốt</th>
+            <th>Giá trị chốt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.sources.map((x) => (
+            <tr key={x.source}>
+              <td>{SOURCE_LABELS[x.source as LeadSource] ?? x.source}</td>
+              <td>{x.leads}</td>
+              <td>{x.won}</td>
+              <td>{pct(x.won, x.leads)}</td>
+              <td>{x.value.toLocaleString('vi-VN')}đ</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3>Theo nhân viên và tốc độ phản hồi</h3>
+      <table className="ds-table">
+        <thead>
+          <tr>
+            <th>Nhân viên</th>
+            <th>Lead</th>
+            <th>Đã gọi</th>
+            <th>Chốt</th>
+            <th>Phản hồi trung bình</th>
+            <th>Giá trị chốt</th>
+          </tr>
+        </thead>
+        <tbody>
+          {r.agents.map((x) => (
+            <tr key={x.user_id ?? 'none'}>
+              <td>{x.name}</td>
+              <td>{x.leads}</td>
+              <td>{x.called}</td>
+              <td>{x.won}</td>
+              <td>{minutes(x.avg_ms)}</td>
+              <td>{x.value.toLocaleString('vi-VN')}đ</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3>Lý do không thành</h3>
+      {r.lost.length ? (
+        <table className="ds-table">
+          <tbody>
+            {r.lost.map((x) => (
+              <tr key={x.reason}>
+                <td>{x.reason}</td>
+                <td>{x.n}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>Chưa có lead không thành trong kỳ này.</p>
+      )}
+    </>
   );
 }

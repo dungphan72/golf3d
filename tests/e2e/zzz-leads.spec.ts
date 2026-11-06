@@ -670,6 +670,156 @@ test('check-in, gia hạn có kiểm tra lịch, thu gộp, biên nhận và c�
   expect(c2.marketing_consent).toBe(1);
 });
 
+test('tư vấn dịch vụ: giai đoạn, hẹn trải nghiệm, gọi hụt, chốt cần giá trị, thất bại cần lý do', async () => {
+  const t0 = Date.now() + 120 * MIN;
+  for (const a of agents) await setDuty(a.userId, true);
+  const mk = async (name: string) => {
+    const p = phone();
+    const r = await (await website({ id: `st-${name}-${t0}`, name, phone: p }, t0)).json();
+    return r.leadId as string;
+  };
+
+  // Missed calls schedule the next try (2 hours, then 1 day) and the lead stays "new".
+  const a = await mk('Khách Gọi Hụt');
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: a, result: 'no_answer' },
+    200,
+    at(t0 + MIN),
+  );
+  let l = await leadOf(a, t0 + MIN);
+  expect([l.stage, l.missed, l.next_at]).toEqual(['new', 1, t0 + MIN + 2 * 3_600_000]);
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: a, result: 'busy' },
+    200,
+    at(t0 + 2 * MIN),
+  );
+  l = await leadOf(a, t0 + 2 * MIN);
+  expect([l.missed, l.next_at]).toEqual([2, t0 + 2 * MIN + 24 * 3_600_000]);
+
+  // The customer is reached and needs time: stage "qualified", missed count resets.
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: a, result: 'thinking' },
+    200,
+    at(t0 + 3 * MIN),
+  );
+  l = await leadOf(a, t0 + 3 * MIN);
+  expect([l.stage, l.status, l.missed]).toEqual(['qualified', 'contacted', 0]);
+
+  // A trial meeting needs a future time.
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: a, result: 'trial' },
+    400,
+    at(t0 + 4 * MIN),
+  );
+  const meeting = t0 + 3 * 24 * 60 * MIN;
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: a, result: 'trial', at: meeting },
+    200,
+    at(t0 + 4 * MIN),
+  );
+  l = await leadOf(a, t0 + 4 * MIN);
+  expect([l.stage, l.next_at]).toEqual(['trial', meeting]);
+
+  // Profile: interest, budget and tags are kept.
+  await post(
+    owner,
+    '/api/crm/leads',
+    {
+      action: 'profile',
+      id: a,
+      interest: 'Học swing cùng HLV',
+      budget: 3000000,
+      tags: ['VIP', 'Cần HLV'],
+      note: 'Đi cùng vợ',
+    },
+    200,
+    at(t0 + 5 * MIN),
+  );
+  l = await leadOf(a, t0 + 5 * MIN);
+  expect([l.interest, l.budget, JSON.parse(l.tags)]).toEqual([
+    'Học swing cùng HLV',
+    3000000,
+    ['VIP', 'Cần HLV'],
+  ]);
+
+  // Won needs the value of the sale; then the lead is closed with it.
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'stage', id: a, stage: 'won' },
+    400,
+    at(t0 + 6 * MIN),
+  );
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'stage', id: a, stage: 'won', dealValue: 2500000 },
+    200,
+    at(t0 + 6 * MIN),
+  );
+  l = await leadOf(a, t0 + 6 * MIN);
+  expect([l.stage, l.status, l.deal_value]).toEqual(['won', 'booked', 2500000]);
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'stage', id: a, stage: 'qualified' },
+    409,
+    at(t0 + 7 * MIN),
+  );
+
+  // Lost needs a reason; "wrong number" closes by itself.
+  const b = await mk('Khách Thất Bại');
+  await post(owner, '/api/crm/leads', { action: 'stage', id: b, stage: 'lost' }, 400, at(t0 + MIN));
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'stage', id: b, stage: 'lost', reason: 'Giá cao hoặc ngân sách' },
+    200,
+    at(t0 + MIN),
+  );
+  l = await leadOf(b, t0 + MIN);
+  expect([l.stage, l.status, l.lost_reason]).toEqual(['lost', 'lost', 'Giá cao hoặc ngân sách']);
+  const c = await mk('Khách Sai Số');
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'call', id: c, result: 'wrong_number' },
+    200,
+    at(t0 + MIN),
+  );
+  l = await leadOf(c, t0 + MIN);
+  expect([l.stage, l.status]).toEqual(['lost', 'lost']);
+
+  // Manual move to "visited" and the report.
+  const d = await mk('Khách Đã Trải Nghiệm');
+  await post(
+    owner,
+    '/api/crm/leads',
+    { action: 'stage', id: d, stage: 'visited' },
+    200,
+    at(t0 + MIN),
+  );
+  l = await leadOf(d, t0 + MIN);
+  expect([l.stage, l.first_call_at != null]).toEqual(['visited', true]);
+  const report = await getJson(owner, '/api/crm/leads?report=30', t0 + 10 * MIN);
+  expect(report.total).toBeGreaterThanOrEqual(4);
+  const count = (st: string) => report.stages.find((x: Json) => x.stage === st)?.n ?? 0;
+  expect(count('won')).toBeGreaterThanOrEqual(1);
+  expect(count('lost')).toBeGreaterThanOrEqual(2);
+  expect(report.lost.map((x: Json) => x.reason)).toContain('Giá cao hoặc ngân sách');
+  expect(report.sources.find((x: Json) => x.source === 'website').won).toBeGreaterThanOrEqual(1);
+});
+
 test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và hàng gửi tin', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   const p = phone();
@@ -705,6 +855,14 @@ test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và 
   await expect(card.getByText('Đã liên hệ').first()).toBeVisible();
   await expect(card.getByText(/Cần gọi trong/)).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Pipeline', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'Hẹn trải nghiệm' })).toBeVisible();
+  await expect(page.locator('.crm-mini', { hasText: 'Khách Giao Diện Lead' })).toBeVisible();
+  await page.getByRole('button', { name: 'Danh sách', exact: true }).click();
+  await page.getByRole('tab', { name: 'Báo cáo tư vấn' }).click();
+  await expect(page.getByRole('heading', { name: 'Phễu tư vấn' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Hiệu quả theo nguồn' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Lead mới' }).click();
   await page.getByRole('tab', { name: 'Thiết lập' }).click();
   await page.getByRole('button', { name: 'Nhân sự nhận lead' }).click();
   await expect(page.getByLabel(/^Nhận lead /).first()).toBeVisible();

@@ -1,13 +1,25 @@
 import { authorize, sendResult, httpError, sameOrigin } from '../../../auth-session';
 import { originOf, requestNow } from '../../../../lib/server/http';
 import { leadInput } from '../../../../lib/leads';
-import { loadLeads, applyLeadAction, loadLeadEvents } from '../../../../lib/server/lead-service';
+import {
+  loadLeads,
+  applyLeadAction,
+  loadLeadEvents,
+  loadLeadReport,
+} from '../../../../lib/server/lead-service';
+import { can } from '../../../../lib/auth/permissions';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   const { auth, response } = await authorize('crm.view');
   if (response) return response;
-  const customer = new URL(req.url).searchParams.get('customer');
+  const params = new URL(req.url).searchParams;
+  const customer = params.get('customer');
+  const report = Number(params.get('report'));
+  if (report > 0) {
+    if (!can(auth.role, 'crm.manage')) return httpError('Không đủ quyền', 403);
+    return sendResult(await loadLeadReport(auth.tenant, report, requestNow(req)));
+  }
   if (customer)
     return sendResult({ status: 200, body: await loadLeadEvents(auth.tenant, customer) });
   return sendResult(await loadLeads(auth.tenant, auth.userId, originOf(req), requestNow(req)));

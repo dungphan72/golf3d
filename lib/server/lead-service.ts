@@ -10,6 +10,7 @@ import {
   NEED_LABELS,
   SOURCE_LABELS,
   CALL_RESULT_LABELS,
+  nextStep,
   pickAgent,
   leadLink,
   staffLeadMessage,
@@ -59,6 +60,15 @@ export type Lead = {
   received_at: number;
   updated: number;
   lost_reason: string;
+  stage: string;
+  interest: string;
+  budget: number;
+  tags: string;
+  note: string;
+  deal_value: number;
+  next_at: number | null;
+  next_note: string;
+  missed: number;
 };
 
 type StaffRow = AgentRow & {
@@ -718,6 +728,32 @@ export async function sweepLeads(tenant: string, base: string, now = Date.now())
 
 // ---------------------------------------------------------------- staff actions on a lead
 
+/** Ends a lead: booked means the service was sold or scheduled, lost needs a reason. */
+async function closeLead(
+  tenant: string,
+  lead: Lead,
+  outcome: 'booked' | 'lost',
+  detail: Record<string, unknown>,
+  now: number,
+  actor: string | null,
+) {
+  await db()
+    .prepare(
+      "UPDATE crm_leads SET status=?,stage=?,closed_at=?,lost_reason=?,next_at=NULL,next_note='',updated=? WHERE id=? AND tenant=?",
+    )
+    .bind(
+      outcome,
+      outcome === 'booked' ? 'won' : 'lost',
+      now,
+      outcome === 'lost' ? String(detail.reason ?? '') : '',
+      now,
+      lead.id,
+      tenant,
+    )
+    .run();
+  await addEvent(tenant, lead, outcome, detail, now, actor);
+}
+
 export async function applyLeadAction(
   tenant: string,
   actor: { id: string; role: Role },
@@ -774,15 +810,26 @@ export async function applyLeadAction(
     }
     if (input.action === 'call' || input.action === 'replied') {
       const first = lead.first_call_at == null;
+      const step =
+        input.action === 'call'
+          ? nextStep(input.result, { now, missed: lead.missed, at: input.at })
+          : null;
+      if (step && 'error' in step) return error(step.error);
+      const reached = input.action === 'replied' || (step?.reached ?? false);
+      const newStage =
+        step?.stage ?? (input.action === 'replied' && lead.stage === 'new' ? 'contacted' : '');
       await d
         .prepare(
-          "UPDATE crm_leads SET first_call_at=COALESCE(first_call_at,?),status=CASE WHEN ?=1 THEN 'contacted' ELSE status END,updated=? WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
+          "UPDATE crm_leads SET first_call_at=COALESCE(first_call_at,?),status=CASE WHEN ?=1 THEN 'contacted' ELSE status END,stage=CASE WHEN ?='' THEN stage WHEN stage IN ('deposit','won','lost') THEN stage ELSE ? END,missed=?,next_at=?,next_note=?,updated=? WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
         )
         .bind(
           now,
-          input.action === 'replied' || input.result === 'answered' || input.result === 'callback'
-            ? 1
-            : 0,
+          reached ? 1 : 0,
+          newStage,
+          newStage,
+          step ? (step.reached ? 0 : step.missed) : lead.missed,
+          step ? step.nextAt : lead.next_at,
+          step ? step.nextNote : lead.next_note,
           now,
           lead.id,
           tenant,
@@ -802,6 +849,7 @@ export async function applyLeadAction(
           note: input.note,
           withinSla: first ? lead.due_at == null || now <= lead.due_at : null,
           seconds: first ? Math.round((now - lead.received_at) / 1000) : null,
+          ...(step && !('error' in step) && step.nextAt ? { nextAt: step.nextAt } : {}),
         },
         now,
         actor.id,
@@ -821,16 +869,65 @@ export async function applyLeadAction(
             now,
           )
           .run();
+      if (step && !('error' in step) && step.lost)
+        await closeLead(tenant, lead, 'lost', { reason: step.lost }, now, actor.id);
       return reply({ ok: true, firstResponse: first });
     }
-    if (input.action === 'booked' || input.action === 'lost') {
+    if (input.action === 'stage') {
+      if (input.stage === 'lost') {
+        if (input.reason.length < 2) return error('Chọn lý do không thành');
+        await closeLead(tenant, lead, 'lost', { reason: input.reason }, now, actor.id);
+        return reply({ ok: true });
+      }
+      if (input.stage === 'won') {
+        if (input.dealValue <= 0) return error('Nhập giá trị dịch vụ đã chốt');
+        await d
+          .prepare('UPDATE crm_leads SET deal_value=? WHERE id=? AND tenant=?')
+          .bind(input.dealValue, lead.id, tenant)
+          .run();
+        await closeLead(tenant, lead, 'booked', { dealValue: input.dealValue }, now, actor.id);
+        return reply({ ok: true });
+      }
+      if (input.stage === 'trial' && (input.at == null || input.at <= now))
+        return error('Chọn ngày giờ trải nghiệm ở tương lai');
+      const nextAt = input.stage === 'trial' ? (input.at ?? null) : lead.next_at;
       await d
         .prepare(
-          'UPDATE crm_leads SET status=?,closed_at=?,lost_reason=?,updated=? WHERE id=? AND tenant=?',
+          "UPDATE crm_leads SET stage=?,next_at=?,next_note=?,updated=?,first_call_at=COALESCE(first_call_at,CASE WHEN ?<>'new' THEN ? END) WHERE id=? AND tenant=?",
         )
-        .bind(input.action, now, input.action === 'lost' ? input.reason : '', now, lead.id, tenant)
+        .bind(
+          input.stage,
+          nextAt,
+          input.stage === 'trial' ? 'Buổi trải nghiệm' : lead.next_note,
+          now,
+          input.stage,
+          now,
+          lead.id,
+          tenant,
+        )
         .run();
-      await addEvent(
+      await addEvent(tenant, lead, 'stage', { from: lead.stage, to: input.stage }, now, actor.id);
+      return reply({ ok: true });
+    }
+    if (input.action === 'profile') {
+      await d
+        .prepare(
+          'UPDATE crm_leads SET interest=?,budget=?,tags=?,note=?,updated=? WHERE id=? AND tenant=?',
+        )
+        .bind(
+          input.interest,
+          input.budget,
+          JSON.stringify([...new Set(input.tags)]),
+          input.note,
+          now,
+          lead.id,
+          tenant,
+        )
+        .run();
+      return reply({ ok: true });
+    }
+    if (input.action === 'booked' || input.action === 'lost') {
+      await closeLead(
         tenant,
         lead,
         input.action,
@@ -1103,7 +1200,7 @@ export async function onBookingConfirmed(
   if (lead) {
     await db()
       .prepare(
-        "UPDATE crm_leads SET status='booked',closed_at=?,updated=?,first_call_at=COALESCE(first_call_at,?) WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
+        "UPDATE crm_leads SET status='booked',stage='won',next_at=NULL,closed_at=?,updated=?,first_call_at=COALESCE(first_call_at,?) WHERE id=? AND tenant=? AND status IN ('queued','assigned','contacted')",
       )
       .bind(now, now, now, lead.id, tenant)
       .run();
@@ -1297,7 +1394,7 @@ export async function loadLeads(
           `SELECT l.*,u.name AS assignee_name,c.marketing_consent,
            (SELECT COUNT(*) FROM crm_lead_contacts k WHERE k.lead_id=l.id) AS contacts
            FROM crm_leads l LEFT JOIN users u ON u.id=l.assignee LEFT JOIN customers c ON c.id=l.customer_id AND c.tenant=l.tenant
-           WHERE l.tenant=? AND (l.status IN ('queued','assigned','contacted') OR l.updated>?) ORDER BY l.status IN ('booked','lost'), l.due_at IS NULL, l.due_at, l.received_at DESC LIMIT 200`,
+           WHERE l.tenant=? AND (l.status IN ('queued','assigned','contacted') OR l.updated>?) ORDER BY l.status IN ('booked','lost'), COALESCE(l.next_at,l.due_at) IS NULL, COALESCE(l.next_at,l.due_at), l.received_at DESC LIMIT 200`,
         )
         .bind(tenant, now - 3 * DAY)
         .all()
@@ -1305,7 +1402,48 @@ export async function loadLeads(
     return reply({ leads, now, mine: userId, slaMs: SLA_MS });
   } catch (e) {
     console.error('load leads', e);
-    return error('Chưa tải được lead. Kiểm tra migration 0017.', 503);
+    return error('Chưa tải được lead. Kiểm tra migration 0018.', 503);
+  }
+}
+
+/** Funnel, sources, lost reasons and agent speed for leads received in the last `days` days. */
+export async function loadLeadReport(tenant: string, days: number, now = Date.now()): Promise<R> {
+  try {
+    const d = db();
+    const since = now - Math.min(Math.max(days, 1), 365) * DAY;
+    const all = async (sql: string) => (await d.prepare(sql).bind(tenant, since).all()).results;
+    const [stages, sources, lost, agents, total] = await Promise.all([
+      all(
+        'SELECT stage,COUNT(*) AS n FROM crm_leads WHERE tenant=? AND received_at>=? GROUP BY stage',
+      ),
+      all(
+        `SELECT source,COUNT(*) AS leads,SUM(stage='won') AS won,SUM(stage='lost') AS lost,COALESCE(SUM(deal_value),0) AS value
+         FROM crm_leads WHERE tenant=? AND received_at>=? GROUP BY source ORDER BY leads DESC`,
+      ),
+      all(
+        `SELECT lost_reason AS reason,COUNT(*) AS n FROM crm_leads
+         WHERE tenant=? AND received_at>=? AND stage='lost' AND lost_reason<>'' GROUP BY lost_reason ORDER BY n DESC LIMIT 10`,
+      ),
+      all(
+        `SELECT l.assignee AS user_id,COALESCE(u.name,'Chưa phân') AS name,COUNT(*) AS leads,
+          SUM(l.first_call_at IS NOT NULL) AS called,SUM(l.stage='won') AS won,COALESCE(SUM(l.deal_value),0) AS value,
+          AVG(CASE WHEN l.first_call_at IS NOT NULL THEN l.first_call_at-l.received_at END) AS avg_ms
+         FROM crm_leads l LEFT JOIN users u ON u.id=l.assignee
+         WHERE l.tenant=? AND l.received_at>=? GROUP BY l.assignee ORDER BY won DESC, leads DESC LIMIT 30`,
+      ),
+      all('SELECT COUNT(*) AS n FROM crm_leads WHERE tenant=? AND received_at>=?'),
+    ]);
+    return reply({
+      days,
+      total: (total[0] as { n: number } | undefined)?.n ?? 0,
+      stages,
+      sources,
+      lost,
+      agents,
+    });
+  } catch (e) {
+    console.error('lead report', e);
+    return error('Chưa tải được báo cáo lead.', 503);
   }
 }
 

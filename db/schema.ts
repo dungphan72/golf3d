@@ -642,6 +642,16 @@ export const crmLeads = sqliteTable(
     updated: integer('updated').notNull(),
     closedAt: integer('closed_at'),
     lostReason: text('lost_reason').notNull().default(''),
+    // Service-consultation pipeline: new | contacted | qualified | trial | visited | deposit | won | lost
+    stage: text('stage').notNull().default('new'),
+    interest: text('interest').notNull().default(''), // service the customer is interested in
+    budget: integer('budget').notNull().default(0),
+    tags: text('tags').notNull().default('[]'),
+    note: text('note').notNull().default(''),
+    dealValue: integer('deal_value').notNull().default(0), // value of the sale when the stage is won
+    nextAt: integer('next_at'), // when the next contact or meeting is due
+    nextNote: text('next_note').notNull().default(''),
+    missed: integer('missed').notNull().default(0), // calls nobody answered
   },
   (t) => [
     index('crm_lead_status').on(t.tenant, t.status, t.dueAt),

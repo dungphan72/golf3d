@@ -41,3 +41,14 @@ Lead trùng (khóa kênh), lead đang chờ của cùng số điện thoại (ch
 ## Kiểm thử
 
 `tests/lead_sql_test.py`, `tests/leads.test.ts`, `tests/e2e/zzz-leads.spec.ts` (từ lead đến thanh toán; ca quá hạn 5 phút; ca hết người trực; chữ ký Facebook và Zalo; gia hạn bị chặn; thu gộp thu lại; biên nhận một lần). Máy chủ kiểm thử bật `E2E_MOCK_CHANNELS` nên tin "gửi" thành công không cần nhà cung cấp; trên site thật kênh gửi chỉ chạy khi có khóa thật.
+
+## Tư vấn dịch vụ: giai đoạn, bước kế tiếp, báo cáo (migration 0018)
+
+Dựa trên `MO-TA-CHUC-NANG-CRM.docx`, chuyển phần bán hàng bất động sản sang tư vấn dịch vụ của câu lạc bộ.
+
+- **Giai đoạn** của mỗi lead: Mới, Đã liên hệ, Có nhu cầu, Hẹn trải nghiệm, Đã trải nghiệm, Giữ chỗ/đặt cọc, Chốt dịch vụ, Không thành. Chuyển tay bằng nút "Chuyển giai đoạn": Chốt bắt buộc giá trị dịch vụ, Không thành bắt buộc chọn lý do, Hẹn trải nghiệm bắt buộc giờ ở tương lai. Lead đã đóng (chốt hoặc không thành) không đổi giai đoạn nữa.
+- **Kết quả cuộc gọi tự đặt bước kế tiếp**: không nghe máy/máy bận hẹn gọi lại sau 2 giờ, 1 ngày, 2 ngày (đếm số lần gọi hụt); cần suy nghĩ thêm hẹn 2 ngày; có nhu cầu cần tư vấn tiếp hẹn 1 ngày; hẹn trải nghiệm/dời lịch bắt buộc giờ; đã trải nghiệm bám sát sau 1 ngày; sai số và không có nhu cầu tự đóng lead là không thành.
+- **Hồ sơ lead**: dịch vụ quan tâm, ngân sách, nhãn (VIP, Doanh nghiệp, Người mới chơi, Cần HLV, Nhạy cảm về giá), ghi chú.
+- **Giao diện**: ba cách xem trong tab Lead mới: Danh sách (lọc theo giai đoạn), Bàn làm việc (việc gấp nhất lên đầu), Pipeline (cột theo giai đoạn).
+- **Báo cáo tư vấn** (quản lý): phễu theo giai đoạn, hiệu quả theo nguồn, theo nhân viên kèm thời gian phản hồi trung bình, lý do không thành; lọc 7/30/90 ngày (`GET /api/crm/leads?report=30`).
+- **Chưa làm** (so với tài liệu): kho số tự nhận, hạn mức nhận số, SLA và giờ làm việc chỉnh được (đang cố định 5 phút), đối tác/hoa hồng, booking và lịch thanh toán nhiều đợt, chiến dịch gửi hàng loạt, tổng đài, Chatwoot.

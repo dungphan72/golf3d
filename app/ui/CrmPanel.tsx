@@ -15,7 +15,7 @@ import {
   type Segment,
 } from '../../lib/crm';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
-import { LeadsView, AgentsView, ChannelsView } from './LeadPanel';
+import { LeadsView, AgentsView, ChannelsView, LeadReportView } from './LeadPanel';
 import { LEAD_STATUS_LABELS, SOURCE_LABELS, type LeadSource } from '../../lib/leads';
 
 type Counts = { overdue: number; today: number; upcoming: number; doneWeek: number };
@@ -982,7 +982,7 @@ export function CrmPanel({
 }) {
   const canWork = permissions.includes('crm.work');
   const canManage = permissions.includes('crm.manage');
-  const [tab, setTab] = useState<'leads' | 'tasks' | 'customers' | 'setup'>(
+  const [tab, setTab] = useState<'leads' | 'tasks' | 'customers' | 'report' | 'setup'>(
     initialCustomer ? 'customers' : 'leads',
   );
   const [setup, setSetup] = useState<'agents' | 'channels' | 'flows'>('agents');
@@ -996,6 +996,7 @@ export function CrmPanel({
           { key: 'leads', label: 'Lead mới' },
           { key: 'tasks', label: 'Việc cần làm' },
           { key: 'customers', label: 'Khách hàng' },
+          { key: 'report', label: 'Báo cáo tư vấn', hidden: !canManage },
           { key: 'setup', label: 'Thiết lập' },
         ]}
       />
@@ -1021,6 +1022,7 @@ export function CrmPanel({
       {tab === 'customers' && (
         <CustomersView key={focus ?? 'all'} canWork={canWork} focus={focus} />
       )}
+      {tab === 'report' && canManage && <LeadReportView />}
       {tab === 'setup' && (
         <>
           <FilterBar>

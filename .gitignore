@@ -48,6 +48,7 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 golf3d-backup-*.json
+backup-*.sql
 
 # E2E
 /.e2e-state/

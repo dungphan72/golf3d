@@ -38,5 +38,5 @@ Giữ nguyên mặc định của spec: hạn liên hệ 15 phút, giữ chỗ 4
 - P5 nguồn khách có khóa API, chi tiêu quảng cáo, số bị chặn (bảng đã có nhưng chưa có màn quản lý), nhập Excel, chiến dịch email/SMS/ZNS.
 - P6 dashboard tùy biến, báo cáo nguồn/nhân viên/phản hồi của module mới (CRM cũ có sẵn "Báo cáo tư vấn").
 - P7 Chatwoot, tổng đài, Meta, TikTok, Google Ads.
-- Chuyển lead và khách từ CRM cũ sang bảng `crm2_*`; cột trưởng nhóm/nhóm đã có (`crm2_staff`) nhưng chưa có màn sửa.
+- Chuyển lead từ CRM cũ sang bảng `crm2_*`: đã có tệp nhập một lần (`scripts/crm-legacy-to-crm2.sql`, xem `docs/CRM-MIGRATION.md`); các cổng nhận lead vẫn ghi vào bảng cũ, và việc nhắc, khách hàng, nhân sự chưa chuyển; cột trưởng nhóm/nhóm đã có (`crm2_staff`) nhưng chưa có màn sửa.
 - Trưởng nhóm xem lead của nhóm (spec cũng chưa làm): hiện chỉ dùng để duyệt lịch hẹn.

@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Loading, PageTabs } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { call, errText, type Staff } from './api';
+import { ChannelsScreen } from './ChannelsScreen';
 import { LeadDetail } from './LeadDetail';
 import {
   AppointmentsScreen,
@@ -497,6 +498,7 @@ export function CrmModule({
           { key: 'holds', label: 'Giữ chỗ' },
           { key: 'orders', label: 'Đơn bán' },
           { key: 'config', label: 'Cấu hình', hidden: !manager },
+          { key: 'channels', label: 'Kênh & tích hợp', hidden: !manager },
           { key: 'legacy', label: 'Chăm sóc KH (cũ)', hidden: !legacy },
         ]}
       />
@@ -512,6 +514,7 @@ export function CrmModule({
         {tab === 'holds' && <HoldsScreen s={shared} />}
         {tab === 'orders' && <OrdersScreen s={shared} />}
         {tab === 'config' && manager && <ConfigScreen />}
+        {tab === 'channels' && manager && <ChannelsScreen />}
         {tab === 'legacy' && legacy}
       </div>
     </section>

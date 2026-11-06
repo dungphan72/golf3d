@@ -16,7 +16,7 @@ Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2
 - Cổng Zalo OA chuyển sang CRM mới bằng công tắc riêng (mặc định cũ); migration `0020` thêm `crm2_inbound` và `crm2_leads.channel_ref`; `ingestChannelLead` dùng chung (nhớ sự kiện, gộp tin theo Zalo ID). Xem `docs/CRM-MIGRATION.md`.
 - Cổng Facebook / Instagram Lead Ads chuyển sang CRM mới bằng công tắc riêng (mặc định cũ), không cần migration mới; bảng dịch vụ dùng chung `core/services.ts`. Xem `docs/CRM-MIGRATION.md`.
 - Cổng quảng cáo (`/api/leads/ads`) chuyển sang CRM mới bằng công tắc riêng (mặc định cũ), không cần migration mới; vậy cả bốn cổng nhận lead đã chuyển được. Xem `docs/CRM-MIGRATION.md`.
-- Chưa làm: cấu hình kênh và thông báo nhân viên trong module mới, bật các công tắc và nhập lịch sử lead cũ trên production, rồi bỏ tab cũ.
+- **Chuyển hết về CRM mới, xóa CRM cũ (đang làm theo giai đoạn; quyết định: xóa cả bảng cũ trên production, giữ mọi tin nhắn cho khách và việc vận hành, làm lại các chức năng còn thiếu trước khi xóa).** Giai đoạn 1 xong: màn **Kênh & tích hợp** trong CRM mới (`modules/crm/ui/ChannelsScreen.tsx`, API `/api/crm2/channels`, chỉ quản lý; mã webhook ở `modules/crm/server/tokens.ts`). Còn lại: (2) tách tin nhắn cho khách (xác nhận, nhắc giờ, đổi/hủy, không đến, biên nhận, cảm ơn) ra khỏi CRM cũ; (3) thông báo Zalo cho nhân viên và việc tự sinh theo khách hàng; (4) bỏ công tắc, xóa tab, API, mã và test của CRM cũ; (5) production: sao lưu, nhập lịch sử, triển khai, nhập lần cuối, đối chiếu, xóa bảng cũ (giữ `crm_outbox`).
 
 ## v0.4 — thực đơn, gọi món theo phiên và bếp/bar
 - Quản lý món theo nhóm, đơn vị, giá trước thuế/phí, VAT và phí F&B riêng; tạo/sửa/tạm ngưng, giữ lịch sử giá đơn đã gửi.

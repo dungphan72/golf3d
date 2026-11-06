@@ -1,7 +1,8 @@
 import { overLimit } from '../../../../lib/server/throttle';
 import { sendResult, httpError, originOf, requestNow, clientIp } from '../../../../lib/server/http';
 import { websiteLeadSchema, fromWebsite } from '../../../../lib/leads';
-import { intake, tenantForToken } from '../../../../lib/server/lead-intake';
+import { intake } from '../../../../lib/server/lead-intake';
+import { tenantForToken } from '../../../../modules/crm/server/tokens';
 import { getSettings } from '../../../../modules/crm/server/store';
 import { ingestWebsiteLead } from '../../../../modules/crm/server/leads';
 export const dynamic = 'force-dynamic';

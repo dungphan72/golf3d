@@ -3,7 +3,7 @@ import { authorize, sendResult, httpError, sameOrigin } from '../../../auth-sess
 import { originOf } from '../../../../lib/server/http';
 import { channelStatus } from '../../../../lib/server/providers';
 import { outboxSummary } from '../../../../lib/server/outbox-service';
-import { rotateToken, tokenStatus } from '../../../../lib/server/lead-intake';
+import { rotateToken, tokenStatus } from '../../../../modules/crm/server/tokens';
 export const dynamic = 'force-dynamic';
 
 /** Which channels run, which need setup, what was sent. Secrets are never returned. */

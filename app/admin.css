@@ -7909,3 +7909,82 @@ body:has(.app-shell) {
 .ds-root .chart-bar-fill:hover .chart-tooltip {
   display: block;
 }
+
+
+/* ==========================================================================
+   STAFF MANAGEMENT MODERN OPERATE STYLING
+   ========================================================================== */
+
+.ds-root .operate-staff {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ds-root .operate-staff-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.ds-root .staff-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.ds-root .staff-create-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ds-root .staff-form-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.ds-root .staff-form-desc {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 6px 0;
+  line-height: 1.45;
+}
+
+.ds-root .operate-staff-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ds-root .staff-user-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ds-root .operate-select-sm {
+  padding: 4px 8px;
+  font-size: 12.5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #0f172a;
+}
+
+@media (max-width: 960px) {
+  .ds-root .operate-staff-layout {
+    grid-template-columns: 1fr;
+  }
+}

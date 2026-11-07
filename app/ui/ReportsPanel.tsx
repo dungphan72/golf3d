@@ -1,9 +1,9 @@
 'use client';
 import { useEffect, useMemo, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, Calendar, DollarSign, ArrowUpRight, TrendingUp, BarChart3, RefreshCw } from 'lucide-react';
 import { money } from '../../lib/club';
 import { toCsv } from '../../lib/csv';
-import { DataTable, FilterBar } from './kit';
+import { DataTable } from './kit';
 
 type Day = {
   day: string;
@@ -17,7 +17,7 @@ type Day = {
 type Service = { service: string; rounds: number; revenue: number; food: number };
 type Report = { days: Day[]; services: Service[] };
 
-const SERVICE: Record<string, string> = { gdr: 'Luyện tập', '9': '9 hố', '18': '18 hố' };
+const SERVICE: Record<string, string> = { gdr: 'Tập kỹ thuật (GDR)', '9': 'Chơi 9 hố', '18': 'Chơi 18 hố' };
 const vnDate = (ms: number) => new Date(ms + 7 * 3600_000).toISOString().slice(0, 10);
 const shortDay = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
 
@@ -27,21 +27,24 @@ export function ReportsPanel() {
   const [from, setFrom] = useState(() => vnDate(Date.now() - 29 * 86_400_000));
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let live = true;
+  const loadData = () => {
+    setLoading(true);
     fetch(`/api/reports?from=${from}&to=${to}`, { cache: 'no-store' })
       .then(async (r) => {
         const v = (await r.json()) as Report & { error?: string };
-        if (!live) return;
         if (!r.ok) throw new Error(v.error || 'Không tải được báo cáo');
         setError('');
         setReport(v);
       })
-      .catch((e) => live && setError(e instanceof Error ? e.message : String(e)));
-    return () => {
-      live = false;
-    };
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to]);
 
   const totals = useMemo(() => {
@@ -56,8 +59,10 @@ export function ReportsPanel() {
     }
     return t;
   }, [report]);
+
   const received = totals.cash + totals.transfer + totals.card;
   const peak = Math.max(1, ...(report?.days ?? []).map((d) => d.cash + d.transfer + d.card));
+
   function download() {
     if (!report) return;
     const rows: (string | number)[][] = [
@@ -92,6 +97,7 @@ export function ReportsPanel() {
     a.click();
     URL.revokeObjectURL(url);
   }
+
   const chart = [...(report?.days ?? [])].reverse();
 
   const range = (days: number) => {
@@ -102,122 +108,235 @@ export function ReportsPanel() {
     setTo(vnDate(Date.now()));
     setFrom(vnDate(Date.now()).slice(0, 8) + '01');
   };
-  const tiles: [string, number, string?][] = [
-    ['Tiền mặt', totals.cash],
-    ['Chuyển khoản', totals.transfer],
-    ['Thẻ', totals.card],
-    ['Trong đó bán gói', totals.packages],
-    ['Chi tiền mặt', totals.expenses],
-  ];
 
   return (
-    <section className="ds-reports">
-      <FilterBar
-        right={
+    <section className="ds-reports operate-reports">
+      {/* Top Filter and Actions Ribbon */}
+      <div className="operate-filterbar">
+        <div className="operate-filter-left">
+          <div className="operate-cat-pills" role="group" aria-label="Khoảng nhanh">
+            <button type="button" className="operate-pill" onClick={() => range(7)}>
+              7 ngày qua
+            </button>
+            <button type="button" className="operate-pill" onClick={() => range(30)}>
+              30 ngày qua
+            </button>
+            <button type="button" className="operate-pill" onClick={monthStart}>
+              Tháng này
+            </button>
+          </div>
+          <div className="operate-date-range-wrap">
+            <label className="operate-date-label">
+              Từ
+              <input
+                type="date"
+                value={from}
+                max={to}
+                onChange={(e) => setFrom(e.target.value)}
+                className="operate-input-sm"
+              />
+            </label>
+            <label className="operate-date-label">
+              Đến
+              <input
+                type="date"
+                value={to}
+                min={from}
+                onChange={(e) => setTo(e.target.value)}
+                className="operate-input-sm"
+              />
+            </label>
+          </div>
+        </div>
+        <div className="operate-filter-right">
+          <button
+            type="button"
+            className="secondary operate-btn"
+            onClick={loadData}
+            disabled={loading}
+          >
+            <RefreshCw size={15} /> Tải lại
+          </button>
           <button
             aria-label="Tải file CSV"
             type="button"
-            className="secondary"
+            className="primary operate-btn"
             disabled={!report}
             onClick={download}
           >
-            <Download size={16} /> Tải file CSV
+            <Download size={15} /> Xuất CSV
           </button>
-        }
-      >
-        <div className="ds-seg" role="group" aria-label="Khoảng nhanh">
-          <button onClick={() => range(7)}>7 ngày</button>
-          <button onClick={() => range(30)}>30 ngày</button>
-          <button onClick={monthStart}>Tháng này</button>
         </div>
-        <label className="ds-date">
-          Từ ngày
-          <input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
-        </label>
-        <label className="ds-date">
-          Đến ngày
-          <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
-        </label>
-      </FilterBar>
+      </div>
+
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
-      <div className="ds-tiles">
-        <article className="ds-tile ds-tile-main">
-          <span className="ds-tile-text">
-            <small>Tổng thu</small>
-            <strong>{money(received)}</strong>
-            <small>{totals.payments} lượt thanh toán</small>
-          </span>
-        </article>
-        {tiles.map(([label, value]) => (
-          <article className="ds-tile" key={label}>
-            <span className="ds-tile-text">
-              <small>{label}</small>
-              <strong>{money(value)}</strong>
-            </span>
-          </article>
-        ))}
+
+      {/* Modern KPI Tiles Ribbon */}
+      <div className="operate-ribbon">
+        <div className="operate-kpi-card highlight">
+          <div className="operate-kpi-label">Tổng thực thu kỳ này</div>
+          <div className="operate-kpi-val text-green">{money(received)}</div>
+          <div className="operate-kpi-sub">{totals.payments} lượt giao dịch hoàn tất</div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Tiền mặt</div>
+          <div className="operate-kpi-val">{money(totals.cash)}</div>
+          <div className="operate-kpi-sub">
+            {received > 0 ? Math.round((totals.cash / received) * 100) : 0}% tổng thu
+          </div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Chuyển khoản (VietQR/SePay)</div>
+          <div className="operate-kpi-val text-blue">{money(totals.transfer)}</div>
+          <div className="operate-kpi-sub">
+            {received > 0 ? Math.round((totals.transfer / received) * 100) : 0}% tổng thu
+          </div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Quẹt thẻ POS</div>
+          <div className="operate-kpi-val">{money(totals.card)}</div>
+          <div className="operate-kpi-sub">
+            {received > 0 ? Math.round((totals.card / received) * 100) : 0}% tổng thu
+          </div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Doanh thu bán gói hội viên</div>
+          <div className="operate-kpi-val" style={{ color: '#7c3aed' }}>
+            {money(totals.packages)}
+          </div>
+          <div className="operate-kpi-sub">Gói giờ, gói hố</div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Tổng chi tiền mặt quỹ</div>
+          <div className="operate-kpi-val text-red">−{money(totals.expenses)}</div>
+          <div className="operate-kpi-sub">Chi mua đồ, phí vận hành</div>
+        </div>
       </div>
 
-      <h2 className="ds-subhead">Doanh thu theo ngày</h2>
-      <div role="img" aria-label="Biểu đồ doanh thu theo ngày" className="ds-chart">
-        {chart.map((d) => (
-          <div
-            key={d.day}
-            title={`${d.day}: ${money(d.cash + d.transfer + d.card)}`}
-            style={{
-              height: `${Math.max(2, ((d.cash + d.transfer + d.card) / peak) * 100)}%`,
-            }}
+      {/* Revenue Trend Visual Bar Chart */}
+      <div className="operate-chart-container">
+        <div className="chart-header">
+          <h2 className="chart-title">
+            <BarChart3 size={18} /> Biểu đồ doanh thu thực nhận theo ngày
+          </h2>
+          <span className="chart-subtitle">Đỉnh cao nhất: {money(peak)}/ngày</span>
+        </div>
+        <div role="img" aria-label="Biểu đồ doanh thu theo ngày" className="operate-bar-chart">
+          {chart.map((d) => {
+            const dayTotal = d.cash + d.transfer + d.card;
+            const pct = Math.max(3, (dayTotal / peak) * 100);
+            return (
+              <div key={d.day} className="chart-col" title={`${d.day}: ${money(dayTotal)}`}>
+                <div className="chart-bar-wrap">
+                  <div className="chart-bar-fill" style={{ height: `${pct}%` }}>
+                    <span className="chart-tooltip">{money(dayTotal)}</span>
+                  </div>
+                </div>
+                <span className="chart-col-label">{shortDay(d.day)}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Daily Breakdown Table */}
+      <div className="operate-table-section">
+        <h2 className="ds-subhead" style={{ marginBottom: '12px' }}>
+          Chi tiết doanh thu từng ngày
+        </h2>
+        {report && (
+          <DataTable
+            rows={report.days}
+            rowKey={(d) => d.day}
+            empty="Chưa có giao dịch trong khoảng này"
+            columns={[
+              { key: 'day', header: 'Ngày', cell: (d) => <strong>{shortDay(d.day)}</strong> },
+              { key: 'cash', header: 'Tiền mặt', align: 'right', cell: (d) => money(d.cash) },
+              {
+                key: 'transfer',
+                header: 'Chuyển khoản',
+                align: 'right',
+                cell: (d) => money(d.transfer),
+              },
+              { key: 'card', header: 'Thẻ', align: 'right', cell: (d) => money(d.card) },
+              {
+                key: 'total',
+                header: 'Tổng thu thực',
+                align: 'right',
+                cell: (d) => (
+                  <strong style={{ color: '#16a34a', fontSize: '13.5px' }}>
+                    {money(d.cash + d.transfer + d.card)}
+                  </strong>
+                ),
+              },
+              {
+                key: 'pk',
+                header: 'Bán gói',
+                align: 'right',
+                cell: (d) => (d.packages > 0 ? money(d.packages) : '—'),
+              },
+              {
+                key: 'ex',
+                header: 'Chi quỹ',
+                align: 'right',
+                cell: (d) => (d.expenses > 0 ? <span className="text-red">−{money(d.expenses)}</span> : '—'),
+              },
+            ]}
           />
-        ))}
+        )}
       </div>
-      {report && (
-        <DataTable
-          rows={report.days}
-          rowKey={(d) => d.day}
-          empty="Chưa có giao dịch trong khoảng này"
-          columns={[
-            { key: 'day', header: 'Ngày', cell: (d) => shortDay(d.day) },
-            { key: 'cash', header: 'Tiền mặt', align: 'right', cell: (d) => money(d.cash) },
-            {
-              key: 'transfer',
-              header: 'Chuyển khoản',
-              align: 'right',
-              cell: (d) => money(d.transfer),
-            },
-            { key: 'card', header: 'Thẻ', align: 'right', cell: (d) => money(d.card) },
-            {
-              key: 'total',
-              header: 'Tổng thu',
-              align: 'right',
-              cell: (d) => <strong>{money(d.cash + d.transfer + d.card)}</strong>,
-            },
-            { key: 'pk', header: 'Bán gói', align: 'right', cell: (d) => money(d.packages) },
-            { key: 'ex', header: 'Chi', align: 'right', cell: (d) => money(d.expenses) },
-          ]}
-        />
-      )}
 
-      <h2 className="ds-subhead">Theo dịch vụ (phiếu đã thanh toán)</h2>
-      {report && (
-        <DataTable
-          rows={report.services}
-          rowKey={(x) => x.service}
-          empty="Chưa có phiếu thanh toán"
-          columns={[
-            { key: 's', header: 'Dịch vụ', cell: (x) => SERVICE[x.service] ?? x.service },
-            { key: 'n', header: 'Số lượt', align: 'right', cell: (x) => x.rounds },
-            { key: 'r', header: 'Doanh thu phiếu', align: 'right', cell: (x) => money(x.revenue) },
-            { key: 'f', header: 'Trong đó F&B', align: 'right', cell: (x) => money(x.food) },
-          ]}
-        />
-      )}
+      {/* Service & FNB Performance */}
+      <div className="operate-table-section">
+        <h2 className="ds-subhead" style={{ marginTop: '20px', marginBottom: '12px' }}>
+          Hiệu quả theo loại dịch vụ & F&B (phiếu đã hoàn tất)
+        </h2>
+        {report && (
+          <DataTable
+            rows={report.services}
+            rowKey={(x) => x.service}
+            empty="Chưa có phiếu thanh toán"
+            columns={[
+              {
+                key: 's',
+                header: 'Dịch vụ golf',
+                cell: (x) => <strong>{SERVICE[x.service] ?? x.service}</strong>,
+              },
+              {
+                key: 'n',
+                header: 'Số lượt chơi',
+                align: 'right',
+                cell: (x) => <span className="badge">{x.rounds} lượt</span>,
+              },
+              {
+                key: 'r',
+                header: 'Doanh thu giờ chơi',
+                align: 'right',
+                cell: (x) => <strong>{money(x.revenue)}</strong>,
+              },
+              {
+                key: 'f',
+                header: 'Doanh thu F&B đi kèm',
+                align: 'right',
+                cell: (x) => (x.food > 0 ? money(x.food) : '—'),
+              },
+            ]}
+          />
+        )}
+      </div>
+
       <p className="ds-note">
-        Doanh thu phiếu gồm cả phần đã trừ bằng lượt gói (không thu tiền); tổng thu chỉ tính tiền
-        thực nhận trong sổ ca.
+        * Doanh thu phiếu gồm cả phần đã cấn trừ bằng gói thành viên trả trước (không phát sinh tiền
+        mặt tại quầy); tổng thực thu chỉ tính dòng tiền thực nhận ghi nhận trong sổ ca làm việc.
       </p>
     </section>
   );

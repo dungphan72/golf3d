@@ -7988,3 +7988,154 @@ body:has(.app-shell) {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ==========================================================================
+   COACHING & LESSON SCHEDULE MODERN OPERATE STYLING
+   ========================================================================== */
+
+.ds-root .operate-coaching {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ds-root .operate-coaching-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.85fr) minmax(340px, 1.15fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.ds-root .coaching-schedule-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.ds-root .coaching-side-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ds-root .side-form-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.ds-root .operate-coaching-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ds-root .lesson-time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ds-root .lesson-duration-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.ds-root .lesson-student-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ds-root .lesson-student-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.ds-root .lesson-price {
+  font-weight: 700;
+  color: #1f7a4d;
+}
+
+.ds-root .lesson-note {
+  font-size: 12px;
+  font-style: italic;
+  color: #475569;
+}
+
+.ds-root .lesson-coach-note {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+  margin-top: 2px;
+}
+
+.ds-root .coaches-list-section {
+  margin-top: 16px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+}
+
+.ds-root .coaches-list-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+}
+
+.ds-root .coaches-items-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.ds-root .coach-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.ds-root .coach-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+@media (max-width: 960px) {
+  .ds-root .operate-coaching-layout {
+    grid-template-columns: 1fr;
+  }
+}

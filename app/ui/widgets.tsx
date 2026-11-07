@@ -1,5 +1,5 @@
 'use client';
-import { CalendarDays, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronRight, Crown } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { labels, time, date } from './shared';
 import { DataTable } from './kit';
@@ -48,6 +48,7 @@ const hm = (ms: number) => {
 export function RoomGrid({
   bookings,
   filter = 'all',
+  areaFilter = 'all',
   now,
   onSelect,
   onBook,
@@ -55,6 +56,7 @@ export function RoomGrid({
 }: {
   bookings: Booking[];
   filter?: string;
+  areaFilter?: 'all' | 'standard' | 'vip';
   now: number;
   onSelect: (b: Booking) => void;
   onBook: (room: string) => void;
@@ -63,6 +65,9 @@ export function RoomGrid({
   return (
     <div className="room-grid">
       {rooms.map((r) => {
+        if (areaFilter === 'standard' && r.vip) return null;
+        if (areaFilter === 'vip' && !r.vip) return null;
+
         const { live, due, next, soon, state } = roomInfo(r.id, bookings, now);
         if (!STATE_FILTER[filter].includes(state)) return null;
         const open = live ?? due ?? next;
@@ -97,8 +102,15 @@ export function RoomGrid({
               onClick={() => (open ? onSelect(open) : onBook(r.id))}
             >
               <span className="rc-head">
-                <strong>{r.name}</strong>
-                {r.left && <em>Tay trái</em>}
+                <span className="rc-name-group">
+                  <strong>{r.name}</strong>
+                  {r.vip && (
+                    <span className="rc-vip-badge">
+                      <Crown size={11} /> VIP
+                    </span>
+                  )}
+                  {r.left && <em>Tay trái</em>}
+                </span>
                 <span className="rc-chip">{chip}</span>
               </span>
               <span className="rc-info">{info || '\u00a0'}</span>

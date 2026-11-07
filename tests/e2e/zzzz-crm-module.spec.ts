@@ -520,6 +520,7 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   await expect(crm.getByRole('tab', { name: 'Bàn làm việc' })).toBeVisible();
   await expect(crm.getByText('Phễu 30 ngày')).toBeVisible();
 
+  await crm.getByRole('tab', { name: 'Lead & Phễu' }).click();
   await crm.getByRole('tab', { name: 'Danh sách lead' }).click();
   await crm.getByRole('row', { name: /Khách Giao Diện CRM/ }).click();
   await expect(crm.getByText('Lịch sử hoạt động')).toBeVisible();
@@ -539,6 +540,7 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   ).toBeVisible();
   await crm.getByRole('tab', { name: 'Kho số' }).click();
   await expect(crm.getByText('Chọn lead để giao cho nhân viên.')).toBeVisible();
+  await crm.getByRole('tab', { name: 'Thiết lập' }).click();
   await crm.getByRole('tab', { name: 'Đơn bán' }).click();
   await expect(crm.getByText('Tổng giá trị')).toBeVisible();
   await crm.getByRole('tab', { name: 'Cấu hình' }).click();

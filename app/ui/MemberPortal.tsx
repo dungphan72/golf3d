@@ -4,6 +4,8 @@ import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
+import { tierOf } from '../../lib/member-card';
+import { MemberCard } from './MemberCard';
 
 type Balance = { kind: GrantKind; remaining: number };
 type Pack = {
@@ -19,6 +21,8 @@ type Pack = {
 type Overview = {
   profile: { name: string; phone: string; email: string; verified: boolean };
   club?: { name: string; address: string };
+  code?: string;
+  since?: number | null;
   points?: number;
   packages?: Pack[];
   usage?: {
@@ -491,6 +495,24 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
         </section>
       ) : (
         <>
+          {data.code && (
+            <MemberCard
+              name={data.profile.name}
+              code={data.code}
+              tier={tierOf(packs, now)}
+              since={data.since ?? null}
+              points={data.points ?? 0}
+              expires={live.length ? Math.max(...live.map((p) => p.expires)) : null}
+              club={data.club?.name ?? ''}
+            />
+          )}
+          <nav className="mp-jump" aria-label="Đi tới mục">
+            <a href="#the">Thẻ và gói</a>
+            <a href="#lich">Lịch chơi</a>
+            {!!data.catalog?.length && <a href="#mua-goi">Mua gói</a>}
+            <a href="#gio-choi">Giờ đã dùng</a>
+            <a href="#lich-su">Lịch sử</a>
+          </nav>
           <div className="mp-tiles">
             <div className="mp-card">
               <span>Giờ chơi còn lại</span>

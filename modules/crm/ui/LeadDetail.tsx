@@ -14,6 +14,7 @@ import { call, countdown, errText, stamp, toMs, type Lead, type Staff } from './
 
 type Detail = {
   lead: Lead;
+  customerId?: string | null;
   ownerName: string | null;
   activities: { id: string; type: string; content: string; actor: string; created: number }[];
   tasks: { id: string; title: string; dueAt: number | null; doneAt: number | null }[];
@@ -52,6 +53,8 @@ export function LeadDetail({
   staff,
   onClose,
   onChanged,
+  onOpenCustomer,
+  onNavigate,
 }: {
   id: string;
   now: number;
@@ -60,6 +63,11 @@ export function LeadDetail({
   staff: Staff[];
   onClose: () => void;
   onChanged: () => void;
+  onOpenCustomer?: (customerId: string) => void;
+  onNavigate?: (
+    view: string,
+    extra?: { customerId?: string; phone?: string; name?: string; room?: string },
+  ) => void;
 }) {
   const dlg = useDialogs();
   const [d, setD] = useState<Detail | null>(null);
@@ -126,46 +134,94 @@ export function LeadDetail({
   return (
     <div className="crm-panel">
       {dlg.node}
-      <p>
-        <button className="secondary" onClick={onClose}>
-          ← Quay lại
-        </button>
-      </p>
-      <header>
-        <div>
-          <strong>{l.fullName}</strong> ·{' '}
-          <a href={`tel:${l.phone}`}>
-            <Phone size={13} /> {l.phone}
-          </a>
-          {!l.masked && l.phoneNorm && (
-            <>
-              {' · '}
-              <a href={`https://zalo.me/${l.phoneNorm}`} target="_blank" rel="noreferrer">
-                <MessageCircle size={13} /> Zalo
-              </a>
-            </>
-          )}
+      <div style={{ background: '#fff', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: '16px', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <button className="secondary" style={{ padding: '6px 14px', fontSize: 13 }} onClick={onClose}>
+            ← Quay lại
+          </button>
+          <StatusBadge tone={l.stage === 'WON' ? 'ok' : l.stage === 'LOST' ? 'muted' : 'info'}>
+            {STAGE_LABELS[l.stage as Stage] ?? l.stage}
+          </StatusBadge>
         </div>
-        <StatusBadge tone={l.stage === 'WON' ? 'ok' : l.stage === 'LOST' ? 'muted' : 'info'}>
-          {STAGE_LABELS[l.stage as Stage] ?? l.stage}
-        </StatusBadge>
-      </header>
-      <p className="crm-meta">
-        <span className="crm-chip">{l.source || 'Không rõ nguồn'}</span>
-        <span>Quan tâm: {l.targetService || 'chưa rõ'}</span>
-        <span>· phụ trách: {d.ownerName ?? 'chưa có (kho số)'}</span>
-        {l.inquiryCount > 1 && <span>· khách gửi {l.inquiryCount} lần</span>}
-        {l.expectedValue > 0 && <span>· giá trị chốt {money(l.expectedValue)}</span>}
-      </p>
-      {l.masked && <p className="crm-warn">Số điện thoại được che cho đến khi bạn nhận số này.</p>}
-      {l.notes && <p className="crm-quote">{l.notes}</p>}
-      {open && l.nextDue != null && (
-        <p className={cd.late ? 'crm-sla late' : 'crm-sla'} role={cd.late ? 'alert' : undefined}>
-          {cd.late ? '⚠ Quá hạn · ' : ''}
-          {NEXT_ACTION_LABELS[l.nextAction as NextAction] || 'Việc kế tiếp'}: {stamp(l.nextDue)} (
-          {cd.text})
-        </p>
-      )}
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--kv-text, #24332b)', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <strong>{l.fullName}</strong>
+              <a href={`tel:${l.phone}`} style={{ fontSize: 14, fontWeight: 500, color: 'var(--kv-blue, #1f7a4d)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Phone size={14} /> {l.phone}
+              </a>
+              {!l.masked && l.phoneNorm && (
+                <a href={`https://zalo.me/${l.phoneNorm}`} target="_blank" rel="noreferrer" style={{ fontSize: 14, fontWeight: 500, color: '#0284c7', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <MessageCircle size={14} /> Zalo
+                </a>
+              )}
+            </div>
+            <p className="crm-meta" style={{ marginTop: 6 }}>
+              <span className="crm-chip">{l.source || 'Không rõ nguồn'}</span>
+              <span>Quan tâm: <strong>{l.targetService || 'chưa rõ'}</strong></span>
+              <span>· phụ trách: <strong>{d.ownerName ?? 'chưa có (kho số)'}</strong></span>
+              {l.inquiryCount > 1 && <span>· khách gửi {l.inquiryCount} lần</span>}
+              {l.expectedValue > 0 && <span>· giá trị chốt <strong>{money(l.expectedValue)}</strong></span>}
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {d.customerId && onOpenCustomer && (
+              <button
+                type="button"
+                className="secondary"
+                style={{ padding: '6px 12px', fontSize: 12.5 }}
+                onClick={() => onOpenCustomer(d.customerId!)}
+              >
+                👤 Hồ sơ khách hàng ↗
+              </button>
+            )}
+            {onNavigate && !l.masked && (
+              <>
+                <button
+                  type="button"
+                  className="primary"
+                  style={{ padding: '6px 12px', fontSize: 12.5 }}
+                  onClick={() =>
+                    onNavigate('rooms', {
+                      customerId: d.customerId,
+                      phone: l.phoneNorm,
+                      name: l.fullName,
+                    })
+                  }
+                >
+                  ⛳ Xếp line chơi ngay
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  style={{ padding: '6px 12px', fontSize: 12.5 }}
+                  onClick={() =>
+                    onNavigate('members', {
+                      customerId: d.customerId,
+                      phone: l.phoneNorm,
+                      name: l.fullName,
+                    })
+                  }
+                >
+                  🎟️ Bán gói hội viên
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {l.masked && <p className="crm-warn" style={{ margin: 0 }}>Số điện thoại được che cho đến khi bạn nhận số này.</p>}
+        {l.notes && <p className="crm-quote" style={{ margin: 0 }}>{l.notes}</p>}
+        {open && l.nextDue != null && (
+          <p className={cd.late ? 'crm-sla late' : 'crm-sla'} style={{ margin: 0 }} role={cd.late ? 'alert' : undefined}>
+            {cd.late ? '⚠ Quá hạn · ' : ''}
+            {NEXT_ACTION_LABELS[l.nextAction as NextAction] || 'Việc kế tiếp'}: {stamp(l.nextDue)} ({cd.text})
+          </p>
+        )}
+      </div>
+
       {error && (
         <div className="error-box" role="alert">
           {error}

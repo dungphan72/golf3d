@@ -158,3 +158,35 @@ Cả bốn cổng nhận lead (website, Zalo, Facebook, quảng cáo) đã chuy�
 1. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
 2. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
 3. Bật từng công tắc trên production, chạy nhập lịch sử lead cũ, chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.
+
+
+## Chăm sóc khách hàng: đã làm lại trong module CRM mới
+
+Các chức năng của tab "Chăm sóc KH (cũ)" đã có bản tương đương trong CRM mới (migration `0022` và `0023`):
+
+| CRM cũ | CRM mới |
+|---|---|
+| 7 quy tắc việc tự sinh (chào mừng, cảm ơn, quay lại, gói sắp hết hạn, gói sắp hết giờ, sinh nhật, đủ điểm), chạy khi mở màn hình | Tab **Chăm sóc khách**, do cron CRM (mỗi 5 phút) tạo; `modules/crm/server/care.ts`, `core/care.ts`. Mã việc giữ định dạng cũ nên việc nhập từ CRM cũ không bị tạo lại. |
+| Nhận việc, hẹn lại, bỏ qua, ghi kênh và kết quả | Cùng bốn thao tác, API `/api/crm2/tasks` (`care-claim`, `care-snooze`, `care-skip`, `care-done`) |
+| Hồ sơ khách: gói, lịch sử chơi, điểm, ngày sinh, email, Zalo ID, đồng ý nhận tin, nhật ký liên hệ, phản hồi | Tab **Hồ sơ khách** (`/api/crm2/care-customers`); phản hồi từ 3 sao trở xuống tạo việc "Xử lý phản ánh" và báo quản lý |
+| Nhóm khách (Mới, Thân thiết, VIP, Sắp rời bỏ, Ngủ đông, Chưa chơi) | Giữ nguyên cách tính; ngưỡng VIP chỉnh ở CRM → Cấu hình |
+| Mẫu tin và công tắc từng quy tắc (lưu ở `settings.crm`) | CRM → Cấu hình → "Chăm sóc khách hàng tự động" (lưu ở `crm2_settings.care`) |
+| Nhân sự nhận lead: nhận lead, đang trực, Zalo ID, email báo | CRM → Cấu hình → "Nhân sự nhận lead và thông báo"; nút **Đang trực / Đang nghỉ** ở đầu CRM (mỗi người tự bật tắt); thông báo gửi email và Zalo |
+| Báo cáo tư vấn | Tab **Báo cáo** (quản lý): phễu, nguồn, lý do thất bại, theo nhân viên, kết quả việc chăm sóc |
+
+### Nhập dữ liệu chăm sóc cũ
+
+`scripts/crm-care-to-crm2.sql` (chạy lại được, không sửa bảng cũ) nhập `crm_tasks`, `crm_interactions`, cấu hình `settings.crm` và Zalo ID/email/trạng thái nhận lead của `crm_agents`. Hoàn tác phần việc và ghi chú: `scripts/crm-care-undo.sql`. Kiểm thử: `tests/crm_care_migrate_sql_test.py` (10 test; trên Windows chạy với `PYTHONUTF8=1`).
+
+```bash
+pnpm exec wrangler d1 migrations apply golf3d --remote --config dist/server/wrangler.deploy.json   # 0022, 0023
+pnpm exec wrangler d1 execute golf3d --remote --config dist/server/wrangler.deploy.json --file scripts/crm-care-to-crm2.sql
+```
+
+Sau khi nhập, so sánh số việc cũ và mới: `SELECT COUNT(*) FROM crm_tasks` và `SELECT COUNT(*) FROM crm2_tasks WHERE id LIKE 'mig-%'` phải bằng nhau (chỉ tính việc có khách).
+
+### Còn lại để xóa CRM cũ
+
+1. Sao lưu, áp migration `0022` và `0023`, nhập lead (`crm-legacy-to-crm2.sql`) rồi dữ liệu chăm sóc (`crm-care-to-crm2.sql`) trên production.
+2. Đổi bốn công tắc kênh (website, Zalo, Facebook, quảng cáo) sang "CRM mới", và đổi webhook ngoài nếu có trỏ vào cổng cũ.
+3. Cho nhân viên làm quen một thời gian, rồi bỏ tab "Chăm sóc KH (cũ)", các API `/api/crm`, `/api/leads/*` cũ, `/api/cron/crm`, mã `lead-service`, `crm-service`, test cũ; cuối cùng xóa bảng `crm_*` (giữ `crm_outbox`).

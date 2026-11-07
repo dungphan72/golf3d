@@ -36,6 +36,18 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   // Until staff verify the phone number, no card or history is shown.
   await expect(me.getByText('Thẻ và gói của tôi')).toHaveCount(0);
 
+  // Registering also puts the person in the CRM as a lead to call (once, whatever the retries).
+  const crm = page.request;
+  expect((await crm.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  const leads = (await (await crm.get('/api/crm/leads')).json()).leads as {
+    phone: string;
+    campaign: string;
+    source: string;
+  }[];
+  const registered = leads.filter((l) => l.phone === PHONE);
+  expect(registered).toHaveLength(1);
+  expect(registered[0]).toMatchObject({ source: 'website', campaign: 'dang-ky-hoi-vien' });
+
   // Staff verify the phone and sell a package.
   const owner = page.request;
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
@@ -56,6 +68,20 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   await me.reload();
   await expect(me.getByText('Thẻ và gói của tôi')).toBeVisible();
   await expect(me.getByRole('heading', { name: type.name })).toBeVisible();
+
+  // The card: tier, member code and a QR; staff find the same member by that code.
+  const code = 'HV-' + customer.id.replaceAll('-', '').slice(0, 8).toUpperCase();
+  const card = me.getByRole('region', { name: 'Thẻ hội viên' });
+  await expect(card).toContainText('Hội Viên Online');
+  await expect(card.getByRole('button', { name: new RegExp(code) })).toBeVisible();
+  await expect(card.getByRole('img', { name: 'Mã QR của thẻ hội viên' })).toBeVisible();
+  await expect(card).toContainText(/Hội viên|Platinum|Diamond/);
+  const byCode = await (await owner.get('/api/members?q=' + code.toLowerCase())).json();
+  expect(byCode.customers.map((c: { id: string }) => c.id)).toEqual([customer.id]);
+  const noMatch = await (await owner.get('/api/members?q=HV-00000000')).json();
+  expect(noMatch.customers).toEqual([]);
+  expect((await guest.request.get('/api/member')).ok()).toBe(true);
+  expect((await (await guest.request.get('/api/member')).json()).code).toBe(code);
 
   // Sign out and back in; a wrong password is refused.
   await me.getByRole('button', { name: 'Đăng xuất' }).click();

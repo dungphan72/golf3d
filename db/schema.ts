@@ -670,7 +670,10 @@ export const crmLeadContacts = sqliteTable(
     message: text('message').notNull().default(''),
     receivedAt: integer('received_at').notNull(),
   },
-  (t) => [uniqueIndex('crm_contact_key').on(t.tenant, t.extKey), index('crm_contact_lead').on(t.leadId)],
+  (t) => [
+    uniqueIndex('crm_contact_key').on(t.tenant, t.extKey),
+    index('crm_contact_lead').on(t.leadId),
+  ],
 );
 export const crmLeadEvents = sqliteTable(
   'crm_lead_events',
@@ -742,6 +745,8 @@ export const crm2Staff = sqliteTable(
     team: text('team').notNull().default(''),
     isLeader: integer('is_leader').notNull().default(0),
     extension: text('extension').notNull().default(''),
+    zaloId: text('zalo_id').notNull().default(''), // Zalo OA user id to notify the person
+    notifyEmail: text('notify_email').notNull().default(''), // overrides the login email for notices
     updated: integer('updated').notNull(),
   },
   (t) => [uniqueIndex('crm2_staff_user').on(t.tenant, t.userId)],
@@ -824,11 +829,34 @@ export const crm2Tasks = sqliteTable(
     remindedAt: integer('reminded_at'),
     ukey: text('ukey'), // makes system tasks idempotent
     created: integer('created').notNull(),
+    // Care tasks belong to a customer (members and walk-ins), not to a lead.
+    customerId: text('customer_id'),
+    rule: text('rule').notNull().default(''), // welcome thanks comeback pkg_expiring pkg_low birthday points manual
+    data: text('data').notNull().default('{}'), // facts the message template fills in
+    channel: text('channel').notNull().default(''), // how it was handled: call zalo sms visit email
+    note: text('note').notNull().default(''), // result, or the reason it was skipped
+    outcome: text('outcome').notNull().default(''), // '' while open, then done | skipped
   },
   (t) => [
     index('crm2_task_assignee').on(t.tenant, t.assignee, t.doneAt, t.dueAt),
     uniqueIndex('crm2_task_ukey').on(t.tenant, t.ukey),
+    index('crm2_task_customer').on(t.tenant, t.customerId),
   ],
+);
+// What staff did or heard from a customer outside any lead: calls, Zalo chats, feedback.
+export const crm2CustomerNotes = sqliteTable(
+  'crm2_customer_notes',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    customerId: text('customer_id').notNull(),
+    taskId: text('task_id'),
+    channel: text('channel').notNull(),
+    content: text('content').notNull(),
+    actor: text('actor').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('crm2_note_customer').on(t.tenant, t.customerId, t.created)],
 );
 /** One row per webhook event already turned into a lead or an inquiry: the provider retries, we never repeat. */
 export const crm2Inbound = sqliteTable(
@@ -869,10 +897,7 @@ export const crm2Appointments = sqliteTable(
     created: integer('created').notNull(),
     updated: integer('updated').notNull(),
   },
-  (t) => [
-    index('crm2_appt_at').on(t.tenant, t.at),
-    index('crm2_appt_lead').on(t.tenant, t.leadId),
-  ],
+  (t) => [index('crm2_appt_at').on(t.tenant, t.at), index('crm2_appt_lead').on(t.tenant, t.leadId)],
 );
 export const crm2Products = sqliteTable(
   'crm2_products',

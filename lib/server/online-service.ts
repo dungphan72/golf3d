@@ -1,10 +1,8 @@
 import { db, loadConfig, type ServiceResult } from './common';
 import { turnstileSiteKey } from './turnstile';
 import { runClubAction } from './club-service';
-import { ingestLead } from './lead-service';
+import { sendWebsiteLead } from './website-lead';
 import { onBookingConfirmed } from './booking-messages';
-import { getSettings } from '../../modules/crm/server/store';
-import { ingestWebsiteLead } from '../../modules/crm/server/leads';
 import { planBooking } from '../booking';
 import { ready, rooms, type Config } from '../club';
 import { normalizePhone, validPhone } from '../member';
@@ -154,48 +152,23 @@ export async function submitRequest(
       )
       .run();
     // Every booking request is also a lead: it is assigned to the on-duty agent who must call within 5 minutes.
-    try {
-      if ((await getSettings(site.tenant)).websiteLeads === 'CRM2')
-        await ingestWebsiteLead(
-          site.tenant,
-          {
-            name: input.name,
-            phone,
-            email: '',
-            need: input.service === 'gdr' ? 'swing' : input.service,
-            guests: input.guests > 0 ? input.guests : input.people,
-            preferredStart: input.start,
-            message: input.note,
-            campaign: 'form-dat-lich',
-            consent: input.consent,
-          },
-          base,
-          now,
-        );
-      else
-        await ingestLead(
-          site.tenant,
-          {
-            source: 'website',
-            campaign: 'form-dat-lich',
-            extKey: 'booking-form:' + requestId,
-            name: input.name,
-            phone,
-            email: '',
-            zaloId: '',
-            need: input.service === 'gdr' ? 'swing' : input.service,
-            guests: input.guests > 0 ? input.guests : input.people,
-            preferredStart: input.start,
-            message: input.note,
-            consent: input.consent,
-            channelRef: '',
-          },
-          base,
-          now,
-        );
-    } catch (e) {
-      console.error('lead from booking request', e);
-    }
+    await sendWebsiteLead(
+      site.tenant,
+      {
+        name: input.name,
+        phone,
+        email: '',
+        need: input.service === 'gdr' ? 'swing' : input.service,
+        guests: input.guests > 0 ? input.guests : input.people,
+        preferredStart: input.start,
+        message: input.note,
+        campaign: 'form-dat-lich',
+        extKey: 'booking-form:' + requestId,
+        consent: input.consent,
+      },
+      base,
+      now,
+    );
     return reply({ ok: true, code, total });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

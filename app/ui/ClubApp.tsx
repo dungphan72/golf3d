@@ -27,18 +27,24 @@ import { WalkInDialog } from './WalkInDialog';
 import { useBellSound } from './BellAlerts';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
-    // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file.
+    // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file;
+    // a scanned member card (/quan-ly?hv=HV-XXXXXXXX) opens the members screen on that card.
     [deepLink] = useState(() => {
       if (typeof location === 'undefined')
         return { view: 'rooms', customer: null as string | null };
       const q = new URLSearchParams(location.search);
-      return { view: q.get('view') === 'crm' ? 'crm' : 'rooms', customer: q.get('customer') };
+      const view = q.get('hv') ? 'members' : q.get('view') === 'crm' ? 'crm' : 'rooms';
+      return { view, customer: q.get('customer') };
     }),
     deepCustomer = deepLink.customer,
     [view, setView] = useState(deepLink.view),
     [mode, setMode] = useState('staff'),
     [modal, setModal] = useState(false),
     [bookingRoom, setBookingRoom] = useState('line-1'),
+    [bookingCustomer, setBookingCustomer] = useState<{ name?: string; phone?: string } | null>(
+      null,
+    ),
+    [memberTarget, setMemberTarget] = useState<{ id?: string; phone?: string } | null>(null),
     [walkInRoom, setWalkInRoom] = useState<string | null>(null),
     [selected, setSelected] = useState<Booking | null>(null),
     [error, setError] = useState(''),
@@ -212,6 +218,23 @@ export default function ClubApp() {
     setBookingRoom(r);
     setModal(true);
   };
+  const handleCrmNavigate = (
+    targetView: string,
+    extra?: { customerId?: string; phone?: string; name?: string; room?: string },
+  ) => {
+    setMode('staff');
+    if (targetView === 'members') {
+      setMemberTarget({ id: extra?.customerId, phone: extra?.phone });
+      go('members');
+    } else if (targetView === 'rooms') {
+      setBookingRoom(extra?.room || 'line-1');
+      setBookingCustomer({ name: extra?.name, phone: extra?.phone });
+      setModal(true);
+      go('rooms');
+    } else {
+      go(targetView);
+    }
+  };
   return (
     <div className="app-shell ds-root">
       <Sidebar
@@ -353,13 +376,18 @@ export default function ClubApp() {
                     <CoachingPanel permissions={data?.permissions ?? []} />
                   )}
                   {view === 'members' && allowed('members') && (
-                    <MembersPanel permissions={data?.permissions ?? []} />
+                    <MembersPanel
+                      permissions={data?.permissions ?? []}
+                      initialCustomer={memberTarget?.id}
+                      initialPhone={memberTarget?.phone}
+                    />
                   )}
                   {(view === 'crmx' || view === 'crm') && allowed('crmx') && (
                     <CrmModule
                       key={view}
                       permissions={data?.permissions ?? []}
-                      initialTab={view === 'crm' ? 'legacy' : 'overview'}
+                      initialTab={deepCustomer ? 'files' : 'overview'}
+                      onNavigate={handleCrmNavigate}
                       legacy={
                         <CrmPanel
                           permissions={data?.permissions ?? []}
@@ -391,11 +419,19 @@ export default function ClubApp() {
       {modal && (
         <BookingForm
           initialRoom={bookingRoom}
+          initialCustomer={bookingCustomer?.name}
+          initialPhone={bookingCustomer?.phone}
           config={c}
           busy={busy}
-          onClose={() => setModal(false)}
+          onClose={() => {
+            setModal(false);
+            setBookingCustomer(null);
+          }}
           onSave={async (v) => {
-            if (await mutate({ action: 'book', ...v })) setModal(false);
+            if (await mutate({ action: 'book', ...v })) {
+              setModal(false);
+              setBookingCustomer(null);
+            }
           }}
         />
       )}

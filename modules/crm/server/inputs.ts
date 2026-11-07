@@ -79,6 +79,20 @@ export const taskActions = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('done'), id }).strict(),
+  // Care tasks (for customers, not leads)
+  z
+    .object({
+      action: z.literal('care-done'),
+      id,
+      channel: z.enum(['call', 'zalo', 'sms', 'visit', 'email']),
+      note: text(600).default(''),
+    })
+    .strict(),
+  z.object({ action: z.literal('care-skip'), id, reason: text(600).min(2) }).strict(),
+  z
+    .object({ action: z.literal('care-snooze'), id, days: z.number().int().min(1).max(60) })
+    .strict(),
+  z.object({ action: z.literal('care-claim'), id }).strict(),
 ]);
 
 export const apptActions = z.discriminatedUnion('action', [

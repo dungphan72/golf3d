@@ -7,6 +7,8 @@ export const dynamic = 'force-dynamic';
 
 /** Background work of the CRM (every 5 minutes). Needs Authorization: Bearer CRON_SECRET. */
 async function run(req: Request) {
+  // A POST body nobody reads leaves the connection in a state where the next request can fail; drain it.
+  if (req.method === 'POST') await req.text().catch(() => '');
   const expected = secret('CRON_SECRET');
   if (!expected || expected.length < 16) return httpError('Chưa cấu hình CRON_SECRET', 503);
   if (!safeEqual(req.headers.get('authorization') ?? '', `Bearer ${expected}`))

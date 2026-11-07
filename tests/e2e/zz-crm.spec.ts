@@ -161,7 +161,8 @@ test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trìn
   await expect(page.getByText('Đã xử lý gần đây')).toBeVisible();
 
   // Customer file from the customers tab.
-  await page.getByRole('tab', { name: 'Hồ sơ khách' }).click();
+  // The CRM module has its own "Hồ sơ khách" tab; this one is inside the old screen.
+  await page.locator('.crm-panel .crm-panel').getByRole('tab', { name: 'Hồ sơ khách' }).click();
   await page.locator('tbody tr', { hasText: 'Khách Sinh Nhật' }).click();
   await expect(page.getByRole('heading', { name: 'Khách Sinh Nhật' })).toBeVisible();
   await page.getByRole('tab', { name: 'Chăm sóc', exact: true }).click();

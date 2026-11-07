@@ -12,6 +12,7 @@ import {
 } from './store';
 import { recallLeads } from './leads';
 import { birthdayStep } from './customers';
+import { generateCareTasks } from './care';
 import { vnDate } from '../core/orders';
 import { dispatchDue } from '../../../lib/server/outbox-service';
 
@@ -22,6 +23,7 @@ export type CronReport = {
   taskReminders: number;
   staleTasks: number;
   birthdays: number;
+  careTasks: number;
   paymentReminders: number;
   errors: string[];
 };
@@ -35,6 +37,7 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
     taskReminders: 0,
     staleTasks: 0,
     birthdays: 0,
+    careTasks: 0,
     paymentReminders: 0,
     errors: [],
   };
@@ -215,6 +218,10 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
       );
       rep.staleTasks++;
     }
+  });
+
+  await step('care', async () => {
+    rep.careTasks = await generateCareTasks(tenant, now);
   });
 
   await step('birthdays', async () => {

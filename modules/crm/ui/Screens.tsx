@@ -14,12 +14,18 @@ import { NEXT_ACTION_LABELS, type NextAction } from '../core/calls';
 import { STAGES, STAGE_LABELS, type Stage } from '../core/stages';
 import { call, countdown, dateOnly, errText, stamp, toMs, type Lead, type Staff } from './api';
 
+export type CrmNavigateFn = (
+  view: string,
+  extra?: { customerId?: string; phone?: string; name?: string; room?: string },
+) => void;
+
 export type Shared = {
   now: number;
   me: string;
   manager: boolean;
   staff: Staff[];
   open: (id: string) => void;
+  onNavigate?: CrmNavigateFn;
 };
 
 /** Loads a URL now and every `every` ms; returns the data, an error and a reload function. */
@@ -100,41 +106,58 @@ export function OverviewScreen({
           </div>
         ))}
       </div>
-      <h3 role="heading" aria-level={2}>
-        Phễu 30 ngày
-      </h3>
-      <DataTable
-        rows={STAGES.map((s) => ({ s, n: n(s) }))}
-        rowKey={(r) => r.s}
-        empty="Chưa có dữ liệu"
-        columns={[
-          { key: 's', header: 'Giai đoạn', cell: (r) => STAGE_LABELS[r.s] },
-          { key: 'n', header: 'Số lead', align: 'right', cell: (r) => r.n },
-          {
-            key: 'p',
-            header: 'Tỷ lệ',
-            align: 'right',
-            cell: (r) => (total ? Math.round((r.n / total) * 100) + '%' : '0%'),
-          },
-        ]}
-      />
-      <h3>Nguồn khách</h3>
-      <DataTable
-        rows={data.sources}
-        rowKey={(r) => r.source}
-        empty="Chưa có nguồn khách"
-        columns={[
-          { key: 's', header: 'Nguồn', cell: (r) => r.source || 'Không rõ' },
-          { key: 'l', header: 'Lead', align: 'right', cell: (r) => r.leads },
-          { key: 'w', header: 'Chốt', align: 'right', cell: (r) => r.won ?? 0 },
-        ]}
-      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
+        <div className="crm-section-card">
+          <header>
+            <h3 role="heading" aria-level={2}>
+              Phễu 30 ngày
+            </h3>
+            <small className="muted">Tỷ lệ chuyển đổi qua các giai đoạn</small>
+          </header>
+          <DataTable
+            rows={STAGES.map((s) => ({ s, n: n(s) }))}
+            rowKey={(r) => r.s}
+            empty="Chưa có dữ liệu"
+            columns={[
+              { key: 's', header: 'Giai đoạn', cell: (r) => STAGE_LABELS[r.s] },
+              { key: 'n', header: 'Số lead', align: 'right', cell: (r) => r.n },
+              {
+                key: 'p',
+                header: 'Tỷ lệ',
+                align: 'right',
+                cell: (r) => (total ? Math.round((r.n / total) * 100) + '%' : '0%'),
+              },
+            ]}
+          />
+        </div>
+
+        <div className="crm-section-card">
+          <header>
+            <h3>Nguồn khách</h3>
+            <small className="muted">Hiệu quả các kênh tiếp cận 30 ngày</small>
+          </header>
+          <DataTable
+            rows={data.sources}
+            rowKey={(r) => r.source}
+            empty="Chưa có nguồn khách"
+            columns={[
+              { key: 's', header: 'Nguồn', cell: (r) => r.source || 'Không rõ' },
+              { key: 'l', header: 'Lead', align: 'right', cell: (r) => r.leads },
+              { key: 'w', header: 'Chốt', align: 'right', cell: (r) => r.won ?? 0 },
+            ]}
+          />
+        </div>
+      </div>
+
       {cron && (
-        <p className="crm-meta">
-          Lần chạy nền gần nhất: {stamp(cron.updated)} — hết hạn giữ chỗ{' '}
-          {String(cron.value.holdsExpired ?? 0)}, cảnh báo quá hạn{' '}
-          {String(cron.value.slaAlerts ?? 0)}
-        </p>
+        <div style={{ background: '#f8faf8', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 6, padding: '10px 14px' }}>
+          <p className="crm-meta" style={{ margin: 0, fontSize: 12.5 }}>
+            🕒 Lần chạy nền gần nhất: <strong>{stamp(cron.updated)}</strong> — hết hạn giữ chỗ{' '}
+            <span className="crm-chip">{String(cron.value.holdsExpired ?? 0)}</span>, cảnh báo quá hạn{' '}
+            <span className="crm-chip">{String(cron.value.slaAlerts ?? 0)}</span>
+          </p>
+        </div>
       )}
     </>
   );
@@ -220,14 +243,19 @@ export function PoolScreen({ s }: { s: Shared }) {
   return (
     <>
       <Err text={error} />
-      <p className="crm-meta">
-        {s.manager
-          ? 'Chọn lead để giao cho nhân viên.'
-          : `Hạn mức nhận số hôm nay: còn ${Math.max(data.quota - data.claimedToday, 0)}/${data.quota}`}
-      </p>
+      <div style={{ background: '#fff', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <p className="crm-meta" style={{ margin: 0, fontWeight: 500 }}>
+          {s.manager
+            ? 'Chọn lead để giao cho nhân viên.'
+            : `Hạn mức nhận số hôm nay: còn ${Math.max(data.quota - data.claimedToday, 0)}/${data.quota}`}
+        </p>
+        <span className="crm-chip" style={{ margin: 0 }}>
+          Tổng số: <strong>{data.leads.length}</strong> lead trong kho
+        </span>
+      </div>
       {s.manager && picked.length > 0 && (
-        <div className="crm-actions">
-          <select aria-label="Giao cho" value={to} onChange={(e) => setTo(e.target.value)}>
+        <div className="crm-actions" style={{ background: '#f0f7f3', border: '1px solid #b5dec6', borderRadius: 8, padding: '10px 14px' }}>
+          <select style={{ height: 36, fontSize: 13 }} aria-label="Giao cho" value={to} onChange={(e) => setTo(e.target.value)}>
             <option value="">Giao {picked.length} lead cho…</option>
             {s.staff.map((m) => (
               <option key={m.id} value={m.id}>
@@ -237,10 +265,11 @@ export function PoolScreen({ s }: { s: Shared }) {
           </select>
           <button
             className="primary"
+            style={{ height: 36, padding: '0 16px', fontSize: 13 }}
             disabled={!to}
             onClick={() => act({ action: 'assign', ids: picked, userId: to })}
           >
-            Giao
+            Giao ngay
           </button>
         </div>
       )}
@@ -321,48 +350,69 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
         </button>
       </FilterBar>
       {adding && (
-        <div className="crm-actions">
-          <input
-            aria-label="Tên khách"
-            placeholder="Tên khách"
-            value={f.fullName}
-            onChange={(e) => setF({ ...f, fullName: e.target.value })}
-          />
-          <input
-            aria-label="Số điện thoại"
-            placeholder="Số điện thoại"
-            value={f.phone}
-            onChange={(e) => setF({ ...f, phone: e.target.value })}
-          />
-          <input
-            aria-label="Dịch vụ quan tâm"
-            placeholder="Dịch vụ quan tâm"
-            value={f.targetService}
-            onChange={(e) => setF({ ...f, targetService: e.target.value })}
-          />
-          <button
-            className="primary"
-            onClick={async () => {
-              try {
-                await call('/api/crm2/leads', { action: 'create', ...f });
-                setAdding(false);
-                setF({ fullName: '', phone: '', targetService: '', notes: '' });
-                await reload();
-              } catch (e) {
-                setError(errText(e));
-              }
-            }}
-          >
-            Tạo lead
-          </button>
+        <div style={{ background: '#f8faf8', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: 14, marginBottom: 14 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: 'var(--kv-text, #24332b)' }}>
+            + Thêm khách hàng tiềm năng (Lead) mới:
+          </div>
+          <div className="crm-actions">
+            <input
+              aria-label="Tên khách"
+              placeholder="Tên khách hàng"
+              value={f.fullName}
+              onChange={(e) => setF({ ...f, fullName: e.target.value })}
+            />
+            <input
+              aria-label="Số điện thoại"
+              placeholder="Số điện thoại"
+              value={f.phone}
+              onChange={(e) => setF({ ...f, phone: e.target.value })}
+            />
+            <input
+              aria-label="Dịch vụ quan tâm"
+              placeholder="Dịch vụ quan tâm"
+              value={f.targetService}
+              onChange={(e) => setF({ ...f, targetService: e.target.value })}
+            />
+            <button
+              className="primary"
+              disabled={!f.fullName || !f.phone}
+              onClick={async () => {
+                try {
+                  await call('/api/crm2/leads', { action: 'create', ...f });
+                  setAdding(false);
+                  setF({ fullName: '', phone: '', targetService: '', notes: '' });
+                  await reload();
+                } catch (e) {
+                  setError(errText(e));
+                }
+              }}
+            >
+              Tạo lead
+            </button>
+            <button className="secondary" onClick={() => setAdding(false)}>
+              Hủy
+            </button>
+          </div>
         </div>
       )}
       {board ? (
         <div className="crm-board">
           {STAGES.map((st) => {
             const col = rows.filter((l) => l.stage === st);
+            const borderTopColor =
+              st === 'NEW'
+                ? '#2563eb'
+                : st === 'CONTACTED'
+                  ? '#7c3aed'
+                  : st === 'QUALIFIED'
+                    ? '#d97706'
+                    : st === 'VISIT_SCHEDULED'
+                      ? '#0d9488'
+                      : st === 'WON'
+                        ? '#16a34a'
+                        : '#64748b';
             return (
-              <section key={st} className="crm-col" aria-label={STAGE_LABELS[st]}>
+              <section key={st} className="crm-col" style={{ borderTopColor }} aria-label={STAGE_LABELS[st]}>
                 <h4>
                   {STAGE_LABELS[st]} <span>{col.length}</span>
                 </h4>
@@ -547,6 +597,8 @@ type Appt = {
   id: string;
   leadId: string;
   leadName: string;
+  phoneNorm?: string;
+  customerId?: string;
   service: string;
   at: number;
   status: string;
@@ -576,7 +628,15 @@ export function AppointmentsScreen({ s }: { s: Shared }) {
   return (
     <>
       <Err text={error} />
-      <p className="crm-meta">Tỷ lệ khách đến hẹn: {data?.arrivalRate ?? 0}%</p>
+      <div style={{ background: '#fff', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--kv-text, #24332b)' }}>📅 Lịch hẹn khách hàng</span>
+          <p className="crm-meta" style={{ margin: 0, marginTop: 2 }}>Tỷ lệ khách đến hẹn: <strong>{data?.arrivalRate ?? 0}%</strong></p>
+        </div>
+        <span className="crm-chip" style={{ margin: 0 }}>
+          {data?.appointments?.length ?? 0} lịch hẹn
+        </span>
+      </div>
       <DataTable
         rows={data?.appointments ?? []}
         rowKey={(r) => r.id}
@@ -625,6 +685,34 @@ export function AppointmentsScreen({ s }: { s: Shared }) {
                   <button className="secondary" onClick={() => set(r.id, 'CANCELLED')}>
                     Hủy
                   </button>
+                )}
+                {r.status === 'ARRIVED' && s.onNavigate && (
+                  <>
+                    <button
+                      className="primary"
+                      onClick={() =>
+                        s.onNavigate?.('rooms', {
+                          customerId: r.customerId,
+                          phone: r.phoneNorm,
+                          name: r.leadName,
+                        })
+                      }
+                    >
+                      ⛳ Xếp line
+                    </button>
+                    <button
+                      className="secondary"
+                      onClick={() =>
+                        s.onNavigate?.('members', {
+                          customerId: r.customerId,
+                          phone: r.phoneNorm,
+                          name: r.leadName,
+                        })
+                      }
+                    >
+                      🎟️ Bán gói
+                    </button>
+                  </>
                 )}
               </span>
             ),

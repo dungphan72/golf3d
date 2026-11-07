@@ -1,3 +1,4 @@
+import { memberCode } from '../member-card';
 import { db, loadConfig, type ServiceResult } from './common';
 import {
   hashPassword,
@@ -13,6 +14,7 @@ import { normalizePhone, validPhone } from '../member';
 import { CREATE_CUSTOMER_SQL } from '../package-sql';
 import { rooms } from '../club';
 import { submitRequest } from './online-service';
+import { sendWebsiteLead } from './website-lead';
 import { MEMBER_SESSION_SECONDS } from '../member-account';
 
 type R = ServiceResult;
@@ -92,6 +94,7 @@ async function record(kind: string, ipHash: string, subject: string) {
 export async function registerMember(
   input: { name: string; phone: string; email: string; password: string },
   ip = 'unknown',
+  base = '',
 ): Promise<Outcome> {
   const phone = normalizePhone(input.phone);
   if (!validPhone(phone)) return { result: error('Số điện thoại không hợp lệ') };
@@ -133,6 +136,24 @@ export async function registerMember(
         .bind(accountId, tenant, customerId, phone, email, hash, now),
     ];
     await d.batch(statements);
+    // A new account is also a lead: the CRM gets the person to call and confirm the phone number.
+    await sendWebsiteLead(
+      tenant,
+      {
+        name: input.name,
+        phone,
+        email,
+        need: '',
+        guests: 0,
+        preferredStart: null,
+        message: 'Đăng ký tài khoản hội viên trên website (chờ xác nhận số điện thoại)',
+        campaign: 'dang-ky-hoi-vien',
+        extKey: 'member-register:' + accountId,
+        consent: false,
+      },
+      base,
+      now,
+    );
     return { result: reply({ ok: true, verified: false }), token: await openSession(accountId) };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
@@ -242,9 +263,9 @@ type PackageRow = {
 export async function memberOverview(user: MemberUser): Promise<R> {
   const d = db();
   const customer = await d
-    .prepare('SELECT name FROM customers WHERE tenant=? AND id=?')
+    .prepare('SELECT name,created FROM customers WHERE tenant=? AND id=?')
     .bind(user.tenant, user.customerId)
-    .first<{ name: string }>();
+    .first<{ name: string; created: number }>();
   const profile = {
     name: customer?.name ?? '',
     phone: user.phone,
@@ -336,6 +357,8 @@ export async function memberOverview(user: MemberUser): Promise<R> {
   return reply({
     profile,
     club: { name: config.name, address: config.address },
+    code: memberCode(user.customerId),
+    since: customer?.created ?? null,
     points: points?.points ?? 0,
     packages: packages.results.map((p) => ({
       ...p,

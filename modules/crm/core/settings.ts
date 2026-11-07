@@ -9,6 +9,7 @@ import {
   type Tier,
 } from './customers.ts';
 import { sanitizeCatalog, type StatusCatalog } from './stages.ts';
+import { careSettings, type CareSettings } from './care.ts';
 
 export type Label = { id: string; name: string; color: string };
 export const DEFAULT_LABELS: Label[] = [
@@ -38,6 +39,8 @@ export type CrmSettings = {
   afterSales: AfterSales;
   statuses: StatusCatalog;
   notifyAssignEmail: boolean;
+  /** Tasks the system creates for existing customers (welcome, thanks, comeback, packages, birthday, points). */
+  care: CareSettings;
   /** Where leads from the website form (POST /api/leads/website) go: the old "Chăm sóc KH" or this module. */
   websiteLeads: 'LEGACY' | 'CRM2';
   /** Same for messages customers send to the Zalo Official Account (POST /api/leads/zalo). */
@@ -137,6 +140,7 @@ export function sanitizeSettings(raw: unknown): CrmSettings {
     },
     statuses: sanitizeCatalog(r.statuses),
     notifyAssignEmail: bool(r.notifyAssignEmail, true),
+    care: careSettings(r.care),
     websiteLeads: r.websiteLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
     zaloLeads: r.zaloLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
     facebookLeads: r.facebookLeads === 'CRM2' ? 'CRM2' : 'LEGACY',

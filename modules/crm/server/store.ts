@@ -142,25 +142,27 @@ export async function notifyStaff(
 ) {
   if (!userId) return;
   const u = await db()
-    .prepare('SELECT email FROM users WHERE id=?')
-    .bind(userId)
-    .first<{ email: string }>();
-  if (!u?.email) return;
-  await enqueue(
-    tenant,
-    [
-      {
-        ukey,
-        channel: 'email',
-        recipient: u.email,
-        subject,
-        body,
-        kind: 'crm2',
-        audience: 'staff',
-        leadId: null,
-        customerId: null,
-      },
-    ],
-    now,
-  ).catch(() => undefined);
+    .prepare(
+      `SELECT COALESCE(NULLIF(s.notify_email,''),u.email) AS email,COALESCE(s.zalo_id,'') AS zalo
+       FROM users u LEFT JOIN crm2_staff s ON s.user_id=u.id AND s.tenant=? WHERE u.id=?`,
+    )
+    .bind(tenant, userId)
+    .first<{ email: string | null; zalo: string }>();
+  if (!u) return;
+  const base = {
+    subject,
+    body,
+    kind: 'crm2',
+    audience: 'staff' as const,
+    leadId: null,
+    customerId: null,
+  };
+  const messages = [
+    ...(u.email ? [{ ...base, ukey, channel: 'email' as const, recipient: u.email }] : []),
+    // The same notice on Zalo when the person gave their Zalo ID (sent only once the OA is configured).
+    ...(u.zalo
+      ? [{ ...base, ukey: ukey + ':zalo', channel: 'zalo' as const, recipient: u.zalo }]
+      : []),
+  ];
+  if (messages.length) await enqueue(tenant, messages, now).catch(() => undefined);
 }

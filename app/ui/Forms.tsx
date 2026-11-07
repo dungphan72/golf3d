@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Flag, Check, ArrowRight, Save } from 'lucide-react';
+import { Flag, Check, ArrowRight, Save, Crown, Clock, Users, Calendar, Award } from 'lucide-react';
 import { DialogHeading, ModalDialog } from './kit';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
@@ -10,6 +10,8 @@ import { PromotionsEditor } from './PromotionsEditor';
 import { DEFAULT_BENEFITS } from '../../lib/member-benefits';
 import { type Service } from '../../lib/pricing';
 import { rooms, ready, money, type Config } from '../../lib/club';
+import { MemberSelector } from './MemberSelector';
+
 /** What still blocks online booking (the public page quotes prices with VAT and service fee). */
 const onlineMissing = (c: Config) =>
   [
@@ -19,14 +21,19 @@ const onlineMissing = (c: Config) =>
     c.vat == null ? 'VAT' : '',
     c.fee == null ? 'phí dịch vụ' : '',
   ].filter(Boolean);
+
 export function BookingForm({
   config,
   busy,
   onClose,
   onSave,
   initialRoom,
+  initialCustomer,
+  initialPhone,
 }: {
   initialRoom: string;
+  initialCustomer?: string;
+  initialPhone?: string;
   config: Config;
   busy: boolean;
   onClose: () => void;
@@ -40,7 +47,10 @@ export function BookingForm({
     [service, setService] = useState('gdr'),
     [start, setStart] = useState(local),
     [people, setPeople] = useState(1),
-    [minutes, setMinutes] = useState(60);
+    [minutes, setMinutes] = useState(60),
+    [customer, setCustomer] = useState(initialCustomer ?? ''),
+    [phone, setPhone] = useState(initialPhone ?? '');
+
   let estimate: ReturnType<typeof planBooking> | null = null,
     estimateError = '';
   try {
@@ -59,15 +69,28 @@ export function BookingForm({
   } catch (e) {
     estimateError = e instanceof Error ? e.message : 'Chưa có báo giá';
   }
+
+  // Quick jump time helper (adds minutes to current start)
+  function adjustTime(addMinutes: number) {
+    const curr = Date.parse(start + ':00+07:00') || Date.now();
+    const target = curr + addMinutes * 60_000;
+    setStart(new Date(target + 7 * 3600000).toISOString().slice(0, 16));
+  }
+
   return (
     <ModalDialog label="Tạo lịch đặt" onClose={onClose}>
-      <DialogHeading onClose={onClose} eyebrow="MỘT TRẢI NGHIỆM MỚI">
+      <DialogHeading onClose={onClose} eyebrow="LỄ TÂN & ĐẶT LỊCH">
         Tạo lịch đặt
       </DialogHeading>
+
       <form
+        className="operate-booking-form"
         onSubmit={(e) => {
           e.preventDefault();
           const f = new FormData(e.currentTarget);
+          const finalCustomer = String(f.get('customer') || customer || 'Khách đặt lịch');
+          const finalPhone = String(f.get('phone') || phone || '');
+
           onSave({
             room,
             service,
@@ -75,8 +98,8 @@ export function BookingForm({
             start: Date.parse(start + ':00+07:00'),
             people,
             minutes,
-            customer: f.get('customer'),
-            phone: f.get('phone'),
+            customer: finalCustomer,
+            phone: finalPhone,
           });
         }}
       >
@@ -85,136 +108,214 @@ export function BookingForm({
             Cần hoàn tất giờ mở cửa, sức chứa, VAT và phí dịch vụ trong Cài đặt trước khi tạo lịch.
           </div>
         )}
-        <h3 className="form-label">01 / Chọn không gian</h3>
-        <div className="room-picker">
-          {rooms.map((r) => (
+
+        {/* 1. KHÁCH HÀNG & HỘI VIÊN */}
+        <div className="operate-form-section">
+          <div className="section-label-row">
+            <span className="step-num">01</span>
+            <h3 className="section-title">Khách hàng & Hội viên</h3>
+          </div>
+          <MemberSelector
+            customer={customer}
+            phone={phone}
+            allowWalkIn={false}
+            required={true}
+            onChange={(c, p) => {
+              setCustomer(c);
+              setPhone(p);
+            }}
+          />
+        </div>
+
+        {/* 2. CHỌN LINE / PHÒNG */}
+        <div className="operate-form-section">
+          <div className="section-label-row">
+            <span className="step-num">02</span>
+            <h3 className="section-title">Chọn không gian (Line / Phòng)</h3>
+          </div>
+          <div className="room-picker operate-room-picker">
+            {rooms.map((r) => (
+              <button
+                type="button"
+                key={r.id}
+                onClick={() => setRoom(r.id)}
+                className={`room-picker-btn ${room === r.id ? 'chosen' : ''} ${r.vip ? 'vip' : ''}`}
+              >
+                <div className="r-btn-top">
+                  {r.vip ? <Crown size={14} className="text-amber" /> : <Flag size={14} />}
+                  <strong>{r.name}</strong>
+                  {room === r.id && <Check size={14} className="check-icon" />}
+                </div>
+                <div className="r-btn-tags">
+                  {r.vip && <span className="tag-vip">VIP</span>}
+                  {r.left && <span className="tag-left">Tay trái</span>}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 3. DỊCH VỤ & THỜI GIAN */}
+        <div className="operate-form-section">
+          <div className="section-label-row">
+            <span className="step-num">03</span>
+            <h3 className="section-title">Dịch vụ & Thời gian chơi</h3>
+          </div>
+
+          <div className="service-cards-grid">
             <button
               type="button"
-              key={r.id}
-              onClick={() => setRoom(r.id)}
-              className={room === r.id ? 'chosen' : ''}
+              className={`service-card ${service === 'gdr' ? 'selected' : ''}`}
+              onClick={() => setService('gdr')}
             >
-              <Flag size={15} />
-              {r.name}
-              {r.left && <small>Tay trái</small>}
-              {room === r.id && <Check size={14} />}
+              <div className="service-card-top">
+                <Clock size={16} />
+                <strong>Luyện tập GDR</strong>
+              </div>
+              <span className="service-desc">Tính cước theo giờ linh hoạt</span>
             </button>
-          ))}
-        </div>
-        <h3 className="form-label">02 / Lịch chơi</h3>
-        <div className="form-grid">
-          <label>
-            Dịch vụ
-            <select value={service} onChange={(e) => setService(e.target.value)}>
-              <option value="gdr">Luyện tập</option>
-              <option value="9">Chơi 9 hố</option>
-              <option value="18">Chơi 18 hố</option>
-            </select>
-          </label>
-          <label>
-            Ngày, giờ bắt đầu (Việt Nam)
-            <input
-              type="datetime-local"
-              step="900"
-              value={start}
-              onChange={(e) => setStart(e.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Số người
-            <select value={people} onChange={(e) => setPeople(Number(e.target.value))}>
-              {[1, 2, 3, 4].map((n) => (
-                <option key={n} value={n}>
-                  {n} người
-                </option>
-              ))}
-            </select>
-          </label>
-          {service === 'gdr' && (
-            <label>
-              Thời lượng giữ chỗ
-              <select value={minutes} onChange={(e) => setMinutes(Number(e.target.value))}>
-                {[60, 90, 120, 150, 180, 210, 240].map((n) => (
-                  <option key={n} value={n}>
-                    {n} phút
-                  </option>
-                ))}
-              </select>
+
+            <button
+              type="button"
+              className={`service-card ${service === '9' ? 'selected' : ''}`}
+              onClick={() => setService('9')}
+            >
+              <div className="service-card-top">
+                <Flag size={16} />
+                <strong>Game 9 hố</strong>
+              </div>
+              <span className="service-desc">Theo lượt 9 hố tiêu chuẩn</span>
+            </button>
+
+            <button
+              type="button"
+              className={`service-card ${service === '18' ? 'selected' : ''}`}
+              onClick={() => setService('18')}
+            >
+              <div className="service-card-top">
+                <Award size={16} />
+                <strong>Game 18 hố</strong>
+              </div>
+              <span className="service-desc">Theo lượt 18 hố trọn gói</span>
+            </button>
+          </div>
+
+          <div className="booking-datetime-grid">
+            <label className="datetime-field">
+              <span className="field-title">
+                <Calendar size={14} /> Ngày, giờ bắt đầu (Việt Nam) *
+              </span>
+              <input
+                type="datetime-local"
+                step="900"
+                value={start}
+                onChange={(e) => setStart(e.target.value)}
+                required
+              />
+              <div className="quick-time-presets">
+                <button type="button" onClick={() => adjustTime(15)}>+15 phút</button>
+                <button type="button" onClick={() => adjustTime(30)}>+30 phút</button>
+                <button type="button" onClick={() => adjustTime(60)}>+1 giờ</button>
+              </div>
             </label>
-          )}
+
+            <div className="specs-inputs-grid">
+              <div className="spec-group">
+                <label className="spec-label">
+                  <Users size={14} /> Số người chơi:
+                </label>
+                <div className="spec-btn-group">
+                  {[1, 2, 3, 4].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className={`btn-spec-pill ${people === n ? 'active' : ''}`}
+                      onClick={() => setPeople(n)}
+                    >
+                      {n} người
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {service === 'gdr' && (
+                <div className="spec-group">
+                  <label className="spec-label">
+                    <Clock size={14} /> Thời lượng giữ chỗ:
+                  </label>
+                  <div className="spec-btn-group">
+                    {[60, 90, 120, 180].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        className={`btn-spec-pill ${minutes === m ? 'active' : ''}`}
+                        onClick={() => setMinutes(m)}
+                      >
+                        {m} phút
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-        <div className="booking-estimate" aria-live="polite">
-          <h3>Báo giá trước khi xác nhận</h3>
+
+        {/* 4. BÁO GIÁ DỰ KIẾN TRƯỚC KHI XÁC NHẬN */}
+        <div className="booking-estimate operate-estimate-card" aria-live="polite">
+          <div className="estimate-header">
+            <h3>Báo giá trước khi xác nhận</h3>
+            {estimate && <span className="estimate-rule-tag">{estimate.ruleLabel}</span>}
+          </div>
+
           {estimate ? (
-            <>
-              <p>
+            <div className="estimate-body">
+              <p className="estimate-note">
                 {service === 'gdr'
                   ? 'Ước tính theo thời lượng giữ chỗ; thanh toán theo thời gian thực tế.'
                   : `Giá trọn lượt theo giờ đã chọn · ${estimate.ruleLabel}`}
               </p>
-              {estimate.bill.lines.map((line, i) => (
-                <div key={i}>
-                  <span>
-                    {line.label} · {line.minutes.toFixed(1)} phút × {money(line.rate)}/giờ
-                  </span>
-                  <strong>{money(line.amount)}</strong>
+
+              <div className="estimate-lines">
+                {estimate.bill.lines.map((line, i) => (
+                  <div key={i} className="estimate-line-row">
+                    <span>
+                      {line.label} · {line.minutes.toFixed(1)} phút × {money(line.rate)}/giờ
+                    </span>
+                    <strong>{money(line.amount)}</strong>
+                  </div>
+                ))}
+                <div className="estimate-line-row subtotal">
+                  <span>Tiền dịch vụ</span>
+                  <strong>{money(estimate.bill.subtotal)}</strong>
                 </div>
-              ))}
-              <div>
-                <span>Tiền dịch vụ</span>
-                <strong>{money(estimate.bill.subtotal)}</strong>
+                <div className="estimate-line-row fee">
+                  <span>
+                    Phí dịch vụ (
+                    {config.feeMode === 'fixed' ? money(config.fee ?? 0) : `${config.fee ?? 0}%`})
+                  </span>
+                  <strong>{money(estimate.bill.fee)}</strong>
+                </div>
+                <div className="estimate-line-row vat">
+                  <span>VAT ({config.vat ?? 0}%)</span>
+                  <strong>{money(estimate.bill.vat)}</strong>
+                </div>
+                <div className="estimate-total-row">
+                  <span>Tổng dự kiến</span>
+                  <strong>{money(estimate.bill.total)}</strong>
+                </div>
               </div>
-              <div>
-                <span>
-                  Phí dịch vụ (
-                  {config.feeMode === 'fixed' ? money(config.fee ?? 0) : `${config.fee ?? 0}%`})
-                </span>
-                <strong>{money(estimate.bill.fee)}</strong>
-              </div>
-              <div>
-                <span>VAT ({config.vat ?? 0}%)</span>
-                <strong>{money(estimate.bill.vat)}</strong>
-              </div>
-              <div className="estimate-total">
-                <span>Tổng dự kiến</span>
-                <strong>{money(estimate.bill.total)}</strong>
-              </div>
-              <small>
-                Đơn giá tính chính xác đến thời gian thực, làm tròn tiền đến 1 đồng. VAT tính sau
-                phí dịch vụ.
-              </small>
-            </>
+            </div>
           ) : (
-            <p role="status">{estimateError}</p>
+            <p role="status" className="estimate-error">{estimateError}</p>
           )}
         </div>
-        <h3 className="form-label">03 / Thông tin khách</h3>
-        <div className="form-grid">
-          <label>
-            Họ và tên
-            <input
-              name="customer"
-              placeholder="Tên khách hàng"
-              minLength={2}
-              maxLength={100}
-              required
-            />
-          </label>
-          <label>
-            Số điện thoại
-            <input name="phone" type="tel" placeholder="+84…" required />
-          </label>
-        </div>
-        <p className="form-note">
-          Nhân viên tạo lịch trong bản thử nội bộ. Đặt online bắt buộc đăng nhập golfer sẽ được mở
-          sau khi kết nối OTP. Lịch và giá được kiểm tra lại trên máy chủ.
-        </p>
-        <div className="form-footer">
+
+        <div className="form-footer operate-modal-footer">
           <button className="secondary" type="button" onClick={onClose}>
             Để sau
           </button>
-          <button className="primary" disabled={busy || !ready(config) || !estimate}>
+          <button className="primary btn-confirm-booking" disabled={busy || !ready(config) || !estimate}>
             {busy ? 'Đang lưu…' : 'Xác nhận lịch đặt'}
             <ArrowRight size={17} />
           </button>

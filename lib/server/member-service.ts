@@ -9,6 +9,7 @@ import {
   type Grant,
   type MemberInput,
 } from '../member';
+import { parseMemberCode } from '../member-card';
 import { verifyAccount, resetAccountPassword } from './member-account-service';
 import { OFFICIAL_PACKAGES } from '../official-packages';
 import { roomAllows, unitsForSession, PACKAGE_ROOM_LABELS, type PackageRoom } from '../package-use';
@@ -82,8 +83,11 @@ export async function loadMembers(tenant: string, query: string, customerId: str
     const q = query.trim().replace(/[%_]/g, '');
     const like = `%${q}%`;
     const phoneLike = `%${normalizePhone(q)}%`;
-    const customers = (await db().prepare(CUSTOMER_LIST_SQL).bind(tenant, q, phoneLike, like).all())
-      .results;
+    // A scanned or typed member code (HV-1A2B3C4D) finds exactly that customer.
+    const code = parseMemberCode(q) ?? '';
+    const customers = (
+      await db().prepare(CUSTOMER_LIST_SQL).bind(tenant, q, phoneLike, like, code).all()
+    ).results;
     const types = (
       await db()
         .prepare(

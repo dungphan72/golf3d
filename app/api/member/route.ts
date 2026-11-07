@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
     const outcome =
       input.action === 'register'
-        ? await registerMember(input, clientIp(req))
+        ? await registerMember(input, clientIp(req), new URL(req.url).origin)
         : await loginMember(input.phone, input.password, clientIp(req));
     const response = sendResult(outcome.result);
     if (outcome.token) response.headers.append('Set-Cookie', cookieFor(outcome.token, req));

@@ -28,6 +28,7 @@ import {
   type Result,
 } from './store';
 import { getLeadRow, changeStage } from './leads';
+import { ensureProfile } from './customers';
 
 const actorOf = (c: Ctx): Actor => ({ id: c.userId, role: c.role });
 
@@ -38,8 +39,9 @@ export async function listAppointments(c: Ctx, from: number, to: number): Promis
   const rows = (
     await db()
       .prepare(
-        `SELECT a.id,a.lead_id AS leadId,l.full_name AS leadName,a.owner,a.service,a.at,a.status,a.note,a.created_by AS createdBy
+        `SELECT a.id,a.lead_id AS leadId,l.full_name AS leadName,l.phone_norm AS phoneNorm,cust.id AS customerId,a.owner,a.service,a.at,a.status,a.note,a.created_by AS createdBy
          FROM crm2_appointments a JOIN crm2_leads l ON l.id=a.lead_id
+         LEFT JOIN customers cust ON cust.tenant=a.tenant AND cust.phone=l.phone_norm
          WHERE a.tenant=? AND a.at>=? AND a.at<? AND (?=1 OR a.owner=?) ORDER BY a.at LIMIT 300`,
       )
       .bind(c.tenant, from, to, mgr ? 1 : 0, c.userId)
@@ -108,7 +110,11 @@ export async function createAppointment(
 export async function setAppointmentStatus(c: Ctx, id: string, to: string): Promise<Result> {
   const a = await db()
     .prepare(
-      'SELECT a.status,a.owner,a.lead_id AS leadId,s.team AS ownerTeam FROM crm2_appointments a LEFT JOIN crm2_staff s ON s.tenant=a.tenant AND s.user_id=a.owner WHERE a.tenant=? AND a.id=?',
+      `SELECT a.status,a.owner,a.lead_id AS leadId,s.team AS ownerTeam,l.full_name AS leadName,l.phone_norm AS phoneNorm,l.email,l.target_service AS targetService
+       FROM crm2_appointments a
+       LEFT JOIN crm2_staff s ON s.tenant=a.tenant AND s.user_id=a.owner
+       LEFT JOIN crm2_leads l ON l.tenant=a.tenant AND l.id=a.lead_id
+       WHERE a.tenant=? AND a.id=?`,
     )
     .bind(c.tenant, id)
     .first<{
@@ -116,6 +122,10 @@ export async function setAppointmentStatus(c: Ctx, id: string, to: string): Prom
       owner: string | null;
       leadId: string;
       ownerTeam: string | null;
+      leadName: string | null;
+      phoneNorm: string | null;
+      email: string | null;
+      targetService: string | null;
     }>();
   if (!a) return fail('Không tìm thấy lịch hẹn', 404);
   if (!['CONFIRMED', 'ARRIVED', 'NO_SHOW', 'CANCELLED'].includes(to))
@@ -142,13 +152,37 @@ export async function setAppointmentStatus(c: Ctx, id: string, to: string): Prom
     )
     .bind(to, a.status, 'PENDING', c.userId, c.now, c.now, c.tenant, id)
     .run();
-  if (to === 'ARRIVED')
+  if (to === 'ARRIVED') {
     await db()
       .prepare(
         "UPDATE crm2_leads SET stage=CASE WHEN stage IN ('NEW','CONTACTED','QUALIFIED','VISIT_SCHEDULED') THEN 'VISITED' ELSE stage END,status_id=CASE WHEN stage IN ('NEW','CONTACTED','QUALIFIED','VISIT_SCHEDULED') THEN 'da-trai-nghiem' ELSE status_id END,next_action='FOLLOW_UP',next_due=?,updated=? WHERE tenant=? AND id=?",
       )
       .bind(c.now + DAY, c.now, c.tenant, a.leadId)
       .run();
+    if (a.phoneNorm) {
+      await ensureProfile(c.tenant, a.phoneNorm, c.userId, c.now);
+      const existingCust = await db()
+        .prepare('SELECT id FROM customers WHERE tenant=? AND phone=?')
+        .bind(c.tenant, a.phoneNorm)
+        .first<{ id: string }>();
+      if (!existingCust) {
+        await db()
+          .prepare(
+            'INSERT INTO customers(id,tenant,name,phone,email,note,created) VALUES (?,?,?,?,?,?,?)',
+          )
+          .bind(
+            crypto.randomUUID(),
+            c.tenant,
+            a.leadName || `Khách ${a.phoneNorm}`,
+            a.phoneNorm,
+            a.email || '',
+            `Khách đến trải nghiệm từ CRM (${a.targetService || 'Lịch hẹn'})`,
+            c.now,
+          )
+          .run();
+      }
+    }
+  }
   await addActivity(c.tenant, a.leadId, 'VISIT', `Lịch hẹn: ${to}`, c.userId, c.now, {
     appointmentId: id,
   });

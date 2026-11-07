@@ -387,7 +387,7 @@ export async function leadDetail(c: Ctx, id: string): Promise<Result> {
   const lead = await getLeadRow(c.tenant, id);
   if (!lead || !canSeeLead(actorOf(c), lead)) return fail('Không tìm thấy lead', 404);
   const d = db();
-  const [activities, tasks, appointments, holds, orders] = await Promise.all([
+  const [activities, tasks, appointments, holds, orders, cust] = await Promise.all([
     d
       .prepare(
         'SELECT id,type,content,meta,actor,created FROM crm2_activities WHERE tenant=? AND lead_id=? ORDER BY created DESC LIMIT 200',
@@ -418,9 +418,16 @@ export async function leadDetail(c: Ctx, id: string): Promise<Result> {
       )
       .bind(c.tenant, id)
       .all(),
+    lead.phoneNorm
+      ? d
+          .prepare('SELECT id FROM customers WHERE tenant=? AND phone=?')
+          .bind(c.tenant, lead.phoneNorm)
+          .first<{ id: string }>()
+      : Promise.resolve(null),
   ]);
   return reply({
     lead: maskForViewer(actorOf(c), lead),
+    customerId: cust?.id ?? null,
     activities: activities.results,
     tasks: tasks.results,
     appointments: appointments.results,
@@ -570,7 +577,29 @@ export async function changeStage(
   );
   if (to === 'WON' || to === 'LOST') await closeOpenTasks(c.tenant, leadId, now);
   if (to === 'WON') {
-    if (lead.phoneNorm) await ensureProfile(c.tenant, lead.phoneNorm, c.userId, now);
+    if (lead.phoneNorm) {
+      await ensureProfile(c.tenant, lead.phoneNorm, c.userId, now);
+      const existingCust = await db()
+        .prepare('SELECT id FROM customers WHERE tenant=? AND phone=?')
+        .bind(c.tenant, lead.phoneNorm)
+        .first<{ id: string }>();
+      if (!existingCust) {
+        await db()
+          .prepare(
+            'INSERT INTO customers(id,tenant,name,phone,email,note,created) VALUES (?,?,?,?,?,?,?)',
+          )
+          .bind(
+            crypto.randomUUID(),
+            c.tenant,
+            lead.fullName || `Khách ${lead.phoneNorm}`,
+            lead.phoneNorm,
+            lead.email || '',
+            `Khách chốt từ CRM (${lead.targetService || lead.source || 'Lead'})`,
+            now,
+          )
+          .run();
+      }
+    }
     const plan = afterSalesPlan(settings.afterSales, now, lead.owner);
     for (let i = 0; i < plan.length; i++)
       await addTask(
@@ -871,7 +900,7 @@ export async function listTasks(c: Ctx, scope: 'mine' | 'all', showDone: boolean
       .prepare(
         `SELECT t.id,t.lead_id AS leadId,l.full_name AS leadName,t.title,t.type,t.due_at AS dueAt,t.done_at AS doneAt,t.assignee,t.created_by AS createdBy
          FROM crm2_tasks t LEFT JOIN crm2_leads l ON l.id=t.lead_id
-         WHERE t.tenant=? AND (?=1 OR t.assignee=?) AND (?=1 OR t.assignee=?) AND (t.done_at IS NULL OR (?=1 AND t.done_at>?))
+         WHERE t.tenant=? AND t.customer_id IS NULL AND (?=1 OR t.assignee=?) AND (?=1 OR t.assignee=?) AND (t.done_at IS NULL OR (?=1 AND t.done_at>?))
          ORDER BY t.done_at IS NOT NULL, t.due_at LIMIT 300`,
       )
       .bind(

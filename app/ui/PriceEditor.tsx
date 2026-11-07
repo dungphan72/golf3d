@@ -1,14 +1,15 @@
 'use client';
 import { Fragment, useState } from 'react';
-import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Pencil, Plus, Trash2, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { money, type Config } from '../../lib/club';
 import { validateRules, type PriceRule, type Service, type DayType } from '../../lib/pricing';
+
 const services = {
   gdr: 'Luyện tập · theo giờ',
   '9': '9 hố · trọn lượt',
   '18': '18 hố · trọn lượt',
 };
-const days = { weekday: 'T2–T6', weekend: 'T7 & CN', holiday: 'Ngày lễ' };
+const days = { weekday: 'Thứ 2 – Thứ 6', weekend: 'Thứ 7 & Chủ nhật', holiday: 'Ngày lễ' };
 const rooms = { standard: 'Line tiêu chuẩn', vip: 'Phòng VIP' } as const;
 
 export function PriceEditor({
@@ -18,33 +19,38 @@ export function PriceEditor({
   rules: PriceRule[];
   onChange: (r: PriceRule[]) => void;
 }) {
-  const [room, setRoom] = useState('all'),
-    [service, setService] = useState('all'),
-    [day, setDay] = useState('all'),
-    [editing, setEditing] = useState<string | null>(null),
-    [confirmDel, setConfirmDel] = useState<string | null>(null),
-    [folded, setFolded] = useState<Set<string>>(new Set());
+  const [room, setRoom] = useState('all');
+  const [service, setService] = useState('all');
+  const [day, setDay] = useState('all');
+  const [editing, setEditing] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<string | null>(null);
+  const [folded, setFolded] = useState<Set<string>>(new Set());
+
   const toggle = (k: string) =>
     setFolded((f) => {
       const n = new Set(f);
       if (!n.delete(k)) n.add(k);
       return n;
     });
+
   const visible = rules.filter(
     (r) =>
       (room === 'all' || r.room === room) &&
       (service === 'all' || r.service === service) &&
       (day === 'all' || r.day === day),
   );
+
   let issue = '';
   try {
     validateRules(rules);
   } catch (e) {
     issue = e instanceof Error ? e.message : 'Bảng giá không hợp lệ';
   }
+
   function update(id: string, patch: Partial<PriceRule>) {
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
+
   function add() {
     const id = `rate-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     onChange([
@@ -64,11 +70,13 @@ export function PriceEditor({
     ]);
     setEditing(id);
   }
+
   function remove(id: string) {
     onChange(rules.filter((x) => x.id !== id));
     setConfirmDel(null);
     if (editing === id) setEditing(null);
   }
+
   const groups = (Object.keys(rooms) as (keyof typeof rooms)[])
     .map((k) => ({
       key: k,
@@ -82,22 +90,31 @@ export function PriceEditor({
         ),
     }))
     .filter((g) => g.rows.length);
+
   return (
-    <div className="price-editor pt">
-      <div className="pt-bar">
-        <div className="pt-filters">
-          <label>
-            Loại phòng
-            <select value={room} onChange={(e) => setRoom(e.target.value)}>
-              <option value="all">Tất cả</option>
+    <div className="price-editor pt operate-price-editor">
+      <div className="operate-filterbar" style={{ padding: '0 0 16px 0', borderBottom: '1px solid #e2e8f0' }}>
+        <div className="operate-filter-left">
+          <label className="operate-label" style={{ minWidth: '140px' }}>
+            Khu vực phòng
+            <select
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              className="operate-select"
+            >
+              <option value="all">Tất cả khu vực</option>
               <option value="standard">Line tiêu chuẩn</option>
-              <option value="vip">VIP</option>
+              <option value="vip">Phòng VIP</option>
             </select>
           </label>
-          <label>
-            Dịch vụ
-            <select value={service} onChange={(e) => setService(e.target.value)}>
-              <option value="all">Tất cả</option>
+          <label className="operate-label" style={{ minWidth: '160px' }}>
+            Dịch vụ golf
+            <select
+              value={service}
+              onChange={(e) => setService(e.target.value)}
+              className="operate-select"
+            >
+              <option value="all">Tất cả dịch vụ</option>
               {Object.entries(services).map(([v, t]) => (
                 <option key={v} value={v}>
                   {t}
@@ -105,10 +122,14 @@ export function PriceEditor({
               ))}
             </select>
           </label>
-          <label>
+          <label className="operate-label" style={{ minWidth: '150px' }}>
             Ngày áp dụng
-            <select value={day} onChange={(e) => setDay(e.target.value)}>
-              <option value="all">Tất cả</option>
+            <select
+              value={day}
+              onChange={(e) => setDay(e.target.value)}
+              className="operate-select"
+            >
+              <option value="all">Tất cả các ngày</option>
               {Object.entries(days).map(([v, t]) => (
                 <option key={v} value={v}>
                   {t}
@@ -117,25 +138,36 @@ export function PriceEditor({
             </select>
           </label>
         </div>
-        <button className="primary" type="button" onClick={add} disabled={rules.length >= 300}>
-          <Plus size={16} />
-          Thêm khung giá
-        </button>
+        <div className="operate-filter-right">
+          <button
+            className="primary operate-btn"
+            type="button"
+            onClick={add}
+            disabled={rules.length >= 300}
+          >
+            <Plus size={16} />
+            Thêm khung giá mới
+          </button>
+        </div>
       </div>
+
       {issue && (
-        <div className="error-box" role="alert">
-          {issue}
+        <div className="error-box" role="alert" style={{ marginTop: '14px' }}>
+          <AlertCircle size={16} /> {issue}
         </div>
       )}
+
       {!groups.length && (
-        <p className="muted">
-          Chưa có khung giá phù hợp bộ lọc. Dịch vụ chưa có giá sẽ không được đặt.
+        <p className="muted" style={{ padding: '24px 0', textAlign: 'center' }}>
+          Chưa có khung giá phù hợp bộ lọc. Dịch vụ chưa có giá sẽ không thể mở phiên hoặc đặt lịch.
         </p>
       )}
+
       {groups.map((g) => (
-        <section className="pt-group" key={g.key}>
-          <h3>
-            {rooms[g.key]} <span>{g.rows.length} khung giá</span>
+        <section className="pt-group" key={g.key} style={{ marginTop: '20px' }}>
+          <h3 className="section-title" style={{ fontSize: '16px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>{rooms[g.key]}</span>
+            <span className="badge" style={{ fontSize: '12px' }}>{g.rows.length} khung giá</span>
           </h3>
           <div className="pt-scroll">
             <table className="pt-table">

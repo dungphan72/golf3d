@@ -476,3 +476,13 @@
   color: var(--muted);
   font-size: var(--t-base);
 }
+
+/* Narrow phones: the fixed bar has no room for the brand name next to the account and CTA buttons. */
+@media (max-width: 480px) {
+  .pp .fw-fixed .fw-brand {
+    min-width: 0;
+  }
+  .pp .fw-fixed .fw-brand span {
+    display: none;
+  }
+}

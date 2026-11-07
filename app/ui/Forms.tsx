@@ -4,6 +4,7 @@ import { Flag, Check, ArrowRight, Save } from 'lucide-react';
 import { DialogHeading, ModalDialog } from './kit';
 import { planBooking } from '../../lib/booking';
 import { PriceEditor } from './PriceEditor';
+import { CallQrSheet } from './CallQrSheet';
 import { OffersField } from './OffersField';
 import { PromotionsEditor } from './PromotionsEditor';
 import { DEFAULT_BENEFITS } from '../../lib/member-benefits';
@@ -515,6 +516,19 @@ export function SettingsForm({
               )}
             </div>
           </section>
+          {c.onlineEnabled && c.onlineSlug && !onlineMissing(c).length && (
+            <section className="settings-section">
+              <div>
+                <h2>Chuông gọi phục vụ</h2>
+                <p>
+                  Khách quét mã QR tại line để gọi nhân viên. Yêu cầu hiện ở Lịch đặt → Yêu cầu hỗ
+                  trợ kèm âm chuông; bật thông báo đẩy ở đó để điện thoại nhân viên báo ngay cả khi
+                  khóa màn hình. Lưu cấu hình trước khi in mã.
+                </p>
+              </div>
+              <CallQrSheet slug={c.onlineSlug} />
+            </section>
+          )}
         </>
       )}
       {tab === 'payment' && (

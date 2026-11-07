@@ -1,6 +1,6 @@
 'use client';
-import { useState } from 'react';
-import { Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Fragment, useState } from 'react';
+import { ChevronDown, Pencil, Plus, Trash2 } from 'lucide-react';
 import { money, type Config } from '../../lib/club';
 import { validateRules, type PriceRule, type Service, type DayType } from '../../lib/pricing';
 const services = {
@@ -9,6 +9,8 @@ const services = {
   '18': '18 hố · trọn lượt',
 };
 const days = { weekday: 'T2–T6', weekend: 'T7 & CN', holiday: 'Ngày lễ' };
+const rooms = { standard: 'Line tiêu chuẩn', vip: 'Phòng VIP' } as const;
+
 export function PriceEditor({
   rules,
   onChange,
@@ -18,7 +20,16 @@ export function PriceEditor({
 }) {
   const [room, setRoom] = useState('all'),
     [service, setService] = useState('all'),
-    [day, setDay] = useState('all');
+    [day, setDay] = useState('all'),
+    [editing, setEditing] = useState<string | null>(null),
+    [confirmDel, setConfirmDel] = useState<string | null>(null),
+    [folded, setFolded] = useState<Set<string>>(new Set());
+  const toggle = (k: string) =>
+    setFolded((f) => {
+      const n = new Set(f);
+      if (!n.delete(k)) n.add(k);
+      return n;
+    });
   const visible = rules.filter(
     (r) =>
       (room === 'all' || r.room === room) &&
@@ -35,10 +46,11 @@ export function PriceEditor({
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
   function add() {
+    const id = `rate-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     onChange([
       ...rules,
       {
-        id: `rate-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+        id,
         label: 'Khung giá mới',
         service: (service === 'all' ? 'gdr' : service) as Service,
         room: (room === 'all' ? 'standard' : room) as 'standard' | 'vip',
@@ -50,197 +62,313 @@ export function PriceEditor({
         enabled: true,
       },
     ]);
+    setEditing(id);
   }
+  function remove(id: string) {
+    onChange(rules.filter((x) => x.id !== id));
+    setConfirmDel(null);
+    if (editing === id) setEditing(null);
+  }
+  const groups = (Object.keys(rooms) as (keyof typeof rooms)[])
+    .map((k) => ({
+      key: k,
+      rows: visible
+        .filter((r) => r.room === k)
+        .sort(
+          (a, b) =>
+            a.service.localeCompare(b.service) ||
+            Object.keys(days).indexOf(a.day) - Object.keys(days).indexOf(b.day) ||
+            a.from.localeCompare(b.from),
+        ),
+    }))
+    .filter((g) => g.rows.length);
   return (
-    <div className="price-editor">
-      <div className="price-filters">
-        <label>
-          Loại phòng
-          <select value={room} onChange={(e) => setRoom(e.target.value)}>
-            <option value="all">Tất cả</option>
-            <option value="standard">Line tiêu chuẩn</option>
-            <option value="vip">VIP</option>
-          </select>
-        </label>
-        <label>
-          Dịch vụ
-          <select value={service} onChange={(e) => setService(e.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(services).map(([v, t]) => (
-              <option key={v} value={v}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Ngày áp dụng
-          <select value={day} onChange={(e) => setDay(e.target.value)}>
-            <option value="all">Tất cả</option>
-            {Object.entries(days).map(([v, t]) => (
-              <option key={v} value={v}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </label>
+    <div className="price-editor pt">
+      <div className="pt-bar">
+        <div className="pt-filters">
+          <label>
+            Loại phòng
+            <select value={room} onChange={(e) => setRoom(e.target.value)}>
+              <option value="all">Tất cả</option>
+              <option value="standard">Line tiêu chuẩn</option>
+              <option value="vip">VIP</option>
+            </select>
+          </label>
+          <label>
+            Dịch vụ
+            <select value={service} onChange={(e) => setService(e.target.value)}>
+              <option value="all">Tất cả</option>
+              {Object.entries(services).map(([v, t]) => (
+                <option key={v} value={v}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Ngày áp dụng
+            <select value={day} onChange={(e) => setDay(e.target.value)}>
+              <option value="all">Tất cả</option>
+              {Object.entries(days).map(([v, t]) => (
+                <option key={v} value={v}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button className="primary" type="button" onClick={add} disabled={rules.length >= 300}>
+          <Plus size={16} />
+          Thêm khung giá
+        </button>
       </div>
       {issue && (
         <div className="error-box" role="alert">
           {issue}
         </div>
       )}
-      {!visible.length && (
+      {!groups.length && (
         <p className="muted">
           Chưa có khung giá phù hợp bộ lọc. Dịch vụ chưa có giá sẽ không được đặt.
         </p>
       )}
-      <div className="rate-list">
-        {visible.map((r) => (
-          <details className={'rate-rule ' + (!r.enabled ? 'disabled' : '')} key={r.id}>
-            <summary>
-              <div>
-                <strong>{r.label}</strong>
-                <span>
-                  {r.room === 'vip' ? 'VIP' : 'Line'} · {services[r.service]}
-                  {r.people ? ` · ${r.people} người` : ''}
-                </span>
-                <small>
-                  {days[r.day]} · {r.from}–{r.to}
-                  {!r.enabled ? ' · Tắt' : ''}
-                </small>
-              </div>
-              <b>
-                {money(r.amount)}
-                {r.service === 'gdr' && <small>/giờ</small>}
-              </b>
-              <ChevronDown size={15} />
-            </summary>
-            <div className="rate-fields">
-              <label>
-                Tên khung giá
-                <input
-                  value={r.label}
-                  maxLength={80}
-                  onChange={(e) => update(r.id, { label: e.target.value })}
-                  required
-                />
-              </label>
-              <label>
-                Dịch vụ
-                <select
-                  value={r.service}
-                  onChange={(e) => {
-                    const s = e.target.value as Service;
-                    update(r.id, { service: s, people: s === 'gdr' ? null : (r.people ?? 1) });
-                  }}
-                >
-                  {Object.entries(services).map(([v, t]) => (
-                    <option value={v} key={v}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Loại phòng
-                <select
-                  value={r.room}
-                  onChange={(e) => update(r.id, { room: e.target.value as PriceRule['room'] })}
-                >
-                  <option value="standard">Line tiêu chuẩn</option>
-                  <option value="vip">VIP</option>
-                </select>
-              </label>
-              <label>
-                Ngày áp dụng
-                <select
-                  value={r.day}
-                  onChange={(e) => update(r.id, { day: e.target.value as DayType })}
-                >
-                  {Object.entries(days).map(([v, t]) => (
-                    <option key={v} value={v}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Từ giờ
-                <input
-                  type="time"
-                  value={r.from}
-                  required
-                  onChange={(e) => update(r.id, { from: e.target.value })}
-                />
-              </label>
-              <label>
-                Đến giờ (24:00 = cuối ngày)
-                <input
-                  value={r.to}
-                  required
-                  placeholder="24:00"
-                  pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
-                  onChange={(e) => update(r.id, { to: e.target.value })}
-                />
-              </label>
-              <label>
-                Đơn giá (₫){r.service === 'gdr' ? ' / giờ' : ' / cả nhóm'}
-                <input
-                  type="number"
-                  min={1}
-                  max={100000000}
-                  step={1}
-                  value={r.amount}
-                  onChange={(e) => update(r.id, { amount: Number(e.target.value) })}
-                  required
-                />
-              </label>
-              {r.service !== 'gdr' && (
-                <label>
-                  Số người
-                  <select
-                    value={r.people ?? 1}
-                    onChange={(e) => update(r.id, { people: Number(e.target.value) })}
-                  >
-                    {[1, 2, 3, 4].map((n) => (
-                      <option value={n} key={n}>
-                        {n} người
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-              <label>
-                Trạng thái
-                <select
-                  value={r.enabled ? 'on' : 'off'}
-                  onChange={(e) => update(r.id, { enabled: e.target.value === 'on' })}
-                >
-                  <option value="on">Áp dụng</option>
-                  <option value="off">Tạm tắt</option>
-                </select>
-              </label>
-              <button
-                className="delete-rule secondary"
-                type="button"
-                onClick={() => onChange(rules.filter((x) => x.id !== r.id))}
-              >
-                <Trash2 size={14} />
-                Xóa khung giá
-              </button>
-            </div>
-          </details>
-        ))}
-      </div>
-      <button className="secondary" type="button" onClick={add} disabled={rules.length >= 300}>
-        <Plus size={16} />
-        Thêm khung giá
-      </button>
+      {groups.map((g) => (
+        <section className="pt-group" key={g.key}>
+          <h3>
+            {rooms[g.key]} <span>{g.rows.length} khung giá</span>
+          </h3>
+          <div className="pt-scroll">
+            <table className="pt-table">
+              <thead>
+                <tr>
+                  <th>Tên khung giá</th>
+                  <th>Số người</th>
+                  <th>Ngày</th>
+                  <th>Khung giờ</th>
+                  <th className="num">Đơn giá</th>
+                  <th>Trạng thái</th>
+                  <th className="act">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.rows.map((r, i) => {
+                  const gk = `${g.key}:${r.service}`;
+                  const shut = folded.has(gk) && editing !== r.id && confirmDel !== r.id;
+                  return (
+                    <Fragment key={r.id}>
+                      {(i === 0 || g.rows[i - 1].service !== r.service) && (
+                        <tr className="pt-sub">
+                          <td colSpan={7}>
+                            <button
+                              type="button"
+                              aria-expanded={!folded.has(gk)}
+                              onClick={() => toggle(gk)}
+                            >
+                              <ChevronDown size={14} className={folded.has(gk) ? 'shut' : ''} />
+                              {services[r.service]}
+                              <span>
+                                {g.rows.filter((x) => x.service === r.service).length} khung giá
+                              </span>
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                      <tr
+                        hidden={shut}
+                        className={(r.enabled ? '' : 'off ') + (editing === r.id ? 'open' : '')}
+                      >
+                        <td>
+                          <strong>{r.label}</strong>
+                        </td>
+                        <td>{r.people ? `${r.people} người` : '—'}</td>
+                        <td>{days[r.day]}</td>
+                        <td>
+                          {r.from}–{r.to}
+                        </td>
+                        <td className="num">
+                          {money(r.amount)}
+                          <small>{r.service === 'gdr' ? ' /giờ' : ' /nhóm'}</small>
+                        </td>
+                        <td>
+                          <span className={'pt-state ' + (r.enabled ? 'on' : 'off')}>
+                            {r.enabled ? 'Áp dụng' : 'Tạm tắt'}
+                          </span>
+                        </td>
+                        <td className="act">
+                          {confirmDel === r.id ? (
+                            <>
+                              <button
+                                type="button"
+                                className="pt-danger"
+                                onClick={() => remove(r.id)}
+                              >
+                                Xác nhận xóa
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary"
+                                onClick={() => setConfirmDel(null)}
+                              >
+                                Hủy
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="secondary"
+                                aria-label={`Sửa ${r.label}`}
+                                onClick={() => setEditing(editing === r.id ? null : r.id)}
+                              >
+                                <Pencil size={14} />
+                                {editing === r.id ? 'Đóng' : 'Sửa'}
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary pt-del"
+                                aria-label={`Xóa ${r.label}`}
+                                onClick={() => setConfirmDel(r.id)}
+                              >
+                                <Trash2 size={14} />
+                                Xóa
+                              </button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                      {editing === r.id && (
+                        <tr className="pt-edit">
+                          <td colSpan={7}>
+                            <div className="pt-fields">
+                              <label>
+                                Tên khung giá
+                                <input
+                                  value={r.label}
+                                  maxLength={80}
+                                  onChange={(e) => update(r.id, { label: e.target.value })}
+                                  required
+                                />
+                              </label>
+                              <label>
+                                Dịch vụ
+                                <select
+                                  value={r.service}
+                                  onChange={(e) => {
+                                    const s = e.target.value as Service;
+                                    update(r.id, {
+                                      service: s,
+                                      people: s === 'gdr' ? null : (r.people ?? 1),
+                                    });
+                                  }}
+                                >
+                                  {Object.entries(services).map(([v, t]) => (
+                                    <option value={v} key={v}>
+                                      {t}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                Loại phòng
+                                <select
+                                  value={r.room}
+                                  onChange={(e) =>
+                                    update(r.id, { room: e.target.value as PriceRule['room'] })
+                                  }
+                                >
+                                  <option value="standard">Line tiêu chuẩn</option>
+                                  <option value="vip">VIP</option>
+                                </select>
+                              </label>
+                              <label>
+                                Ngày áp dụng
+                                <select
+                                  value={r.day}
+                                  onChange={(e) => update(r.id, { day: e.target.value as DayType })}
+                                >
+                                  {Object.entries(days).map(([v, t]) => (
+                                    <option key={v} value={v}>
+                                      {t}
+                                    </option>
+                                  ))}
+                                </select>
+                              </label>
+                              <label>
+                                Từ giờ
+                                <input
+                                  type="time"
+                                  value={r.from}
+                                  required
+                                  onChange={(e) => update(r.id, { from: e.target.value })}
+                                />
+                              </label>
+                              <label>
+                                Đến giờ (24:00 = cuối ngày)
+                                <input
+                                  value={r.to}
+                                  required
+                                  placeholder="24:00"
+                                  pattern="([01][0-9]|2[0-3]):[0-5][0-9]|24:00"
+                                  onChange={(e) => update(r.id, { to: e.target.value })}
+                                />
+                              </label>
+                              <label>
+                                Đơn giá (₫){r.service === 'gdr' ? ' / giờ' : ' / cả nhóm'}
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={100000000}
+                                  step={1}
+                                  value={r.amount}
+                                  onChange={(e) => update(r.id, { amount: Number(e.target.value) })}
+                                  required
+                                />
+                              </label>
+                              {r.service !== 'gdr' && (
+                                <label>
+                                  Số người
+                                  <select
+                                    value={r.people ?? 1}
+                                    onChange={(e) =>
+                                      update(r.id, { people: Number(e.target.value) })
+                                    }
+                                  >
+                                    {[1, 2, 3, 4].map((n) => (
+                                      <option value={n} key={n}>
+                                        {n} người
+                                      </option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
+                              <label>
+                                Trạng thái
+                                <select
+                                  value={r.enabled ? 'on' : 'off'}
+                                  onChange={(e) =>
+                                    update(r.id, { enabled: e.target.value === 'on' })
+                                  }
+                                >
+                                  <option value="on">Áp dụng</option>
+                                  <option value="off">Tạm tắt</option>
+                                </select>
+                              </label>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
       <p className="form-note">
         Giá trọn lượt tính theo giờ bắt đầu đã đặt. Quy tắc ngày lễ ưu tiên hơn thứ trong tuần.
         Khung qua đêm áp dụng theo ngày lịch Việt Nam của từng phút. Các khung cùng dịch
-        vụ/phòng/nhóm/ngày không được chồng nhau.
+        vụ/phòng/nhóm/ngày không được chồng nhau. Nhớ lưu cài đặt sau khi thêm, sửa hoặc xóa.
       </p>
     </div>
   );

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { defaults, type Booking } from '../../lib/club';
 import FinancePanel from './FinancePanel';
@@ -8,7 +8,7 @@ import { BookingForm } from './Forms';
 import { SettingsForm, type SettingsTab } from './Forms';
 import { PageTabs } from './kit';
 import { type Data } from './shared';
-import { BookingsHub, HUB_VIEWS, InvoiceList } from './BookingsHub';
+import { BookingsHub, HUB_VIEWS, InvoiceList, SupportList } from './BookingsHub';
 import { HomeBoard } from './HomeBoard';
 import { BottomBar, AppHeader, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
@@ -24,6 +24,7 @@ import { ReportsPanel } from './ReportsPanel';
 import { CrmModule } from '../../modules/crm/ui/CrmApp';
 import { CrmPanel } from './CrmPanel';
 import { WalkInDialog } from './WalkInDialog';
+import { useBellSound } from './BellAlerts';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
     // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file.
@@ -160,6 +161,12 @@ export default function ClubApp() {
   const c = data?.config ?? defaults,
     b = data?.bookings ?? [],
     pending = data?.requests.filter((x) => x.status !== 'done') ?? [];
+  const ringing = data ? data.requests.filter((x) => x.status === 'new').length : null;
+  const onRing = useCallback(
+    (n: number) => setToast(n > 1 ? `${n} khách đang gọi phục vụ` : 'Có khách gọi phục vụ'),
+    [],
+  );
+  useBellSound(ringing, onRing);
   const needs: Record<string, string> = {
     finance: 'finance.view',
     reports: 'finance.view',
@@ -196,7 +203,8 @@ export default function ClubApp() {
       </div>
     );
   const badges: Record<string, number> = {
-    bookings: pending.length + (data?.onlinePending ?? 0),
+    bookings: data?.onlinePending ?? 0,
+    support: pending.length,
     invoices: b.filter((x) => x.status === 'finished').length,
   };
   const visibleNav = (key: string) => allowed(key);
@@ -307,12 +315,13 @@ export default function ClubApp() {
                       view={view}
                       onView={go}
                       data={data}
-                      busy={busy}
                       canOnline={allowed('online')}
                       onSelect={setSelected}
-                      onMutate={mutate}
                       onChanged={load}
                     />
+                  )}
+                  {view === 'support' && data && (
+                    <SupportList data={data} busy={busy} onMutate={mutate} />
                   )}
                   {view === 'invoices' && <InvoiceList bookings={b} onSelect={setSelected} />}
                   {view === 'fnb' && <FnbPanel onChanged={load} />}

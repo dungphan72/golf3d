@@ -987,3 +987,24 @@ export const crm2CustomerProfiles = sqliteTable(
     uniqueIndex('crm2_profile_code').on(t.tenant, t.code),
   ],
 );
+
+// ---- Staff phones that receive a push when a guest rings the service bell ----
+export const pushSubscriptions = sqliteTable(
+  'push_subscriptions',
+  {
+    endpoint: text('endpoint').primaryKey(),
+    tenant: text('tenant').notNull(),
+    userId: text('user_id').notNull(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [index('push_sub_tenant').on(t.tenant)],
+);
+// One VAPID key pair per deployment, generated on first use (public key is handed to browsers).
+export const pushKeys = sqliteTable('push_keys', {
+  id: text('id').primaryKey(),
+  publicKey: text('public_key').notNull(),
+  privateJwk: text('private_jwk').notNull(),
+  created: integer('created').notNull(),
+});

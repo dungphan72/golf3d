@@ -5,6 +5,7 @@ import {
   Contact,
   Award,
   Bell,
+  BellRing,
   CalendarDays,
   ChartColumn,
   ChevronDown,
@@ -40,6 +41,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'rooms', label: 'Sơ đồ phòng', icon: Grid2X2 },
       { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
+      { key: 'support', label: 'Chuông gọi', icon: BellRing },
     ],
   },
   {
@@ -81,7 +83,6 @@ export const NAV_LABEL: Record<string, string> = Object.fromEntries(
 /** Screens that live as tabs inside another menu entry: they highlight and title as their parent. */
 export const NAV_PARENT: Record<string, string> = {
   online: 'bookings',
-  support: 'bookings',
   stock: 'fnb',
   crm: 'crmx',
 };
@@ -289,6 +290,7 @@ function DropMenu({
 const MAIN_KEYS = [
   'rooms',
   'bookings',
+  'support',
   'invoices',
   'fnb',
   'crmx',
@@ -443,7 +445,11 @@ export function AppHeader({
           return (
             <button
               key={k}
-              className={'ds-menu-item' + (active === k ? ' selected' : '')}
+              className={
+                'ds-menu-item' +
+                (active === k ? ' selected' : '') +
+                (k === 'support' && (badges[k] ?? 0) > 0 ? ' ringing' : '')
+              }
               aria-current={active === k ? 'page' : undefined}
               onClick={() => onGo(k)}
             >
@@ -496,6 +502,7 @@ export function BottomBar({
   const main: NavItem[] = [
     { key: 'rooms', label: 'Phòng', icon: Grid2X2 },
     { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
+    { key: 'support', label: 'Chuông', icon: BellRing },
     { key: 'invoices', label: 'Thu tiền', icon: Wallet },
   ];
   return (

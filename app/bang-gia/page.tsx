@@ -182,7 +182,8 @@ export default async function PricingPage() {
             </p>
             <ul className="pp-chips">
               <li>
-                <Clock size={15} /> Mở cửa {pricing.open} – {pricing.close} mỗi ngày
+                <Clock size={15} /> Mở cửa{' '}
+                {pricing.open && pricing.close ? `${pricing.open} – ${pricing.close} ` : ''}mỗi ngày
               </li>
               {Number.isFinite(lowest) && (
                 <li>

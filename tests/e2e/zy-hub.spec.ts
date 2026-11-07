@@ -2,19 +2,19 @@ import { test, expect } from '@playwright/test';
 
 const OWNER = { email: 'owner@e2e.test', password: 'e2e-owner-password' };
 
-test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online và Yêu cầu hỗ trợ; Hóa đơn; Thực đơn & kho', async ({
+test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online, mục Chuông gọi riêng; Hóa đơn; Thực đơn & kho', async ({
   page,
 }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   const nav = (name: RegExp) => page.locator('.ds-menubar').getByRole('button', { name });
 
-  // One menu entry holds the booking list and the two request queues as tabs.
+  // One menu entry holds the booking list and online requests as tabs; the bell has its own entry.
   await expect(nav(/Đặt online/)).toHaveCount(0);
-  await expect(nav(/Yêu cầu hỗ trợ/)).toHaveCount(0);
+  await expect(nav(/Chuông gọi/)).toBeVisible();
   await nav(/Lịch đặt/).click();
   await expect(page.getByRole('tab', { name: /Đặt online/ })).toBeVisible();
-  await expect(page.getByRole('tab', { name: /Yêu cầu hỗ trợ/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /Yêu cầu hỗ trợ/ })).toHaveCount(0);
 
   // Filter by status: every row of the "Đã thanh toán" filter shows that status.
   await page.getByRole('button', { name: /^Đã thanh toán/ }).click();
@@ -27,7 +27,7 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online v�
   await expect(page.getByText('Không có lượt đặt phù hợp')).toBeVisible();
   await page.getByLabel('Tìm lịch đặt').fill('');
 
-  await page.getByRole('tab', { name: /Yêu cầu hỗ trợ/ }).click();
+  await nav(/Chuông gọi/).click();
   await expect(page.getByRole('button', { name: /^Đang chờ/ })).toBeVisible();
 
   // Invoices open on what is still to collect.

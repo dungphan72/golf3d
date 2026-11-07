@@ -36,7 +36,7 @@ const reply = (body: Record<string, unknown>, status = 200): R => ({ status, bod
 const error = (message: string, status = 400): R => reply({ error: message }, status);
 const DAY = 86_400_000;
 
-async function tenantBySlug(slug: string) {
+export async function tenantBySlug(slug: string) {
   const row = await db()
     .prepare(
       "SELECT tenant FROM settings WHERE json_extract(value,'$.onlineSlug')=? AND json_extract(value,'$.onlineEnabled')=1",

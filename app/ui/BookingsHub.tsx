@@ -5,30 +5,26 @@ import { time, date, type Data } from './shared';
 import { BookingTable } from './widgets';
 import { Chips, DataTable, FilterBar, PageTabs } from './kit';
 import { OnlineRequests } from './OnlineRequests';
+import { BellSettings } from './BellAlerts';
 
-export const HUB_VIEWS = ['bookings', 'online', 'support'] as const;
+export const HUB_VIEWS = ['bookings', 'online'] as const;
 
-/** "Lịch đặt": the booking list, online requests and guest support requests as tabs of one page. */
+/** "Lịch đặt": the booking list and online requests as tabs of one page. */
 export function BookingsHub({
   view,
   onView,
   data,
-  busy,
   canOnline,
   onSelect,
-  onMutate,
   onChanged,
 }: {
   view: string;
   onView: (v: string) => void;
   data: Data;
-  busy: boolean;
   canOnline: boolean;
   onSelect: (b: Booking) => void;
-  onMutate: (v: Record<string, unknown>) => Promise<boolean>;
   onChanged: () => void;
 }) {
-  const open = data.requests.filter((r) => r.status !== 'done').length;
   return (
     <>
       <PageTabs
@@ -42,12 +38,10 @@ export function BookingsHub({
             count: data.onlinePending ?? 0,
             hidden: !canOnline,
           },
-          { key: 'support', label: 'Yêu cầu hỗ trợ', count: open },
         ]}
       />
       {view === 'bookings' && <BookingList bookings={data.bookings} onSelect={onSelect} />}
       {view === 'online' && canOnline && <OnlineRequests onChanged={onChanged} />}
-      {view === 'support' && <SupportList data={data} busy={busy} onMutate={onMutate} />}
     </>
   );
 }
@@ -156,7 +150,8 @@ export function InvoiceList({
   );
 }
 
-function SupportList({
+/** "Chuông gọi": guest bell rings and support requests from running sessions. */
+export function SupportList({
   data,
   busy,
   onMutate,
@@ -168,8 +163,15 @@ function SupportList({
   const [filter, setFilter] = useState('open');
   const open = data.requests.filter((r) => r.status !== 'done');
   const rows = filter === 'open' ? open : data.requests;
+  const waiting = data.requests.filter((r) => r.status === 'new').length;
   return (
     <>
+      <p className={'bell-summary' + (waiting ? ' ringing' : '')} role="status">
+        {waiting
+          ? `${waiting} yêu cầu đang chờ nhân viên tiếp nhận`
+          : 'Chưa có khách gọi. Yêu cầu mới sẽ hiện ở đây kèm âm chuông.'}
+      </p>
+      <BellSettings />
       <FilterBar>
         <Chips
           value={filter}

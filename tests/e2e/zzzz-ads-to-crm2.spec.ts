@@ -52,22 +52,13 @@ test.beforeAll(async ({ playwright }) => {
   token = ((await rotated.json()) as Json).token;
 });
 test.afterAll(async () => {
-  await target('LEGACY');
+  await target('CRM2');
   await owner.dispose();
 });
 
-test('mặc định lead quảng cáo vẫn vào CRM cũ', async () => {
+test('mặc định lead quảng cáo vào CRM mới', async () => {
   const cfg = (await (await owner.get('/api/crm2/config')).json()) as Json;
-  expect(cfg.settings.adsLeads).toBe('LEGACY');
-  const p = phone();
-  const r = await send({ source: 'tiktok', id: adId(), name: 'Khách Cũ', phone: p });
-  expect(r.ok).toBe(true);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-});
-
-test('bật CRM mới: lead quảng cáo vào module mới, nguồn Quảng cáo, nền tảng làm chiến dịch', async () => {
-  await target('CRM2');
+  expect(cfg.settings.adsLeads).toBe('CRM2');
   const p = phone();
   const r = await send({
     source: 'tiktok',
@@ -92,6 +83,16 @@ test('bật CRM mới: lead quảng cáo vào module mới, nguồn Quảng cáo
   expect(lead.notes).toContain('Muốn chơi 18 hố');
   expect(lead.notes).toContain('Chiến dịch: tiktok');
   expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
+});
+
+test('chuyển về CRM cũ nếu cấu hình: lead quảng cáo vào bên cũ', async () => {
+  await target('LEGACY');
+  const p = phone();
+  const r = await send({ source: 'tiktok', id: adId(), name: 'Khách Cũ', phone: p });
+  expect(r.ok).toBe(true);
+  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
+  expect(await byPhone(p)).toHaveLength(0);
+  await target('CRM2');
 });
 
 test('bên gửi đặt chiến dịch riêng thì dùng chiến dịch đó', async () => {

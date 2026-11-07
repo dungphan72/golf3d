@@ -63,22 +63,13 @@ test.beforeAll(async ({ playwright }) => {
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
 });
 test.afterAll(async () => {
-  await target('LEGACY');
+  await target('CRM2');
   await owner.dispose();
 });
 
-test('mặc định lead Facebook vẫn vào CRM cũ', async () => {
+test('mặc định lead Facebook vào CRM mới', async () => {
   const cfg = (await (await owner.get('/api/crm2/config')).json()) as Json;
-  expect(cfg.settings.facebookLeads).toBe('LEGACY');
-  const p = phone();
-  const r = await facebook(form(fbId(), fields('Khách Cũ', p)));
-  expect(((await r.json()) as Json).processed).toBe(1);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-});
-
-test('bật CRM mới: lead Facebook vào module mới, giữ chiến dịch và mã biểu mẫu', async () => {
-  await target('CRM2');
+  expect(cfg.settings.facebookLeads).toBe('CRM2');
   const p = phone();
   const id = fbId();
   const r = await facebook(
@@ -88,21 +79,36 @@ test('bật CRM mới: lead Facebook vào module mới, giữ chiến dịch và
         ...fields('Lan Facebook', p, 'Chơi 9 hố cuối tuần'),
         { name: 'email', values: ['lan@example.vn'] },
       ],
-      { campaign_name: 'khai-truong' },
+      { adId: 'ad-fb-1', formId: 'form-99' },
     ),
   );
   expect(((await r.json()) as Json).processed).toBe(1);
-  const [lead] = await byPhone(p);
+  const rows = await byPhone(p);
+  expect(rows).toHaveLength(1);
+  const { lead, activities } = await detail(rows[0].id);
   expect(lead).toMatchObject({
     fullName: 'Lan Facebook',
+    phone: p,
     email: 'lan@example.vn',
     source: 'Facebook',
     targetService: 'Game 9 hố',
     stage: 'NEW',
   });
-  for (const line of ['Chơi 9 hố cuối tuần', 'Chiến dịch: khai-truong', `Facebook lead: ${id}`])
-    expect(lead.notes).toContain(line);
+  expect(lead.notes).toContain('Chơi 9 hố cuối tuần');
+  expect(lead.notes).toContain('Chiến dịch: ad-fb-1');
+  expect(lead.notes).toContain(`Facebook lead: ${id}`);
+  expect(activities.length).toBeGreaterThan(0);
   expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
+});
+
+test('chuyển về CRM cũ nếu cấu hình: lead Facebook vào bên cũ', async () => {
+  await target('LEGACY');
+  const p = phone();
+  const r = await facebook(form(fbId(), fields('Khách Cũ', p)));
+  expect(((await r.json()) as Json).processed).toBe(1);
+  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
+  expect(await byPhone(p)).toHaveLength(0);
+  await target('CRM2');
 });
 
 test('Facebook gửi lại đúng biểu mẫu: không tạo thêm gì', async () => {

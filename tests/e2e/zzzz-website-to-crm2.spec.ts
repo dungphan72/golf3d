@@ -47,25 +47,16 @@ test.beforeAll(async ({ playwright }) => {
   token = ((await rotated.json()) as Json).token;
 });
 test.afterAll(async () => {
-  await target('LEGACY');
+  await target('CRM2');
   await owner.dispose();
 });
 
-test('mặc định lead từ form website vẫn vào CRM cũ', async () => {
+test('mặc định lead từ form website vào CRM mới', async () => {
   const cfg = (await (await owner.get('/api/crm2/config')).json()) as Json;
-  expect(cfg.settings.websiteLeads).toBe('LEGACY');
-  const p = phone();
-  const r = await send({ name: 'Khách Cũ', phone: p, need: '9' });
-  expect(r.ok).toBe(true);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect((await newLeads()).some((l) => l.phone === p)).toBe(false);
-});
-
-test('bật CRM mới: lead vào module mới, không vào bên cũ, giữ đủ thông tin', async () => {
-  await target('CRM2');
+  expect(cfg.settings.websiteLeads).toBe('CRM2');
   const p = phone();
   const r = await send({
-    name: 'Khách Mới',
+    name: 'Khách Mới Mặc Định',
     phone: p,
     email: 'moi@example.vn',
     need: '18',
@@ -78,11 +69,13 @@ test('bật CRM mới: lead vào module mới, không vào bên cũ, giữ đủ
   expect(r).toMatchObject({ ok: true, duplicate: false });
   expect(['assigned', 'queued']).toContain(r.status);
   expect(r.leadId).toBeTruthy();
+  expect((await newLeads()).some((l) => l.phone === p)).toBe(true);
+  expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
 
   const detail = (await (await owner.get('/api/crm2/leads?id=' + r.leadId)).json()) as Json;
   expect(detail.lead).toMatchObject({
     id: r.leadId,
-    fullName: 'Khách Mới',
+    fullName: 'Khách Mới Mặc Định',
     phone: p,
     email: 'moi@example.vn',
     source: 'Website',
@@ -99,6 +92,16 @@ test('bật CRM mới: lead vào module mới, không vào bên cũ, giữ đủ
   ])
     expect(detail.lead.notes).toContain(line);
   expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
+});
+
+test('chuyển về CRM cũ nếu cấu hình: lead vào bên cũ', async () => {
+  await target('LEGACY');
+  const p = phone();
+  const r = await send({ name: 'Khách Cũ', phone: p, need: '9' });
+  expect(r.ok).toBe(true);
+  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
+  expect((await newLeads()).some((l) => l.phone === p)).toBe(false);
+  await target('CRM2');
 });
 
 test('gửi lại cùng số: cùng lead, tính thêm một lần hỏi', async () => {

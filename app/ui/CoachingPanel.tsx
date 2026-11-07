@@ -468,15 +468,14 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
 
                 <div className="operate-member-selector-section">
                   <MemberSelector
-                    label="Kết nối học viên từ danh sách hội viên"
                     required
-                    initialCustomerName={form.customerName}
-                    initialPhone={form.phone}
-                    onChange={(sel) => {
+                    customer={form.customerName}
+                    phone={form.phone}
+                    onChange={(customer, phone) => {
                       setForm((prev) => ({
                         ...prev,
-                        customerName: sel.name,
-                        phone: sel.phone,
+                        customerName: customer,
+                        phone,
                       }));
                     }}
                   />

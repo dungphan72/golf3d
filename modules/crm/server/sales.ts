@@ -1,4 +1,5 @@
 import { db } from '../../../lib/server/common';
+import { OFFICIAL_PACKAGES } from '../../../lib/official-packages';
 import {
   canApproveAppointment,
   canTransition,
@@ -191,8 +192,38 @@ export async function setAppointmentStatus(c: Ctx, id: string, to: string): Prom
 
 // ---------------------------------------------------------------- products and holds
 
+const SYSTEM_SERVICES = [
+  { code: 'svc-swing-1h', name: 'Luyện swing (1 giờ)', listPrice: 200_000, limited: 0, active: 1 },
+  { code: 'svc-game-9h', name: 'Game 9 hố (1 người)', listPrice: 350_000, limited: 0, active: 1 },
+  { code: 'svc-game-18h', name: 'Game 18 hố (1 người)', listPrice: 600_000, limited: 0, active: 1 },
+  { code: 'svc-vip-1h', name: 'Phòng VIP riêng biệt (1 giờ)', listPrice: 500_000, limited: 0, active: 1 },
+  { code: 'svc-coach-1h', name: 'HLV cá nhân hướng dẫn 1-1 (1 giờ)', listPrice: 800_000, limited: 0, active: 1 },
+];
+
+export async function findProduct(tenant: string, code: string) {
+  const custom = await db()
+    .prepare('SELECT code,name,limited,active,list_price AS listPrice FROM crm2_products WHERE tenant=? AND code=?')
+    .bind(tenant, code)
+    .first<{ code: string; name: string; limited: number; active: number; listPrice: number }>();
+  if (custom) return custom;
+
+  const pkg = await db()
+    .prepare('SELECT id AS code,name,0 AS limited,active,price AS listPrice FROM package_types WHERE tenant=? AND id=?')
+    .bind(tenant, code)
+    .first<{ code: string; name: string; limited: number; active: number; listPrice: number }>();
+  if (pkg) return pkg;
+
+  const off = OFFICIAL_PACKAGES.find((p) => p.key === code);
+  if (off) return { code: off.key, name: off.name, limited: 0, active: 1, listPrice: off.price };
+
+  const sys = SYSTEM_SERVICES.find((s) => s.code === code);
+  if (sys) return sys;
+
+  return null;
+}
+
 export async function listProducts(c: Ctx): Promise<Result> {
-  const rows = (
+  const customRows = (
     await db()
       .prepare(
         `SELECT p.code,p.name,p.list_price AS listPrice,p.limited,p.active,
@@ -200,9 +231,56 @@ export async function listProducts(c: Ctx): Promise<Result> {
          FROM crm2_products p WHERE p.tenant=? ORDER BY p.name`,
       )
       .bind(c.tenant)
-      .all()
+      .all<{ code: string; name: string; listPrice: number; limited: number; active: number; held: number }>()
   ).results;
-  return reply({ products: rows });
+
+  const pkgRows = (
+    await db()
+      .prepare(
+        `SELECT pt.id AS code,pt.name,pt.price AS listPrice,0 AS limited,pt.active,
+          EXISTS(SELECT 1 FROM crm2_holds h WHERE h.tenant=pt.tenant AND h.product_code=pt.id AND h.status='ACTIVE') AS held
+         FROM package_types pt WHERE pt.tenant=? AND pt.active=1 ORDER BY pt.price`,
+      )
+      .bind(c.tenant)
+      .all<{ code: string; name: string; listPrice: number; limited: number; active: number; held: number }>()
+  ).results;
+
+  const seenCodes = new Set(customRows.map((r) => r.code));
+  const combined = [...customRows];
+
+  for (const pkg of pkgRows) {
+    if (!seenCodes.has(pkg.code)) {
+      seenCodes.add(pkg.code);
+      combined.push(pkg);
+    }
+  }
+
+  // If no package types created yet in DB, include official system packages
+  if (pkgRows.length === 0) {
+    for (const off of OFFICIAL_PACKAGES) {
+      if (!seenCodes.has(off.key)) {
+        seenCodes.add(off.key);
+        combined.push({
+          code: off.key,
+          name: off.name,
+          listPrice: off.price,
+          limited: 0,
+          active: 1,
+          held: 0,
+        });
+      }
+    }
+  }
+
+  // Include core practice & game services
+  for (const svc of SYSTEM_SERVICES) {
+    if (!seenCodes.has(svc.code)) {
+      seenCodes.add(svc.code);
+      combined.push({ ...svc, held: 0 });
+    }
+  }
+
+  return reply({ products: combined });
 }
 
 export async function saveProduct(
@@ -250,10 +328,7 @@ export async function createHold(
   const lead = await getLeadRow(c.tenant, o.leadId);
   if (!lead || !canSeeLead(actorOf(c), lead)) return fail('Không tìm thấy lead', 404);
   if (!canEditLead(actorOf(c), lead)) return fail('Lead đang do nhân viên khác phụ trách', 403);
-  const prod = await db()
-    .prepare('SELECT code,name,limited,active FROM crm2_products WHERE tenant=? AND code=?')
-    .bind(c.tenant, o.productCode)
-    .first<{ code: string; name: string; limited: number; active: number }>();
+  const prod = await findProduct(c.tenant, o.productCode);
   if (!prod || !prod.active) return fail('Không tìm thấy dịch vụ trong danh mục');
   const settings = await getSettings(c.tenant);
   const id = crypto.randomUUID();
@@ -408,12 +483,7 @@ export async function createOrder(
   if (!isManager(c.role)) return fail('Chỉ quản lý tạo đơn bán', 403);
   const lead = await getLeadRow(c.tenant, o.leadId);
   if (!lead) return fail('Không tìm thấy lead', 404);
-  const prod = await db()
-    .prepare(
-      'SELECT code,name,list_price AS listPrice,limited FROM crm2_products WHERE tenant=? AND code=?',
-    )
-    .bind(c.tenant, o.productCode)
-    .first<{ code: string; name: string; listPrice: number; limited: number }>();
+  const prod = await findProduct(c.tenant, o.productCode);
   if (!prod) return fail('Không tìm thấy dịch vụ trong danh mục');
   const listPrice = o.price ?? prod.listPrice;
   const discount = Math.min(Math.max(Math.round(o.discount), 0), listPrice);

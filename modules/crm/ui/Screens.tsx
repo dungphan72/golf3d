@@ -1,6 +1,19 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import {
+  Phone,
+  MessageCircle,
+  Calendar,
+  FileText,
+  Check,
+  AlertCircle,
+  Clock,
+  Upload,
+  Plus,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react';
+import {
   Chips,
   DataTable,
   FilterBar,
@@ -10,7 +23,13 @@ import {
   type Tone,
 } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
-import { NEXT_ACTION_LABELS, type NextAction } from '../core/calls';
+import {
+  CALL_RESULTS,
+  CALL_RESULT_LABELS,
+  NEXT_ACTION_LABELS,
+  type CallResult,
+  type NextAction,
+} from '../core/calls';
 import { STAGES, STAGE_LABELS, type Stage } from '../core/stages';
 import { call, countdown, dateOnly, errText, stamp, toMs, type Lead, type Staff } from './api';
 
@@ -165,58 +184,680 @@ export function OverviewScreen({
 
 // ---------------------------------------------------------------- work desk
 
+type WorkDeskAppointment = {
+  id: string;
+  leadId: string | null;
+  service: string;
+  at: number;
+  status: string;
+  note: string;
+  owner: string | null;
+  fullName: string;
+  phone: string;
+  targetService: string;
+};
+
+type WorkDeskCareTask = {
+  id: string;
+  leadId: string | null;
+  title: string;
+  type: string;
+  dueAt: number | null;
+  doneAt: number | null;
+  assignee: string | null;
+  rule: string | null;
+  customerName: string;
+  phone: string;
+  targetService: string;
+};
+
+type WorkDeskData = {
+  leads: Lead[];
+  appointments: WorkDeskAppointment[];
+  careTasks: WorkDeskCareTask[];
+  now: number;
+  mine: string;
+  isManager: boolean;
+  dayStart?: number;
+  dayEnd?: number;
+};
+
 export function WorkScreen({ s }: { s: Shared }) {
-  const { data, error } = useLoad<{ leads: Lead[] }>('/api/crm2/leads?view=work', 15_000);
-  if (error) return <Err text={error} />;
+  const { data, error, reload } = useLoad<WorkDeskData>('/api/crm2/leads?view=work', 15_000);
+  const [subTab, setSubTab] = useState<'new' | 'overdue' | 'today' | 'appointments' | 'care'>('new');
+  
+  // Call result modal state
+  const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
+  const [callResult, setCallResult] = useState<CallResult>('INTERESTED');
+  const [callNote, setCallNote] = useState('');
+  const [callWhen, setCallWhen] = useState('');
+  const [savingResult, setSavingResult] = useState(false);
+  const [modalErr, setModalErr] = useState('');
+
+  if (error && !data) return <Err text={error} />;
   if (!data) return <Loading />;
-  return (
-    <DataTable
-      rows={data.leads}
-      rowKey={(r) => r.id}
-      empty="Không còn việc cần gọi"
-      emptyText="Khách mới được chia cho bạn hoặc đến hạn gọi lại sẽ hiện ở đây, việc gấp nhất lên đầu."
-      onRowClick={(r) => s.open(r.id)}
-      columns={[
-        {
-          key: 'n',
-          header: 'Khách',
-          cell: (r) => (
-            <>
-              <strong>{r.fullName}</strong>
-              <br />
-              {r.phone}
-            </>
-          ),
-        },
-        {
-          key: 'a',
-          header: 'Việc kế tiếp',
-          cell: (r) => NEXT_ACTION_LABELS[r.nextAction as NextAction] || '—',
-        },
-        {
-          key: 'd',
-          header: 'Hạn',
-          cell: (r) => {
-            const c = countdown(r.nextDue, s.now);
-            return (
-              <span className={c.late ? 'late' : ''}>
-                {r.nextDue ? stamp(r.nextDue) + ' · ' + c.text : '—'}
+
+  const leads = data.leads ?? [];
+  const appointments = data.appointments ?? [];
+  const careTasks = data.careTasks ?? [];
+  const dayEnd = data.dayEnd ?? (s.now + 86_400_000);
+
+  // Partition leads
+  const newNeeded = leads.filter(
+    (l) => l.stage === 'NEW' || l.callAttempts === 0 || l.nextAction === 'NEW',
+  );
+  const overdue = leads.filter(
+    (l) => l.nextDue != null && l.nextDue < s.now,
+  );
+  const today = leads.filter(
+    (l) => l.nextDue != null && l.nextDue >= s.now && l.nextDue <= dayEnd,
+  );
+
+  const unassignedCount = leads.filter((l) => !l.owner).length;
+
+  const handleSaveResult = async () => {
+    if (!callModalLead) return;
+    setSavingResult(true);
+    setModalErr('');
+    try {
+      await call('/api/crm2/leads', {
+        action: 'result',
+        id: callModalLead.id,
+        result: callResult,
+        note: callNote,
+        ...(callWhen ? { when: toMs(callWhen) } : {}),
+      });
+      setCallModalLead(null);
+      setCallNote('');
+      setCallWhen('');
+      await reload();
+    } catch (e) {
+      setModalErr(errText(e));
+    } finally {
+      setSavingResult(false);
+    }
+  };
+
+  const handleFinishCare = async (id: string) => {
+    try {
+      await call('/api/crm2/tasks', {
+        action: 'care-done',
+        id,
+        channel: 'call',
+        note: 'Đã liên hệ chăm sóc khách hàng',
+      });
+      await reload();
+    } catch (e) {
+      alert(errText(e));
+    }
+  };
+
+  const renderLeadActions = (r: Lead) => {
+    const cleanPhone = r.phone.replace(/[^0-9]/g, '');
+    return (
+      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+        <a
+          href={`tel:${r.phone}`}
+          className="crm-action-btn"
+          title="Gọi điện trực tiếp (không tự động hoàn tất)"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 32,
+            height: 32,
+            borderRadius: 6,
+            background: '#e0f2fe',
+            color: '#0369a1',
+            textDecoration: 'none',
+          }}
+        >
+          <Phone size={15} />
+        </a>
+        {cleanPhone && (
+          <a
+            href={`https://zalo.me/${cleanPhone}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="crm-action-btn"
+            title="Mở nhắn tin Zalo"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 6,
+              background: '#e0e7ff',
+              color: '#3730a3',
+              textDecoration: 'none',
+            }}
+          >
+            <MessageCircle size={15} />
+          </a>
+        )}
+        <button
+          type="button"
+          className="secondary"
+          title="Ghi kết quả cuộc gọi"
+          onClick={() => {
+            setCallModalLead(r);
+            setCallResult('INTERESTED');
+            setCallNote('');
+            setCallWhen('');
+            setModalErr('');
+          }}
+          style={{ height: 32, padding: '0 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        >
+          <FileText size={14} /> Ghi KQ
+        </button>
+        <button
+          type="button"
+          className="primary"
+          title="Đặt lịch phòng tập cho khách"
+          onClick={() => s.onNavigate?.('rooms', { name: r.fullName, phone: r.phone })}
+          style={{ height: 32, padding: '0 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        >
+          <Calendar size={14} /> Đặt lịch
+        </button>
+      </div>
+    );
+  };
+
+  const leadColumns = [
+    {
+      key: 'n',
+      header: 'Khách hàng',
+      cell: (r: Lead) => (
+        <div>
+          <strong style={{ fontSize: 14 }}>{r.fullName}</strong>
+          <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+            {!r.owner && (
+              <span className="crm-chip" style={{ background: '#fef3c7', color: '#92400e', fontSize: 11, margin: 0 }}>
+                ⚠️ Chưa phân công
               </span>
-            );
-          },
-        },
-        {
-          key: 'st',
-          header: 'Giai đoạn',
-          cell: (r) => (
-            <StatusBadge tone={stageTone(r.stage)}>
-              {STAGE_LABELS[r.stage as Stage] ?? r.stage}
-            </StatusBadge>
-          ),
-        },
-        { key: 'c', header: 'Gọi hụt', align: 'right', cell: (r) => r.callAttempts },
-      ]}
-    />
+            )}
+            {(!r.nextAction || !r.nextDue) && (
+              <span className="crm-chip" style={{ background: '#fee2e2', color: '#991b1b', fontSize: 11, margin: 0 }}>
+                ⚠️ Thiếu việc kế tiếp
+              </span>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'service',
+      header: 'Nhu cầu & Nguồn',
+      cell: (r: Lead) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{r.targetService || 'Chưa rõ nhu cầu'}</div>
+          <small className="muted">{r.source || 'Trực tiếp'}</small>
+        </div>
+      ),
+    },
+    {
+      key: 'owner',
+      header: 'Phụ trách',
+      cell: (r: Lead) =>
+        r.owner ? (s.staff.find((m) => m.id === r.owner)?.name ?? r.owner) : (
+          <span style={{ color: '#d97706', fontWeight: 600 }}>Hàng chờ (Kho số)</span>
+        ),
+    },
+    {
+      key: 'next',
+      header: 'Việc kế tiếp & Hạn',
+      cell: (r: Lead) => {
+        const c = countdown(r.nextDue, s.now);
+        return (
+          <div>
+            <div style={{ fontWeight: 600 }}>{NEXT_ACTION_LABELS[r.nextAction as NextAction] || 'Gọi tư vấn'}</div>
+            <span className={c.late ? 'late' : ''} style={{ fontSize: 12 }}>
+              {r.nextDue ? `${stamp(r.nextDue)} · ${c.text}` : '—'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'actions',
+      header: 'Thao tác nhanh',
+      cell: (r: Lead) => renderLeadActions(r),
+    },
+  ];
+
+  return (
+    <>
+      <Err text={error} />
+      
+      {unassignedCount > 0 && s.manager && (
+        <div
+          style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: 8,
+            padding: '10px 16px',
+            marginBottom: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#92400e', fontSize: 13, fontWeight: 500 }}>
+            <AlertTriangle size={16} />
+            <span>
+              Có <strong>{unassignedCount}</strong> lead mới trong hàng chờ chưa phân công. Quản lý vui lòng phân công để đảm bảo SLA gọi trong 5 phút!
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* 5 View Subtabs */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+        {[
+          { key: 'new', label: 'Lead mới cần gọi', count: newNeeded.length, isWarning: newNeeded.some((l) => l.nextDue && l.nextDue < s.now) },
+          { key: 'overdue', label: 'Việc quá hạn', count: overdue.length, isDanger: overdue.length > 0 },
+          { key: 'today', label: 'Việc hôm nay', count: today.length },
+          { key: 'appointments', label: 'Lịch khách sắp đến', count: appointments.length },
+          { key: 'care', label: 'Chăm sóc sau chơi', count: careTasks.length },
+        ].map((tab) => {
+          const active = subTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setSubTab(tab.key as typeof subTab)}
+              style={{
+                height: 38,
+                padding: '0 14px',
+                borderRadius: 8,
+                border: active ? '1px solid var(--kv-blue, #1f7a4d)' : '1px solid #e2e8f0',
+                background: active ? '#f0fdf4' : '#ffffff',
+                color: active ? '#15803d' : '#334155',
+                fontWeight: active ? 700 : 500,
+                fontSize: 13,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <span>{tab.label}</span>
+              <span
+                style={{
+                  padding: '2px 7px',
+                  borderRadius: 12,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: tab.isDanger ? '#fee2e2' : tab.isWarning ? '#fef3c7' : active ? '#dcfce7' : '#f1f5f9',
+                  color: tab.isDanger ? '#dc2626' : tab.isWarning ? '#b45309' : active ? '#166534' : '#64748b',
+                }}
+              >
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* View 1: Lead mới cần gọi */}
+      {subTab === 'new' && (
+        <DataTable
+          rows={newNeeded}
+          rowKey={(r) => r.id}
+          empty="Không có lead mới cần gọi"
+          emptyText="Khách mới tiếp nhận sẽ hiển thị ở đây với hạn gọi 5 phút đầu tiên."
+          onRowClick={(r) => s.open(r.id)}
+          columns={leadColumns}
+        />
+      )}
+
+      {/* View 2: Việc quá hạn */}
+      {subTab === 'overdue' && (
+        <DataTable
+          rows={overdue}
+          rowKey={(r) => r.id}
+          empty="Không có việc quá hạn"
+          emptyText="Tuyệt vời! Tất cả các tác vụ và cuộc gọi hẹn trước đều đúng hạn."
+          onRowClick={(r) => s.open(r.id)}
+          columns={leadColumns}
+        />
+      )}
+
+      {/* View 3: Việc hôm nay */}
+      {subTab === 'today' && (
+        <DataTable
+          rows={today}
+          rowKey={(r) => r.id}
+          empty="Không có việc đến hạn hôm nay"
+          emptyText="Các lịch hẹn gọi lại trong ngày sẽ xuất hiện ở đây."
+          onRowClick={(r) => s.open(r.id)}
+          columns={leadColumns}
+        />
+      )}
+
+      {/* View 4: Lịch khách sắp đến */}
+      {subTab === 'appointments' && (
+        <DataTable
+          rows={appointments}
+          rowKey={(r) => r.id}
+          empty="Chưa có lịch hẹn sắp đến"
+          emptyText="Lịch hẹn trải nghiệm hoặc đặt lịch của golfer trong 48h tới sẽ hiện ở đây."
+          columns={[
+            {
+              key: 'cust',
+              header: 'Khách hàng',
+              cell: (r) => (
+                <div>
+                  <strong style={{ fontSize: 14 }}>{r.fullName}</strong>
+                  <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
+                </div>
+              ),
+            },
+            {
+              key: 'sv',
+              header: 'Dịch vụ / Gói hẹn',
+              cell: (r) => <strong>{r.service}</strong>,
+            },
+            {
+              key: 'time',
+              header: 'Thời gian hẹn',
+              cell: (r) => (
+                <div>
+                  <strong style={{ color: '#0369a1' }}>{stamp(r.at)}</strong>
+                  {r.note && <div style={{ fontSize: 12, color: '#64748b' }}>{r.note}</div>}
+                </div>
+              ),
+            },
+            {
+              key: 'st',
+              header: 'Trạng thái',
+              cell: (r) => (
+                <StatusBadge
+                  tone={
+                    r.status === 'ARRIVED' ? 'ok' : r.status === 'CONFIRMED' ? 'info' : r.status === 'CANCELLED' || r.status === 'NO_SHOW' ? 'warn' : 'muted'
+                  }
+                >
+                  {r.status === 'PENDING' ? 'Chờ duyệt' : r.status === 'CONFIRMED' ? 'Đã xác nhận' : r.status === 'ARRIVED' ? 'Đã đến' : r.status === 'NO_SHOW' ? 'Vắng mặt' : r.status}
+                </StatusBadge>
+              ),
+            },
+            {
+              key: 'staff',
+              header: 'Phụ trách',
+              cell: (r) => (r.owner ? (s.staff.find((m) => m.id === r.owner)?.name ?? r.owner) : '—'),
+            },
+            {
+              key: 'act',
+              header: 'Thao tác',
+              cell: (r) => {
+                const cleanPhone = r.phone.replace(/[^0-9]/g, '');
+                return (
+                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <a
+                      href={`tel:${r.phone}`}
+                      className="crm-action-btn"
+                      title="Gọi điện"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                      }}
+                    >
+                      <Phone size={15} />
+                    </a>
+                    {cleanPhone && (
+                      <a
+                        href={`https://zalo.me/${cleanPhone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="crm-action-btn"
+                        title="Zalo"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 32,
+                          height: 32,
+                          borderRadius: 6,
+                          background: '#e0e7ff',
+                          color: '#3730a3',
+                        }}
+                      >
+                        <MessageCircle size={15} />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => s.onNavigate?.('rooms', { name: r.fullName, phone: r.phone })}
+                      style={{ height: 32, padding: '0 10px', fontSize: 12 }}
+                    >
+                      Mở đặt phòng
+                    </button>
+                    {r.leadId && (
+                      <button
+                        type="button"
+                        className="secondary"
+                        onClick={() => s.open(r.leadId!)}
+                        style={{ height: 32, padding: '0 10px', fontSize: 12 }}
+                      >
+                        Xem Lead
+                      </button>
+                    )}
+                  </div>
+                );
+              },
+            },
+          ]}
+        />
+      )}
+
+      {/* View 5: Chăm sóc sau chơi */}
+      {subTab === 'care' && (
+        <DataTable
+          rows={careTasks}
+          rowKey={(r) => r.id}
+          empty="Không có lịch chăm sóc sau chơi"
+          emptyText="Các tác vụ cảm ơn sau chơi, hỏi thăm trải nghiệm và mời quay lại sẽ hiện ở đây."
+          columns={[
+            {
+              key: 'cust',
+              header: 'Khách hàng',
+              cell: (r) => (
+                <div>
+                  <strong style={{ fontSize: 14 }}>{r.customerName}</strong>
+                  <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
+                </div>
+              ),
+            },
+            {
+              key: 'title',
+              header: 'Nội dung chăm sóc',
+              cell: (r) => (
+                <div>
+                  <strong>{r.title}</strong>
+                  {r.targetService && <small className="muted" style={{ display: 'block' }}>Quan tâm: {r.targetService}</small>}
+                </div>
+              ),
+            },
+            {
+              key: 'due',
+              header: 'Hạn xử lý',
+              cell: (r) => (r.dueAt ? stamp(r.dueAt) : '—'),
+            },
+            {
+              key: 'staff',
+              header: 'Phụ trách',
+              cell: (r) => (r.assignee ? (s.staff.find((m) => m.id === r.assignee)?.name ?? r.assignee) : 'Chưa gán'),
+            },
+            {
+              key: 'act',
+              header: 'Thao tác',
+              cell: (r) => {
+                const cleanPhone = r.phone.replace(/[^0-9]/g, '');
+                return (
+                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                    <a
+                      href={`tel:${r.phone}`}
+                      className="crm-action-btn"
+                      title="Gọi điện"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: 6,
+                        background: '#e0f2fe',
+                        color: '#0369a1',
+                      }}
+                    >
+                      <Phone size={15} />
+                    </a>
+                    {cleanPhone && (
+                      <a
+                        href={`https://zalo.me/${cleanPhone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="crm-action-btn"
+                        title="Zalo"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 32,
+                          height: 32,
+                          borderRadius: 6,
+                          background: '#e0e7ff',
+                          color: '#3730a3',
+                        }}
+                      >
+                        <MessageCircle size={15} />
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      className="primary"
+                      onClick={() => handleFinishCare(r.id)}
+                      style={{ height: 32, padding: '0 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    >
+                      <Check size={14} /> Hoàn tất
+                    </button>
+                  </div>
+                );
+              },
+            },
+          ]}
+        />
+      )}
+
+      {/* Modal: Ghi kết quả cuộc gọi */}
+      {callModalLead && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setCallModalLead(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: 24,
+              width: '100%',
+              maxWidth: 480,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 17 }}>
+              Ghi kết quả cuộc gọi
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: 13 }}>
+              Khách: <strong>{callModalLead.fullName}</strong> ({callModalLead.phone})
+            </p>
+
+            {modalErr && (
+              <div style={{ padding: '8px 12px', background: '#fee2e2', color: '#991b1b', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
+                {modalErr}
+              </div>
+            )}
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+                Kết quả liên hệ:
+              </label>
+              <select
+                style={{ width: '100%', height: 38, fontSize: 13 }}
+                value={callResult}
+                onChange={(e) => setCallResult(e.target.value as CallResult)}
+              >
+                {CALL_RESULTS.map((cr) => (
+                  <option key={cr} value={cr}>
+                    {CALL_RESULT_LABELS[cr]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {(callResult === 'INTERESTED' || callResult === 'THINKING' || callResult === 'APPOINTMENT') && (
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+                  Hẹn liên hệ lại / Thời gian đến:
+                </label>
+                <input
+                  type="datetime-local"
+                  style={{ width: '100%', height: 38, fontSize: 13 }}
+                  value={callWhen}
+                  onChange={(e) => setCallWhen(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
+                Ghi chú chi tiết trao đổi:
+              </label>
+              <textarea
+                rows={3}
+                style={{ width: '100%', fontSize: 13, padding: 8, boxSizing: 'border-box' }}
+                placeholder="Nhu cầu golfer, tình trạng swing, gói quan tâm, lịch rảnh..."
+                value={callNote}
+                onChange={(e) => setCallNote(e.target.value)}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button type="button" className="secondary" onClick={() => setCallModalLead(null)}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={savingResult}
+                onClick={handleSaveResult}
+              >
+                {savingResult ? 'Đang lưu…' : 'Lưu kết quả'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -326,11 +967,77 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
   const [q, setQ] = useState('');
   const [stage, setStage] = useState('');
   const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importLoading, setImportLoading] = useState(false);
+  const [importStatus, setImportStatus] = useState('');
   const [f, setF] = useState({ fullName: '', phone: '', targetService: '', notes: '' });
   const url = `/api/crm2/leads?limit=200&q=${encodeURIComponent(q)}${stage ? '&stage=' + stage : ''}`;
   const { data, error, reload, setError } = useLoad<{ leads: Lead[]; total: number }>(url);
   if (error && !data) return <Err text={error} />;
-  const rows = data?.leads ?? [];
+  if (!data) return <Loading />;
+  const rows = data.leads ?? [];
+
+  const handleDoImport = async () => {
+    setImportLoading(true);
+    setImportStatus('');
+    try {
+      const lines = importText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+      const parsedLeads: Array<{
+        fullName: string;
+        phone: string;
+        email?: string;
+        targetService?: string;
+        source?: string;
+        notes?: string;
+      }> = [];
+
+      for (const line of lines) {
+        if (line.toLowerCase().includes('họ tên') || line.toLowerCase().includes('fullname')) continue;
+        const parts = line.includes('\t') ? line.split('\t') : line.split(',');
+        const fullName = parts[0]?.trim();
+        const phone = parts[1]?.trim() || '';
+        const email = parts[2]?.trim() || '';
+        const targetService = parts[3]?.trim() || '';
+        const source = parts[4]?.trim() || 'Excel/CSV';
+        const notes = parts.slice(5).join(', ').trim() || '';
+
+        if (fullName) {
+          parsedLeads.push({ fullName, phone, email, targetService, source, notes });
+        }
+      }
+
+      if (parsedLeads.length === 0) {
+        setImportStatus('Lỗi: Không tìm thấy dữ liệu hợp lệ để nhập.');
+        setImportLoading(false);
+        return;
+      }
+
+      const res = await call<{
+        ok: boolean;
+        total: number;
+        created: number;
+        absorbed: number;
+        errors?: string[];
+      }>('/api/crm2/leads', {
+        action: 'import',
+        leads: parsedLeads,
+      });
+
+      setImportStatus(
+        `Thành công: Đã tạo mới ${res.created} lead, gộp ${res.absorbed} lead trùng lặp. ${res.errors?.length ? `Có ${res.errors.length} cảnh báo.` : ''}`,
+      );
+      await reload();
+    } catch (e) {
+      setImportStatus(`Lỗi: ${errText(e)}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
   return (
     <>
       <Err text={error} />
@@ -345,10 +1052,86 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
             ]}
           />
         )}
-        <button className="secondary" onClick={() => setAdding(!adding)}>
-          Thêm lead
+        <button className="secondary" onClick={() => setImporting(true)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Upload size={14} /> Nhập Excel/CSV
+        </button>
+        <button className="secondary" onClick={() => setAdding(!adding)} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Plus size={14} /> Thêm lead
         </button>
       </FilterBar>
+
+      {importing && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setImporting(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: 24,
+              width: '100%',
+              maxWidth: 580,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 17 }}>
+              Nhập danh sách Lead từ Excel / CSV
+            </h3>
+            <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>
+              Dán dữ liệu từ bảng tính (Excel/Google Sheets) hoặc tệp CSV. Mỗi dòng một khách hàng theo định dạng:
+              <br />
+              <code>Họ tên, Số điện thoại, Email, Dịch vụ quan tâm, Nguồn, Ghi chú</code>
+            </p>
+
+            <textarea
+              rows={8}
+              style={{ width: '100%', fontSize: 13, padding: 10, fontFamily: 'monospace', boxSizing: 'border-box' }}
+              placeholder={`Nguyễn Văn A, 0901234567, a@gmail.com, Gói 18 hố, Facebook Ads, Muốn tập cuối tuần\nTrần Thị B, 0987654321, , GDR 30 giờ, Bạn giới thiệu, `}
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+            />
+
+            {importStatus && (
+              <div
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 6,
+                  marginTop: 12,
+                  fontSize: 13,
+                  background: importStatus.startsWith('Lỗi') ? '#fee2e2' : '#f0fdf4',
+                  color: importStatus.startsWith('Lỗi') ? '#991b1b' : '#166534',
+                }}
+              >
+                {importStatus}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button type="button" className="secondary" onClick={() => setImporting(false)}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="primary"
+                disabled={!importText.trim() || importLoading}
+                onClick={handleDoImport}
+              >
+                {importLoading ? 'Đang nhập…' : 'Bắt đầu nhập dữ liệu'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {adding && (
         <div style={{ background: '#f8faf8', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: 14, marginBottom: 14 }}>
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8, color: 'var(--kv-text, #24332b)' }}>

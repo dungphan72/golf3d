@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Check, Copy } from 'lucide-react';
-import { askConfirm, DataTable, EmptyState, Loading, StatusBadge } from '../../../app/ui/kit';
+import { Check, Copy, Send, RefreshCw } from 'lucide-react';
+import { askConfirm, DataTable, EmptyState, Loading, StatusBadge, type Tone } from '../../../app/ui/kit';
 import { call, errText, stamp } from './api';
 import { useLoad } from './Screens';
 
@@ -36,11 +36,48 @@ const URL_LABELS: Record<string, string> = {
   zalo: 'Zalo OA',
 };
 
+const MSG_STATUS_LABELS: Record<string, string> = {
+  sent: 'Đã gửi',
+  pending: 'Đang chờ',
+  failed: 'Thất bại',
+  expired: 'Hết hạn',
+  cancelled: 'Đã hủy',
+};
+
+const MSG_STATUS_TONE: Record<string, Tone> = {
+  sent: 'ok',
+  pending: 'info',
+  failed: 'warn',
+  expired: 'muted',
+  cancelled: 'muted',
+};
+
+const MSG_KIND_LABELS: Record<string, string> = {
+  staff_assigned: 'Báo lead mới cho NV',
+  welcome: 'Chào mừng khách mới',
+  payment_thanks: 'Cảm ơn thanh toán',
+  nps_survey: 'Khảo sát trải nghiệm',
+  appointment_reminder: 'Nhắc lịch hẹn',
+  booking_info: 'Xác nhận đặt lịch',
+  reminder: 'Nhắc giờ chơi',
+  winback_invite: 'Mời quay lại',
+  package_expiring: 'Gói sắp hết hạn',
+  package_hours_low: 'Gói sắp hết giờ',
+  birthday_wish: 'Chúc mừng sinh nhật',
+  points_expiring: 'Điểm sắp hết hạn',
+  thanks: 'Cảm ơn sau chơi',
+};
+
 /** Managers: which channels are ready, the webhook addresses, webhook tokens, and what was sent to staff and customers. */
 export function ChannelsScreen() {
   const { data, error, reload, setError } = useLoad<Channels>('/api/crm2/channels');
   const [token, setToken] = useState<{ kind: 'website' | 'ads'; value: string } | null>(null);
   const [copied, setCopied] = useState('');
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [testingChannel, setTestingChannel] = useState<string | null>(null);
+  const [testRecipient, setTestRecipient] = useState('');
+  const [testingBusy, setTestingBusy] = useState(false);
+
   if (error && !data)
     return (
       <div className="error-box" role="alert">
@@ -56,6 +93,7 @@ export function ChannelsScreen() {
   };
   const count = (status: string) =>
     d.counts.filter((c) => c.status === status).reduce((n, c) => n + c.n, 0);
+
   const rotate = async (kind: 'website' | 'ads') => {
     if (
       d.tokens[kind] &&
@@ -74,6 +112,28 @@ export function ChannelsScreen() {
       setError(errText(e));
     }
   };
+
+  const handleTestSend = async () => {
+    if (!testingChannel) return;
+    setTestingBusy(true);
+    setTestResult(null);
+    try {
+      const res = await call<{ ok: boolean; message?: string }>('/api/crm2/channels', {
+        action: 'test',
+        channel: testingChannel,
+        recipient: testRecipient,
+      });
+      setTestResult({ ok: true, msg: res.message || 'Kiểm tra kết nối thành công!' });
+      setTestingChannel(null);
+      setTestRecipient('');
+      reload();
+    } catch (e) {
+      setTestResult({ ok: false, msg: errText(e) });
+    } finally {
+      setTestingBusy(false);
+    }
+  };
+
   return (
     <div className="settings-panel">
       {error && (
@@ -81,6 +141,18 @@ export function ChannelsScreen() {
           {error}
         </div>
       )}
+
+      {testResult && (
+        <div
+          className={testResult.ok ? 'info-strip' : 'error-box'}
+          style={{ marginBottom: 16 }}
+          role="status"
+        >
+          {testResult.ok ? '✓ ' : '✕ '}
+          {testResult.msg}
+        </div>
+      )}
+
       <h3>Kênh nhận lead và gửi tin</h3>
       <DataTable
         label="Kênh nhận lead và gửi tin"
@@ -111,16 +183,95 @@ export function ChannelsScreen() {
           },
           {
             key: 'needs',
-            header: 'Còn thiếu',
+            header: 'Mục còn thiếu',
             hideOnPhone: true,
-            cell: (c) => c.needs.join(', ') || '—',
+            cell: (c) => (c.needs.length ? <span style={{ color: '#c0392b' }}>{c.needs.join(', ')}</span> : '—'),
           },
-          { key: 'note', header: 'Ghi chú', hideOnPhone: true, cell: (c) => c.note },
+          {
+            key: 'test',
+            header: 'Kiểm tra',
+            cell: (c) => {
+              if (c.id === 'email-out') {
+                return (
+                  <button
+                    className="secondary"
+                    style={{ fontSize: 12, padding: '4px 8px' }}
+                    onClick={() => {
+                      setTestingChannel('email');
+                      setTestRecipient('');
+                      setTestResult(null);
+                    }}
+                  >
+                    Gửi thử email
+                  </button>
+                );
+              }
+              if (c.id === 'zalo-out') {
+                return (
+                  <button
+                    className="secondary"
+                    style={{ fontSize: 12, padding: '4px 8px' }}
+                    onClick={() => {
+                      setTestingChannel('zalo');
+                      setTestRecipient('');
+                      setTestResult(null);
+                    }}
+                  >
+                    Gửi thử Zalo
+                  </button>
+                );
+              }
+              if (c.id === 'facebook-in') {
+                return (
+                  <button
+                    className="secondary"
+                    style={{ fontSize: 12, padding: '4px 8px' }}
+                    onClick={() => {
+                      setTestingChannel('facebook');
+                      handleTestSend();
+                    }}
+                  >
+                    Thử API
+                  </button>
+                );
+              }
+              return '—';
+            },
+          },
         ]}
         rows={d.channels}
         rowKey={(c) => c.id}
         empty="Chưa có kênh"
       />
+
+      {testingChannel && testingChannel !== 'facebook' && (
+        <div style={{ background: '#f8faf8', border: '1px solid #c2d6cb', borderRadius: 8, padding: 14, margin: '14px 0' }}>
+          <h4 style={{ margin: '0 0 8px 0' }}>
+            Kiểm tra kết nối {testingChannel === 'email' ? 'Email' : 'Zalo OA'}
+          </h4>
+          <p style={{ margin: '0 0 10px 0', fontSize: 13, color: '#556b5e' }}>
+            {testingChannel === 'email'
+              ? 'Nhập địa chỉ email của bạn để gửi 1 thư thử nghiệm xác minh kết nối (không gửi khách thật):'
+              : 'Nhập Zalo User ID của bạn để gửi 1 tin thử nghiệm:'}
+          </p>
+          <div className="crm-actions">
+            <input
+              type={testingChannel === 'email' ? 'email' : 'text'}
+              placeholder={testingChannel === 'email' ? 'nhanvien@example.com' : 'Zalo User ID'}
+              value={testRecipient}
+              onChange={(e) => setTestRecipient(e.target.value)}
+              style={{ minWidth: 260 }}
+            />
+            <button className="primary" disabled={testingBusy || !testRecipient.trim()} onClick={handleTestSend}>
+              {testingBusy ? 'Đang gửi…' : 'Gửi thử ngay'}
+            </button>
+            <button className="secondary" onClick={() => setTestingChannel(null)}>
+              Hủy
+            </button>
+          </div>
+        </div>
+      )}
+
       <h3>Địa chỉ webhook</h3>
       <ul className="crm-timeline">
         {Object.entries(d.urls).map(([k, u]) => (
@@ -163,7 +314,7 @@ export function ChannelsScreen() {
       )}
       <h3>Hàng gửi tin (7 ngày qua)</h3>
       <p>
-        Đã gửi: <strong>{count('sent')}</strong> · Đang chờ (kênh chưa cấu hình hoặc chưa đến giờ):{' '}
+        Đã gửi: <strong>{count('sent')}</strong> · Đang chờ:{' '}
         <strong>{count('pending')}</strong> · Lỗi: <strong>{count('failed')}</strong> · Hết hạn:{' '}
         {count('expired')} · Đã hủy: {count('cancelled')}
       </p>
@@ -176,17 +327,24 @@ export function ChannelsScreen() {
               header: 'Lúc',
               cell: (m: Channels['recent'][number]) => stamp(m.created),
             },
-            { key: 'channel', header: 'Kênh', hideOnPhone: true, cell: (m) => m.channel },
+            { key: 'channel', header: 'Kênh', hideOnPhone: true, cell: (m) => m.channel.toUpperCase() },
             {
               key: 'to',
               header: 'Gửi cho',
               cell: (m) => `${m.audience === 'staff' ? 'Nhân viên' : 'Khách'} · ${m.recipient}`,
             },
-            { key: 'kind', header: 'Loại', hideOnPhone: true, cell: (m) => m.kind },
+            { key: 'kind', header: 'Loại tin', hideOnPhone: true, cell: (m) => MSG_KIND_LABELS[m.kind] || m.kind },
             {
               key: 'status',
               header: 'Trạng thái',
-              cell: (m) => m.status + (m.last_error ? ` (${m.last_error})` : ''),
+              cell: (m) => (
+                <span>
+                  <StatusBadge tone={MSG_STATUS_TONE[m.status] || 'neutral'}>
+                    {MSG_STATUS_LABELS[m.status] || m.status}
+                  </StatusBadge>
+                  {m.last_error && <small style={{ color: '#c0392b', display: 'block' }}>{m.last_error}</small>}
+                </span>
+              ),
             },
           ]}
           rows={d.recent.slice(0, 30)}

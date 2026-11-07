@@ -20,6 +20,24 @@ export const leadActions = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
+      action: z.literal('import'),
+      leads: z
+        .array(
+          z.object({
+            fullName: text(100).min(1),
+            phone: text(30).default(''),
+            email: text(200).default(''),
+            notes: text(2000).default(''),
+            source: text(100).default('Excel/CSV'),
+            targetService: text(255).default(''),
+          }),
+        )
+        .min(1)
+        .max(500),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('result'),
       id,
       result: z.enum(CALL_RESULTS),

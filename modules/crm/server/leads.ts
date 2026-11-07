@@ -281,8 +281,96 @@ export async function ingestLead(
         `Khách: ${i.fullName}\nĐiện thoại: ${i.phone}\nNhu cầu: ${i.targetService || 'chưa rõ'}\nGọi trong ${settings.slaMinutes} phút.\nHồ sơ: ${base}/quan-ly?view=crm&lead=${id}`,
         now,
       );
-  } else await addActivity(tenant, id, 'SYSTEM', 'Lead vào kho số', 'Hệ thống', now);
+  } else {
+    await addActivity(
+      tenant,
+      id,
+      'WAITING',
+      'Chưa có nhân viên phù hợp đang trực, đưa vào hàng chờ / kho số',
+      'Hệ thống',
+      now,
+    );
+    await addTask(
+      tenant,
+      {
+        leadId: id,
+        title: 'Lead chờ phân công (gọi trong SLA)',
+        type: 'CALL',
+        dueAt: due,
+        assignee: null,
+        createdBy: 'Hệ thống',
+        ukey: `waiting:${id}`,
+      },
+      now,
+    );
+    const managers = (await staffList(tenant)).filter((s) => ['owner', 'manager'].includes(s.role));
+    for (const m of managers) {
+      await notifyStaff(
+        tenant,
+        m.id,
+        `crm2:unassigned:${id}:${m.id}`,
+        `[CRM] Cảnh báo: Lead mới chờ phân công - ${i.fullName}`,
+        `Khách: ${i.fullName}\nĐiện thoại: ${i.phone}\nNhu cầu: ${i.targetService || 'chưa rõ'}\nNguồn: ${i.source || 'Website'}\nChưa có nhân viên trực nhận lead. Vui lòng vào CRM phân công ngay để không quá hạn SLA ${settings.slaMinutes} phút.\nHồ sơ: ${base}/quan-ly?view=crm&lead=${id}`,
+        now,
+      );
+    }
+  }
   return reply({ ok: true, id, duplicate: false, owner, pooled: !owner });
+}
+
+export async function importLeads(
+  c: Ctx,
+  leads: Array<{
+    fullName: string;
+    phone: string;
+    email?: string;
+    notes?: string;
+    source?: string;
+    targetService?: string;
+  }>,
+): Promise<Result> {
+  let created = 0;
+  let absorbed = 0;
+  const errors: string[] = [];
+
+  for (let idx = 0; idx < leads.length; idx++) {
+    const item = leads[idx];
+    try {
+      const res = await ingestLead(
+        c.tenant,
+        {
+          fullName: item.fullName,
+          phone: item.phone,
+          email: item.email,
+          notes: item.notes,
+          source: item.source || 'Excel/CSV',
+          targetService: item.targetService,
+        },
+        c.base,
+        c.now,
+      );
+      if (res.status === 200 || res.status === 201) {
+        const body = res.body as Record<string, unknown>;
+        if (body.duplicate) {
+          absorbed++;
+        } else {
+          created++;
+        }
+      } else {
+        errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(res.body as any)?.error || 'Lỗi'}`);
+      }
+    } catch (err: unknown) {
+      errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(err as Error)?.message || 'Lỗi xử lý'}`);
+    }
+  }
+
+  return reply({
+    ok: true,
+    total: leads.length,
+    created,
+    absorbed,
+    errors: errors.slice(0, 10),
+  });
 }
 
 /**
@@ -881,16 +969,81 @@ export const lostReasons = () => [...LOST_REASONS];
 
 export async function workDesk(c: Ctx): Promise<Result> {
   const mgr = isManager(c.role);
-  const rows = (
-    await db()
+  const d = db();
+  const dayStart = vnDayStart(c.now);
+  const dayEnd = dayStart + DAY;
+
+  const [leadRows, apptRows, careRows] = await Promise.all([
+    d
       .prepare(
-        `SELECT ${LEAD_COLS} FROM crm2_leads WHERE tenant=? AND owner IS NOT NULL AND (?=1 OR owner=?) AND stage NOT IN ('WON','LOST')
-         ORDER BY next_due IS NULL, next_due LIMIT 150`,
+        `SELECT ${LEAD_COLS} FROM crm2_leads WHERE tenant=? AND (?=1 OR owner=? OR owner IS NULL) AND stage NOT IN ('WON','LOST')
+         ORDER BY next_due IS NULL, next_due ASC LIMIT 250`,
       )
       .bind(c.tenant, mgr ? 1 : 0, c.userId)
-      .all<LeadRow>()
-  ).results;
-  return reply({ leads: rows, now: c.now, mine: c.userId });
+      .all<LeadRow>(),
+    d
+      .prepare(
+        `SELECT a.id, a.lead_id AS leadId, a.service, a.at, a.status, a.note, a.owner,
+                COALESCE(l.full_name, 'Khách đặt hẹn') AS fullName,
+                COALESCE(l.phone, '') AS phone,
+                COALESCE(l.target_service, '') AS targetService
+         FROM crm2_appointments a
+         LEFT JOIN crm2_leads l ON l.id = a.lead_id
+         WHERE a.tenant=? AND a.at >= ? AND a.at <= ? AND (?=1 OR a.owner=?)
+         ORDER BY a.at ASC LIMIT 50`,
+      )
+      .bind(c.tenant, c.now - 3_600_000, c.now + 2 * DAY, mgr ? 1 : 0, c.userId)
+      .all<{
+        id: string;
+        leadId: string | null;
+        service: string;
+        at: number;
+        status: string;
+        note: string;
+        owner: string | null;
+        fullName: string;
+        phone: string;
+        targetService: string;
+      }>(),
+    d
+      .prepare(
+        `SELECT t.id, t.lead_id AS leadId, t.title, t.type, t.due_at AS dueAt, t.done_at AS doneAt, t.assignee, t.rule,
+                COALESCE(l.full_name, cust.name, 'Khách hàng') AS customerName,
+                COALESCE(l.phone, cust.phone, '') AS phone,
+                COALESCE(l.target_service, '') AS targetService
+         FROM crm2_tasks t
+         LEFT JOIN crm2_leads l ON l.id = t.lead_id
+         LEFT JOIN customers cust ON cust.tenant=t.tenant AND cust.id=t.customer_id
+         WHERE t.tenant=? AND t.done_at IS NULL AND (?=1 OR t.assignee=? OR t.assignee IS NULL)
+           AND (t.type='CARE' OR t.type='FOLLOW_UP' OR t.customer_id IS NOT NULL)
+         ORDER BY t.due_at IS NULL, t.due_at ASC LIMIT 50`,
+      )
+      .bind(c.tenant, mgr ? 1 : 0, c.userId)
+      .all<{
+        id: string;
+        leadId: string | null;
+        title: string;
+        type: string;
+        dueAt: number | null;
+        doneAt: number | null;
+        assignee: string | null;
+        rule: string | null;
+        customerName: string;
+        phone: string;
+        targetService: string;
+      }>(),
+  ]);
+
+  return reply({
+    leads: leadRows.results,
+    appointments: apptRows.results,
+    careTasks: careRows.results,
+    now: c.now,
+    mine: c.userId,
+    isManager: mgr,
+    dayStart,
+    dayEnd,
+  });
 }
 
 export async function listTasks(c: Ctx, scope: 'mine' | 'all', showDone: boolean): Promise<Result> {

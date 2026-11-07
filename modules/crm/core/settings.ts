@@ -103,7 +103,7 @@ export function sanitizeSettings(raw: unknown): CrmSettings {
     .map((s) => ({ days: num(s.days, 0, 3650, 3), title: String(s.title).trim().slice(0, 150) }));
   return {
     autoAssign: intakeMode === 'AUTO',
-    slaMinutes: num(r.slaMinutes, 1, 1440, 15),
+    slaMinutes: num(r.slaMinutes, 1, 1440, 5),
     holdHours: num(r.holdHours, 1, 336, 48),
     pool: {
       claimQuotaPerDay: num(pool.claimQuotaPerDay, 1, 500, 20),
@@ -141,9 +141,9 @@ export function sanitizeSettings(raw: unknown): CrmSettings {
     statuses: sanitizeCatalog(r.statuses),
     notifyAssignEmail: bool(r.notifyAssignEmail, true),
     care: careSettings(r.care),
-    websiteLeads: r.websiteLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
-    zaloLeads: r.zaloLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
-    facebookLeads: r.facebookLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
-    adsLeads: r.adsLeads === 'CRM2' ? 'CRM2' : 'LEGACY',
+    websiteLeads: r.websiteLeads === 'LEGACY' ? 'LEGACY' : 'CRM2',
+    zaloLeads: r.zaloLeads === 'LEGACY' ? 'LEGACY' : 'CRM2',
+    facebookLeads: r.facebookLeads === 'LEGACY' ? 'LEGACY' : 'CRM2',
+    adsLeads: r.adsLeads === 'LEGACY' ? 'LEGACY' : 'CRM2',
   };
 }

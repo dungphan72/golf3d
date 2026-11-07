@@ -210,7 +210,7 @@ test('pickAssignee: khách cũ, cân bằng, trọng số, tạm dừng, theo ng
 });
 
 test('giờ làm việc: qua đêm, qua Chủ nhật, bắt đầu ngoài giờ', () => {
-  const wh = { ...DEFAULT_WORK_HOURS, enabled: true };
+  const wh = { ...DEFAULT_WORK_HOURS, enabled: true, start: 480, end: 1080, days: [1, 2, 3, 4, 5, 6] };
   // Disabled: plain addition.
   assert.equal(addWorkingMinutes(1000, 15, DEFAULT_WORK_HOURS), 1000 + 15 * 60_000);
   // 2026-11-02 is a Monday. 17:50 + 30 minutes -> 08:20 next day.
@@ -395,7 +395,7 @@ test('hạng khách, chăm sóc sau bán, cấu hình', () => {
   );
 
   const def = sanitizeSettings(undefined);
-  assert.equal(def.slaMinutes, 15);
+  assert.equal(def.slaMinutes, 5);
   assert.equal(def.holdHours, 48);
   assert.equal(def.pool.claimQuotaPerDay, 20);
   assert.deepEqual(def.calls.retryHours, [2, 24, 48]);
@@ -478,11 +478,11 @@ test('lead từ form website: đọc số điện thoại, nhu cầu, giờ hẹ
   assert.equal(toInquiry(base).notes, '');
 });
 
-test('cấu hình: lead từ form website mặc định vào CRM cũ, chỉ nhận đúng hai giá trị', () => {
-  assert.equal(sanitizeSettings(undefined).websiteLeads, 'LEGACY');
-  assert.equal(sanitizeSettings({ websiteLeads: 'CRM2' }).websiteLeads, 'CRM2');
-  assert.equal(sanitizeSettings({ websiteLeads: 'crm2' }).websiteLeads, 'LEGACY');
-  assert.equal(sanitizeSettings({ websiteLeads: 7 }).websiteLeads, 'LEGACY');
+test('cấu hình: lead từ form website mặc định vào CRM mới, chỉ nhận đúng hai giá trị', () => {
+  assert.equal(sanitizeSettings(undefined).websiteLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ websiteLeads: 'LEGACY' }).websiteLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ websiteLeads: 'crm2' }).websiteLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ websiteLeads: 7 }).websiteLeads, 'CRM2');
 });
 
 test('tin nhắn Zalo: đặt tên theo Zalo ID, giữ ID trong ghi chú, đoán dịch vụ', () => {
@@ -506,13 +506,13 @@ test('tin nhắn Zalo: đặt tên theo Zalo ID, giữ ID trong ghi chú, đoán
   assert.equal(long.notes.length, 2000);
 });
 
-test('cấu hình: tin Zalo mặc định vào CRM cũ, chỉ nhận đúng hai giá trị', () => {
-  assert.equal(sanitizeSettings(undefined).zaloLeads, 'LEGACY');
-  assert.equal(sanitizeSettings({ zaloLeads: 'CRM2' }).zaloLeads, 'CRM2');
-  assert.equal(sanitizeSettings({ zaloLeads: 'zalo' }).zaloLeads, 'LEGACY');
+test('cấu hình: tin Zalo mặc định vào CRM mới, chỉ nhận đúng hai giá trị', () => {
+  assert.equal(sanitizeSettings(undefined).zaloLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ zaloLeads: 'LEGACY' }).zaloLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ zaloLeads: 'zalo' }).zaloLeads, 'CRM2');
   // the two switches are independent
-  const s = sanitizeSettings({ websiteLeads: 'CRM2' });
-  assert.deepEqual([s.websiteLeads, s.zaloLeads], ['CRM2', 'LEGACY']);
+  const s = sanitizeSettings({ websiteLeads: 'LEGACY' });
+  assert.deepEqual([s.websiteLeads, s.zaloLeads], ['LEGACY', 'CRM2']);
 });
 
 test('dịch vụ khách hỏi: bảng dùng chung, lạ thì để trống', () => {
@@ -552,12 +552,12 @@ test('lead Facebook: giữ tên, số, email, đưa chiến dịch và mã biể
   assert.equal(facebookInquiry({ ...ev, message: 'x'.repeat(3000) }).notes.length, 2000);
 });
 
-test('cấu hình: lead Facebook mặc định vào CRM cũ và độc lập với hai công tắc kia', () => {
-  assert.equal(sanitizeSettings(undefined).facebookLeads, 'LEGACY');
-  assert.equal(sanitizeSettings({ facebookLeads: 'CRM2' }).facebookLeads, 'CRM2');
-  assert.equal(sanitizeSettings({ facebookLeads: true }).facebookLeads, 'LEGACY');
-  const s = sanitizeSettings({ facebookLeads: 'CRM2', zaloLeads: 'CRM2' });
-  assert.deepEqual([s.websiteLeads, s.zaloLeads, s.facebookLeads], ['LEGACY', 'CRM2', 'CRM2']);
+test('cấu hình: lead Facebook mặc định vào CRM mới và độc lập với hai công tắc kia', () => {
+  assert.equal(sanitizeSettings(undefined).facebookLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ facebookLeads: 'LEGACY' }).facebookLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ facebookLeads: true }).facebookLeads, 'CRM2');
+  const s = sanitizeSettings({ facebookLeads: 'LEGACY', zaloLeads: 'LEGACY' });
+  assert.deepEqual([s.websiteLeads, s.zaloLeads, s.facebookLeads], ['CRM2', 'LEGACY', 'LEGACY']);
 });
 
 test('lead quảng cáo: đọc như form website, nguồn là Quảng cáo, tên nền tảng làm chiến dịch', () => {
@@ -594,13 +594,13 @@ test('lead quảng cáo: đọc như form website, nguồn là Quảng cáo, tê
   assert.equal(guessed.targetService, 'Luyện swing');
 });
 
-test('cấu hình: lead quảng cáo mặc định vào CRM cũ và độc lập với ba công tắc kia', () => {
-  assert.equal(sanitizeSettings(undefined).adsLeads, 'LEGACY');
-  assert.equal(sanitizeSettings({ adsLeads: 'CRM2' }).adsLeads, 'CRM2');
-  assert.equal(sanitizeSettings({ adsLeads: 'ads' }).adsLeads, 'LEGACY');
-  const s = sanitizeSettings({ adsLeads: 'CRM2', facebookLeads: 'CRM2' });
+test('cấu hình: lead quảng cáo mặc định vào CRM mới và độc lập với ba công tắc kia', () => {
+  assert.equal(sanitizeSettings(undefined).adsLeads, 'CRM2');
+  assert.equal(sanitizeSettings({ adsLeads: 'LEGACY' }).adsLeads, 'LEGACY');
+  assert.equal(sanitizeSettings({ adsLeads: 'ads' }).adsLeads, 'CRM2');
+  const s = sanitizeSettings({ adsLeads: 'LEGACY', facebookLeads: 'LEGACY' });
   assert.deepEqual(
     [s.websiteLeads, s.zaloLeads, s.facebookLeads, s.adsLeads],
-    ['LEGACY', 'LEGACY', 'CRM2', 'CRM2'],
+    ['CRM2', 'CRM2', 'LEGACY', 'LEGACY'],
   );
 });

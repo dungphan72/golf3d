@@ -12,12 +12,27 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   return (await response.json()) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
+const ALL_ROOMS = Array.from({ length: 12 }, (_, i) => (i < 10 ? `line-${i + 1}` : `vip-${i - 9}`));
+
 async function finishedRound(request: APIRequestContext, room: string, customer: string) {
-  const { config } = await (await request.get('/api/club')).json();
+  const club = await (await request.get('/api/club')).json();
+  const config = club.config;
   const start = Math.ceil(Date.now() / 900_000) * 900_000;
+  const myEnd = start + 180 * 60_000;
+  const busyRooms = new Set(
+    (club.bookings || [])
+      .filter(
+        (b: { status: string; start?: number; end?: number; room: string }) =>
+          ['playing', 'paused'].includes(b.status) ||
+          (['finished', 'paid'].includes(b.status) && (b.end ?? 0) > Date.now()) ||
+          (b.status !== 'cancelled' && (b.start ?? 0) < myEnd && (b.end ?? 0) > start),
+      )
+      .map((b: { room: string }) => b.room),
+  );
+  const targetRoom = ALL_ROOMS.find((r) => !busyRooms.has(r)) || room;
   const booked = await post(request, '/api/club', {
     action: 'book',
-    room,
+    room: targetRoom,
     service: '9',
     start,
     people: 1,
@@ -28,8 +43,8 @@ async function finishedRound(request: APIRequestContext, room: string, customer:
   });
   await post(request, '/api/club', { action: 'start', id: booked.id });
   await post(request, '/api/club', { action: 'finish', id: booked.id });
-  const club = await (await request.get('/api/club')).json();
-  const b = club.bookings.find((x: { id: string }) => x.id === booked.id);
+  const updatedClub = await (await request.get('/api/club')).json();
+  const b = updatedClub.bookings.find((x: { id: string }) => x.id === booked.id);
   return { id: booked.id as string, amount: b.amount as number };
 }
 

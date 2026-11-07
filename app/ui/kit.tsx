@@ -237,7 +237,7 @@ export function ModalDialog({
   }, []);
   return (
     <dialog
-      className="native-dialog"
+      className="native-dialog ds-root"
       ref={ref}
       onCancel={(e) => (locked ? e.preventDefault() : onClose())}
       aria-label={label}
@@ -408,7 +408,7 @@ export function AskDialog({
   };
   return (
     <dialog
-      className="native-dialog ds-ask"
+      className="native-dialog ds-ask ds-root"
       ref={ref}
       onCancel={() => onClose(null)}
       aria-label={o.title}

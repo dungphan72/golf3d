@@ -22,7 +22,7 @@ import { SepaySettings } from './SepaySettings';
 import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmModule } from '../../modules/crm/ui/CrmApp';
-import { CrmPanel } from './CrmPanel';
+
 import { WalkInDialog } from './WalkInDialog';
 import { useBellSound } from './BellAlerts';
 export default function ClubApp() {
@@ -388,12 +388,6 @@ export default function ClubApp() {
                       permissions={data?.permissions ?? []}
                       initialTab={deepCustomer ? 'files' : 'overview'}
                       onNavigate={handleCrmNavigate}
-                      legacy={
-                        <CrmPanel
-                          permissions={data?.permissions ?? []}
-                          initialCustomer={deepCustomer}
-                        />
-                      }
                     />
                   )}
                   {view === 'staff' && allowed('staff') && (

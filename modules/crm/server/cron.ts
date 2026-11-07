@@ -142,16 +142,19 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
         tenant,
         l.id,
         'SYSTEM',
-        `Quá ${settings.slaMinutes} phút chưa liên hệ`,
+        `Quá ${settings.slaMinutes} phút chưa liên hệ (nhắc nhân viên & báo quản lý)`,
         'Hệ thống',
         now,
       );
-      for (const to of l.owner ? [l.owner] : managers.map((m) => m.id))
+      const notifyRecipients = new Set<string>();
+      if (l.owner) notifyRecipients.add(l.owner);
+      for (const m of managers) notifyRecipients.add(m.id);
+      for (const to of notifyRecipients)
         await notifyStaff(
           tenant,
           to,
           `crm2:sla:${l.id}:${to}`,
-          `[CRM] Quá hạn liên hệ: ${l.name}`,
+          `[CRM] Cảnh báo quá hạn liên hệ: ${l.name}`,
           text,
           now,
         );

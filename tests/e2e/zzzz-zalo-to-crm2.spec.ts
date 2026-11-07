@@ -59,22 +59,13 @@ test.beforeAll(async ({ playwright }) => {
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
 });
 test.afterAll(async () => {
-  await target('LEGACY');
+  await target('CRM2');
   await owner.dispose();
 });
 
-test('mặc định tin Zalo vẫn vào CRM cũ', async () => {
+test('mặc định tin Zalo vào CRM mới', async () => {
   const cfg = (await (await owner.get('/api/crm2/config')).json()) as Json;
-  expect(cfg.settings.zaloLeads).toBe('LEGACY');
-  const u = user();
-  const r = await zalo(text(u, 'Cho em hỏi giá tập swing', `m-${u}-1`));
-  expect(r.status()).toBe(200);
-  expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(true);
-  expect(await ofUser(u)).toHaveLength(0);
-});
-
-test('bật CRM mới: tin Zalo thành lead mới, không vào bên cũ', async () => {
-  await target('CRM2');
+  expect(cfg.settings.zaloLeads).toBe('CRM2');
   const u = user();
   const r = await zalo(text(u, 'Em muốn tập swing cuối tuần', `m-${u}-1`));
   expect(r.status()).toBe(200);
@@ -93,6 +84,16 @@ test('bật CRM mới: tin Zalo thành lead mới, không vào bên cũ', async 
   expect(lead.notes).toContain(`Zalo ID: ${u}`);
   expect(activities.length).toBeGreaterThan(0);
   expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(false);
+});
+
+test('chuyển về CRM cũ nếu cấu hình: tin Zalo vào bên cũ', async () => {
+  await target('LEGACY');
+  const u = user();
+  const r = await zalo(text(u, 'Cho em hỏi giá tập swing', `m-${u}-1`));
+  expect(r.status()).toBe(200);
+  expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(true);
+  expect(await ofUser(u)).toHaveLength(0);
+  await target('CRM2');
 });
 
 test('Zalo gửi lại đúng sự kiện: không tạo thêm gì', async () => {

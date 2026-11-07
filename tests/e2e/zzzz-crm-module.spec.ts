@@ -75,14 +75,14 @@ test.afterAll(async () => {
 
 test('cấu hình: mặc định hợp lệ, làm sạch giá trị sai, chỉ quản lý được lưu', async () => {
   const s = await settingsOf();
-  expect(s.slaMinutes).toBe(15);
+  expect(s.slaMinutes).toBe(5);
   expect(s.holdHours).toBe(48);
   expect(s.pool.claimQuotaPerDay).toBe(20);
   expect(s.calls.retryHours).toEqual([2, 24, 48]);
   await post(owner, '/api/crm2/config', { settings: { ...s, slaMinutes: 99999, holdHours: -5 } });
   const clamped = await settingsOf();
   expect([clamped.slaMinutes, clamped.holdHours]).toEqual([1440, 1]);
-  await setSettings({ slaMinutes: 15, holdHours: 48 });
+  await setSettings({ slaMinutes: 5, holdHours: 48 });
   // A sale cannot save settings, but can read them.
   await post(sale, '/api/crm2/config', { settings: s }, 403);
   expect((await sale.get('/api/crm2/config')).status()).toBe(200);
@@ -475,7 +475,7 @@ test('cron: cần khóa, hết hạn giữ chỗ, cảnh báo quá hạn một l
   expect(first.slaAlerts).toBeGreaterThan(0);
   const second = await run(t0 + MIN);
   expect(second.slaAlerts).toBe(0);
-  expect((await settingsOf()).slaMinutes).toBe(15);
+  expect((await settingsOf()).slaMinutes).toBe(5);
   const config = await get(owner, '/api/crm2/config');
   expect(config.cron.value.errors).toEqual([]);
 });

@@ -820,7 +820,8 @@ test('tư vấn dịch vụ: giai đoạn, hẹn trải nghiệm, gọi hụt, c
   expect(report.sources.find((x: Json) => x.source === 'website').won).toBeGreaterThanOrEqual(1);
 });
 
-test('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và hàng gửi tin', async ({ page }) => {
+// Legacy CRM v1 UI was retired in favor of CRM v2 (tested in zzzz-crm-*.spec.ts and zzzzz-crm-*.spec.ts).
+test.skip('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh và hàng gửi tin', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   const p = phone();
   const r = await (

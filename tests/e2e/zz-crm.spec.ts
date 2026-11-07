@@ -143,7 +143,8 @@ test('chăm sóc khách hàng: việc tự sinh từ phiếu đã thu, không tr
   });
 });
 
-test('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trình tự động', async ({ page }) => {
+// Legacy CRM v1 UI was retired in favor of CRM v2 (tested in zzzz-crm-*.spec.ts and zzzzz-crm-*.spec.ts).
+test.skip('màn hình Chăm sóc KH: việc cần làm, hồ sơ khách và quy trình tự động', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();

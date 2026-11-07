@@ -301,7 +301,7 @@ test('nhân sự: Zalo ID và email báo lưu được; nút trực bật tắt 
   await expect(page.getByRole('button', { name: /Đang nghỉ/ })).toBeVisible();
   await page.getByRole('button', { name: /Đang nghỉ/ }).click();
   await expect(page.getByRole('button', { name: /Đang trực/ })).toBeVisible();
-  await page.getByRole('tab', { name: 'Cấu hình' }).click();
+  await page.getByRole('tab', { name: /Thiết lập|Cấu hình/ }).click();
   await expect(page.getByRole('heading', { name: 'Nhân sự nhận lead và thông báo' })).toBeVisible();
   const zaloIds = await page
     .getByLabel(/^Zalo ID: /)

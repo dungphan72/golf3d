@@ -165,3 +165,14 @@ export async function fetchFacebookLead(leadgenId: string, fetcher: Fetcher = fe
     created_time?: string;
   };
 }
+
+export async function testFacebookConnection(fetcher: Fetcher = fetch) {
+  if (mockChannels()) return { ok: true, name: 'Facebook Test Page' };
+  const token = e('FB_PAGE_TOKEN');
+  if (!token) throw new Error('Chưa cấu hình FB_PAGE_TOKEN');
+  const r = await fetcher(
+    `https://graph.facebook.com/v19.0/me?fields=id,name&access_token=${encodeURIComponent(token)}`,
+  );
+  if (!r.ok) throw new Error(`Facebook API lỗi ${r.status}: ${(await r.text()).slice(0, 100)}`);
+  return (await r.json()) as { id?: string; name?: string };
+}

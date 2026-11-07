@@ -9,9 +9,9 @@ export type WorkHours = {
 };
 export const DEFAULT_WORK_HOURS: WorkHours = {
   enabled: false,
-  days: [1, 2, 3, 4, 5, 6],
+  days: [0, 1, 2, 3, 4, 5, 6],
   start: 480,
-  end: 1080,
+  end: 1320,
 };
 
 const MIN = 60_000;

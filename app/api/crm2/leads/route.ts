@@ -14,6 +14,7 @@ import {
   claimLeads,
   assignLeads,
   recallLeads,
+  importLeads,
 } from '../../../../modules/crm/server/leads';
 export const dynamic = 'force-dynamic';
 
@@ -52,6 +53,8 @@ const route = crmRoute({ read: 'crm.view', write: 'crm.work' }, async (c, req, b
       return claimLeads(c, a.ids);
     case 'assign':
       return assignLeads(c, a.ids, a.userId);
+    case 'import':
+      return importLeads(c, a.leads);
     case 'recall': {
       if (c.role !== 'owner' && c.role !== 'manager')
         return fail('Chỉ quản lý được thu hồi lead', 403);

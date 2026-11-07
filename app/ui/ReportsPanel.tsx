@@ -116,13 +116,13 @@ export function ReportsPanel() {
         <div className="operate-filter-left">
           <div className="operate-cat-pills" role="group" aria-label="Khoảng nhanh">
             <button type="button" className="operate-pill" onClick={() => range(7)}>
-              7 ngày qua
+              7 ngày
             </button>
             <button type="button" className="operate-pill" onClick={() => range(30)}>
-              30 ngày qua
+              30 ngày
             </button>
             <button type="button" className="operate-pill" onClick={monthStart}>
-              Tháng này
+              Từ đầu tháng
             </button>
           </div>
           <div className="operate-date-range-wrap">
@@ -164,7 +164,7 @@ export function ReportsPanel() {
             disabled={!report}
             onClick={download}
           >
-            <Download size={15} /> Xuất CSV
+            <Download size={15} /> Tải file CSV
           </button>
         </div>
       </div>
@@ -176,11 +176,17 @@ export function ReportsPanel() {
       )}
 
       {/* Modern KPI Tiles Ribbon */}
-      <div className="operate-ribbon">
-        <div className="operate-kpi-card highlight">
-          <div className="operate-kpi-label">Tổng thực thu kỳ này</div>
-          <div className="operate-kpi-val text-green">{money(received)}</div>
-          <div className="operate-kpi-sub">{totals.payments} lượt giao dịch hoàn tất</div>
+      <div className="operate-ribbon ds-tiles">
+        <div className="operate-kpi-card highlight ds-tile ds-tile-main">
+          <div className="operate-kpi-label ds-tile-text">
+            <small>Tổng thu</small>
+          </div>
+          <div className="operate-kpi-val text-green">
+            <strong>{money(received)}</strong>
+          </div>
+          <div className="operate-kpi-sub">
+            <small>{totals.payments} lượt thanh toán</small>
+          </div>
         </div>
 
         <div className="operate-kpi-card">
@@ -251,7 +257,7 @@ export function ReportsPanel() {
       {/* Daily Breakdown Table */}
       <div className="operate-table-section">
         <h2 className="ds-subhead" style={{ marginBottom: '12px' }}>
-          Chi tiết doanh thu từng ngày
+          Doanh thu theo ngày
         </h2>
         {report && (
           <DataTable

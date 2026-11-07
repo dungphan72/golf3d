@@ -875,14 +875,14 @@ export function MembersPanel({
                           </div>
 
                           <div className="pkg-card-balances">
-                            {balances.map((b, idx) => (
-                              <div key={idx} className="balance-pill">
-                                <span className="bal-qty">
-                                  {b.remaining >= UNLIMITED ? 'Không giới hạn' : b.remaining}
-                                </span>
-                                <span className="bal-unit">{KIND_LABELS[b.kind]}</span>
-                              </div>
-                            ))}
+                            {(JSON.parse(p.balances ?? '[]') as { kind: GrantKind; remaining: number }[])
+                              .map(
+                                (b) => (
+                                  <span key={b.kind} className="balance-item">
+                                    {b.remaining >= UNLIMITED ? 'không giới hạn' : b.remaining} {KIND_LABELS[b.kind]}
+                                  </span>
+                                ),
+                              )}
                           </div>
                         </li>
                       );

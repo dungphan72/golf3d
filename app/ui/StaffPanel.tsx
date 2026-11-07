@@ -172,7 +172,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
               },
               {
                 key: 'role',
-                header: 'Phân quyền',
+                header: 'Vai trò',
                 cell: (s) => {
                   const locked = s.role === 'owner' && actorRole !== 'owner';
                   return (

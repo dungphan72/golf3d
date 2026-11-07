@@ -217,7 +217,7 @@ function renderSampleMessage(tmpl: string) {
     .replace(/\{goi\}/g, 'Gói Hội viên 18 hố')
     .replace(/\{han\}/g, '20/11/2026')
     .replace(/\{con\}/g, '5 buổi')
-    .replace(/\{ngay\}/g, 'hôm qua (06/11)')
+    .replace(/\{ngay\}/g, '06/11')
     .replace(/\{so_ngay\}/g, '30')
     .replace(/\{diem\}/g, '250');
   return <span>&ldquo;{sample}&rdquo;</span>;
@@ -400,7 +400,7 @@ function ConfigScreen() {
     }
   }, [data, s]);
 
-  const num = (v: string, d: number) => (Number.isFinite(Number(v)) && v !== '' ? Number(v) : d);
+  const num = (v: string, d: number) => (v === '' ? 0 : Number.isFinite(Number(v)) ? Number(v) : d);
 
   const isDirty = useMemo(() => {
     if (!s || !initialRef.current) return false;
@@ -473,7 +473,7 @@ function ConfigScreen() {
     { key: 'intake' as const, label: 'Tiếp nhận & SLA', desc: 'Chia lead & kho số', icon: Target },
     { key: 'channels' as const, label: 'Định tuyến kênh', desc: 'Website, Zalo, FB, Ads', icon: GitFork },
     { key: 'pipeline' as const, label: 'Bán hàng & Giờ làm', desc: 'Gọi lại, lịch hẹn, giữ chỗ', icon: PhoneCall },
-    { key: 'care' as const, label: 'Chăm sóc tự động', desc: '5 kịch bản & hạng VIP', icon: Sparkles },
+    { key: 'care' as const, label: 'Chăm sóc tự động', desc: `${CARE_RULES.length} kịch bản & hạng VIP`, icon: Sparkles },
     { key: 'products' as const, label: 'Dịch vụ & Gói', desc: 'Bảng giá & sản phẩm', icon: Package },
   ];
 
@@ -608,7 +608,7 @@ function ConfigScreen() {
                   <InputAffix
                     value={s.slaMinutes}
                     affix="phút"
-                    placeholder="15"
+                    placeholder="5"
                     onChange={(v) => setS({ ...s, slaMinutes: num(v, s.slaMinutes) })}
                   />
                 </SettingRow>
@@ -963,7 +963,7 @@ function ConfigScreen() {
                     <Sparkles size={18} style={{ color: 'var(--kv-blue, #1f7a4d)' }} />
                     Chăm sóc khách hàng tự động & Hạng VIP
                   </h3>
-                  <p>Thiết lập tiêu chuẩn thăng hạng VIP và 5 kịch bản chăm sóc golfer theo chu kỳ & sự kiện.</p>
+                  <p>Thiết lập tiêu chuẩn thăng hạng VIP và {CARE_RULES.length} kịch bản chăm sóc golfer theo chu kỳ & sự kiện.</p>
                 </div>
               </div>
 
@@ -1211,10 +1211,150 @@ function ConfigScreen() {
   );
 }
 
+function MigrationScreen() {
+  const { data, error, reload } = useLoad<{
+    legacy: Record<string, number>;
+    migrated: Record<string, number>;
+  }>('/api/crm2/migrate');
+  const [working, setWorking] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null);
+
+  const act = async (action: 'migrate' | 'rollback') => {
+    setWorking(true);
+    setMsg(null);
+    try {
+      const res = await call<{
+        ok: boolean;
+        action: string;
+        leads?: number;
+        contacts?: number;
+        events?: number;
+        tasks?: number;
+        notes?: number;
+      }>('/api/crm2/migrate', { action });
+      if (action === 'migrate') {
+        setMsg({
+          text: `Chuyển đổi thành công: ${res.leads ?? 0} lead, ${res.contacts ?? 0} khách hàng/liên hệ, ${res.events ?? 0} sự kiện, ${res.tasks ?? 0} việc, ${res.notes ?? 0} ghi chú. Dữ liệu cũ vẫn được bảo toàn nguyên vẹn!`,
+          tone: 'ok',
+        });
+      } else {
+        setMsg({
+          text: 'Đã hoàn tác (rollback) an toàn các bản ghi đã chuyển từ CRM cũ.',
+          tone: 'ok',
+        });
+      }
+      await reload();
+    } catch (e) {
+      setMsg({ text: errText(e), tone: 'err' });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  if (error && !data) return <div className="error-box" role="alert">{error}</div>;
+  if (!data) return <Loading />;
+
+  const items = [
+    { label: 'Khách hàng tiềm năng (Leads)', legacy: data.legacy.leads, migrated: data.migrated.leads },
+    { label: 'Liên hệ / Golfer (Contacts)', legacy: data.legacy.contacts, migrated: data.migrated.contacts },
+    { label: 'Lịch sử / Sự kiện (Events)', legacy: data.legacy.events, migrated: data.migrated.events },
+    { label: 'Tác vụ / Lịch nhắc (Tasks)', legacy: data.legacy.tasks, migrated: data.migrated.tasks },
+    { label: 'Ghi chú chăm sóc (Notes)', legacy: data.legacy.notes, migrated: data.migrated.notes },
+  ];
+
+  return (
+    <div className="crm-section-card" style={{ maxWidth: 860, margin: '16px auto' }}>
+      <header>
+        <h3>
+          <Layers size={18} style={{ color: 'var(--kv-blue, #1f7a4d)' }} />
+          Chuyển đổi dữ liệu từ Chăm sóc KH (cũ) sang CRM mới
+        </h3>
+        <p>
+          Hệ thống hỗ trợ chuyển toàn bộ dữ liệu lead, khách hàng, lịch sử và tác vụ từ hệ thống cũ sang CRM mới.
+          Dữ liệu gốc ở CRM cũ được bảo toàn 100%, không bị xóa hay thay đổi.
+        </p>
+      </header>
+
+      {msg && (
+        <div
+          style={{
+            padding: '12px 16px',
+            borderRadius: 8,
+            marginBottom: 16,
+            background: msg.tone === 'ok' ? '#f0fdf4' : '#fef2f2',
+            border: `1px solid ${msg.tone === 'ok' ? '#bbf7d0' : '#fecaca'}`,
+            color: msg.tone === 'ok' ? '#166534' : '#991b1b',
+            fontSize: 14,
+            fontWeight: 500,
+          }}
+        >
+          {msg.text}
+        </div>
+      )}
+
+      <table className="crm-table" style={{ width: '100%', marginBottom: 20 }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'left' }}>Phân loại dữ liệu</th>
+            <th style={{ textAlign: 'center' }}>Số lượng ở CRM cũ</th>
+            <th style={{ textAlign: 'center' }}>Đã chuyển sang CRM mới</th>
+            <th style={{ textAlign: 'center' }}>Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it) => (
+            <tr key={it.label}>
+              <td><strong>{it.label}</strong></td>
+              <td style={{ textAlign: 'center' }}>{it.legacy}</td>
+              <td style={{ textAlign: 'center', fontWeight: 600, color: it.migrated > 0 ? '#16a34a' : 'inherit' }}>
+                {it.migrated}
+              </td>
+              <td style={{ textAlign: 'center' }}>
+                {it.migrated >= it.legacy && it.legacy > 0 ? (
+                  <span className="crm-chip" style={{ background: '#dcfce7', color: '#15803d' }}>Đã đồng bộ</span>
+                ) : it.migrated > 0 ? (
+                  <span className="crm-chip" style={{ background: '#fef3c7', color: '#b45309' }}>Một phần</span>
+                ) : (
+                  <span className="crm-chip" style={{ background: '#f1f5f9', color: '#64748b' }}>Chưa chuyển</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <button
+          className="primary"
+          disabled={working}
+          onClick={() => act('migrate')}
+          style={{ height: 40, padding: '0 20px', fontWeight: 600 }}
+        >
+          {working ? 'Đang chuyển dữ liệu…' : 'Bắt đầu chuyển sang CRM mới'}
+        </button>
+        {Object.values(data.migrated).some((v) => v > 0) && (
+          <button
+            className="secondary"
+            disabled={working}
+            onClick={() => {
+              if (confirm('Bạn có chắc muốn hoàn tác các bản ghi đã chuyển từ CRM cũ? Các lead mới tạo riêng trên CRM mới sẽ không bị ảnh hưởng.')) {
+                act('rollback');
+              }
+            }}
+            style={{ height: 40, padding: '0 16px', color: '#dc2626' }}
+          >
+            Hoàn tác (Rollback)
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function CrmModule({
   permissions,
   legacy = null,
-  initialTab = 'overview',
+  initialTab = 'work',
   onNavigate,
 }: {
   permissions: string[];
@@ -1229,38 +1369,33 @@ export function CrmModule({
   const manager = permissions.includes('crm.manage');
   const [tab, setTab] = useState(initialTab);
   const [space, setSpace] = useState<
-    | 'overview'
     | 'work'
     | 'leads'
-    | 'files'
+    | 'customers'
     | 'appointments'
     | 'report'
     | 'config'
-    | 'channels'
     | 'legacy'
   >(() => {
-    if (initialTab === 'work' || initialTab === 'tasks' || initialTab === 'care') return 'work';
-    if (initialTab === 'leads' || initialTab === 'pipeline' || initialTab === 'pool') return 'leads';
-    if (initialTab === 'files') return 'files';
+    if (initialTab === 'leads' || initialTab === 'pipeline' || initialTab === 'pool' || initialTab === 'overview') return 'leads';
+    if (initialTab === 'files' || initialTab === 'customers') return 'customers';
     if (initialTab === 'appointments') return 'appointments';
     if (initialTab === 'report') return 'report';
-    if (initialTab === 'config' || initialTab === 'orders') return 'config';
-    if (initialTab === 'channels') return 'channels';
+    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'migration') return 'config';
     if (initialTab === 'legacy') return 'legacy';
-    return 'overview';
+    return 'work';
   });
 
   const selectTab = (t: string) => {
     setTab(t);
     if (t === 'work' || t === 'tasks' || t === 'care') setSpace('work');
-    else if (t === 'leads' || t === 'pipeline' || t === 'pool') setSpace('leads');
-    else if (t === 'config' || t === 'orders') setSpace('config');
-    else if (t === 'channels') setSpace('channels');
-    else if (t === 'files') setSpace('files');
+    else if (t === 'leads' || t === 'pipeline' || t === 'pool' || t === 'overview') setSpace('leads');
+    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'migration') setSpace('config');
+    else if (t === 'files' || t === 'customers') setSpace('customers');
     else if (t === 'appointments') setSpace('appointments');
     else if (t === 'report') setSpace('report');
     else if (t === 'legacy') setSpace('legacy');
-    else setSpace('overview');
+    else setSpace('work');
   };
 
   const onSelectSpace = (s: string) => {
@@ -1268,9 +1403,11 @@ export function CrmModule({
     if (s === 'work') {
       if (tab !== 'work' && tab !== 'tasks' && tab !== 'care') setTab('work');
     } else if (s === 'leads') {
-      if (tab !== 'leads' && tab !== 'pipeline' && tab !== 'pool') setTab('leads');
+      if (tab !== 'leads' && tab !== 'pipeline' && tab !== 'pool' && tab !== 'overview') setTab('leads');
     } else if (s === 'config') {
-      if (tab !== 'config' && tab !== 'orders') setTab('config');
+      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'migration') setTab('config');
+    } else if (s === 'customers') {
+      setTab('customers');
     } else {
       setTab(s);
     }
@@ -1319,7 +1456,8 @@ export function CrmModule({
           onOpenCustomer={(id) => {
             setLead(null);
             setFocus(id);
-            selectTab('files');
+            setSpace('customers');
+            setTab('customers');
           }}
           onNavigate={onNavigate}
         />
@@ -1332,44 +1470,17 @@ export function CrmModule({
         value={space}
         onChange={onSelectSpace}
         tabs={[
-          { key: 'overview', label: 'Tổng quan' },
           { key: 'work', label: 'Bàn làm việc' },
           { key: 'leads', label: 'Lead & Phễu' },
-          { key: 'files', label: 'Hồ sơ khách' },
+          { key: 'customers', label: 'Khách hàng' },
           { key: 'appointments', label: 'Lịch hẹn' },
           { key: 'report', label: 'Báo cáo', hidden: !manager },
-          { key: 'config', label: 'Thiết lập', hidden: !manager },
-          { key: 'channels', label: 'Kênh & tích hợp', hidden: !manager },
+          { key: 'config', label: 'Cấu hình', hidden: !manager },
           { key: 'legacy', label: 'Chăm sóc KH (cũ)', hidden: !legacy },
         ]}
       />
-      <div key={`${space}-${bump}`}>
-        {space === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
-        {space === 'work' && (
-          <>
-            <PageTabs
-              sub
-              value={tab}
-              onChange={selectTab}
-              tabs={[
-                { key: 'work', label: 'Lead cần gọi' },
-                { key: 'tasks', label: 'Việc của tôi' },
-                { key: 'care', label: 'Chăm sóc khách' },
-              ]}
-            />
-            {tab === 'work' && <WorkScreen s={shared} />}
-            {tab === 'tasks' && <TasksScreen s={shared} />}
-            {tab === 'care' && (
-              <CareTasksView
-                s={shared}
-                onOpenCustomer={(id) => {
-                  setFocus(id);
-                  selectTab('files');
-                }}
-              />
-            )}
-          </>
-        )}
+      <div key={space}>
+        {space === 'work' && <WorkScreen s={shared} />}
         {space === 'leads' && (
           <>
             <PageTabs
@@ -1380,14 +1491,16 @@ export function CrmModule({
                 { key: 'leads', label: 'Danh sách lead' },
                 { key: 'pipeline', label: 'Pipeline' },
                 { key: 'pool', label: 'Kho số' },
+                { key: 'overview', label: 'Tổng quan phễu' },
               ]}
             />
             {tab === 'leads' && <LeadsScreen s={shared} board={false} />}
             {tab === 'pipeline' && <LeadsScreen s={shared} board />}
             {tab === 'pool' && <PoolScreen s={shared} />}
+            {tab === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
           </>
         )}
-        {space === 'files' && (
+        {space === 'customers' && (
           <CareCustomersView key={focus ?? 'all'} focus={focus} onNavigate={onNavigate} />
         )}
         {space === 'appointments' && <AppointmentsScreen s={shared} />}
@@ -1399,15 +1512,18 @@ export function CrmModule({
               value={tab}
               onChange={selectTab}
               tabs={[
-                { key: 'config', label: 'Cấu hình' },
-                { key: 'orders', label: 'Đơn bán' },
+                { key: 'config', label: 'Cài đặt chung' },
+                { key: 'channels', label: 'Kênh & tích hợp' },
+                { key: 'orders', label: 'Đơn bán & Giữ chỗ' },
+                { key: 'migration', label: 'Chuyển dữ liệu CRM cũ' },
               ]}
             />
             {tab === 'config' && <ConfigScreen />}
+            {tab === 'channels' && <ChannelsScreen />}
             {tab === 'orders' && <OrdersScreen s={shared} />}
+            {tab === 'migration' && <MigrationScreen />}
           </>
         )}
-        {space === 'channels' && manager && <ChannelsScreen />}
         {space === 'legacy' && legacy}
       </div>
     </section>

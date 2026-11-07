@@ -34,15 +34,36 @@ type Product = { code: string; name: string; listPrice: number; active: number }
 const ACT_LABEL: Record<string, string> = {
   NOTE: 'Ghi chú',
   CALL: 'Cuộc gọi',
-  ZALO: 'Zalo',
+  ZALO: 'Zalo OA',
   EMAIL: 'Email',
   VISIT: 'Trải nghiệm',
-  STAGE: 'Giai đoạn',
+  STAGE: 'Chuyển giai đoạn',
   ASSIGN: 'Phân công',
   INQUIRY: 'Khách gửi lại',
   SYSTEM: 'Hệ thống',
-  CHAT: 'Chat',
+  CHAT: 'Tin nhắn',
   HOLD: 'Giữ chỗ',
+};
+
+const APPT_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Chờ duyệt',
+  CONFIRMED: 'Đã xác nhận',
+  ARRIVED: 'Đã đến',
+  NO_SHOW: 'Vắng mặt',
+  CANCELLED: 'Đã hủy',
+};
+
+const HOLD_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Đang giữ chỗ',
+  EXPIRED: 'Hết hạn giữ',
+  CONVERTED: 'Đã tạo đơn',
+  CANCELLED: 'Đã hủy',
+};
+
+const ORDER_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: 'Đang xử lý',
+  COMPLETED: 'Hoàn tất',
+  CANCELLED: 'Đã hủy',
 };
 
 export function LeadDetail({
@@ -85,8 +106,14 @@ export function LeadDetail({
 
   const load = useCallback(async () => {
     try {
-      setD(await call<Detail>('/api/crm2/leads?id=' + id));
+      const res = await call<Detail>('/api/crm2/leads?id=' + id);
+      setD(res);
       setError('');
+      if (res?.lead?.stage) {
+        const curIdx = STAGES.indexOf(res.lead.stage as Stage);
+        const next = curIdx >= 0 && curIdx < STAGES.length - 2 ? STAGES[curIdx + 1] : res.lead.stage;
+        setStage(next);
+      }
     } catch (e) {
       setError(errText(e));
     }
@@ -185,9 +212,9 @@ export function LeadDetail({
                   style={{ padding: '6px 12px', fontSize: 12.5 }}
                   onClick={() =>
                     onNavigate('rooms', {
-                      customerId: d.customerId,
-                      phone: l.phoneNorm,
-                      name: l.fullName,
+                      customerId: d.customerId ?? undefined,
+                      phone: l.phoneNorm ?? undefined,
+                      name: l.fullName ?? undefined,
                     })
                   }
                 >
@@ -199,9 +226,9 @@ export function LeadDetail({
                   style={{ padding: '6px 12px', fontSize: 12.5 }}
                   onClick={() =>
                     onNavigate('members', {
-                      customerId: d.customerId,
-                      phone: l.phoneNorm,
-                      name: l.fullName,
+                      customerId: d.customerId ?? undefined,
+                      phone: l.phoneNorm ?? undefined,
+                      name: l.fullName ?? undefined,
                     })
                   }
                 >
@@ -295,11 +322,17 @@ export function LeadDetail({
                   value={stage}
                   onChange={(e) => setStage(e.target.value)}
                 >
-                  {STAGES.filter((s) => s !== l.stage).map((s) => (
-                    <option key={s} value={s}>
-                      {STAGE_LABELS[s]}
-                    </option>
-                  ))}
+                  {STAGES.map((s) => {
+                    const curIdx = STAGES.indexOf(l.stage as Stage);
+                    const sIdx = STAGES.indexOf(s);
+                    const isCurrent = s === l.stage;
+                    const isBackward = sIdx < curIdx && s !== 'LOST';
+                    return (
+                      <option key={s} value={s} disabled={isCurrent}>
+                        {STAGE_LABELS[s]} {isCurrent ? '(Hiện tại)' : isBackward ? '(Lùi giai đoạn)' : ''}
+                      </option>
+                    );
+                  })}
                 </select>
                 {stage === 'LOST' && (
                   <select
@@ -323,15 +356,25 @@ export function LeadDetail({
                 )}
                 <button
                   className="secondary"
-                  onClick={() =>
+                  disabled={stage === l.stage}
+                  onClick={async () => {
+                    const curIdx = STAGES.indexOf(l.stage as Stage);
+                    const sIdx = STAGES.indexOf(stage as Stage);
+                    if (sIdx < curIdx && stage !== 'LOST') {
+                      const ok = await dlg.confirm({
+                        title: 'Chuyển lùi giai đoạn?',
+                        message: `Lead đang ở "${STAGE_LABELS[l.stage as Stage]}", bạn có chắc muốn chuyển lùi về "${STAGE_LABELS[stage as Stage]}"?`,
+                      });
+                      if (!ok) return;
+                    }
                     act('/api/crm2/leads', {
                       action: 'stage',
                       id,
                       stage,
                       ...(stage === 'LOST' ? { lostReason: reason } : {}),
                       ...(stage === 'WON' ? { dealValue: Number(dealValue) || 0 } : {}),
-                    })
-                  }
+                    });
+                  }}
                 >
                   Chuyển
                 </button>
@@ -472,18 +515,18 @@ export function LeadDetail({
               <ul>
                 {d.appointments.map((a) => (
                   <li key={a.id}>
-                    Lịch hẹn {stamp(a.at)} · {a.service || 'trải nghiệm'} · {a.status}
+                    Lịch hẹn {stamp(a.at)} · {a.service || 'trải nghiệm'} · <strong>{APPT_STATUS_LABELS[a.status] || a.status}</strong>
                   </li>
                 ))}
                 {d.holds.map((h) => (
                   <li key={h.id}>
-                    Giữ chỗ {h.productName} · {h.status}
+                    Giữ chỗ {h.productName} · <strong>{HOLD_STATUS_LABELS[h.status] || h.status}</strong>
                     {h.amount ? ` · cọc ${money(h.amount)}` : ''}
                   </li>
                 ))}
                 {d.orders.map((o) => (
                   <li key={o.id}>
-                    Đơn {o.code} · {o.productName} · {money(o.price)} · {o.status}
+                    Đơn {o.code} · {o.productName} · {money(o.price)} · <strong>{ORDER_STATUS_LABELS[o.status] || o.status}</strong>
                   </li>
                 ))}
               </ul>

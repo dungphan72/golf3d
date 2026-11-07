@@ -9,7 +9,7 @@ type Report = {
   days: number;
   total: number;
   stages: { stage: string; n: number }[];
-  sources: { source: string; leads: number; won: number; lost: number; value: number }[];
+  sources: { source: string; leads: number; won: number; lost: number; value: number; paidValue?: number }[];
   lost: { reason: string; n: number }[];
   agents: {
     userId: string | null;
@@ -18,9 +18,11 @@ type Report = {
     responded: number;
     won: number;
     value: number;
+    paidValue?: number;
     avgMin: number | null;
   }[];
   care: { rule: string; total: number; done: number; skipped: number }[];
+  actualPaidTotal?: number;
 };
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) + '%' : '0%');
 const minutes = (m: number | null) =>
@@ -65,6 +67,7 @@ export function ReportScreen() {
           ['Đã liên hệ được', pct(reached, r.total)],
           ['Chốt dịch vụ', String(won)],
           ['Tỷ lệ chốt', pct(won, r.total)],
+          ['Doanh thu thực thu', (r.actualPaidTotal || 0).toLocaleString('vi-VN') + 'đ'],
         ].map(([label, v]) => (
           <div key={label}>
             <span>{label}</span>
@@ -111,6 +114,11 @@ export function ReportScreen() {
                 header: 'Giá trị chốt',
                 cell: (x) => x.value.toLocaleString('vi-VN') + 'đ',
               },
+              {
+                key: 'paid',
+                header: 'Thực thu',
+                cell: (x) => (x.paidValue || 0).toLocaleString('vi-VN') + 'đ',
+              },
             ]}
             rows={r.sources}
             rowKey={(x) => x.source}
@@ -139,6 +147,11 @@ export function ReportScreen() {
               key: 'value',
               header: 'Giá trị chốt',
               cell: (x) => x.value.toLocaleString('vi-VN') + 'đ',
+            },
+            {
+              key: 'paid',
+              header: 'Thực thu',
+              cell: (x) => (x.paidValue || 0).toLocaleString('vi-VN') + 'đ',
             },
           ]}
           rows={r.agents}

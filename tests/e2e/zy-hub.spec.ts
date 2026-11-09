@@ -7,12 +7,12 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online, m
 }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  const nav = (name: RegExp) => page.locator('.ds-menubar').getByRole('button', { name });
+  const nav = (name: RegExp) => page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name });
 
   // One menu entry holds the booking list and online requests as tabs; the bell has its own entry.
   await expect(nav(/Đặt online/)).toHaveCount(0);
-  await expect(nav(/Chuông gọi/)).toBeVisible();
-  await nav(/Lịch đặt/).click();
+  await expect(nav(/Trợ giúp/)).toBeVisible();
+  await nav(/Booking/).click();
   await expect(page.getByRole('tab', { name: /Đặt online/ })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Yêu cầu hỗ trợ/ })).toHaveCount(0);
 
@@ -27,7 +27,7 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online, m
   await expect(page.getByText('Không có lượt đặt phù hợp')).toBeVisible();
   await page.getByLabel('Tìm lịch đặt').fill('');
 
-  await nav(/Chuông gọi/).click();
+  await nav(/Trợ giúp/).click();
   await expect(page.getByRole('button', { name: /^Đang chờ/ })).toBeVisible();
 
   // Invoices open on what is still to collect.
@@ -50,20 +50,19 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online, m
 test('Cài đặt cơ sở chia tab; Báo cáo, Nhân viên, Nhật ký dùng bảng chung', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  const nav = (name: RegExp) => page.locator('.ds-menubar').getByRole('button', { name });
+  const nav = (name: RegExp) => page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name });
   const admin = async (name: RegExp) => {
-    await page.locator('.ds-menubar').getByRole('button', { name: 'Quản trị' }).click();
-    await page.getByRole('menuitem', { name }).click();
+    await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name }).click();
   };
-  await admin(/Cài đặt cơ sở/);
+  await admin(/Cài đặt/);
   for (const tab of ['Cơ sở', 'Giá', 'Khuyến mãi', 'Đặt lịch', 'Thanh toán'])
     await expect(page.getByRole('tab', { name: tab, exact: true })).toBeVisible();
   await expect(page.getByLabel('Tên cơ sở')).toBeVisible();
   await page.getByRole('tab', { name: 'Giá', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khung giá theo lịch' })).toBeVisible();
   await page.getByRole('tab', { name: 'Thanh toán' }).click();
-  await expect(page.getByLabel(/Mã BIN ngân hàng/)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Nhận báo có từ ngân hàng' })).toBeVisible();
+  await expect(page.getByLabel(/Chọn Ngân hàng thụ hưởng/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Nhận báo có ngân hàng tự động' })).toBeVisible();
 
   await nav(/Báo cáo/).click();
   await page.getByRole('button', { name: '7 ngày' }).click();

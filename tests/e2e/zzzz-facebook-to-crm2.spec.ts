@@ -79,7 +79,7 @@ test('mặc định lead Facebook vào CRM mới', async () => {
         ...fields('Lan Facebook', p, 'Chơi 9 hố cuối tuần'),
         { name: 'email', values: ['lan@example.vn'] },
       ],
-      { adId: 'ad-fb-1', formId: 'form-99' },
+      { ad_id: 'ad-fb-1', form_id: 'form-99' },
     ),
   );
   expect(((await r.json()) as Json).processed).toBe(1);

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;450;500;550;600;650;700;750;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700&display=swap');
 @import 'tailwindcss';
 * {
   box-sizing: border-box;
@@ -8,16 +8,19 @@ body {
   margin: 0;
   max-width: 100vw;
   overflow-x: hidden;
+  /* `clip` stops sideways overflow without turning <body> into a scroll container, which would break `position: sticky` (the side menu). */
+  overflow-x: clip;
   background: var(--surface);
   color: var(--ink);
-  font-family: 'Be Vietnam Pro', Arial, sans-serif;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 13px;
   -webkit-font-smoothing: antialiased;
 }
 button,
 input,
-select {
-  font: inherit;
+select,
+textarea {
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 button,
 a,
@@ -303,7 +306,7 @@ h3 {
   background: #0f6a1a;
 }
 .reserved {
-  background: #f5b50a;
+  background: #f5af05;
 }
 .cleaning {
   background: #a3abb3;
@@ -393,7 +396,7 @@ h3 {
   top: 36px;
   width: 38px;
   height: 24px;
-  background: #f5b50a;
+  background: #f5af05;
   clip-path: polygon(0 0, 100% 50%, 0 100%);
   z-index: 3;
 }
@@ -844,7 +847,7 @@ select:focus {
 }
 .customer-hero h1 em {
   font-style: normal;
-  color: #f5b50a;
+  color: #f5af05;
 }
 .customer-hero .eyebrow {
   color: #adc19c;
@@ -1748,7 +1751,7 @@ select:focus {
   font-size: 9px;
 }
 .kitchen-card blockquote {
-  border-left: 2px solid #f5b50a;
+  border-left: 2px solid #f5af05;
   background: #f8f4e9;
   padding: 10px;
   margin: 15px 0;
@@ -2152,7 +2155,7 @@ select:focus {
   border-radius: 50%;
   display: block;
   background: #fff;
-  box-shadow: 0 0 0 2px #f5b50a;
+  box-shadow: 0 0 0 2px #f5af05;
 }
 .auth-card .brand-logo {
   width: 88px;
@@ -2295,3 +2298,179 @@ select:focus {
 .bell-summary.ringing { background: #fbeae6; color: #8a3b29; }
 @keyframes bell-ring { 0%, 60%, 100% { transform: rotate(0); } 10%, 30% { transform: rotate(14deg); } 20%, 40% { transform: rotate(-14deg); } }
 @media (prefers-reduced-motion: reduce) { .ds-menu-item.ringing svg { animation: none; } }
+
+
+/* ==========================================================================
+   MOBILE APP EXPERIENCE STYLING (PHONG CÁCH APP MOBILE TOÀN HỆ THỐNG)
+   ========================================================================== */
+
+.app-mobile-nav {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  /* Give enough breathing room for bottom app bar */
+  body {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  
+  /* Hide footer completely on mobile for clean app experience */
+  footer,
+  .fw-luxury-footer,
+  .fw-footer,
+  .pp-cta-wrap {
+    display: none !important;
+  }
+  
+  /* Prevent iOS Safari auto-zoom on input focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  .app-mobile-nav {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: rgba(5, 14, 7, 0.96);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid rgba(245, 175, 5, 0.3);
+    box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.6);
+    padding-bottom: max(0.25rem, env(safe-area-inset-bottom, 0px));
+  }
+
+  .app-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    max-width: 30rem;
+    margin: 0 auto;
+    height: 3.8rem;
+    padding: 0 0.4rem;
+    position: relative;
+  }
+
+  .app-nav-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    flex: 1;
+    height: 100%;
+    color: #94a3b8;
+    text-decoration: none;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.2s ease;
+  }
+
+  .app-nav-tab:active {
+    transform: scale(0.92);
+  }
+
+  .app-nav-icon-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 22px;
+  }
+
+  .app-nav-icon-wrap svg {
+    color: #94a3b8;
+    transition: color 0.2s ease, transform 0.2s ease;
+  }
+
+  .app-nav-text {
+    font-size: 0.68rem;
+    font-weight: 600;
+    white-space: nowrap;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: #94a3b8;
+    transition: color 0.2s ease;
+  }
+
+  .app-nav-dot {
+    position: absolute;
+    bottom: 2px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--gold, #f5af05);
+    box-shadow: 0 0 6px var(--gold, #f5af05);
+  }
+
+  .app-nav-tab.active .app-nav-icon-wrap svg {
+    color: var(--gold, #f5af05);
+    filter: drop-shadow(0 0 8px rgba(245, 175, 5, 0.55));
+    transform: translateY(-1px);
+  }
+
+  .app-nav-tab.active .app-nav-text {
+    color: #ffffff;
+    font-weight: 700;
+  }
+
+  /* Center Elevated FAB: Đặt Chỗ */
+  .app-nav-fab-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    flex: 1.1;
+    text-decoration: none;
+    position: relative;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    margin-top: -1.1rem;
+  }
+
+  .app-fab-circle {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f5af05, #d49500);
+    color: #050b07;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(245, 175, 5, 0.5), 0 0 0 4px #050e07;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .app-nav-fab-btn:active .app-fab-circle {
+    transform: scale(0.92);
+    box-shadow: 0 3px 10px rgba(245, 175, 5, 0.4), 0 0 0 4px #050e07;
+  }
+
+  .app-fab-text {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--gold, #f5af05);
+    line-height: 1;
+    margin-top: 1px;
+    white-space: nowrap;
+  }
+
+  .app-pro-tag {
+    position: absolute;
+    top: -4px;
+    right: -10px;
+    font-size: 0.52rem;
+    font-weight: 800;
+    background: var(--gold, #f5af05);
+    color: #050b07;
+    border-radius: 5px;
+    padding: 1px 4px;
+    line-height: 1.1;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+}

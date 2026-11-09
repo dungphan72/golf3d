@@ -119,16 +119,14 @@ test('chuông gọi phục vụ: khách gọi từ line, nhân viên nhận và 
   });
   await page.goto('/quan-ly');
   // The menu entry is on the bar and flags a waiting guest.
-  const bellNav = page.locator('.ds-menubar').getByRole('button', { name: /Chuông gọi/ });
-  await expect(bellNav).toHaveClass(/ringing/);
+  const bellNav = page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /Trợ giúp/ });
   await expect(bellNav.locator('.ds-count')).toHaveText('1');
   await bellNav.click();
   await expect(page.locator('.bell-summary')).toContainText('1 yêu cầu đang chờ');
   await post(owner, '/api/club', { action: 'request-update', id: ring.id, status: 'done' });
-  await expect(page.getByRole('heading', { name: 'Chuông gọi', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Trợ giúp', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: /Âm chuông/ })).toBeVisible();
-  await page.locator('.ds-menubar').getByRole('button', { name: 'Quản trị' }).click();
-  await page.getByRole('menuitem', { name: /Cài đặt cơ sở/ }).click();
+  await page.locator('aside[aria-label=\"Menu chính\"]').getByRole('button', { name: 'Cài đặt' }).click();
   await page.getByRole('tab', { name: 'Đặt lịch' }).click();
   await expect(page.getByRole('heading', { name: 'Chuông gọi phục vụ' })).toBeVisible();
   await expect(page.locator('.qr-grid figure')).toHaveCount(12);

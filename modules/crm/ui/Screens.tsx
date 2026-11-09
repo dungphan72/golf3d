@@ -126,7 +126,7 @@ export function OverviewScreen({
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 16 }}>
         <div className="crm-section-card">
           <header>
             <h3 role="heading" aria-level={2}>

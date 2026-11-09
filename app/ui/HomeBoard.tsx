@@ -4,25 +4,20 @@ import {
   Bell,
   PhoneCall,
   CalendarClock,
-  Globe,
   Wallet,
   Grid2X2,
   CalendarDays,
-  Crown,
-  Sparkles,
-  TrendingUp,
-  AlertCircle,
-  CheckCircle2,
-  Activity,
-  Layers,
-  Clock,
   ChevronRight,
-  ArrowUpRight,
+  CheckCircle2,
+  Plus,
+  Play,
+  ReceiptText,
 } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { time, type Data } from './shared';
-import { RoomGrid, roomInfo } from './widgets';
+import { roomInfo } from './widgets';
 import { BayTimeline } from './BayTimeline';
+import { OwnerProfileCard } from './RightInsightPanel';
 
 const SOON = 60 * 60_000; // a booking due within the hour needs the front desk's attention
 
@@ -31,12 +26,11 @@ type Task = {
   icon: typeof Bell;
   title: string;
   detail: string;
-  category: 'payment' | 'booking' | 'support' | 'crm' | 'online';
+  category: 'payment' | 'booking' | 'support' | 'crm';
   categoryLabel: string;
   onClick: () => void;
 };
 
-/** The first screen: today's numbers, every line at a glance, and what needs doing right now. */
 export function HomeBoard({
   data,
   now,
@@ -58,336 +52,344 @@ export function HomeBoard({
   onWalkIn: (room: string) => void;
   onGo: (view: string) => void;
 }) {
-  const [filter, setFilter] = useState('all');
-  const [areaFilter, setAreaFilter] = useState<'all' | 'standard' | 'vip'>('all');
+  const [filter, setFilter] = useState<'all' | 'occupied' | 'free' | 'due' | 'soon'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'timeline'>('grid');
 
   const b = data.bookings;
-  const playing = b.filter((x) => ['playing', 'paused'].includes(x.status));
   const unpaid = b.filter((x) => x.status === 'finished');
-  const dayStart = Math.floor((now + 7 * 3_600_000) / 86_400_000) * 86_400_000 - 7 * 3_600_000;
-  const todayCount = b.filter(
-    (x) => x.status !== 'cancelled' && x.start >= dayStart && x.start < dayStart + 86_400_000,
-  ).length;
+
   const roomName = (id: string) => rooms.find((r) => r.id === id)?.name ?? id;
 
-  const occupancyRate = Math.round((playing.length / rooms.length) * 100);
+  // Calculate live state for all 10 bays
+  const allBayStates = useMemo(() => {
+    return rooms.map((r) => ({
+      room: r,
+      info: roomInfo(r.id, b, now),
+    }));
+  }, [b, now]);
 
-  const tasks: Task[] = [
-    ...unpaid.map((x) => ({
-      id: 'pay-' + x.id,
-      icon: Wallet,
-      title: `Thu tiền · ${x.customer}`,
-      detail: `${roomName(x.room)}${x.amount != null ? ' · ' + money(x.amount) : ''}`,
-      category: 'payment' as const,
-      categoryLabel: 'Chờ thu tiền',
-      onClick: () => onSelect(x),
-    })),
-    ...b
+  // Operational Counts
+  const counts = useMemo(() => {
+    let free = 0;
+    let occupied = 0;
+    let soon = 0;
+    let due = 0;
+    for (const item of allBayStates) {
+      if (item.info.state === 'occupied') occupied++;
+      else if (item.info.state === 'free') free++;
+      else if (item.info.state === 'soon') soon++;
+      else if (item.info.state === 'due' || item.info.state === 'clean') due++;
+    }
+    return { free, occupied, soon, due };
+  }, [allBayStates]);
+
+  // Filtered bays
+  const visibleBays = useMemo(() => {
+    return allBayStates.filter(({ info }) => {
+      if (filter === 'occupied') return info.state === 'occupied';
+      if (filter === 'free') return info.state === 'free';
+      if (filter === 'soon') return info.state === 'soon';
+      if (filter === 'due') return info.state === 'due' || info.state === 'clean';
+      return true;
+    });
+  }, [allBayStates, filter]);
+
+  // Priority Tasks
+  const tasks: Task[] = useMemo(() => {
+    const list: Task[] = [];
+
+    // 1. Chờ thu tiền (Finished bookings)
+    for (const x of unpaid) {
+      list.push({
+        id: 'pay-' + x.id,
+        icon: Wallet,
+        title: `Thu tiền · ${x.customer}`,
+        detail: `${roomName(x.room)}${x.amount != null ? ' · ' + money(x.amount) : ''}`,
+        category: 'payment',
+        categoryLabel: 'Chờ thu tiền',
+        onClick: () => onSelect(x),
+      });
+    }
+
+    // 2. Khách sắp đến / quá giờ
+    const soonBookings = b
       .filter((x) => x.status === 'booked' && x.start <= now + SOON && x.end > now)
-      .sort((a, c) => a.start - c.start)
-      .map((x) => ({
+      .sort((m, n) => m.start - n.start);
+
+    for (const x of soonBookings) {
+      list.push({
         id: 'soon-' + x.id,
         icon: CalendarClock,
-        title: `${x.start < now ? 'Khách đặt chưa đến' : 'Sắp đến'} · ${x.customer}`,
+        title: `${x.start < now ? 'Quá giờ hẹn' : 'Sắp đến'} · ${x.customer}`,
         detail: `${roomName(x.room)} · ${time(x.start)}`,
-        category: 'booking' as const,
-        categoryLabel: x.start < now ? 'Quá giờ hẹn' : 'Khách sắp đến',
+        category: 'booking',
+        categoryLabel: x.start < now ? 'Quá giờ' : 'Sắp đến',
         onClick: () => onSelect(x),
-      })),
-    ...data.requests
-      .filter((r) => r.status !== 'done')
-      .map((r) => {
+      });
+    }
+
+    // 3. Khách cần hỗ trợ tại phòng
+    if (data.requests) {
+      for (const r of data.requests.filter((req) => req.status !== 'done')) {
         const booking = b.find((x) => x.id === r.booking);
-        return {
+        list.push({
           id: 'req-' + r.id,
           icon: Bell,
-          title: `Khách cần hỗ trợ · ${r.kind}`,
+          title: `Hỗ trợ · ${r.kind}`,
           detail: `${roomName(booking?.room ?? '')} · ${booking?.customer ?? ''}`,
-          category: 'support' as const,
-          categoryLabel: 'Hỗ trợ tại line',
+          category: 'support',
+          categoryLabel: 'Hỗ trợ line',
           onClick: () => onGo('support'),
-        };
-      }),
-    ...(leads && leads.overdue > 0
-      ? [
-          {
-            id: 'lead-overdue',
-            icon: PhoneCall,
-            title: `${leads.overdue} lead quá 5 phút chưa gọi`,
-            detail: 'Gọi ngay để không mất khách',
-            category: 'crm' as const,
-            categoryLabel: 'Lead khẩn cấp',
-            onClick: () => onGo('crm'),
-          },
-        ]
-      : []),
-    ...(leads && leads.waiting > 0
-      ? [
-          {
-            id: 'lead-waiting',
-            icon: PhoneCall,
-            title: `${leads.waiting} lead mới đang chờ gọi`,
-            detail:
-              leads.queued > 0 ? `${leads.queued} lead chưa có người trực` : 'Trong hạn gọi 5 phút',
-            category: 'crm' as const,
-            categoryLabel: 'Lead mới',
-            onClick: () => onGo('crm'),
-          },
-        ]
-      : []),
-    ...(crm2 && crm2.newUnhandled > 0
-      ? [
-          {
-            id: 'crm2-new',
-            icon: PhoneCall,
-            title: `${crm2.newUnhandled} lead mới ở CRM chưa liên hệ`,
-            detail: 'Mở CRM để gọi khách',
-            category: 'crm' as const,
-            categoryLabel: 'CRM mới',
-            onClick: () => onGo('crmx'),
-          },
-        ]
-      : []),
-    ...(crm2 && crm2.overdueTasks > 0
-      ? [
-          {
-            id: 'crm2-overdue',
-            icon: PhoneCall,
-            title: `${crm2.overdueTasks} việc CRM quá hạn`,
-            detail: 'Xem trong Việc của tôi',
-            category: 'crm' as const,
-            categoryLabel: 'CRM quá hạn',
-            onClick: () => onGo('crmx'),
-          },
-        ]
-      : []),
-    ...((data.onlinePending ?? 0) > 0
-      ? [
-          {
-            id: 'online',
-            icon: Globe,
-            title: `${data.onlinePending} yêu cầu đặt lịch online chờ xác nhận`,
-            detail: 'Bấm để xem và xác nhận',
-            category: 'online' as const,
-            categoryLabel: 'Đặt web',
-            onClick: () => onGo('online'),
-          },
-        ]
-      : []),
-  ];
+        });
+      }
+    }
 
-  const counts: Record<string, number> = { free: 0, occupied: 0, soon: 0, due: 0 };
-  for (const r of rooms) {
-    const st = roomInfo(r.id, b, now).state;
-    counts[st === 'clean' ? 'due' : st]++;
-  }
+    // 4. CRM Lead khẩn cấp
+    if (leads && leads.overdue > 0) {
+      list.push({
+        id: 'lead-overdue',
+        icon: PhoneCall,
+        title: `${leads.overdue} lead quá 5 phút chưa gọi`,
+        detail: 'Gọi ngay để chốt lịch thử sân',
+        category: 'crm',
+        categoryLabel: 'Lead nóng',
+        onClick: () => onGo('crmx'),
+      });
+    }
+
+    return list;
+  }, [unpaid, b, now, data.requests, leads, onSelect, onGo]);
 
   return (
-    <div className="ds-home operate-home-cockpit">
-      {/* 1. OPERATIONS KPI STATBAR */}
-      <div className="ds-statbar operate-statbar">
-        {/* KPI 1: Occupancy */}
-        <button
-          type="button"
-          className="kpi-card occupancy-kpi"
-          onClick={() => setFilter('occupied')}
+    <div className="modern-asymmetric-cockpit">
+      {/* ========================================================================= */}
+      {/* 1. LEFT MAIN COLUMN: BẢN ĐỒ SÂN 3D (10 LINE PHÒNG MÔ PHỎNG) */}
+      {/* ========================================================================= */}
+      <div className="cockpit-main-column">
+        {/* Compact Single Operational Bar */}
+        <div
+          style={{
+            background: '#ffffff',
+            padding: '12px 16px',
+            borderRadius: 10,
+            border: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
         >
-          <div className="kpi-icon-wrap emerald">
-            <Activity size={20} />
-          </div>
-          <div className="kpi-body">
-            <div className="kpi-label-row">
-              <span className="kpi-label">Đang chơi</span>
-              <span className="kpi-badge emerald">{occupancyRate}% lấp đầy</span>
+          {/* Left: View Mode (Chỉ icon) & Status Filter Pills */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            {/* View Mode: Only Icons */}
+            <div className="view-mode-toggle" role="group" aria-label="Chế độ hiển thị">
+              <button
+                type="button"
+                className={`btn-mode ${viewMode === 'grid' ? 'active' : ''}`}
+                onClick={() => setViewMode('grid')}
+                title="Chế độ lưới thẻ 10 phòng"
+                style={{ width: 34, height: 32, padding: 0, justifyContent: 'center' }}
+              >
+                <Grid2X2 size={16} />
+              </button>
+              <button
+                type="button"
+                className={`btn-mode ${viewMode === 'timeline' ? 'active' : ''}`}
+                onClick={() => setViewMode('timeline')}
+                title="Chế độ dòng thời gian Gantt theo line"
+                style={{ width: 34, height: 32, padding: 0, justifyContent: 'center' }}
+              >
+                <CalendarDays size={16} />
+              </button>
             </div>
-            <strong className="kpi-val">
-              {playing.length}/{rooms.length} <small>line</small>
-            </strong>
-            <div className="kpi-progress-bar">
-              <div
-                className="kpi-progress-fill emerald"
-                style={{ width: `${Math.min(100, Math.max(8, occupancyRate))}%` }}
-              />
-            </div>
-          </div>
-        </button>
 
-        {/* KPI 2: Unpaid Tickets */}
-        <button
-          type="button"
-          className={`kpi-card unpaid-kpi ${unpaid.length > 0 ? 'warn' : ''}`}
-          onClick={() => onGo('invoices')}
-        >
-          <div className={`kpi-icon-wrap ${unpaid.length > 0 ? 'amber pulse' : 'slate'}`}>
-            <Wallet size={20} />
-          </div>
-          <div className="kpi-body">
-            <div className="kpi-label-row">
-              <span className="kpi-label">Chờ thu</span>
-              {unpaid.length > 0 && <span className="kpi-badge amber">Cần chốt hóa đơn</span>}
+            {/* Status Filter Pills */}
+            <div className="gcd-bays-filter-pills" style={{ margin: 0 }}>
+              <button
+                type="button"
+                className={filter === 'all' ? 'active' : ''}
+                onClick={() => setFilter('all')}
+              >
+                Tất cả ({rooms.length})
+              </button>
+              <button
+                type="button"
+                className={filter === 'occupied' ? 'active' : ''}
+                onClick={() => setFilter('occupied')}
+              >
+                Đang chơi ({counts.occupied})
+              </button>
+              <button
+                type="button"
+                className={filter === 'free' ? 'active' : ''}
+                onClick={() => setFilter('free')}
+              >
+                Trống ({counts.free})
+              </button>
+              {counts.due > 0 && (
+                <button
+                  type="button"
+                  className={filter === 'due' ? 'active' : ''}
+                  onClick={() => setFilter('due')}
+                >
+                  Chờ tính tiền ({counts.due})
+                </button>
+              )}
             </div>
-            <strong className="kpi-val">
-              {unpaid.length} <small>phiếu</small>
-            </strong>
-            <span className="kpi-hint">
-              {unpaid.length > 0 ? 'Khách chơi xong chưa thanh toán' : 'Không có công nợ chờ'}
-            </span>
           </div>
-        </button>
 
-        {/* KPI 3: Bookings Today */}
-        <button
-          type="button"
-          className="kpi-card today-kpi"
-          onClick={() => onGo('bookings')}
-        >
-          <div className="kpi-icon-wrap blue">
-            <CalendarClock size={20} />
+          {/* Right: Quick Action Buttons */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => onBook(rooms[0]?.id || '')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Plus size={15} /> Đặt trước
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => onWalkIn(rooms[0]?.id || '')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '7px 14px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Play size={14} /> Khách vào chơi
+            </button>
           </div>
-          <div className="kpi-body">
-            <div className="kpi-label-row">
-              <span className="kpi-label">Lịch hôm nay</span>
-              <span className="kpi-badge blue">Hôm nay</span>
-            </div>
-            <strong className="kpi-val">
-              {todayCount} <small>lượt đặt</small>
-            </strong>
-            <span className="kpi-hint">Tổng lượt đặt line trong ngày</span>
-          </div>
-        </button>
+        </div>
 
-        {/* KPI 4: Today Revenue (if authorized) */}
-        {canSeeMoney && (
-          <button
-            type="button"
-            className="kpi-card revenue-kpi"
-            onClick={() => onGo('finance')}
-          >
-            <div className="kpi-icon-wrap gold">
-              <Sparkles size={20} />
-            </div>
-            <div className="kpi-body">
-              <div className="kpi-label-row">
-                <span className="kpi-label">Thực thu hôm nay</span>
-                <span className="kpi-badge gold">Sổ ca</span>
-              </div>
-              <strong className="kpi-val text-gold">{money(data.todayReceipts)}</strong>
-              <span className="kpi-hint">Đã đối soát ghi nhận ca trực</span>
-            </div>
-          </button>
+        {/* 10-Bay Interactive Grid (Same as Dashboard's clean cards) */}
+        {viewMode === 'grid' ? (
+          <div className="gcd-bays-interactive-grid" style={{ marginTop: 0 }}>
+            {visibleBays.map(({ room, info }) => {
+              const isOccupied = info.state === 'occupied';
+              const isDue = info.state === 'due' || info.state === 'clean';
+              const isSoon = info.state === 'soon';
+              const isVip = room.vip;
+
+              return (
+                <div
+                  key={room.id}
+                  className={`gcd-bay-item-card ${info.state} ${isVip ? 'vip' : ''}`}
+                >
+                  <div className="bay-item-header">
+                    <div className="bay-id-wrap">
+                      <strong className="bay-number">{room.name}</strong>
+                      <span className={`bay-badge ${isVip ? 'vip' : 'std'}`}>
+                        {isVip ? 'VIP GC3' : 'Tiêu chuẩn'}
+                      </span>
+                    </div>
+                    <span className={`bay-status-pill ${info.state}`}>
+                      {isOccupied ? 'Đang chơi' : isDue ? 'Chờ thu tiền' : isSoon ? 'Sắp có hẹn' : 'Trống'}
+                    </span>
+                  </div>
+
+                  <div className="bay-item-body">
+                    {isOccupied && info.live ? (
+                      <>
+                        <div className="bay-player-info">
+                          <span className="lbl">Khách chơi:</span>
+                          <strong className="val">{info.live.customer}</strong>
+                        </div>
+                        <div className="bay-time-info">
+                          Vào lúc: <strong>{time(info.live.start)}</strong>
+                        </div>
+                        <button
+                          type="button"
+                          className="bay-btn pay"
+                          onClick={() => onSelect(info.live!)}
+                        >
+                          <ReceiptText size={13} /> POS tính tiền
+                        </button>
+                      </>
+                    ) : isDue && info.due ? (
+                      <>
+                        <div className="bay-player-info">
+                          <span className="lbl">Khách:</span>
+                          <strong className="val">{info.due.customer}</strong>
+                        </div>
+                        <div className="bay-time-info text-amber">
+                          Đã chơi xong
+                        </div>
+                        <button
+                          type="button"
+                          className="bay-btn pay"
+                          onClick={() => onSelect(info.due!)}
+                        >
+                          <ReceiptText size={13} /> POS tính tiền
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bay-empty-hint">Sẵn sàng nhận khách</div>
+                        <div className="bay-actions-split">
+                          <button
+                            type="button"
+                            className="bay-btn walkin"
+                            onClick={() => onWalkIn(room.id)}
+                          >
+                            <Play size={12} /> Vào chơi
+                          </button>
+                          <button
+                            type="button"
+                            className="bay-btn book"
+                            onClick={() => onBook(room.id)}
+                          >
+                            <Plus size={12} /> Đặt trước
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <BayTimeline
+            bookings={b}
+            now={now}
+            filter={filter}
+            areaFilter="all"
+            onSelect={onSelect}
+            onBook={onBook}
+            onWalkIn={onWalkIn}
+          />
         )}
       </div>
 
-      {/* 2. MAIN COCKPIT: BAY MAP & PRIORITY TASKS */}
-      <div className="ds-home-grid">
-        <section className="ds-panel operate-map-panel" aria-label="Sơ đồ phòng">
-          <div className="ds-panel-head operate-panel-header">
-            <div className="head-title-wrap">
-              <h2>Sơ đồ line</h2>
-              <span className="bay-count-badge">12 line mô phỏng</span>
-            </div>
+      {/* ========================================================================= */}
+      {/* 2. RIGHT COLUMN: 1. CHỦ CƠ SỞ  ->  2. VIỆC CẦN LÀM NGAY (NGAY DƯỚI)       */}
+      {/* ========================================================================= */}
+      <aside className="right-insight-panel" aria-label="Bảng tiện ích & việc cần làm">
+        {/* Item 1: Chủ cơ sở (Profile Card) */}
+        <OwnerProfileCard
+          user={data?.user ?? ''}
+          role={data?.role ?? ''}
+          bookings={b}
+          now={now}
+        />
 
-            {/* View Mode & Area Controls */}
-            <div className="operate-controls-cluster">
-              {/* View Switcher: Grid vs Timeline */}
-              <div className="view-mode-toggle" role="group" aria-label="Chế độ hiển thị">
-                <button
-                  type="button"
-                  className={`btn-mode ${viewMode === 'grid' ? 'active' : ''}`}
-                  onClick={() => setViewMode('grid')}
-                  title="Chế độ thẻ line trực quan"
-                >
-                  <Grid2X2 size={15} />
-                  <span>Lưới thẻ</span>
-                </button>
-                <button
-                  type="button"
-                  className={`btn-mode ${viewMode === 'timeline' ? 'active' : ''}`}
-                  onClick={() => setViewMode('timeline')}
-                  title="Chế độ dòng thời gian Gantt theo line"
-                >
-                  <CalendarDays size={15} />
-                  <span>Dòng thời gian</span>
-                </button>
-              </div>
-
-              {/* Area Switcher: All vs Standard vs VIP */}
-              <div className="area-filter-toggle" role="group" aria-label="Phân khu">
-                <button
-                  type="button"
-                  className={`btn-area ${areaFilter === 'all' ? 'active' : ''}`}
-                  onClick={() => setAreaFilter('all')}
-                >
-                  Tất cả ({rooms.length})
-                </button>
-                <button
-                  type="button"
-                  className={`btn-area ${areaFilter === 'standard' ? 'active' : ''}`}
-                  onClick={() => setAreaFilter('standard')}
-                >
-                  Line thường (10)
-                </button>
-                <button
-                  type="button"
-                  className={`btn-area vip ${areaFilter === 'vip' ? 'active' : ''}`}
-                  onClick={() => setAreaFilter('vip')}
-                >
-                  <Crown size={12} /> VIP (2)
-                </button>
-              </div>
-
-              {/* Status Segment Filter: strictly preserving test attributes */}
-              <div className="ds-seg" role="group" aria-label="Lọc theo trạng thái">
-                {(
-                  [
-                    ['all', 'Tất cả', rooms.length, ''],
-                    ['free', 'Trống', counts.free, 'free'],
-                    ['occupied', 'Đang chơi', counts.occupied, 'inplay'],
-                    ['soon', 'Sắp có khách', counts.soon, 'reserved'],
-                    ['due', 'Chờ thu / dọn', counts.due, 'cleaning'],
-                  ] as const
-                ).map(([v, t, n, dot]) => (
-                  <button
-                    key={v}
-                    aria-pressed={filter === v}
-                    className={filter === v ? 'active' : ''}
-                    onClick={() => setFilter(v)}
-                  >
-                    {dot && <i className={'dot ' + dot} />}
-                    {t} · {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Render Active View */}
-          {viewMode === 'grid' ? (
-            <RoomGrid
-              bookings={b}
-              filter={filter}
-              areaFilter={areaFilter}
-              now={now}
-              onSelect={onSelect}
-              onBook={onBook}
-              onWalkIn={onWalkIn}
-            />
-          ) : (
-            <BayTimeline
-              bookings={b}
-              now={now}
-              filter={filter}
-              areaFilter={areaFilter}
-              onSelect={onSelect}
-              onBook={onBook}
-              onWalkIn={onWalkIn}
-            />
-          )}
-        </section>
-
-        {/* 3. PRIORITY TASKS SIDEBAR */}
-        <aside className="ds-panel ds-tasks operate-tasks-panel" aria-label="Việc cần làm ngay">
+        {/* Item 2: Việc cần làm ngay (Immediately below Chủ cơ sở) */}
+        <div className="ds-panel ds-tasks operate-tasks-panel" role="region" aria-label="Việc cần làm ngay">
           <div className="ds-panel-head">
             <div className="task-header-title">
               <h2>
@@ -397,7 +399,7 @@ export function HomeBoard({
             </div>
           </div>
 
-          {tasks.length ? (
+          {tasks.length > 0 ? (
             <ul className="operate-task-list">
               {tasks.map(({ id, icon: Icon, title, detail, category, categoryLabel, onClick }) => (
                 <li key={id} className={`task-item category-${category}`}>
@@ -426,8 +428,8 @@ export function HomeBoard({
               <p>Mọi yêu cầu, thanh toán và cuộc gọi đều đã hoàn tất.</p>
             </div>
           )}
-        </aside>
-      </div>
+        </div>
+      </aside>
     </div>
   );
 }

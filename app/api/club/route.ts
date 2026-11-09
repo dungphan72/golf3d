@@ -25,6 +25,7 @@ const ACTION_PERMISSION: Record<string, Permission> = {
   extend: 'session.operate',
   walkin: 'session.operate',
   'request-update': 'support.handle',
+  'clean-test-data': 'settings.manage',
 };
 
 export async function GET() {
@@ -37,12 +38,13 @@ export async function GET() {
   );
 }
 export async function POST(req: Request) {
+  // Read the body before any early reply: an unread body upsets the worker runtime.
+  const raw = await req.text().catch(() => '');
   if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
   const { auth, response } = await authorize('view');
   if (response) return response;
   let input;
   try {
-    const raw = await req.text();
     if (raw.length > MAX_BODY) return httpError('Yêu cầu quá lớn', 413);
     input = clubInput.parse(JSON.parse(raw));
   } catch {
@@ -51,6 +53,9 @@ export async function POST(req: Request) {
   const needed = ACTION_PERMISSION[input.action];
   if (!needed || !can(auth.role, needed))
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  // Wiping bookings, shifts and the cashbook is irreversible: only the facility owner may do it.
+  if (input.action === 'clean-test-data' && auth.role !== 'owner')
+    return httpError('Chỉ Chủ cơ sở được dọn dẹp dữ liệu', 403);
   try {
     const now = requestNow(req);
     const result = await runClubAction(auth.tenant, input, now);

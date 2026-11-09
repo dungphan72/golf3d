@@ -169,6 +169,20 @@
       "when": 1794028383906,
       "tag": "0023_burly_captain_cross",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1794157328843,
+      "tag": "0024_opposite_killmonger",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1794157789073,
+      "tag": "0025_amusing_old_lace",
+      "breakpoints": true
     }
   ]
 }

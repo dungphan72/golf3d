@@ -272,6 +272,7 @@ export async function memberOverview(user: MemberUser): Promise<R> {
     email: user.email,
     verified: user.verified,
   };
+  // Never show another person's card, packages or history before staff confirm the phone number.
   if (!user.verified) return reply({ profile });
   const now = Date.now();
   const config = await loadConfig(user.tenant);

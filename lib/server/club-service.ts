@@ -22,6 +22,7 @@ export const clubInput = z.object({
     'reschedule',
     'extend',
     'walkin',
+    'clean-test-data',
   ]),
   value: z.record(z.string(), z.unknown()).optional(),
   id: z.string().max(100).optional(),
@@ -90,6 +91,20 @@ export async function runClubAction(
 ): Promise<ServiceResult> {
   const c = await loadConfig(tenant);
   const now = nowArg;
+  if (input.action === 'clean-test-data') {
+    if (input.value?.confirm !== 'XACNHAN') return fail('Thiếu xác nhận dọn dẹp dữ liệu');
+    await db().batch([
+      db().prepare('DELETE FROM bookings WHERE tenant=?').bind(tenant),
+      db().prepare('DELETE FROM requests WHERE tenant=?').bind(tenant),
+      db().prepare('DELETE FROM shifts WHERE tenant=?').bind(tenant),
+      db().prepare('DELETE FROM finance_entries WHERE tenant=?').bind(tenant),
+      db().prepare('DELETE FROM food_orders WHERE tenant=?').bind(tenant),
+      db().prepare('DELETE FROM package_redemptions WHERE tenant=?').bind(tenant),
+    ]);
+    await audit(tenant, 'Khởi tạo', 'Đã dọn dẹp dữ liệu thử nghiệm trước ngày vận hành');
+    return ok();
+  }
+
   if (input.action === 'settings') {
     if (input.value?.pricingRevision !== c.pricingRevision)
       return fail('Cấu hình đã thay đổi ở thiết bị khác. Hãy tải lại trước khi lưu.', 409);
@@ -106,8 +121,20 @@ export async function runClubAction(
         .first();
       if (taken) return fail('Mã đường dẫn đã được cơ sở khác sử dụng', 409);
     }
-    const v: Config = { ...parsed.data, pricingRevision: crypto.randomUUID(), published: false };
+    // The landing-page CMS lives beside the typed config; the schema would otherwise strip it on save.
+    const prev = await db()
+      .prepare('SELECT value FROM settings WHERE tenant=?')
+      .bind(tenant)
+      .first<{ value: string }>();
+    let landing: unknown;
+    try {
+      landing = prev ? (JSON.parse(prev.value) as { landing?: unknown }).landing : undefined;
+    } catch {
+      landing = undefined;
+    }
+    const v: Config & { landing?: unknown } = { ...parsed.data, pricingRevision: crypto.randomUUID(), published: false };
     v.published = false;
+    if (landing !== undefined) v.landing = landing;
     const saved = await db()
       .prepare(
         "INSERT INTO settings(tenant,value) VALUES (?,?) ON CONFLICT(tenant) DO UPDATE SET value=excluded.value WHERE COALESCE(json_extract(settings.value,'$.pricingRevision'),'v01-upgrade')=?",

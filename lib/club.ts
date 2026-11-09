@@ -101,7 +101,8 @@ export type Booking = {
   price: string;
   created: number;
 };
-export const money = (n: number) => new Intl.NumberFormat('vi-VN').format(n) + ' ₫';
+// `n || 0` turns -0 (a refund or expense total of nothing) into 0, which Intl would otherwise print as "-0".
+export const money = (n: number) => new Intl.NumberFormat('vi-VN').format(n || 0) + ' ₫';
 export function localParts(ms: number) {
   const d = new Date(ms + 7 * 3600000);
   return {

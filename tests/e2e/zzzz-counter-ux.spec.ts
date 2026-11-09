@@ -30,9 +30,10 @@ test.describe('điện thoại', () => {
     expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
     await page.goto('/quan-ly');
     // Earlier specs leave some lines busy, so check whatever actions the line cards offer now.
-    await expect(page.locator('.room-card button').first()).toBeVisible();
+    await page.getByRole('button', { name: /^Phòng/ }).last().click();
+    await expect(page.locator('.gcd-bay-item-card button').first()).toBeVisible();
     const targets = [
-      ...(await page.locator('.room-card button:visible').all()),
+      ...(await page.locator('.gcd-bay-item-card button:visible').all()),
       page.getByRole('button', { name: 'Đặt lịch', exact: true }),
       page.getByRole('button', { name: 'Tải lại' }),
       page.getByRole('button', { name: 'Mở menu' }),

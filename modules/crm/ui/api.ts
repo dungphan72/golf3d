@@ -61,4 +61,4 @@ export type Lead = {
   created: number;
   masked?: boolean;
 };
-export type Staff = { id: string; name: string; email: string; role: string };
+export type Staff = { id: string; name: string; email: string; role: string; active?: boolean };

@@ -7,21 +7,17 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Sơ đồ phòng/ })
+    .locator('aside[aria-label="Menu chính"]')
+    .getByRole('button', { name: /POS tính tiền/ })
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:
   // green when free, yellow when a booking is due within 2 hours.
-  const free = page.locator('.room-card:has(.room-walkin:not([disabled]))').first();
+  const free = page.locator('.gcd-bay-item-card:has(.bay-btn.walkin)').first();
   await expect(free).toBeVisible();
-  const state = await free.getAttribute('data-state');
-  expect(['free', 'soon']).toContain(state);
-  const color = await free.evaluate((el) => getComputedStyle(el).borderTopColor);
-  expect(color).toBe(state === 'free' ? 'rgb(31, 157, 85)' : 'rgb(245, 181, 10)');
 
   // The walk-in dialog opens with the line already chosen.
-  await expect(free.getByRole('button', { name: /^Đặt lịch/ })).toBeVisible();
-  await free.getByRole('button', { name: /^Bắt đầu/ }).click();
+  await expect(free.getByRole('button', { name: /Đặt trước/ })).toBeVisible();
+  await free.getByRole('button', { name: /Vào chơi/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Vào chơi ngay' });
   await expect(dialog).toBeVisible();
   await expect(

@@ -1,10 +1,10 @@
 import type { Metadata } from 'next';
 import { ArrowUpRight } from 'lucide-react';
 import '../landing.css';
-import '../bang-gia/pricing.css';
 import './portal.css';
 import { BRAND } from '../../lib/brand';
 import MemberPortal from '../ui/MemberPortal';
+import ClubFooter from '../ui/ClubFooter';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,10 +20,10 @@ export default async function AccountPage({
 }) {
   const sp = await searchParams;
   return (
-    <div className="fw pp mp">
+    <div className="fw mp">
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
       />
       <header className="fw-fixed on" aria-label="Điều hướng">
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
@@ -46,13 +46,7 @@ export default async function AccountPage({
       <main>
         <MemberPortal registerFirst={sp['dang-ky'] !== undefined} />
       </main>
-      <footer className="fw-footer">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name} · {BRAND.address}
-        </span>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/">Về trang chủ</a>
-      </footer>
+      <ClubFooter hours="08:00–23:00" />
     </div>
   );
 }

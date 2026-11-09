@@ -1,11 +1,32 @@
-/* Brand colour tokens shared by every page. Component-level tokens live next to their component (--kv-*, --ds-*). */
+/* Official Brand Colour Tokens — Saigon Golf 3D Club (Strictly extracted from Logo) */
 :root {
-  --green: #0b4d14;
-  --accent: #f5b50a;
-  --ink: #1b3a22;
-  --muted: #839087;
-  --border: #e5e9e2;
-  --surface: #f4f7f1;
-  --light: #e8f3e8;
-  --white: #fff;
+  --green: #025c0a;
+  --green-vibrant: #0c7317;
+  --green-dark: #081a0e;
+  --green-surface: #0c2615;
+  --green-border: rgba(2, 92, 10, 0.35);
+  --gold: #f5af05;
+  --gold-dark: #d49500;
+  --gold-glow: rgba(245, 175, 5, 0.35);
+  --ink: #050b07;
+  --muted: #8ea893;
+  --border: rgba(255, 255, 255, 0.12);
+  --surface: #0a1c10;
+  --light: #eef6f0;
+  --white: #ffffff;
+  --radius: 5px;
+
+  /* Typographic & Modern Asymmetric Theme Tokens */
+  --font-display: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --clr-bg-root: #fbfbfa;
+  --clr-surface: #ffffff;
+  --clr-primary: #025c0a;
+  --clr-primary-deep: #073d12;
+  --clr-border-subtle: #e4e8e5;
+  --clr-accent: #c59b27;
+  --clr-text-main: #0f172a;
+  --clr-text-muted: #64748b;
+  --transition-smooth: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }

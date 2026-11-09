@@ -65,6 +65,45 @@ export const clearedCookie = `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax
 
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
-  return !origin || origin === new URL(request.url).origin;
+  if (!origin) return true;
+
+  try {
+    const reqUrl = new URL(request.url);
+    if (origin === reqUrl.origin) return true;
+
+    // Behind reverse proxy (Nginx, Cloudflare): compare with Host or X-Forwarded-Host
+    const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+    const proto =
+      request.headers.get('x-forwarded-proto') || reqUrl.protocol.replace(':', '') || 'https';
+    if (host) {
+      if (
+        origin === `${proto}://${host}` ||
+        origin === `https://${host}` ||
+        origin === `http://${host}`
+      ) {
+        return true;
+      }
+      const originHost = new URL(origin).host;
+      if (originHost === host || originHost === host.split(':')[0]) {
+        return true;
+      }
+    }
+
+    // Known domain whitelist
+    const originHostname = new URL(origin).hostname;
+    const allowed = [
+      'golfhub.cloud',
+      'www.golfhub.cloud',
+      '3dgolf.vn',
+      'www.3dgolf.vn',
+    ];
+    if (allowed.includes(originHostname)) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+
+  return false;
 }
 export { sendResult, httpError };

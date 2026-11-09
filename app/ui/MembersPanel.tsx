@@ -23,6 +23,7 @@ import {
   RotateCcw,
   AlertCircle,
   Package,
+  Play,
   ShieldCheck,
   ChevronDown,
   ChevronUp,
@@ -95,10 +96,12 @@ export function MembersPanel({
   permissions,
   initialCustomer,
   initialPhone,
+  onStartSession,
 }: {
   permissions: string[];
   initialCustomer?: string | null;
   initialPhone?: string | null;
+  onStartSession?: (customer: { name: string; phone: string }) => void;
 }) {
   const canSell = permissions.includes('member.sell');
   const canAdjust = permissions.includes('member.adjust');
@@ -133,6 +136,7 @@ export function MembersPanel({
   const [editing, setEditing] = useState<PackageType | 'new' | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value or load-on-open; runs once per dependency change
     if (initialCustomer) setSelected(initialCustomer);
     if (initialPhone) setQuery(initialPhone);
   }, [initialCustomer, initialPhone]);
@@ -163,6 +167,7 @@ export function MembersPanel({
 
   useEffect(() => {
     if (current) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value or load-on-open; runs once per dependency change
       setCustomerNote(current.note ?? '');
       setIsEditingNote(false);
       setShowDigitalCard(false);
@@ -185,6 +190,7 @@ export function MembersPanel({
   }
 
   // Filter customers based on tabs
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- memo deps are intentional
   const filteredCustomers = useMemo(() => {
     if (!data?.customers) return [];
     if (filterMode === 'pending') {
@@ -205,6 +211,7 @@ export function MembersPanel({
     [data?.customers],
   );
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- memo deps are intentional
   const currentTier: Tier = useMemo(() => {
     if (!data?.detail?.packages) return 'guest';
     return tierOf(data.detail.packages, now);
@@ -548,6 +555,16 @@ export function MembersPanel({
 
                         {/* Quick Contact buttons */}
                         <div className="quick-contact-actions">
+                          {onStartSession && (
+                            <button
+                              type="button"
+                              className="btn-quick-contact play"
+                              onClick={() => onStartSession({ name: current.name, phone: current.phone })}
+                              title="Nhận phòng và bắt đầu chơi cho hội viên này"
+                            >
+                              <Play size={13} /> Nhận line chơi
+                            </button>
+                          )}
                           <a
                             href={`tel:${current.phone}`}
                             className="btn-quick-contact"

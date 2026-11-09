@@ -304,7 +304,7 @@ export async function createStaff(
 
 export async function updateStaff(
   actor: AuthUser,
-  input: { userId: string; role?: string; active?: boolean },
+  input: { userId: string; name?: string; role?: string; active?: boolean },
 ): Promise<ServiceResult> {
   const t = await target(actor.tenant, input.userId);
   if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
@@ -314,6 +314,12 @@ export async function updateStaff(
     (input.active === false || (input.role && input.role !== t.role))
   )
     return fail('Không thể tự khóa hoặc tự đổi vai trò của mình', 409);
+  if (input.name !== undefined && input.name.trim().length >= 2) {
+    await db()
+      .prepare('UPDATE users SET name=? WHERE id=?')
+      .bind(input.name.trim().slice(0, 100), input.userId)
+      .run();
+  }
   if (input.role !== undefined) {
     if (!isRole(input.role) || !canAssignRole(actor.role, input.role))
       return fail('Không đủ quyền gán vai trò này', 403);
@@ -329,6 +335,29 @@ export async function updateStaff(
       .run();
     if (!input.active)
       await db().prepare('DELETE FROM sessions WHERE user_id=?').bind(input.userId).run();
+  }
+  return ok();
+}
+
+export async function deleteStaff(actor: AuthUser, userId: string): Promise<ServiceResult> {
+  const t = await target(actor.tenant, userId);
+  if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
+  if (userId === actor.userId) return fail('Không thể tự xóa tài khoản của chính mình', 409);
+  if (t.role === 'owner') return fail('Không thể xóa tài khoản Chủ cơ sở', 403);
+  if (!canAssignRole(actor.role, t.role)) return fail('Không đủ quyền xóa nhân viên này', 403);
+
+  // Terminate active sessions and remove from crm sales extra & tenant membership
+  await db().prepare('DELETE FROM sessions WHERE user_id=?').bind(userId).run().catch(() => undefined);
+  await db().prepare('DELETE FROM crm2_staff WHERE tenant=? AND user_id=?').bind(actor.tenant, userId).run().catch(() => undefined);
+  await db().prepare('DELETE FROM memberships WHERE tenant=? AND user_id=?').bind(actor.tenant, userId).run();
+
+  // If no remaining memberships in other branches, delete from users table
+  const other = await db()
+    .prepare('SELECT 1 AS x FROM memberships WHERE user_id=? LIMIT 1')
+    .bind(userId)
+    .first();
+  if (!other) {
+    await db().prepare('DELETE FROM users WHERE id=?').bind(userId).run().catch(() => undefined);
   }
   return ok();
 }

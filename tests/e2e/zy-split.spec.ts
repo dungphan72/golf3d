@@ -29,7 +29,9 @@ async function finishedRound(request: APIRequestContext, room: string, customer:
       )
       .map((b: { room: string }) => b.room),
   );
-  const targetRoom = ALL_ROOMS.find((r) => !busyRooms.has(r)) || room;
+  // line-2 and line-8 are reserved for zzz-leads, which starts sessions on them straight away.
+  const targetRoom =
+    ALL_ROOMS.find((r) => !busyRooms.has(r) && !['line-2', 'line-8'].includes(r)) || room;
   const booked = await post(request, '/api/club', {
     action: 'book',
     room: targetRoom,
@@ -120,8 +122,8 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
   await finishedRound(owner, 'line-6', 'Khách chia UI');
   await page.goto('/quan-ly');
   await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Lịch đặt/ })
+    .locator('aside[aria-label="Menu chính"]')
+    .getByRole('button', { name: /Booking/ })
     .click();
   await page.getByText('Khách chia UI').first().click();
   await page.getByRole('button', { name: 'Chia nhiều hình thức thanh toán' }).click();

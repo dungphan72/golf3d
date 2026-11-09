@@ -2,6 +2,7 @@
 import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
 import { useRef } from 'react';
 import { Bell, Play, Pause, Square, Printer } from 'lucide-react';
+import { BRAND } from '../../lib/brand';
 import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import type { Bill } from '../../lib/pricing';
@@ -150,7 +151,32 @@ export function SessionPanel({
         </div>
       ) : (
         <div className="bill">
-          <h3>{b.status === 'paid' ? 'Phiếu thanh toán' : 'Tạm tính'}</h3>
+          <div className="receipt-thermal-header">
+            <div className="receipt-brand-logo">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BRAND.logo} alt="" width={38} height={38} />
+            </div>
+            <div className="receipt-thermal-title">SAIGON GOLF 3D CLUB</div>
+            <div className="receipt-thermal-sub">
+              Hệ thống Golf 3D Foresight GC3 USA<br />
+              Hotline: 0901 234 567 · www.golfhub.cloud
+            </div>
+            <div className="receipt-thermal-divider" />
+            <div className="receipt-meta-row">
+              <span>Phòng: <strong>{rooms.find((r) => r.id === b.room)?.name}</strong></span>
+              <span>Số phiếu: <strong>#{b.id.slice(-6).toUpperCase()}</strong></span>
+            </div>
+            <div className="receipt-meta-row">
+              <span>Khách hàng: <strong>{b.customer}</strong></span>
+              <span>{b.phone || ''}</span>
+            </div>
+            <div className="receipt-meta-row">
+              <span>Giờ vào: {time(b.started || b.start)}</span>
+              <span>Thời gian: {Math.round(minutes)} phút</span>
+            </div>
+            <div className="receipt-thermal-divider" />
+          </div>
+          <h3 className="bill-screen-title">{b.status === 'paid' ? 'Phiếu thanh toán' : 'Tạm tính'}</h3>
           {q.lines.map((l, i) => (
             <div key={i}>
               <span>
@@ -200,6 +226,11 @@ export function SessionPanel({
           <div className="bill-total">
             <span>Tổng cộng</span>
             <strong>{money(b.amount ?? q.total + (b.food_total ?? 0))}</strong>
+          </div>
+          <div className="receipt-thermal-footer">
+            <div className="receipt-thermal-divider" />
+            <p className="thermal-thanks">Cảm ơn Quý khách & Hẹn gặp lại!</p>
+            <p className="thermal-micro">Phần mềm quản trị Saigon Golf 3D Club · Foresight GC3 USA</p>
           </div>
           <details className="bill-note">
             <summary>Cách tính</summary>

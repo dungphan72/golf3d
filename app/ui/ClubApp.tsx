@@ -10,6 +10,7 @@ import { PageTabs } from './kit';
 import { type Data } from './shared';
 import { BookingsHub, HUB_VIEWS, InvoiceList, SupportList } from './BookingsHub';
 import { HomeBoard } from './HomeBoard';
+import { DashboardView } from './DashboardView';
 import { BottomBar, AppHeader, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
@@ -24,6 +25,7 @@ import { ReportsPanel } from './ReportsPanel';
 import { CrmModule } from '../../modules/crm/ui/CrmApp';
 
 import { WalkInDialog } from './WalkInDialog';
+import LandingCmsPanel from './LandingCmsPanel';
 import { useBellSound } from './BellAlerts';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
@@ -31,9 +33,10 @@ export default function ClubApp() {
     // a scanned member card (/quan-ly?hv=HV-XXXXXXXX) opens the members screen on that card.
     [deepLink] = useState(() => {
       if (typeof location === 'undefined')
-        return { view: 'rooms', customer: null as string | null };
+        return { view: 'dashboard', customer: null as string | null };
       const q = new URLSearchParams(location.search);
-      const view = q.get('hv') ? 'members' : q.get('view') === 'crm' ? 'crm' : 'rooms';
+      const requestedView = q.get('view');
+      const view = q.get('hv') ? 'members' : (requestedView || 'dashboard');
       return { view, customer: q.get('customer') };
     }),
     deepCustomer = deepLink.customer,
@@ -176,6 +179,7 @@ export default function ClubApp() {
   const needs: Record<string, string> = {
     finance: 'finance.view',
     reports: 'finance.view',
+    landing: 'settings.manage',
     settings: 'settings.manage',
     staff: 'staff.manage',
     audit: 'staff.manage',
@@ -253,6 +257,7 @@ export default function ClubApp() {
           setMode('customer');
           setMobile(false);
         }}
+        onLogout={signOut}
       />
       <div className="ds-body">
         <a className="ds-skip" href="#noi-dung">
@@ -286,6 +291,7 @@ export default function ClubApp() {
           }}
           onPick={setSelected}
           onCustomerView={() => setMode('customer')}
+          onLogout={signOut}
         />
         <main className="ds-main" id="noi-dung" tabIndex={-1}>
           {error && (
@@ -320,6 +326,19 @@ export default function ClubApp() {
                 </>
               ) : (
                 <>
+                  {view === 'dashboard' && data && (
+                    <DashboardView
+                      data={data}
+                      now={now}
+                      canSeeMoney={allowed('finance')}
+                      leads={leads}
+                      crm2={crm2}
+                      onSelect={setSelected}
+                      onBook={bookRoom}
+                      onWalkIn={setWalkInRoom}
+                      onGo={go}
+                    />
+                  )}
                   {view === 'rooms' && data && (
                     <HomeBoard
                       data={data}
@@ -349,6 +368,7 @@ export default function ClubApp() {
                   {view === 'invoices' && <InvoiceList bookings={b} onSelect={setSelected} />}
                   {view === 'fnb' && <FnbPanel onChanged={load} />}
                   {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
+                  {view === 'landing' && allowed('landing') && <LandingCmsPanel />}
                   {view === 'settings' && allowed('settings') && (
                     <>
                       <PageTabs
@@ -380,6 +400,12 @@ export default function ClubApp() {
                       permissions={data?.permissions ?? []}
                       initialCustomer={memberTarget?.id}
                       initialPhone={memberTarget?.phone}
+                      onStartSession={(cust) => {
+                        setBookingCustomer({ name: cust.name, phone: cust.phone });
+                        setBookingRoom('line-1');
+                        setModal(true);
+                        go('rooms');
+                      }}
                     />
                   )}
                   {(view === 'crmx' || view === 'crm') && allowed('crmx') && (

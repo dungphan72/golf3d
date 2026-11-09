@@ -1,9 +1,11 @@
 'use client';
 import { CareTasksView } from './CareTasks';
+import { MarketingScreen } from './MarketingScreen';
+import { ViewLogScreen } from './ViewLogScreen';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import {
   Users,
   Target,
@@ -29,6 +31,7 @@ import { money } from '../../../lib/club';
 import { call, errText, type Staff } from './api';
 import { ChannelsScreen } from './ChannelsScreen';
 import { LeadDetail } from './LeadDetail';
+import { SalesStaffManager } from './SalesStaffManager';
 import {
   AppointmentsScreen,
   CustomersScreen,
@@ -223,7 +226,7 @@ function renderSampleMessage(tmpl: string) {
   return <span>&ldquo;{sample}&rdquo;</span>;
 }
 
-/** Who receives leads and where each person is notified (email, Zalo). Managers only. */
+/** Quản lý đội ngũ Sales: Thêm, sửa, xóa, phân quyền vai trò, định tuyến máy lẻ & nhận lead. */
 function StaffTable({
   s,
   setS,
@@ -235,148 +238,14 @@ function StaffTable({
   data: Config;
   reload: () => Promise<void>;
 }) {
-  const [rows, setRows] = useState<Record<string, StaffExtra>>({});
-  const [rowMsg, setRowMsg] = useState<Record<string, string>>({});
-  const extra = (id: string): StaffExtra =>
-    rows[id] ??
-    data.staffExtra.find((x) => x.userId === id) ?? {
-      userId: id,
-      team: '',
-      isLeader: 0,
-      extension: '',
-      zaloId: '',
-      notifyEmail: '',
-    };
-  const paused = (s.distribution as { paused: string[] }).paused;
-  const set = (id: string, patch: Partial<StaffExtra>) =>
-    setRows({ ...rows, [id]: { ...extra(id), ...patch } });
-
-  const getInitials = (name: string) => {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return (name[0] || 'U').toUpperCase();
-  };
-
+  type Mgr = ComponentProps<typeof SalesStaffManager>;
   return (
-    <div>
-      <div className="crm-staff-table-wrap">
-        <table className="crm-staff-modern">
-          <thead>
-            <tr>
-              <th style={{ width: '22%' }}>Nhân sự</th>
-              <th style={{ width: '12%', textAlign: 'center' }}>Nhận lead</th>
-              <th style={{ width: '12%' }}>Nhóm</th>
-              <th style={{ width: '10%', textAlign: 'center' }}>Trưởng nhóm</th>
-              <th style={{ width: '12%' }}>Máy lẻ</th>
-              <th style={{ width: '14%' }}>Zalo ID</th>
-              <th style={{ width: '18%' }}>Email thông báo</th>
-              <th style={{ width: '60px' }} />
-            </tr>
-          </thead>
-          <tbody>
-            {data.staff.map((m) => {
-              const x = extra(m.id);
-              const isReceiving = !paused.includes(m.id);
-              return (
-                <tr key={m.id}>
-                  <td>
-                    <div className="crm-staff-user">
-                      <div className="crm-staff-avatar">{getInitials(m.name)}</div>
-                      <div className="crm-staff-meta">
-                        <strong>{m.name}</strong>
-                        <small>{m.role === 'admin' ? 'Quản trị viên' : 'Tư vấn sales'}</small>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <Switch
-                      checked={isReceiving}
-                      aria-label={`Nhận lead: ${m.name}`}
-                      onChange={(checked) =>
-                        setS({
-                          ...s,
-                          distribution: {
-                            ...(s.distribution as object),
-                            paused: checked
-                              ? paused.filter((id) => id !== m.id)
-                              : [...paused, m.id],
-                          },
-                        })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="crm-staff-input"
-                      aria-label={`Nhóm: ${m.name}`}
-                      placeholder="VD: Sales 1"
-                      value={x.team}
-                      onChange={(e) => set(m.id, { team: e.target.value })}
-                    />
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <Switch
-                      checked={!!x.isLeader}
-                      aria-label={`Trưởng nhóm: ${m.name}`}
-                      onChange={(checked) => set(m.id, { isLeader: checked ? 1 : 0 })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="crm-staff-input"
-                      aria-label={`Máy lẻ: ${m.name}`}
-                      placeholder="101"
-                      value={x.extension}
-                      onChange={(e) => set(m.id, { extension: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="crm-staff-input"
-                      aria-label={`Zalo ID: ${m.name}`}
-                      placeholder="oa_user_id"
-                      value={x.zaloId}
-                      onChange={(e) => set(m.id, { zaloId: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="crm-staff-input"
-                      aria-label={`Email báo: ${m.name}`}
-                      placeholder="sale@golf3d.vn"
-                      value={x.notifyEmail}
-                      onChange={(e) => set(m.id, { notifyEmail: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <button
-                      className="secondary"
-                      style={{ padding: '4px 10px', fontSize: '12px' }}
-                      title="Lưu thông tin nhân sự này"
-                      onClick={async () => {
-                        try {
-                          await call('/api/crm2/config', { staff: x });
-                          await reload();
-                          setRowMsg({ ...rowMsg, [m.id]: 'Đã lưu' });
-                          setTimeout(() => setRowMsg((cur) => ({ ...cur, [m.id]: '' })), 2500);
-                        } catch (e) {
-                          setRowMsg({ ...rowMsg, [m.id]: errText(e) });
-                        }
-                      }}
-                    >
-                      {rowMsg[m.id] ? rowMsg[m.id] : 'Lưu'}
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="muted" style={{ fontSize: '12px', marginTop: '8px' }}>
-        💡 Trạng thái <strong>Nhận lead</strong> được lưu cùng nút <em>Lưu cấu hình</em> ở đầu trang. Các thông tin cấu hình kênh (Máy lẻ, Zalo, Email) có thể lưu trực tiếp theo từng nhân sự.
-      </p>
-    </div>
+    <SalesStaffManager
+      s={s as unknown as Mgr['s']}
+      setS={setS as unknown as Mgr['setS']}
+      data={data as unknown as Mgr['data']}
+      reload={reload}
+    />
   );
 }
 
@@ -389,23 +258,24 @@ function ConfigScreen() {
   const [saving, setSaving] = useState(false);
   const [section, setSection] = useState<'all' | 'staff' | 'intake' | 'channels' | 'pipeline' | 'care' | 'products'>('all');
   const [p, setP] = useState({ code: '', name: '', listPrice: '', limited: false });
-  const initialRef = useRef<string>('');
+  const [initial, setInitial] = useState('');
 
   useEffect(() => {
     if (data && !s) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value or load-on-open; runs once per dependency change
       setS(data.settings);
       const rStr = data.settings.calls.retryHours.join(', ');
       setRetry(rStr);
-      initialRef.current = JSON.stringify({ s: data.settings, retry: rStr });
+      setInitial(JSON.stringify({ s: data.settings, retry: rStr }));
     }
   }, [data, s]);
 
   const num = (v: string, d: number) => (v === '' ? 0 : Number.isFinite(Number(v)) ? Number(v) : d);
 
   const isDirty = useMemo(() => {
-    if (!s || !initialRef.current) return false;
-    return initialRef.current !== JSON.stringify({ s, retry });
-  }, [s, retry]);
+    if (!s || !initial) return false;
+    return initial !== JSON.stringify({ s, retry });
+  }, [s, retry, initial]);
 
   const reset = useCallback(() => {
     if (!data) return;
@@ -435,7 +305,7 @@ function ConfigScreen() {
       setS(r.settings);
       const rStr = r.settings.calls.retryHours.join(', ');
       setRetry(rStr);
-      initialRef.current = JSON.stringify({ s: r.settings, retry: rStr });
+      setInitial(JSON.stringify({ s: r.settings, retry: rStr }));
       setMsg('Đã lưu cấu hình');
       setTimeout(() => setMsg(''), 4000);
     } catch (e) {
@@ -577,9 +447,9 @@ function ConfigScreen() {
                 <div className="crm-card-title-group">
                   <h3>
                     <Users size={18} style={{ color: 'var(--kv-blue, #1f7a4d)' }} />
-                    Nhân sự nhận lead và thông báo
+                    Đội ngũ Sales & Phân quyền vai trò
                   </h3>
-                  <p>Trực ca, phân quyền tiếp nhận khách hàng mới và cấu hình kênh liên hệ theo từng nhân viên.</p>
+                  <p>Thêm, sửa, xóa, phân quyền vai trò kinh doanh, cấu hình máy lẻ & cơ chế nhận lead tự động.</p>
                 </div>
               </div>
               <StaffTable s={s} setS={setS} data={data!} reload={reload} />
@@ -1373,6 +1243,8 @@ export function CrmModule({
     | 'leads'
     | 'customers'
     | 'appointments'
+    | 'care'
+    | 'marketing'
     | 'report'
     | 'config'
     | 'legacy'
@@ -1380,17 +1252,21 @@ export function CrmModule({
     if (initialTab === 'leads' || initialTab === 'pipeline' || initialTab === 'pool' || initialTab === 'overview') return 'leads';
     if (initialTab === 'files' || initialTab === 'customers') return 'customers';
     if (initialTab === 'appointments') return 'appointments';
+    if (initialTab === 'care') return 'care';
+    if (initialTab === 'marketing') return 'marketing';
     if (initialTab === 'report') return 'report';
-    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'migration') return 'config';
+    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'viewlog' || initialTab === 'migration') return 'config';
     if (initialTab === 'legacy') return 'legacy';
     return 'work';
   });
 
   const selectTab = (t: string) => {
     setTab(t);
-    if (t === 'work' || t === 'tasks' || t === 'care') setSpace('work');
+    if (t === 'work' || t === 'tasks') setSpace('work');
+    else if (t === 'care') setSpace('care');
+    else if (t === 'marketing') setSpace('marketing');
     else if (t === 'leads' || t === 'pipeline' || t === 'pool' || t === 'overview') setSpace('leads');
-    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'migration') setSpace('config');
+    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'viewlog' || t === 'migration') setSpace('config');
     else if (t === 'files' || t === 'customers') setSpace('customers');
     else if (t === 'appointments') setSpace('appointments');
     else if (t === 'report') setSpace('report');
@@ -1401,11 +1277,11 @@ export function CrmModule({
   const onSelectSpace = (s: string) => {
     setSpace(s as typeof space);
     if (s === 'work') {
-      if (tab !== 'work' && tab !== 'tasks' && tab !== 'care') setTab('work');
+      if (tab !== 'work' && tab !== 'tasks') setTab('work');
     } else if (s === 'leads') {
       if (tab !== 'leads' && tab !== 'pipeline' && tab !== 'pool' && tab !== 'overview') setTab('leads');
     } else if (s === 'config') {
-      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'migration') setTab('config');
+      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'viewlog' && tab !== 'migration') setTab('config');
     } else if (s === 'customers') {
       setTab('customers');
     } else {
@@ -1474,6 +1350,8 @@ export function CrmModule({
           { key: 'leads', label: 'Lead & Phễu' },
           { key: 'customers', label: 'Khách hàng' },
           { key: 'appointments', label: 'Lịch hẹn' },
+          { key: 'care', label: 'Chăm sóc khách' },
+          { key: 'marketing', label: 'Marketing', hidden: !manager },
           { key: 'report', label: 'Báo cáo', hidden: !manager },
           { key: 'config', label: 'Cấu hình', hidden: !manager },
           { key: 'legacy', label: 'Chăm sóc KH (cũ)', hidden: !legacy },
@@ -1504,6 +1382,17 @@ export function CrmModule({
           <CareCustomersView key={focus ?? 'all'} focus={focus} onNavigate={onNavigate} />
         )}
         {space === 'appointments' && <AppointmentsScreen s={shared} />}
+        {space === 'care' && (
+          <CareTasksView
+            s={shared}
+            onOpenCustomer={(id) => {
+              setFocus(id);
+              setSpace('customers');
+              setTab('customers');
+            }}
+          />
+        )}
+        {space === 'marketing' && manager && <MarketingScreen />}
         {space === 'report' && manager && <ReportScreen />}
         {space === 'config' && manager && (
           <>
@@ -1515,12 +1404,14 @@ export function CrmModule({
                 { key: 'config', label: 'Cài đặt chung' },
                 { key: 'channels', label: 'Kênh & tích hợp' },
                 { key: 'orders', label: 'Đơn bán & Giữ chỗ' },
+                { key: 'viewlog', label: 'Nhật ký xem số' },
                 { key: 'migration', label: 'Chuyển dữ liệu CRM cũ' },
               ]}
             />
             {tab === 'config' && <ConfigScreen />}
             {tab === 'channels' && <ChannelsScreen />}
             {tab === 'orders' && <OrdersScreen s={shared} />}
+            {tab === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
             {tab === 'migration' && <MigrationScreen />}
           </>
         )}

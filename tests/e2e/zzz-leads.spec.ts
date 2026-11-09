@@ -55,10 +55,28 @@ async function setDuty(userId: string, onDuty: boolean) {
 test.beforeAll(async ({ playwright }) => {
   owner = await playwright.request.newContext({ baseURL: 'http://127.0.0.1:8787' });
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  // These tests cover the old lead pipeline; new installs route every channel to the CRM module.
+  await routeChannels('LEGACY');
 });
 test.afterAll(async () => {
+  await routeChannels('CRM2');
   await owner.dispose();
 });
+async function routeChannels(to: 'LEGACY' | 'CRM2') {
+  const cfg = (await getJson(owner, '/api/crm2/config')) as Json;
+  const r = await owner.post('/api/crm2/config', {
+    data: {
+      settings: {
+        ...cfg.settings,
+        websiteLeads: to,
+        zaloLeads: to,
+        facebookLeads: to,
+        adsLeads: to,
+      },
+    },
+  });
+  expect(r.status(), await r.text()).toBe(200);
+}
 
 test('chuẩn bị: nhân viên nhận lead, mã webhook, kênh gửi tin sẵn sàng', async () => {
   for (const n of ['A', 'B']) {
@@ -110,7 +128,7 @@ test('lead từ website: nhận, gộp theo số điện thoại, không xử l�
         need: '18',
         guests: 2,
         message: 'Muốn đặt 18 hố',
-        campaign: '3dgolf.vn',
+        campaign: 'golfhub.cloud',
         consent: true,
       },
       t0,
@@ -120,7 +138,7 @@ test('lead từ website: nhận, gộp theo số điện thoại, không xử l�
   const lead = await leadOf(first.leadId, t0);
   expect(lead).toMatchObject({
     source: 'website',
-    campaign: '3dgolf.vn',
+    campaign: 'golfhub.cloud',
     phone: p,
     need: '18',
     status: 'assigned',
@@ -838,10 +856,10 @@ test.skip('màn hình Lead: đồng hồ 5 phút, ghi nhận cuộc gọi, kênh
   // A lead waiting for its first call shows up on the home board.
   await expect(
     page
-      .getByRole('complementary', { name: 'Việc cần làm ngay' })
+      .getByRole('region', { name: 'Việc cần làm ngay' })
       .getByText(/lead .*(chờ gọi|chưa gọi)/),
   ).toBeVisible();
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   await page.getByRole('tab', { name: 'Chăm sóc KH (cũ)' }).click();
   await expect(page.getByRole('tab', { name: 'Lead mới' })).toBeVisible();
   const card = page.locator('.crm-lead', { hasText: 'Khách Giao Diện Lead' });

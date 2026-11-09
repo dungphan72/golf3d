@@ -124,8 +124,7 @@ test('tắt một quy tắc trong cấu hình thì không tạo việc đó nữ
   // The screen: manager sees the task with its message and the action buttons.
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM' }).click();
-  await page.getByRole('tab', { name: 'Bàn làm việc' }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
   await page.getByRole('tab', { name: 'Chăm sóc khách' }).click();
   const card = page.locator('.crm-task', { hasText: 'Khách Có Chào' });
   await expect(card).toContainText('Chào mừng khách mới');
@@ -218,8 +217,8 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
   await cron();
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM' }).click();
-  await page.getByRole('tab', { name: 'Hồ sơ khách' }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
+  await page.getByRole('region', { name: 'CRM' }).getByRole('tab', { name: 'Khách hàng' }).click();
   await page.getByLabel('Tìm hồ sơ khách').fill(c.phone);
   await page.getByRole('row', { name: /Khách Giao Diện Hồ Sơ/ }).click();
   const panel = page.getByRole('region', { name: 'Hồ sơ Khách Giao Diện Hồ Sơ' });
@@ -231,7 +230,6 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
   await expect(panel).toContainText('Khách hỏi lịch cuối tuần');
 
   // From a care task, the customer's name opens the same file.
-  await page.getByRole('tab', { name: 'Bàn làm việc' }).click();
   await page.getByRole('tab', { name: 'Chăm sóc khách' }).click();
   await page
     .locator('.crm-task', { hasText: 'Khách Giao Diện Hồ Sơ' })
@@ -294,7 +292,7 @@ test('nhân sự: Zalo ID và email báo lưu được; nút trực bật tắt 
   // The screens: the duty button on top of the CRM and the staff table in the settings.
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM' }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
   const duty = page.getByRole('button', { name: /Đang trực/ });
   await expect(duty).toBeVisible();
   await duty.click();
@@ -302,11 +300,7 @@ test('nhân sự: Zalo ID và email báo lưu được; nút trực bật tắt 
   await page.getByRole('button', { name: /Đang nghỉ/ }).click();
   await expect(page.getByRole('button', { name: /Đang trực/ })).toBeVisible();
   await page.getByRole('tab', { name: /Thiết lập|Cấu hình/ }).click();
-  await expect(page.getByRole('heading', { name: 'Nhân sự nhận lead và thông báo' })).toBeVisible();
-  const zaloIds = await page
-    .getByLabel(/^Zalo ID: /)
-    .evaluateAll((els) => els.map((e) => (e as HTMLInputElement).value));
-  expect(zaloIds).toContain('zalo-owner-1');
+  await expect(page.getByText('zalo-owner-1')).toBeVisible();
 });
 
 test('báo cáo tư vấn: phễu, nguồn, nhân viên và việc chăm sóc; cần quyền quản lý', async ({
@@ -340,7 +334,7 @@ test('báo cáo tư vấn: phễu, nguồn, nhân viên và việc chăm sóc; c
   // The screen shows the same figures.
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM' }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
   await page.getByRole('tab', { name: 'Báo cáo' }).click();
   await expect(page.getByRole('heading', { name: 'Phễu tư vấn' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Việc chăm sóc khách' })).toBeVisible();

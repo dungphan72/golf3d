@@ -12,8 +12,9 @@ import {
   GraduationCap,
   Globe,
   Grid2X2,
+  LayoutDashboard,
   Menu,
-  MoreHorizontal,
+  LayoutGrid,
   Plus,
   ReceiptText,
   RefreshCw,
@@ -23,8 +24,11 @@ import {
   ShieldCheck,
   UtensilsCrossed,
   Users,
+  Megaphone,
+  HelpCircle,
   Wallet,
   X,
+  LogOut,
 } from 'lucide-react';
 import { rooms, type Booking } from '../../lib/club';
 import { BRAND } from '../../lib/brand';
@@ -37,40 +41,27 @@ export type NavGroup = { label: string; items: NavItem[] };
 /** The staff menu, grouped by what the person is doing. Each screen appears exactly once. */
 export const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Vận hành',
+    label: 'QUẢN LÝ',
     items: [
-      { key: 'rooms', label: 'Sơ đồ phòng', icon: Grid2X2 },
-      { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
-      { key: 'support', label: 'Chuông gọi', icon: BellRing },
-    ],
-  },
-  {
-    label: 'Bán hàng',
-    items: [
+      { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
+      { key: 'bookings', label: 'Booking', icon: CalendarDays },
+      { key: 'rooms', label: 'POS tính tiền', icon: Grid2X2 },
       { key: 'invoices', label: 'Hóa đơn', icon: ReceiptText },
+      { key: 'members', label: 'Khách hàng', icon: Users },
+      { key: 'crmx', label: 'CRM', icon: Megaphone },
       { key: 'fnb', label: 'Thực đơn & kho', icon: UtensilsCrossed },
-    ],
-  },
-  {
-    label: 'Khách hàng',
-    items: [
-      { key: 'crmx', label: 'CRM', icon: Contact },
-      { key: 'members', label: 'Hội viên', icon: Award },
       { key: 'coaching', label: 'Huấn luyện', icon: GraduationCap },
-    ],
-  },
-  {
-    label: 'Tài chính',
-    items: [
-      { key: 'finance', label: 'Ca & sổ tiền', icon: Wallet },
       { key: 'reports', label: 'Báo cáo', icon: ChartColumn },
     ],
   },
   {
-    label: 'Quản trị',
+    label: 'HỆ THỐNG',
     items: [
-      { key: 'settings', label: 'Cài đặt cơ sở', icon: Settings },
+      { key: 'settings', label: 'Cài đặt', icon: Settings },
+      { key: 'support', label: 'Trợ giúp', icon: HelpCircle },
       { key: 'staff', label: 'Nhân viên', icon: Users },
+      { key: 'finance', label: 'Ca & sổ tiền', icon: Wallet },
+      { key: 'landing', label: 'Landing Page', icon: Globe },
       { key: 'audit', label: 'Nhật ký', icon: ScrollText },
       { key: 'account', label: 'Tài khoản', icon: ShieldCheck },
     ],
@@ -97,6 +88,7 @@ export function Sidebar({
   onGo,
   onClose,
   onCustomerView,
+  onLogout,
 }: {
   open: boolean;
   view: string;
@@ -107,16 +99,26 @@ export function Sidebar({
   onGo: (key: string) => void;
   onClose: () => void;
   onCustomerView: () => void;
+  onLogout?: () => void;
 }) {
   const active = NAV_PARENT[view] ?? view;
+  const asideRef = useRef<HTMLElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (open) closeRef.current?.focus();
+  }, [open]);
+  // The menu scrolls on its own: keep the current screen's entry in sight instead of leaving it below the fold.
+  useEffect(() => {
+    asideRef.current?.querySelector('.ds-nav-item.selected')?.scrollIntoView({ block: 'nearest' });
+  }, [active]);
   return (
     <>
       {open && <div className="ds-scrim" onClick={onClose} aria-hidden="true" />}
-      <aside className={'ds-side' + (open ? ' open' : '')} aria-label="Menu chính">
+      <aside ref={asideRef} className={'ds-side' + (open ? ' open' : '')} aria-label="Menu chính">
         <div className="ds-side-head">
           <Link className="ds-brand" href="/quan-ly" aria-label={BRAND.name + ' — trang chủ'}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={BRAND.logo} alt="" width={40} height={40} />
+            <img src={BRAND.logo} alt="" width={38} height={38} />
             <span>
               {BRAND.short}
               <small>{BRAND.sub}</small>
@@ -125,6 +127,17 @@ export function Sidebar({
           <button className="ds-iconbtn ds-close" aria-label="Đóng menu" onClick={onClose}>
             <X size={22} />
           </button>
+        </div>
+        <div className="ds-branch-card">
+          <div className="ds-branch-avatar">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={BRAND.logo} alt="" width={22} height={22} />
+          </div>
+          <div className="ds-branch-info">
+            <span className="ds-branch-status">ĐANG VẬN HÀNH</span>
+            <strong className="ds-branch-name">{BRAND.short}</strong>
+          </div>
+          <ChevronDown size={14} className="ds-branch-arrow" />
         </div>
         <nav className="ds-nav">
           {NAV_GROUPS.map((g) => {
@@ -150,18 +163,89 @@ export function Sidebar({
           })}
         </nav>
         <div className="ds-side-foot">
-          <button className="ds-link" onClick={onCustomerView}>
-            Xem như khách hàng
-          </button>
-          <div className="ds-user">
-            <span className="ds-avatar">{(user[0] ?? 'D').toUpperCase()}</span>
-            <div>
-              <strong>{user.split('@')[0] || 'Chủ cơ sở'}</strong>
-              {role && <small>{role}</small>}
+          <div className="ds-user-card">
+            <span className="ds-user-avatar">
+              {(user[0] ?? 'H').toUpperCase()}{user.length > 1 ? (user[1] ?? 'N').toUpperCase() : 'N'}
+            </span>
+            <div className="ds-user-info">
+              <strong className="ds-user-name">{user.split('@')[0] || 'Hoàng Nguyễn'}</strong>
+              <span className="ds-user-role">{role || 'Quản trị viên'}</span>
             </div>
+            {onLogout && (
+              <button
+                type="button"
+                className="ds-user-logout-btn"
+                aria-label="Đăng xuất"
+                onClick={onLogout}
+                title="Đăng xuất khỏi hệ thống"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
           </div>
         </div>
       </aside>
+      {open && (
+        <div
+          className="ds-appmenu"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu ứng dụng"
+          onKeyDown={(e) => e.key === 'Escape' && onClose()}
+        >
+          <div className="ds-appmenu-grab" aria-hidden="true" />
+          <header className="ds-appmenu-head">
+            <span className="ds-appmenu-brand">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BRAND.logo} alt="" width={32} height={32} />
+              <span>
+                <strong>{BRAND.short}</strong>
+                <small>{(user.split('@')[0] || 'Quản trị viên') + (role ? ' · ' + role : '')}</small>
+              </span>
+            </span>
+            <button ref={closeRef} className="ds-appmenu-close" aria-label="Đóng menu" onClick={onClose}>
+              <X size={20} />
+            </button>
+          </header>
+          <div className="ds-appmenu-body">
+            {NAV_GROUPS.map((g, gi) => {
+              const items = g.items.filter((i) => visible(i.key));
+              if (!items.length) return null;
+              return (
+                <section key={g.label} aria-label={g.label}>
+                  <h2 className="ds-appmenu-title">{g.label}</h2>
+                  <div className="ds-appmenu-grid">
+                    {items.map(({ key, label, icon: Icon }, i) => (
+                      <button
+                        key={key}
+                        className={'ds-app-tile hue-' + ((gi * 5 + i) % 8) + (active === key ? ' selected' : '')}
+                        aria-current={active === key ? 'page' : undefined}
+                        onClick={() => onGo(key)}
+                      >
+                        <span className="ds-app-ico">
+                          <Icon size={26} />
+                          {(badges[key] ?? 0) > 0 && <b className="ds-app-badge">{badges[key]}</b>}
+                        </span>
+                        <span className="ds-app-label">{label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+          <footer className="ds-appmenu-foot">
+            <button type="button" className="ds-app-foot-btn" onClick={onCustomerView}>
+              <Globe size={18} /> Xem như khách
+            </button>
+            {onLogout && (
+              <button type="button" className="ds-app-foot-btn danger" onClick={onLogout}>
+                <LogOut size={18} /> Đăng xuất
+              </button>
+            )}
+          </footer>
+        </div>
+      )}
     </>
   );
 }
@@ -197,7 +281,7 @@ export function GlobalSearch({
       <Search size={18} />
       <input
         aria-label="Tìm khách hoặc phiếu"
-        placeholder="Tìm khách, số điện thoại, line…  ( / )"
+        placeholder="Tìm khách hàng, booking..."
         value={q}
         onChange={(e) => {
           setQ(e.target.value);
@@ -288,15 +372,12 @@ function DropMenu({
 
 /** Menu items shown straight on the menu bar; the rest sit under "Quản trị". */
 const MAIN_KEYS = [
-  'rooms',
+  'dashboard',
   'bookings',
-  'support',
+  'rooms',
   'invoices',
-  'fnb',
-  'crmx',
   'members',
-  'coaching',
-  'finance',
+  'crmx',
   'reports',
 ];
 const ADMIN_KEYS = ['settings', 'staff', 'audit'];
@@ -322,6 +403,7 @@ export function AppHeader({
   onSupport,
   onPick,
   onCustomerView,
+  onLogout,
 }: {
   title: string;
   view: string;
@@ -340,6 +422,7 @@ export function AppHeader({
   onSupport: () => void;
   onPick: (b: Booking) => void;
   onCustomerView: () => void;
+  onLogout?: () => void;
 }) {
   const active = NAV_PARENT[view] ?? view;
   const admin = ADMIN_KEYS.filter(visible).map(item);
@@ -377,6 +460,10 @@ export function AppHeader({
           </span>
         </Link>
         <h1 className="ds-title">{title}</h1>
+        <div className="ds-platform-indicator">
+          <span>Golf Booking CRM Platform</span>
+          <ChevronDown size={13} />
+        </div>
         <GlobalSearch bookings={bookings} onPick={onPick} />
         <div className="ds-top-actions">
           <button
@@ -386,7 +473,7 @@ export function AppHeader({
             onClick={onBook}
           >
             <Plus size={19} />
-            <span>Đặt lịch</span>
+            <span>Tạo booking</span>
           </button>
           <span className={'ds-conn' + (online ? ' on' : '')} title={connection}>
             <i />
@@ -404,6 +491,17 @@ export function AppHeader({
             <Bell size={20} />
             {pending > 0 && <b>{pending}</b>}
           </button>
+          {onLogout && (
+            <button
+              className="ds-iconbtn ds-top-logout-btn"
+              aria-label="Đăng xuất"
+              title="Đăng xuất"
+              onClick={onLogout}
+              style={{ color: '#64748b' }}
+            >
+              <LogOut size={18} />
+            </button>
+          )}
           <DropMenu
             className="ds-user-btn"
             align="right"
@@ -434,6 +532,21 @@ export function AppHeader({
                 >
                   <Globe size={17} /> Xem như khách hàng
                 </button>
+                {onLogout && (
+                  <>
+                    <div style={{ height: 1, background: '#e2e8f0', margin: '4px 0' }} />
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        close();
+                        onLogout();
+                      }}
+                      style={{ color: '#dc2626', fontWeight: 600 }}
+                    >
+                      <LogOut size={17} /> Đăng xuất
+                    </button>
+                  </>
+                )}
               </>
             )}
           </DropMenu>
@@ -487,7 +600,7 @@ export function AppHeader({
   );
 }
 
-/** Phone / tablet tab bar: the four things done all day, and "Thêm" for the rest of the menu. */
+/** Phone / tablet tab bar, like a mobile app: four daily screens and "Menu", which opens the icon grid. */
 export function BottomBar({
   view,
   badges,
@@ -500,23 +613,34 @@ export function BottomBar({
   onMore: () => void;
 }) {
   const main: NavItem[] = [
+    { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
     { key: 'rooms', label: 'Phòng', icon: Grid2X2 },
     { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
     { key: 'support', label: 'Chuông', icon: BellRing },
-    { key: 'invoices', label: 'Thu tiền', icon: Wallet },
   ];
+  const inMain = main.some((m) => m.key === view);
+  // Entries only reachable through "Menu" (like Thu tiền) still show their count on it.
+  const hidden = Object.entries(badges)
+    .filter(([k]) => !main.some((m) => m.key === k))
+    .reduce((n, [, v]) => n + (v ?? 0), 0);
   return (
     <nav className="ds-bottom" aria-label="Thao tác nhanh">
       {main.map(({ key, label, icon: Icon }) => (
-        <button key={key} className={view === key ? 'active' : ''} onClick={() => onGo(key)}>
+        <button
+          key={key}
+          className={view === key ? 'active' : ''}
+          aria-current={view === key ? 'page' : undefined}
+          onClick={() => onGo(key)}
+        >
           <Icon size={22} />
           <span>{label}</span>
           {(badges[key] ?? 0) > 0 && <b>{badges[key]}</b>}
         </button>
       ))}
-      <button onClick={onMore}>
-        <MoreHorizontal size={22} />
-        <span>Thêm</span>
+      <button className={inMain ? '' : 'active'} onClick={onMore} aria-haspopup="dialog">
+        <LayoutGrid size={22} />
+        <span>Menu</span>
+        {hidden > 0 && <b>{hidden}</b>}
       </button>
     </nav>
   );

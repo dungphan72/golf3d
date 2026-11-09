@@ -9,6 +9,7 @@ export type FormInquiry = {
   notes: string;
   source: string;
   targetService: string;
+  campaign: string;
 };
 
 /**
@@ -33,5 +34,6 @@ export function facebookInquiry(
       .slice(0, 2000),
     source: 'Facebook',
     targetService: serviceOf(ev.need),
+    campaign: (ev.campaign || '').trim().slice(0, 120),
   };
 }

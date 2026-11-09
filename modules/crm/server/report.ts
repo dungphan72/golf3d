@@ -8,14 +8,17 @@ export async function leadReport(c: Ctx, days: number): Promise<Result> {
   const span = Math.min(Math.max(Math.round(days) || 30, 1), 365);
   const since = c.now - span * DAY;
   const d = db();
-  const all = async (sql: string) => (await d.prepare(sql).bind(c.tenant, since).all()).results;
+  // Queries that sum paid order value take `since` once more, before the tenant, for their subquery.
+  const all = async (sql: string, withPaid = false) =>
+    (await d.prepare(sql).bind(...(withPaid ? [since, c.tenant, since] : [c.tenant, since])).all()).results;
   const [stages, sources, lost, agents, care, orderPaid, bookingPaid] = await Promise.all([
     all('SELECT stage,COUNT(*) AS n FROM crm2_leads WHERE tenant=? AND created>=? GROUP BY stage'),
     all(
       `SELECT source,COUNT(*) AS leads,SUM(stage='WON') AS won,SUM(stage='LOST') AS lost,
          COALESCE(SUM(CASE WHEN stage='WON' THEN expected_value END),0) AS value,
-         COALESCE((SELECT SUM(o.paid_amount) FROM crm2_orders o JOIN crm2_leads l2 ON l2.id=o.lead_id WHERE l2.tenant=crm2_leads.tenant AND l2.source=crm2_leads.source AND o.created>=?),0) AS paidValue
+         COALESCE((SELECT SUM(p.paid_amount) FROM crm2_order_payments p JOIN crm2_orders o ON o.id=p.order_id AND o.tenant=p.tenant JOIN crm2_leads l2 ON l2.id=o.lead_id WHERE l2.tenant=crm2_leads.tenant AND l2.source=crm2_leads.source AND o.created>=?),0) AS paidValue
        FROM crm2_leads WHERE tenant=? AND created>=? GROUP BY source ORDER BY leads DESC LIMIT 20`,
+      true,
     ),
     all(
       `SELECT lost_reason AS reason,COUNT(*) AS n FROM crm2_leads
@@ -25,17 +28,18 @@ export async function leadReport(c: Ctx, days: number): Promise<Result> {
       `SELECT l.owner AS userId,COALESCE(u.name,'Kho số (chưa phân)') AS name,COUNT(*) AS leads,
          SUM(l.first_response_at IS NOT NULL) AS responded,SUM(l.stage='WON') AS won,
          COALESCE(SUM(CASE WHEN l.stage='WON' THEN l.expected_value END),0) AS value,
-         COALESCE((SELECT SUM(o.paid_amount) FROM crm2_orders o JOIN crm2_leads l2 ON l2.id=o.lead_id WHERE l2.tenant=l.tenant AND l2.owner=l.owner AND o.created>=?),0) AS paidValue,
+         COALESCE((SELECT SUM(p.paid_amount) FROM crm2_order_payments p JOIN crm2_orders o ON o.id=p.order_id AND o.tenant=p.tenant JOIN crm2_leads l2 ON l2.id=o.lead_id WHERE l2.tenant=l.tenant AND l2.owner=l.owner AND o.created>=?),0) AS paidValue,
          AVG(l.first_response_min) AS avgMin
        FROM crm2_leads l LEFT JOIN users u ON u.id=l.owner
        WHERE l.tenant=? AND l.created>=? GROUP BY l.owner ORDER BY won DESC, leads DESC LIMIT 30`,
+      true,
     ),
     all(
       `SELECT rule,COUNT(*) AS total,SUM(outcome='done') AS done,SUM(outcome='skipped') AS skipped
        FROM crm2_tasks WHERE tenant=? AND customer_id IS NOT NULL AND created>=? GROUP BY rule ORDER BY total DESC`,
     ),
-    d.prepare("SELECT COALESCE(SUM(paid_amount),0) AS total FROM crm2_orders WHERE tenant=? AND created>=?").bind(c.tenant, since).first<{ total: number }>(),
-    d.prepare("SELECT COALESCE(SUM(b.amount),0) AS total FROM bookings b JOIN crm2_leads l ON l.tenant=b.tenant AND l.phone_norm=b.phone WHERE b.tenant=? AND b.status='paid' AND b.finished>=?").bind(c.tenant, since).first<{ total: number }>(),
+    d.prepare("SELECT COALESCE(SUM(p.paid_amount),0) AS total FROM crm2_order_payments p JOIN crm2_orders o ON o.id=p.order_id AND o.tenant=p.tenant WHERE p.tenant=? AND o.created>=?").bind(c.tenant, since).first<{ total: number }>(),
+    d.prepare("SELECT COALESCE(SUM(b.amount),0) AS total FROM bookings b WHERE b.tenant=? AND b.status='paid' AND b.finished>=? AND EXISTS(SELECT 1 FROM crm2_leads l WHERE l.tenant=b.tenant AND l.phone_norm=b.phone)").bind(c.tenant, since).first<{ total: number }>(),
   ]);
   const total = (stages as { n: number }[]).reduce((a, x) => a + x.n, 0);
   const actualPaidTotal = (orderPaid?.total ?? 0) + (bookingPaid?.total ?? 0);

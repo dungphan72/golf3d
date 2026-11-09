@@ -43,6 +43,7 @@ export function ReportsPanel() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value or load-on-open; runs once per dependency change
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, to]);

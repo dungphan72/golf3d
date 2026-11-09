@@ -154,19 +154,20 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   const total = await amountOf(owner, id);
   await page.goto('/quan-ly');
   // The home board lists the unpaid session under "Việc cần làm ngay"; the top search finds it too.
-  const tasks = page.getByRole('complementary', { name: 'Việc cần làm ngay' });
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /POS tính tiền/ }).click();
+  const tasks = page.getByRole('region', { name: 'Việc cần làm ngay' });
   await expect(tasks.getByText('Thu tiền · Khách Giao Diện')).toBeVisible();
   await page.getByLabel('Tìm khách hoặc phiếu').fill('Giao Diện');
   await expect(page.getByRole('option', { name: /Khách Giao Diện/ })).toBeVisible();
   await page.getByLabel('Tìm khách hoặc phiếu').fill('');
   // A finished session waits for payment on its room card: one click opens the bill.
   await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Sơ đồ phòng/ })
+    .locator('aside[aria-label="Menu chính"]')
+    .getByRole('button', { name: /POS tính tiền/ })
     .click();
-  const card = page.locator('.room-card', { hasText: 'Khách Giao Diện' });
-  await expect(card.getByText('Chờ thanh toán')).toBeVisible();
-  await card.click();
+  const card = page.locator('.gcd-bay-item-card', { hasText: 'Khách Giao Diện' });
+  await expect(card.getByText('Chờ thu tiền')).toBeVisible();
+  await card.getByRole('button', { name: /POS tính tiền/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Chi tiết phiên chơi' });
   await expect(dialog).toBeVisible();
 

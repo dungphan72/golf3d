@@ -388,6 +388,7 @@ function OrderCard({
 }) {
   const roomName = rooms.find((r) => r.id === o.room)?.name ?? o.room;
   const items = JSON.parse(o.items) as FoodLine[];
+  // eslint-disable-next-line react-hooks/purity -- urgency is relative to the current time
   const isUrgent = o.status === 'new' && Date.now() - o.created > 10 * 60 * 1000;
 
   return (

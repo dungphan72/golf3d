@@ -782,6 +782,8 @@ export const crm2Leads = sqliteTable(
     callAttempts: integer('call_attempts').notNull().default(0),
     lastResult: text('last_result').notNull().default(''),
     labels: text('labels').notNull().default('[]'),
+    campaign: text('campaign').notNull().default(''), // marketing campaign that brought the lead (first touch)
+    seeding: integer('seeding').notNull().default(0), // internal/test number: excluded from marketing KPIs
     slaAlertedAt: integer('sla_alerted_at'),
     staleTaskAt: integer('stale_task_at'),
     firstResponseAt: integer('first_response_at'),
@@ -879,6 +881,59 @@ export const crm2BlockedPhones = sqliteTable(
     created: integer('created').notNull(),
   },
   (t) => [uniqueIndex('crm2_blocked_key').on(t.tenant, t.phoneNorm)],
+);
+export const crm2Campaigns = sqliteTable(
+  'crm2_campaigns',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    name: text('name').notNull(),
+    source: text('source').notNull().default(''), // lead source it feeds, e.g. Facebook, Website, Quảng cáo
+    runner: text('runner').notNull().default(''), // who runs the ads
+    budget: integer('budget').notNull().default(0),
+    startsOn: text('starts_on').notNull().default(''),
+    endsOn: text('ends_on').notNull().default(''),
+    active: integer('active').notNull().default(1),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_campaign_name').on(t.tenant, t.name)],
+);
+export const crm2AdSpend = sqliteTable(
+  'crm2_ad_spend',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    campaignId: text('campaign_id').notNull(),
+    day: text('day').notNull(), // YYYY-MM-DD, Vietnam time
+    amount: integer('amount').notNull().default(0),
+    impressions: integer('impressions').notNull().default(0),
+    clicks: integer('clicks').notNull().default(0),
+    updated: integer('updated').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_spend_day').on(t.tenant, t.campaignId, t.day)],
+);
+export const crm2Seeding = sqliteTable(
+  'crm2_seeding',
+  {
+    tenant: text('tenant').notNull(),
+    phoneNorm: text('phone_norm').notNull(),
+    note: text('note').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('crm2_seeding_key').on(t.tenant, t.phoneNorm)],
+);
+export const crm2ViewLog = sqliteTable(
+  'crm2_view_log',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    userId: text('user_id').notNull(),
+    leadId: text('lead_id').notNull(),
+    leadName: text('lead_name').notNull().default(''),
+    kind: text('kind').notNull().default('lead'), // lead | export
+    created: integer('created').notNull(),
+  },
+  (t) => [index('crm2_view_log_time').on(t.tenant, t.created), index('crm2_view_log_user').on(t.tenant, t.userId, t.leadId, t.created)],
 );
 export const crm2Appointments = sqliteTable(
   'crm2_appointments',

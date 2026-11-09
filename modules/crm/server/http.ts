@@ -9,7 +9,7 @@ import type { Ctx, Result } from './store';
  */
 export function crmRoute(
   perm: { read: Permission; write: Permission },
-  handler: (c: Ctx, req: Request, body: Record<string, unknown>) => Promise<Result>,
+  handler: (c: Ctx, req: Request, body: Record<string, unknown>) => Promise<Result | Response>,
 ) {
   const run = async (req: Request, write: boolean) => {
     // Read the body before any early reply: leaving it unread can upset the worker runtime.
@@ -37,7 +37,8 @@ export function crmRoute(
       base: originOf(req),
     };
     try {
-      return sendResult(await handler(ctx, req, body));
+      const out = await handler(ctx, req, body);
+      return out instanceof Response ? out : sendResult(out);
     } catch (e) {
       console.error('crm2', e);
       return httpError('Không thể xử lý yêu cầu. Vui lòng thử lại.', 500);

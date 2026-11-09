@@ -57,3 +57,10 @@ backup-*.sql
 
 # ScrollCraft workspace: keep the briefs and score, not local tooling
 /scrollcraft/builds/*/node_modules/
+
+# deployment bundles
+deploy_bundle.tar.gz
+*.tar.gz
+
+# local helper scripts (contain server credentials)
+/scratch/

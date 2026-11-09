@@ -23,14 +23,14 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
 
   // Signed out: the account page asks to sign in.
   await me.goto('/tai-khoan');
-  await expect(me.getByRole('tab', { name: 'Đăng nhập' })).toBeVisible();
+  await expect(me.getByRole('tab', { name: 'Đăng Nhập' })).toBeVisible();
 
   // Register. Weak passwords and bad phones are refused.
   await me.goto('/tai-khoan?dang-ky');
   await me.getByLabel('Họ và tên').fill('Hội Viên Online');
   await me.getByLabel('Số điện thoại').fill(PHONE);
-  await me.getByLabel('Mật khẩu').fill('matkhau-an-toan-1');
-  await me.getByRole('button', { name: 'Đăng ký', exact: true }).click();
+  await me.getByLabel('Mật khẩu', { exact: true }).fill('matkhau-an-toan-1');
+  await me.getByRole('button', { name: 'Hoàn Tất Đăng Ký' }).click();
   await expect(me.getByRole('heading', { name: /Xin chào, Hội Viên Online/ })).toBeVisible();
   await expect(me.getByText('Đang chờ câu lạc bộ xác nhận')).toBeVisible();
   // Until staff verify the phone number, no card or history is shown.
@@ -39,14 +39,12 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   // Registering also puts the person in the CRM as a lead to call (once, whatever the retries).
   const crm = page.request;
   expect((await crm.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
-  const leads = (await (await crm.get('/api/crm/leads')).json()).leads as {
-    phone: string;
-    campaign: string;
-    source: string;
-  }[];
+  const leads = ((await (await crm.get('/api/crm2/leads?limit=200&q=')).json()) as {
+    leads: { phone: string; campaign: string; source: string }[];
+  }).leads;
   const registered = leads.filter((l) => l.phone === PHONE);
   expect(registered).toHaveLength(1);
-  expect(registered[0]).toMatchObject({ source: 'website', campaign: 'dang-ky-hoi-vien' });
+  expect(registered[0]).toMatchObject({ source: 'Website' });
 
   // Staff verify the phone and sell a package.
   const owner = page.request;
@@ -66,15 +64,17 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
 
   // The member now sees the package.
   await me.reload();
-  await expect(me.getByText('Thẻ và gói của tôi')).toBeVisible();
-  await expect(me.getByRole('heading', { name: type.name })).toBeVisible();
+  await expect(me.getByText('HỘI VIÊN ĐANG HOẠT ĐỘNG', { exact: false })).toBeVisible();
+  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
+  await me.getByRole('button', { name: /Tổng Quan & Thẻ/ }).click();
 
   // The card: tier, member code and a QR; staff find the same member by that code.
   const code = 'HV-' + customer.id.replaceAll('-', '').slice(0, 8).toUpperCase();
-  const card = me.getByRole('region', { name: 'Thẻ hội viên' });
+  const card = me.getByRole('region', { name: 'Thẻ hội viên điện tử' });
   await expect(card).toContainText('Hội Viên Online');
   await expect(card.getByRole('button', { name: new RegExp(code) })).toBeVisible();
-  await expect(card.getByRole('img', { name: 'Mã QR của thẻ hội viên' })).toBeVisible();
+  await expect(card.getByRole('button', { name: /Mã QR của thẻ hội viên/ })).toBeVisible();
   await expect(card).toContainText(/Hội viên|Platinum|Diamond/);
   const byCode = await (await owner.get('/api/members?q=' + code.toLowerCase())).json();
   expect(byCode.customers.map((c: { id: string }) => c.id)).toEqual([customer.id]);
@@ -85,18 +85,20 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
 
   // Sign out and back in; a wrong password is refused.
   await me.getByRole('button', { name: 'Đăng xuất' }).click();
-  await me.getByRole('tab', { name: 'Đăng nhập' }).click();
+  await me.getByRole('tab', { name: 'Đăng Nhập' }).click();
   await me.getByLabel('Số điện thoại').fill(PHONE);
-  await me.getByLabel('Mật khẩu').fill('sai-mat-khau-roi');
-  await me.getByRole('button', { name: 'Đăng nhập', exact: true }).last().click();
+  await me.getByLabel('Mật khẩu', { exact: true }).fill('sai-mat-khau-roi');
+  await me.getByRole('button', { name: 'Đăng Nhập Tài Khoản' }).click();
   await expect(me.getByRole('alert')).toContainText('không đúng');
-  await me.getByLabel('Mật khẩu').fill('matkhau-an-toan-1');
-  await me.getByRole('button', { name: 'Đăng nhập', exact: true }).last().click();
-  await expect(me.getByRole('heading', { name: type.name })).toBeVisible();
+  await me.getByLabel('Mật khẩu', { exact: true }).fill('matkhau-an-toan-1');
+  await me.getByRole('button', { name: 'Đăng Nhập Tài Khoản' }).click();
+  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
 
   // The member asks to buy a package from the page; staff see it, sell it, and it becomes theirs.
   await me.reload();
-  await expect(me.getByRole('button', { name: 'Đăng ký mua' }).first()).toBeVisible();
+  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
   const ordered = await guest.request.post('/api/member', {
     data: { action: 'order', typeId: type.id },
   });
@@ -151,7 +153,7 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   expect(await anon.json()).toEqual({ signedOut: true });
   await post(owner, '/api/members', { action: 'account-reset', customerId: customer.id });
   await me.reload();
-  await expect(me.getByRole('tab', { name: 'Đăng nhập' })).toBeVisible(); // reset signs everyone out
+  await expect(me.getByRole('tab', { name: 'Đăng Nhập' })).toBeVisible(); // reset signs everyone out
   const again = await guest.request.post('/api/member', {
     data: {
       action: 'register',

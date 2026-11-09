@@ -20,6 +20,7 @@ import { packageBullets, type PackageGroup } from '../../lib/price-table';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
 import LandingFx from '../ui/LandingFx';
+import ClubFooter from '../ui/ClubFooter';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,7 +81,7 @@ export default async function MembershipPage() {
       <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
       />
 
       <header className="fw-fixed on" aria-label="Điều hướng">
@@ -223,13 +224,7 @@ export default async function MembershipPage() {
         </section>
       </main>
 
-      <footer className="fw-footer">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name} · {BRAND.address}
-        </span>
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a href="/">Về trang chủ</a>
-      </footer>
+      <ClubFooter hours="08:00–23:00" />
       <LandingFx />
     </div>
   );

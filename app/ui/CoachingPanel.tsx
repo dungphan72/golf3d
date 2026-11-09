@@ -278,7 +278,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                         <span className="lesson-price">· {money(l.price)}</span>
                       )}
                     </div>
-                    {l.note && <div className="lesson-note">"{l.note}"</div>}
+                    {l.note && <div className="lesson-note">&ldquo;{l.note}&rdquo;</div>}
                     {l.coach_note && (
                       <div className="lesson-coach-note">
                         <FileText size={11} /> Ghi chú HLV: {l.coach_note}

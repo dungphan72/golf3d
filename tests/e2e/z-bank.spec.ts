@@ -110,8 +110,8 @@ test('chuyển khoản SePay: webhook ghi nhận, nhân viên xác nhận, khôn
   await finishedRound(owner, 'line-4', 'Khách QR', '0977666555', 1);
   await page.goto('/quan-ly');
   await page
-    .locator('.ds-menubar')
-    .getByRole('button', { name: /Lịch đặt/ })
+    .locator('aside[aria-label="Menu chính"]')
+    .getByRole('button', { name: /Booking/ })
     .click();
   await page.getByText('Khách QR').first().click();
   await expect(page.getByRole('img', { name: 'Mã QR chuyển khoản' })).toBeVisible();

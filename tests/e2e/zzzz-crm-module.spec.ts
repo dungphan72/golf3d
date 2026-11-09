@@ -121,7 +121,7 @@ test('tiếp nhận công khai: cần đồng ý, chống trùng, chia cho nhân
     source: 'Website',
   });
   expect(l.owner).toBeTruthy();
-  expect(l.nextDue).toBe(t + 15 * MIN);
+  expect(l.nextDue).toBe(t + 5 * MIN); // default SLA is 5 minutes
   const detail = await get(owner, '/api/crm2/leads?id=' + l.id);
   expect(detail.tasks.some((x: Json) => x.title === 'Gọi khách mới')).toBe(true);
   // The same number again: no new lead, the count grows, the owner gets a call-back task.
@@ -515,7 +515,7 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
     ).status(),
   ).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('.ds-menubar').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
   await expect(crm.getByRole('tab', { name: 'Bàn làm việc' })).toBeVisible();
   await expect(crm.getByText('Phễu 30 ngày')).toBeVisible();
@@ -540,10 +540,10 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   ).toBeVisible();
   await crm.getByRole('tab', { name: 'Kho số' }).click();
   await expect(crm.getByText('Chọn lead để giao cho nhân viên.')).toBeVisible();
-  await crm.getByRole('tab', { name: 'Thiết lập' }).click();
-  await crm.getByRole('tab', { name: 'Đơn bán' }).click();
-  await expect(crm.getByText('Tổng giá trị')).toBeVisible();
   await crm.getByRole('tab', { name: 'Cấu hình' }).click();
+  await crm.getByRole('tab', { name: 'Đơn bán & Giữ chỗ' }).click();
+  await expect(crm.getByText('Tổng giá trị')).toBeVisible();
+  await crm.getByRole('tab', { name: 'Cài đặt chung' }).click();
   await expect(crm.getByRole('heading', { name: 'Danh mục dịch vụ và gói' })).toBeVisible();
   await expect(crm.getByRole('cell', { name: 'Gói HLV 1 kèm 1' })).toBeVisible();
 });

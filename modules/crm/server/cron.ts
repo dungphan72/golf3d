@@ -125,7 +125,7 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
     ).results;
     if (!late.length) return;
     const managers = (await staffList(tenant)).filter(
-      (s) => s.role === 'owner' || s.role === 'manager',
+      (s) => (s.role === 'owner' || s.role === 'manager'),
     );
     for (const l of late) {
       // Mark first, so a failing notification never repeats on the next run.

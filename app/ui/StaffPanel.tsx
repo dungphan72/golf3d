@@ -1,18 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { DataTable } from './kit';
+import { DataTable, DialogHeading, ModalDialog } from './kit';
 import { ROLES, ROLE_LABELS, type Role } from '../../lib/auth/permissions';
 import {
-  Users,
   UserPlus,
   KeyRound,
   ShieldAlert,
   Lock,
   Unlock,
-  CheckCircle2,
-  Mail,
-  UserCheck,
   Search,
+  Trash2,
 } from 'lucide-react';
 
 type Staff = { id: string; email: string; name: string; role: Role; active: boolean };
@@ -38,6 +35,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const assignable = ROLES.filter((r) => actorRole === 'owner' || r !== 'owner');
 
@@ -57,9 +55,11 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
     setBusy(true);
     setError('');
     try {
-      const result = await task();
-      setSecret(result.temporaryPassword ? { who, password: result.temporaryPassword } : null);
+      const r = await task();
       await load();
+      if (r.temporaryPassword) {
+        setSecret({ who, password: r.temporaryPassword });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -124,11 +124,21 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
         </div>
       )}
 
-      {/* Staff Management & Creation Grid */}
+      {/* Staff Management Table */}
       <div className="operate-staff-layout">
         <div className="staff-table-card">
-          <div className="operate-filterbar" style={{ padding: '0 0 12px 0' }}>
-            <div className="operate-filter-left">
+          <div
+            className="operate-filterbar"
+            style={{
+              padding: '0 0 14px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 12,
+            }}
+          >
+            <div className="operate-filter-left" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <div className="operate-search-wrap">
                 <Search size={15} className="operate-search-icon" />
                 <input
@@ -153,6 +163,26 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 ))}
               </select>
             </div>
+
+            {/* Button mở form tạo tài khoản */}
+            <button
+              type="button"
+              className="primary operate-btn"
+              onClick={() => setShowCreateModal(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '8px 16px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <UserPlus size={16} />
+              <span>Tạo tài khoản</span>
+            </button>
           </div>
 
           <DataTable
@@ -230,6 +260,20 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                       >
                         <KeyRound size={13} /> Đổi mật khẩu
                       </button>
+                      {s.role !== 'owner' && (
+                        <button
+                          className="secondary operate-btn-sm"
+                          disabled={busy || locked}
+                          title="Xóa nhân viên khỏi hệ thống"
+                          style={{ color: '#dc2626', borderColor: '#fecaca', background: '#fff5f5' }}
+                          onClick={() => {
+                            if (!confirm(`Bạn có chắc chắn muốn xóa nhân viên "${s.name}" (${s.email}) khỏi hệ thống?`)) return;
+                            act(() => call({ action: 'delete', userId: s.id }));
+                          }}
+                        >
+                          <Trash2 size={13} /> Xóa
+                        </button>
+                      )}
                     </div>
                   );
                 },
@@ -237,28 +281,35 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
             ]}
           />
         </div>
+      </div>
 
-        {/* Add Staff Card Form */}
-        <div className="staff-create-card">
-          <h3 className="staff-form-title">
-            <UserPlus size={18} /> Thêm nhân viên mới
-          </h3>
-          <p className="staff-form-desc">
-            Nhân viên mới sẽ được cấp mật khẩu tạm thời để đăng nhập và tự đổi mật khẩu.
+      {/* Modal Dialog Form Tạo Tài Khoản */}
+      {showCreateModal && (
+        <ModalDialog
+          label="Tạo tài khoản nhân viên"
+          onClose={() => setShowCreateModal(false)}
+          locked={busy}
+        >
+          <DialogHeading onClose={() => setShowCreateModal(false)} eyebrow="QUẢN TRỊ & NHÂN SỰ" locked={busy}>
+            Tạo tài khoản nhân viên
+          </DialogHeading>
+          <p style={{ margin: '0 0 16px 0', fontSize: 13, color: '#64748b' }}>
+            Nhân viên mới sẽ được cấp mật khẩu tạm thời để đăng nhập và tự đổi mật khẩu lần đầu.
           </p>
           <form
-            className="operate-staff-form"
+            className="form-grid"
             onSubmit={(e) => {
               e.preventDefault();
               act(async () => {
                 const result = await call({ action: 'create', email, name, role });
                 setEmail('');
                 setName('');
+                setShowCreateModal(false);
                 return result;
               }, email);
             }}
           >
-            <label className="operate-label">
+            <label>
               Họ và tên
               <input
                 value={name}
@@ -266,10 +317,9 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 placeholder="VD: Nguyễn Văn An"
                 required
                 minLength={2}
-                className="operate-input"
               />
             </label>
-            <label className="operate-label">
+            <label>
               Email đăng nhập
               <input
                 type="email"
@@ -277,15 +327,13 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="VD: an.nguyen@golf3d.vn"
                 required
-                className="operate-input"
               />
             </label>
-            <label className="operate-label">
+            <label>
               Vai trò / Phân quyền
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as Role)}
-                className="operate-select"
               >
                 {assignable.map((r) => (
                   <option key={r} value={r}>
@@ -294,13 +342,23 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 ))}
               </select>
             </label>
-            <button className="primary operate-btn" disabled={busy} style={{ marginTop: '8px' }}>
-              <UserPlus size={16} />
-              {busy ? 'Đang tạo…' : 'Tạo tài khoản nhân viên'}
-            </button>
+            <div className="form-footer" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={() => setShowCreateModal(false)}
+                disabled={busy}
+              >
+                Hủy
+              </button>
+              <button type="submit" className="primary" disabled={busy}>
+                <UserPlus size={16} />
+                {busy ? 'Đang tạo…' : 'Tạo tài khoản'}
+              </button>
+            </div>
           </form>
-        </div>
-      </div>
+        </ModalDialog>
+      )}
     </section>
   );
 }

@@ -22,7 +22,7 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   return (await response.json()) as Record<string, any>;
 }
 const nav = (page: Page, name: RegExp | string) =>
-  page.locator('.ds-menubar').getByRole('button', { name });
+  page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name });
 
 /** All-day prices so the tests do not depend on the time of day they run. */
 function allDayRules() {
@@ -71,7 +71,7 @@ test('đăng nhập: sai mật khẩu bị từ chối, đúng thì vào đượ
   await expect(page.getByText('Email hoặc mật khẩu không đúng')).toBeVisible();
   await page.getByLabel('Mật khẩu').fill(OWNER.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sơ đồ phòng', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Tổng quan', level: 1, exact: true })).toBeVisible();
 });
 
 test('cấu hình cơ sở và nạp danh mục gói', async ({ request }) => {
@@ -158,7 +158,7 @@ test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', as
   expect([paid.status, paid.payment]).toEqual(['paid', 'package']);
 
   await page.goto('/quan-ly');
-  await nav(page, /Hội viên/).click();
+  await nav(page, /Khách hàng/).click();
   await page.getByRole('button', { name: /Khách Gói/ }).click();
   await expect(page.getByText('Điểm tích lũy:')).toBeVisible();
   await expect(page.getByText(/10 Lượt 18 hố/)).toBeVisible();
@@ -180,7 +180,7 @@ test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách th�
   await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 
   await page.goto('/quan-ly');
-  await nav(page, /Lịch đặt/).click();
+  await nav(page, /Booking/).click();
   await page.getByRole('tab', { name: /Đặt online/ }).click();
   const row = page.getByRole('row', { name: /Khách Online/ });
   await expect(row).toBeVisible();
@@ -240,9 +240,9 @@ test('phân quyền: thu ngân chỉ làm được việc của thu ngân', asyn
 
   const view = await ctx.newPage();
   await view.goto('/quan-ly');
-  await expect(view.getByRole('heading', { name: 'Sơ đồ phòng', level: 1 })).toBeVisible();
-  await expect(nav(view, /Quản trị/)).toHaveCount(0);
-  await expect(nav(view, /Hội viên/)).toBeVisible();
+  await expect(view.getByRole('heading', { name: 'Tổng quan', level: 1, exact: true })).toBeVisible();
+  await expect(nav(view, /Cài đặt/)).toHaveCount(0);
+  await expect(nav(view, /Khách hàng/)).toBeVisible();
   await ctx.close();
 });
 

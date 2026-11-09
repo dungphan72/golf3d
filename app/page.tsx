@@ -4,11 +4,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   Clock,
-  Crown,
-  Flag,
   MapPin,
   Phone,
-  Target,
   UserRound,
 } from 'lucide-react';
 import { BRAND } from '../lib/brand';
@@ -16,8 +13,16 @@ import { money } from '../lib/club';
 import BookingPage from './ui/BookingPage';
 import LandingFx from './ui/LandingFx';
 import { PromoCards } from './ui/PromoCards';
+import QuickBookingBar from './ui/QuickBookingBar';
+import RoomShowcase from './ui/RoomShowcase';
+import ClubAmenities from './ui/ClubAmenities';
+import ClubGalleryAlbum from './ui/ClubGalleryAlbum';
+import PriceEstimator from './ui/PriceEstimator';
+import TestimonialSection from './ui/TestimonialSection';
+import ClubFooter from './ui/ClubFooter';
 import { grantLine, validityText, type PriceTable } from '../lib/price-table';
 import { publicPricing } from '../lib/server/pricing-service';
+import { getPublicLandingConfig } from '../lib/server/landing-service';
 import { bookingSlug } from '../lib/server/online-service';
 import './landing.css';
 
@@ -69,8 +74,16 @@ const faqFor = (group: string, tax: string, goldText: string, holes: boolean) =>
         a: 'Tính theo giờ cho mỗi phòng. Phòng tiêu chuẩn và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng bên trên.',
       },
   {
-    q: 'Giá niêm yết đã gồm thuế chưa?',
-    a: `Giá niêm yết chưa gồm VAT${tax}; thuế được cộng thêm trên hóa đơn khi thanh toán.`,
+    q: 'Người mới chưa từng chơi golf có đến tập được không?',
+    a: 'Hoàn toàn được! Câu lạc bộ có sẵn gậy tập cho người mới, nhân viên hỗ trợ cài đặt máy và hướng dẫn cơ bản. Bạn cũng có thể đăng ký gói hướng dẫn cùng Huấn luyện viên.',
+  },
+  {
+    q: 'Có cần tự mang theo gậy và bóng riêng không?',
+    a: 'Không bắt buộc. Câu lạc bộ miễn phí mượn các bộ gậy cao cấp (TaylorMade, Callaway, Titleist) và bóng chuyên dụng. Golfer vẫn có thể mang túi gậy cá nhân nếu muốn làm quen.',
+  },
+  {
+    q: 'Câu lạc bộ có chỗ đỗ xe ô tô không?',
+    a: 'Có. Bãi đỗ xe ô tô và xe máy rộng rãi, an ninh ngay trước cửa cơ sở tại số 250 Lương Đình Của với bảo vệ hỗ trợ tận tình suốt buổi chơi.',
   },
   {
     q: 'Giờ vàng là gì?',
@@ -78,19 +91,11 @@ const faqFor = (group: string, tax: string, goldText: string, holes: boolean) =>
   },
   {
     q: 'Đặt lịch online có cần thanh toán trước không?',
-    a: 'Không. Bạn gửi yêu cầu, nhân viên xác nhận lại lịch và line. Thanh toán sau khi chơi bằng tiền mặt, thẻ hoặc quét mã QR chuyển khoản.',
+    a: 'Không. Bạn chỉ cần gửi yêu cầu, nhân viên gọi xác nhận lịch và line. Bạn chỉ thanh toán sau khi kết thúc buổi chơi bằng tiền mặt, thẻ hoặc chuyển khoản quét mã VietQR.',
   },
-  ...(holes
-    ? [
-        {
-          q: 'Có tích điểm cho khách quen không?',
-          a: 'Có. Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.',
-        },
-      ]
-    : []),
   {
     q: 'Gói trả trước dùng thế nào?',
-    a: 'Mua gói tại quầy hoặc gọi hotline. Gói ghi rõ số giờ, thời hạn và phòng áp dụng; nhân viên sẽ trừ giờ mỗi lần bạn chơi.',
+    a: 'Mua gói tại quầy hoặc gọi hotline. Gói ghi rõ số giờ, thời hạn và loại phòng áp dụng; nhân viên sẽ trừ giờ mỗi lần bạn đến chơi.',
   },
 ];
 
@@ -150,7 +155,7 @@ function RateGrid({ title, table }: { title?: string; table: PriceTable }) {
 }
 
 export default async function LandingPage() {
-  const [slug, pricing] = await Promise.all([bookingSlug(), publicPricing()]);
+  const [slug, pricing, landing] = await Promise.all([bookingSlug(), publicPricing(), getPublicLandingConfig()]);
   const rows = pricing.standard.rows;
   const group = pricing.standard.group;
   const gold = rows.find((r) => r.gold) ?? rows[0];
@@ -195,10 +200,12 @@ export default async function LandingPage() {
   };
   const nav = [
     ['#dich-vu', 'Trải nghiệm'],
+    ['#album-anh', 'Hình ảnh'],
+    ['#tien-ich', 'Tiện ích'],
     ['#gio-vang', 'Giờ vàng'],
     ['#bang-gia', 'Bảng giá'],
     ...(pricing.promotions.length ? [['#khuyen-mai', 'Khuyến mãi']] : []),
-    ['#goi', 'Gói hội viên'],
+    ['#danh-gia', 'Đánh giá'],
     ['#lien-he', 'Liên hệ'],
   ];
   return (
@@ -207,7 +214,7 @@ export default async function LandingPage() {
       <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Lexend:wght@200;300;400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
       />
       <script
         type="application/ld+json"
@@ -245,12 +252,12 @@ export default async function LandingPage() {
         <section className="fw-hero">
           <div className="fw-stage">
             <picture>
-              <source media="(max-width: 860px)" srcSet="/img/hero-room-m.webp" />
+              <source media="(max-width: 860px)" srcSet={landing.heroMobileImage || '/img/hero-room-m.webp'} />
               {}
               <img
                 className="fw-scene"
-                src="/img/hero-room.webp"
-                alt="Phòng chơi Saigon Golf 3D Club với màn hình mô phỏng sân golf"
+                src={landing.heroDesktopImage || '/img/hero-room.webp'}
+                alt={landing.brandName || 'Phòng chơi Saigon Golf 3D Club'}
                 width={1458}
                 height={1201}
                 fetchPriority="high"
@@ -301,8 +308,6 @@ export default async function LandingPage() {
               </p>
             </div>
 
-            <div className="fw-bubble">Hơn cả một buổi chơi, một phiên bản tốt hơn của bạn.</div>
-
             <div className="fw-side-time" aria-label="Giờ mở cửa">
               <span>
                 {pricing.open} – {pricing.close}
@@ -337,7 +342,7 @@ export default async function LandingPage() {
 
             <a className="fw-card fw-card-discover" href="#dich-vu">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/space-wide.webp" alt="Màn hình mô phỏng sân golf trong phòng chơi" />
+              <img src="/img/fs-castle.webp" alt="Không gian phòng chơi golf 3D cao cấp" />
               <div className="fw-card-foot">
                 <span>
                   <b>Khám phá phòng chơi của bạn.</b>
@@ -353,6 +358,10 @@ export default async function LandingPage() {
               <ArrowDown size={20} />
             </a>
           </div>
+          <QuickBookingBar
+            lowestPrice={lowestGdr}
+            goldTimeText={`${gold.days}, ${gold.from}–${gold.to}`}
+          />
         </section>
 
         <section id="dich-vu" className="fw-section">
@@ -370,55 +379,28 @@ export default async function LandingPage() {
               </li>
             ))}
           </ol>
-          <div className="fw-three" data-sc-in data-sc-stagger="80">
-            {[
-              ...(hasHoles
-                ? [
-                    {
-                      Icon: Flag,
-                      t: 'Chơi 9 hố · 18 hố',
-                      p: 'Mô phỏng sân thật. Giá theo đầu người cho nhóm 1–3 người, giá nhóm cho 4 người.',
-                    },
-                  ]
-                : []),
-              {
-                Icon: Target,
-                t: hasHoles ? 'Luyện tập' : 'Chơi và luyện tập theo giờ',
-                p: `Đặt line theo giờ để chơi, tập swing và xem số liệu từng cú đánh. Giờ vàng từ ${money(lowestGdr)}.`,
-              },
-              {
-                Icon: Crown,
-                t: 'Phòng VIP riêng tư',
-                p: 'Không gian riêng cho nhóm bạn, gia đình, đối tác, có bảng giá phòng VIP riêng.',
-              },
-            ].map(({ Icon, t, p }) => (
-              <article key={t} className="fw-tile fw-tile-line">
-                <Icon size={22} />
-                <h3>{t}</h3>
-                <p>{p}</p>
-              </article>
-            ))}
-          </div>
 
-          <div className="fw-gallery" data-sc-in>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/img/space-wide.webp"
-              alt="Màn hình mô phỏng sân golf trong phòng chơi"
-              width={2000}
-              height={667}
-              loading="lazy"
-            />
+          <div className="fw-head" style={{ marginTop: '3.5rem' }} data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Không gian & Tiêu chuẩn</p>
+            <h2>Chọn phòng chơi phù hợp với bạn</h2>
+            <p className="fw-sub">
+              Hệ thống 10 line hiện đại: 8 line tiêu chuẩn thoáng đãng và 2 phòng VIP riêng tư.
+            </p>
           </div>
+          <RoomShowcase
+            standardPrice={lowestGdr}
+            vipPrice={vipRows.get(gold.key)?.gdr ?? 350000}
+          />
+
           <div className="fw-gc3" data-sc-in data-sc-stagger="90">
             <div>
               <p className="fw-kicker fw-kicker-light">Công nghệ</p>
               <h3>Foresight GC3 đo từng cú đánh</h3>
               <p>
-                Thiết bị theo dõi bóng với ba camera, ghi lại tốc độ, góc phóng, độ xoáy và quỹ đạo
-                của từng cú đánh rồi hiển thị ngay trên màn hình mô phỏng để bạn chỉnh swing.
+                Thiết bị theo dõi bóng với ba camera tốc độ cao, ghi lại tốc độ đầu gậy, góc phóng,
+                độ xoáy và quỹ đạo của từng cú đánh rồi hiển thị tức thì trên màn hình mô phỏng để
+                bạn hoàn thiện kỹ thuật swing.
               </p>
-              <small>Ảnh thiết bị và phòng chơi: Foresight Sports.</small>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -429,29 +411,20 @@ export default async function LandingPage() {
               loading="lazy"
             />
           </div>
-          <div className="fw-fs" data-sc-in data-sc-stagger="80">
-            <div className="fw-fs-head">
-              <p className="fw-kicker">Golf mô phỏng</p>
-              <h3>Chơi như trên sân thật, ngay trong phòng</h3>
-            </div>
-            <ul>
-              {[
-                ['/img/fs-lounge.webp', 'Phòng chơi golf mô phỏng rộng rãi với khu ghế ngồi nghỉ'],
-                [
-                  '/img/fs-castle.webp',
-                  'Phòng golf mô phỏng tông tối với màn hình lớn nhìn ra sân',
-                ],
-                ['/img/fs-office.webp', 'Không gian golf mô phỏng với màn hình chiếu sân golf'],
-                ['/img/fs-jag.webp', 'Phòng golf mô phỏng nhìn ra khung cảnh thiên nhiên'],
-              ].map(([src, alt]) => (
-                <li key={src}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={alt} width={1200} height={797} loading="lazy" />
-                </li>
-              ))}
-            </ul>
-            <small>Ảnh minh họa: Foresight Sports.</small>
+        </section>
+
+        {/* Real Club Space Photo Album Gallery */}
+        <ClubGalleryAlbum photos={landing.galleryPhotos} />
+
+        <section id="tien-ich" className="fw-section fw-tint">
+          <div className="fw-head" data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Đặc quyền hội viên & khách chơi</p>
+            <h2>Tiện ích trọn vẹn từng buổi tập</h2>
+            <p className="fw-sub">
+              Từ thiết bị đo đạc PGA, gậy tập miễn phí đến quầy đồ uống phục vụ tận nơi.
+            </p>
           </div>
+          <ClubAmenities />
         </section>
 
         <section id="gio-vang" className="fw-section fw-tight">
@@ -587,6 +560,11 @@ export default async function LandingPage() {
               </table>
             </div>
           )}
+          <PriceEstimator
+            standardTable={pricing.standard}
+            vipTable={pricing.vip}
+            vat={pricing.vat}
+          />
           <p className="fw-note">
             <a href="/bang-gia">Xem bảng giá đầy đủ</a> · <a href="/thanh-vien">Thẻ hội viên</a> ·{' '}
             <a href="/tai-khoan">Tài khoản hội viên</a>
@@ -640,6 +618,17 @@ export default async function LandingPage() {
           <p className="fw-note">
             Đăng ký gói tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
           </p>
+        </section>
+
+        <section id="danh-gia" className="fw-section">
+          <div className="fw-head" data-sc-in data-sc-stagger="70">
+            <p className="fw-kicker">Cộng đồng Golfer</p>
+            <h2>Khách hàng nói gì về Saigon Golf 3D</h2>
+            <p className="fw-sub">
+              Hơn 1,200 Golfer tại TP.HCM đã lựa chọn chúng tôi để luyện tập và giao lưu mỗi tuần.
+            </p>
+          </div>
+          <TestimonialSection />
         </section>
 
         <section id="dat-cho" className="fw-section">
@@ -722,17 +711,7 @@ export default async function LandingPage() {
         </section>
       </main>
 
-      <footer className="fw-footer">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name} · {BRAND.website}
-        </span>
-        <a href="/quan-ly">Dành cho nhân viên</a>
-      </footer>
-      <div className="fw-sticky">
-        <a className="fw-btn" href={bookHref}>
-          {bookLabel} <ArrowUpRight size={16} />
-        </a>
-      </div>
+      <ClubFooter hours={hours} />
       <LandingFx />
     </div>
   );

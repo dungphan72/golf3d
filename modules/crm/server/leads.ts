@@ -43,7 +43,7 @@ export const LEAD_COLS = `id,full_name AS fullName,phone,phone_norm AS phoneNorm
  claimed_by AS claimedBy,claimed_at AS claimedAt,pooled_at AS pooledAt,lost_reason AS lostReason,expected_value AS expectedValue,
  budget,last_contact_at AS lastContactAt,inquiry_count AS inquiryCount,next_action AS nextAction,next_due AS nextDue,
  call_attempts AS callAttempts,last_result AS lastResult,labels,first_response_at AS firstResponseAt,first_response_min AS firstResponseMin,
- first_response_work_min AS firstResponseWorkMin,won_at AS wonAt,created,updated`;
+ first_response_work_min AS firstResponseWorkMin,won_at AS wonAt,campaign,seeding,created,updated`;
 
 export type LeadRow = {
   id: string;
@@ -97,6 +97,8 @@ export type IntakeInput = {
   targetService?: string;
   preferredDate?: string;
   preferredTime?: string;
+  /** Marketing campaign that brought the lead (first touch is kept). */
+  campaign?: string;
 };
 
 /** How the customer got in touch again: a form they filled in, or a message on a chat channel. */
@@ -198,6 +200,13 @@ export async function ingestLead(
     }
   }
   const id = crypto.randomUUID();
+  // Internal / test numbers still get a lead (staff can see it) but never count in marketing KPIs.
+  const seeding = norm
+    ? !!(await d
+        .prepare('SELECT 1 AS x FROM crm2_seeding WHERE tenant=? AND phone_norm=?')
+        .bind(tenant, norm)
+        .first())
+    : false;
   let owner: string | null = null;
   if (settings.pool.intakeMode === 'AUTO') {
     const staff = (await staffList(tenant)).filter((s) => SALES_ROLES.includes(s.role));
@@ -232,8 +241,8 @@ export async function ingestLead(
   await d
     .prepare(
       `INSERT INTO crm2_leads(id,tenant,full_name,phone,phone_norm,email,notes,source,target_service,preferred_date,preferred_time,
-        stage,status_id,owner,owned_at,pooled_at,next_action,next_due,labels,created,updated)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,'NEW','khach-moi',?,?,?, 'NEW',?, '[]',?,?)`,
+        stage,status_id,owner,owned_at,pooled_at,next_action,next_due,labels,campaign,seeding,created,updated)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,'NEW','khach-moi',?,?,?, 'NEW',?, '[]',?,?,?,?)`,
     )
     .bind(
       id,
@@ -251,6 +260,8 @@ export async function ingestLead(
       owner ? now : null,
       owner ? null : now,
       due,
+      (i.campaign ?? '').trim().slice(0, 120),
+      seeding ? 1 : 0,
       now,
       now,
     )
@@ -303,7 +314,9 @@ export async function ingestLead(
       },
       now,
     );
-    const managers = (await staffList(tenant)).filter((s) => ['owner', 'manager'].includes(s.role));
+    const managers = (await staffList(tenant)).filter(
+      (s) => ['owner', 'manager'].includes(s.role),
+    );
     for (const m of managers) {
       await notifyStaff(
         tenant,
@@ -357,7 +370,7 @@ export async function importLeads(
           created++;
         }
       } else {
-        errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(res.body as any)?.error || 'Lỗi'}`);
+        errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(res.body as { error?: string } | undefined)?.error || 'Lỗi'}`);
       }
     } catch (err: unknown) {
       errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(err as Error)?.message || 'Lỗi xử lý'}`);
@@ -471,6 +484,29 @@ export async function listLeads(c: Ctx, f: LeadFilter): Promise<Result> {
   });
 }
 
+/**
+ * Who looked at a customer's phone number, for tracing a data leak. Only staff who are not managers are logged
+ * (managers see everything anyway), once per person and lead every 10 minutes. A failed write never blocks the screen.
+ */
+async function logView(c: Ctx, lead: LeadRow) {
+  // An unowned lead is shown masked to staff, so nothing sensitive was seen.
+  if (isManager(c.role) || !lead.phone || !c.userId || lead.owner == null) return;
+  try {
+    const d = db();
+    const recent = await d
+      .prepare('SELECT 1 AS x FROM crm2_view_log WHERE tenant=? AND user_id=? AND lead_id=? AND created>? LIMIT 1')
+      .bind(c.tenant, c.userId, lead.id, c.now - 10 * 60_000)
+      .first();
+    if (recent) return;
+    await d
+      .prepare('INSERT INTO crm2_view_log(id,tenant,user_id,lead_id,lead_name,kind,created) VALUES (?,?,?,?,?,?,?)')
+      .bind(crypto.randomUUID(), c.tenant, c.userId, lead.id, lead.fullName.slice(0, 100), 'lead', c.now)
+      .run();
+  } catch (e) {
+    console.error('crm2 view log', e);
+  }
+}
+
 export async function leadDetail(c: Ctx, id: string): Promise<Result> {
   const lead = await getLeadRow(c.tenant, id);
   if (!lead || !canSeeLead(actorOf(c), lead)) return fail('Không tìm thấy lead', 404);
@@ -513,6 +549,7 @@ export async function leadDetail(c: Ctx, id: string): Promise<Result> {
           .first<{ id: string }>()
       : Promise.resolve(null),
   ]);
+  await logView(c, lead);
   return reply({
     lead: maskForViewer(actorOf(c), lead),
     customerId: cust?.id ?? null,

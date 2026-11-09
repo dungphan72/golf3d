@@ -24,6 +24,7 @@ export type WebsiteInquiry = {
   targetService: string;
   preferredDate: string;
   preferredTime: string;
+  campaign: string;
 };
 
 const VN_OFFSET = 7 * 3_600_000;
@@ -55,5 +56,6 @@ export function toInquiry(raw: WebsiteLead): WebsiteInquiry {
     targetService: serviceOf(need),
     preferredDate: when.slice(0, 10),
     preferredTime: when.slice(11, 16),
+    campaign: raw.campaign.trim().slice(0, 120),
   };
 }

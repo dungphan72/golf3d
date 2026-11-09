@@ -11537,3 +11537,18 @@ body:has(.app-shell) {
     animation: none;
   }
 }
+
+/* Menu scrolls but shows no scrollbar (desktop side menu and the phone app-launcher sheet). */
+.ds-root .ds-side,
+.ds-root .ds-nav,
+.ds-root .ds-appmenu-body {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ds-root .ds-side::-webkit-scrollbar,
+.ds-root .ds-nav::-webkit-scrollbar,
+.ds-root .ds-appmenu-body::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}

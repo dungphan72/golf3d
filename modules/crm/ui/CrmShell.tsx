@@ -196,6 +196,9 @@ export function CrmShell({
   }, []);
 
   const groups = useMemo(() => visibleNav(manager), [manager]);
+  useEffect(() => {
+    document.querySelector('.crm-ws-side .crm-ws-group button.on')?.scrollIntoView({ block: 'nearest' });
+  }, [page, collapsed]);
   const item = findItem(page);
   const name = me?.name ?? '';
   const initials = name.split(/\s+/).map((w) => w[0]).join('').slice(-2).toUpperCase();

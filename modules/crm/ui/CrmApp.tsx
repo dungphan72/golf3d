@@ -101,13 +101,6 @@ function DutyToggle() {
   if (!data) return error ? <span className="muted">{error}</span> : null;
   return (
     <div className="crm-top-bar">
-      <div className="crm-brand-badge">
-        <span className="crm-brand-icon">⛳</span>
-        <span>CRM Saigon Golf 3D</span>
-        <span className="crm-chip seg-loyal" style={{ margin: 0, fontSize: '11px' }}>
-          Bán hàng & CSKH
-        </span>
-      </div>
       <div className="crm-duty">
         <button
           type="button"

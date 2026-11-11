@@ -368,6 +368,34 @@
   color: #55605a;
 }
 
+/* the duty switch sits at the right, without the old brand banner (the sidebar already has the brand) */
+.crm-ws .crm-top-bar {
+  justify-content: flex-end;
+  padding: 0;
+  margin: 0 0 12px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+/* more menu entries fit on a laptop screen */
+.crm-ws-group button {
+  padding-block: 6px;
+}
+.crm-ws-brand {
+  padding-block: 12px 10px;
+}
+.crm-ws-find,
+.crm-ws-back {
+  margin-top: 8px;
+  padding-block: 6px;
+}
+.crm-ws-group-title {
+  padding-top: 6px;
+}
+.crm-ws-group {
+  margin-bottom: 6px;
+}
+
 /* phones and tablets: top bar + drawer */
 .crm-ws-bar,
 .crm-ws-drawer {

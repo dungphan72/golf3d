@@ -284,7 +284,7 @@ export function OverviewScreen({
       )}
 
       {kpis.length > 0 && (
-        <div className="crm-kpis">
+        <div className="crm-kpis" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))' }}>
           {kpis.map((id) => (
             <div key={id} className={kpi[id]?.[2] ? 'late' : ''}>
               <span>{kpi[id]?.[0]}</span>

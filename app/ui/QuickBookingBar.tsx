@@ -23,7 +23,7 @@ export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBook
     };
     const [from, to] =
       slot === 'gold'
-        ? [ranges.gold[1] || '08:00', ranges.gold[2] || '11:00']
+        ? [ranges.gold[1] || '06:00', ranges.gold[2] || '11:00']
         : ranges[slot];
     const date = new Date(Date.now() + (dayType === 'tomorrow' ? 86_400_000 : 0) + 7 * 3600_000)
       .toISOString()
@@ -111,7 +111,7 @@ export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBook
               type="button"
               className={`pill-gold ${slot === 'gold' ? 'active' : ''}`}
               onClick={() => setSlot('gold')}
-              title={goldTimeText || 'Sáng 08:00 - 14:00 (Ưu đãi)'}
+              title={goldTimeText || 'T2–T6 06:00 - 11:00 (Giờ vàng)'}
             >
               Giờ vàng (Sáng)
             </button>

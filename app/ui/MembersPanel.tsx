@@ -7,6 +7,7 @@ import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/me
 import { memberCode, tierOf, TIER_LABEL, type Tier } from '../../lib/member-card';
 import { PackageEditor } from './PackageEditor';
 import { MemberCard } from './MemberCard';
+import { WalletPanel, type WalletEntry } from './WalletPanel';
 import {
   Search,
   UserPlus,
@@ -72,6 +73,7 @@ type Overview = {
     customerId: string;
     packages: OwnedPackage[];
     orders?: { id: string; type_id: string; name: string; price: number; created: number }[];
+    wallet?: { balance: number; history: WalletEntry[] };
   } | null;
 };
 
@@ -754,6 +756,28 @@ export function MembersPanel({
                     </p>
                   </div>
                 </div>
+
+                {data?.detail?.wallet && current && (
+                  <WalletPanel
+                    balance={data.detail.wallet.balance}
+                    history={data.detail.wallet.history}
+                    canTopUp={canSell}
+                    busy={busy}
+                    onTopUp={(amount, method) =>
+                      act(
+                        () =>
+                          post({
+                            action: 'wallet-topup',
+                            requestId: operationKey(),
+                            customerId: current.id,
+                            amount,
+                            method,
+                          }),
+                        'Đã nạp ví',
+                      )
+                    }
+                  />
+                )}
 
                 {/* 3. PENDING PACKAGE ORDERS FROM WEB (IF ANY) */}
                 {!!data?.detail?.orders?.length && (

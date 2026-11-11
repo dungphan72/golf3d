@@ -19,14 +19,14 @@ test('trang bảng giá hiện giá từ admin và đổi ngay khi admin sửa',
   await page.goto('/bang-gia');
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Giá rõ ràng');
   await expect(page.getByText('Giờ vàng').first()).toBeVisible();
-  await expect(page.getByText('Thẻ VIP Platinum')).toBeAttached();
+  await expect(page.getByText('Thẻ tháng · 6 tháng')).toBeAttached();
   // The test club has all-day rules: GDR 100.000, 9 holes 300.000, 18 holes 400.000.
   await expect(page.getByText('100.000 ₫').first()).toBeAttached();
   await expect(page.getByText('400.000 ₫').first()).toBeAttached();
 
   // 1) a package price and a new package edited through the admin API
   const list = await (await owner.get('/api/members')).json();
-  const combo = list.types.find((t: { name: string }) => t.name.startsWith('Combo 9 hố · 10'));
+  const combo = list.types.find((t: { name: string }) => t.name.startsWith('Thẻ giờ · mua 10'));
   await post(owner, '/api/members', {
     action: 'type-save',
     id: combo.id,

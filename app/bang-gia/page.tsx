@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Bảng giá — Saigon Golf 3D Club',
   description:
-    'Bảng giá chơi golf 3D Foresight GC3 tại Saigon Golf 3D Club: giá theo giờ, theo lượt 9 hố và 18 hố, nhóm 4 người, combo và thẻ VIP. Cập nhật theo giá hiện hành.',
+    'Bảng giá chơi golf 3D Foresight GC3 tại Saigon Golf 3D Club: giá theo giờ, theo lượt 9 hố và 18 hố, thẻ giờ và thẻ tháng. Cập nhật theo giá hiện hành.',
   openGraph: {
     title: 'Bảng giá — Saigon Golf 3D Club',
     type: 'website',
@@ -177,7 +177,7 @@ export default async function PricingPage() {
             <h1>Giá rõ ràng, chơi thoải mái</h1>
             <p className="pp-hero-sub">
               {hasHoles
-                ? 'Giá theo giờ và theo lượt, nhóm 4 người, combo trả trước và thẻ VIP. '
+                ? 'Giá theo giờ và theo lượt, thẻ giờ và thẻ tháng. '
                 : 'Giá theo giờ cho phòng tiêu chuẩn và phòng VIP, gói trả trước và thẻ hội viên. '}
               Bảng này luôn khớp với giá đang áp dụng tại quầy.
             </p>
@@ -361,7 +361,7 @@ export default async function PricingPage() {
         </section>
       </main>
 
-      <ClubFooter hours="08:00–23:00" />
+      <ClubFooter hours="06:00–23:00" />
       <LandingFx />
     </div>
   );

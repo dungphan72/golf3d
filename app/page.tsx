@@ -67,7 +67,9 @@ const faqFor = (group: string, tax: string, goldText: string, holes: boolean) =>
   holes
     ? {
         q: 'Giá 9 hố, 18 hố tính thế nào?',
-        a: `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`,
+        a: group
+          ? `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`
+          : 'Tính theo đầu người: nhóm nhiều người trả đơn giá một người nhân với số người chơi. Phòng tiêu chuẩn và phòng VIP có giá riêng.',
       }
     : {
         q: 'Giá theo giờ tính thế nào?',

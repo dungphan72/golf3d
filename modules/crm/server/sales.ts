@@ -193,10 +193,10 @@ export async function setAppointmentStatus(c: Ctx, id: string, to: string): Prom
 // ---------------------------------------------------------------- products and holds
 
 const SYSTEM_SERVICES = [
-  { code: 'svc-swing-1h', name: 'Luyện swing (1 giờ)', listPrice: 200_000, limited: 0, active: 1 },
-  { code: 'svc-game-9h', name: 'Game 9 hố (1 người)', listPrice: 350_000, limited: 0, active: 1 },
-  { code: 'svc-game-18h', name: 'Game 18 hố (1 người)', listPrice: 600_000, limited: 0, active: 1 },
-  { code: 'svc-vip-1h', name: 'Phòng VIP riêng biệt (1 giờ)', listPrice: 500_000, limited: 0, active: 1 },
+  { code: 'svc-swing-1h', name: 'Luyện swing (1 giờ)', listPrice: 150_000, limited: 0, active: 1 },
+  { code: 'svc-game-9h', name: 'Game 9 hố (1 người)', listPrice: 300_000, limited: 0, active: 1 },
+  { code: 'svc-game-18h', name: 'Game 18 hố (1 người)', listPrice: 400_000, limited: 0, active: 1 },
+  { code: 'svc-vip-1h', name: 'Phòng VIP riêng biệt (1 giờ)', listPrice: 200_000, limited: 0, active: 1 },
   { code: 'svc-coach-1h', name: 'HLV cá nhân hướng dẫn 1-1 (1 giờ)', listPrice: 800_000, limited: 0, active: 1 },
 ];
 

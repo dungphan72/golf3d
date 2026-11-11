@@ -82,6 +82,16 @@ export const memberInput = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('order-reject'), id }).strict(),
+  z
+    .object({
+      action: z.literal('wallet-topup'),
+      requestId,
+      customerId: id,
+      amount: z.number().int().min(100_000).max(100_000_000),
+      method: z.enum(['cash', 'transfer', 'card']),
+    })
+    .strict(),
+  z.object({ action: z.literal('wallet-pay'), bookingId: id }).strict(),
   z.object({ action: z.literal('redeem'), bookingId: id, packageId: id }).strict(),
   z
     .object({

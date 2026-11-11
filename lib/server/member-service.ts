@@ -27,7 +27,13 @@ import {
   INSERT_LOYALTY_SQL,
   CUSTOMER_LIST_SQL,
   CUSTOMER_PACKAGES_SQL,
+  INSERT_WALLET_LEDGER_SQL,
+  INSERT_WALLET_TOPUP_ENTRY_SQL,
+  PAY_BY_WALLET_SQL,
+  WALLET_BALANCE_SQL,
+  WALLET_HISTORY_SQL,
 } from '../package-sql';
+import { walletBonus } from '../wallet';
 
 export { memberInput };
 type R = ServiceResult;
@@ -68,6 +74,10 @@ function explain(e: unknown): R {
       'Còn phần tiền phải thu ngoài gói (ví dụ F&B). Hãy thu phần còn lại.',
       409,
     ],
+    ['WALLET_INSUFFICIENT', 'Số dư ví không đủ', 409],
+    ['WALLET_SPEND_INVALID', 'Chỉ trả bằng ví cho phiên đã kết thúc, chưa thu tiền hay trừ gói', 409],
+    ['WALLET_NOT_PAYABLE', 'Không ghi được khoản nạp ví vào sổ ca', 409],
+    ['wallet_spend_once', 'Phiên này đã được trả bằng ví', 409],
     ['POINTS_INSUFFICIENT', 'Chưa đủ điểm để đổi', 409],
     ['finance_request_once', 'Mã yêu cầu đã dùng cho thao tác khác', 409],
     ['ADJUST_REASON_REQUIRED', 'Cần ghi lý do điều chỉnh', 400],
@@ -108,7 +118,17 @@ export async function loadMembers(tenant: string, query: string, customerId: str
           .bind(tenant, customerId)
           .all()
       ).results;
-      detail = { customerId, packages, orders };
+      const wallet = {
+        balance:
+          (
+            await db()
+              .prepare(WALLET_BALANCE_SQL)
+              .bind(tenant, customerId)
+              .first<{ balance: number }>()
+          )?.balance ?? 0,
+        history: (await db().prepare(WALLET_HISTORY_SQL).bind(tenant, customerId).all()).results,
+      };
+      detail = { customerId, packages, orders, wallet };
     }
     return reply({ customers, types, detail });
   } catch (e) {
@@ -121,11 +141,51 @@ export async function loadMembers(tenant: string, query: string, customerId: str
 export async function usablePackages(tenant: string, bookingId: string) {
   try {
     const b = await db()
-      .prepare('SELECT service,phone,room,segments FROM bookings WHERE tenant=? AND id=?')
+      .prepare(
+        'SELECT service,phone,room,segments,status,amount FROM bookings WHERE tenant=? AND id=?',
+      )
       .bind(tenant, bookingId)
-      .first<{ service: string; phone: string; room: string; segments: string }>();
-    const kind = b ? kindForService(b.service) : null;
-    if (!b || !kind) return reply({ packages: [] });
+      .first<{
+        service: string;
+        phone: string;
+        room: string;
+        segments: string;
+        status: string;
+        amount: number | null;
+      }>();
+    if (!b) return reply({ packages: [], wallet: null });
+    // The wallet pays a whole finished bill; it is offered until something has been collected.
+    const owner = await db()
+      .prepare('SELECT id,name FROM customers WHERE tenant=? AND phone=?')
+      .bind(tenant, normalizePhone(b.phone))
+      .first<{ id: string; name: string }>();
+    const balance = owner
+      ? ((
+          await db()
+            .prepare(WALLET_BALANCE_SQL)
+            .bind(tenant, owner.id)
+            .first<{ balance: number }>()
+        )?.balance ?? 0)
+      : 0;
+    const walletSpent = await db()
+      .prepare(
+        "SELECT -delta AS paid FROM wallet_ledger WHERE tenant=? AND booking_id=? AND reason='spend'",
+      )
+      .bind(tenant, bookingId)
+      .first<{ paid: number }>();
+    const wallet =
+      owner && (balance > 0 || walletSpent)
+        ? {
+            customer: owner.name,
+            balance,
+            amount: b.amount ?? 0,
+            enough: balance >= (b.amount ?? 0) && (b.amount ?? 0) > 0,
+            payable: b.status === 'finished',
+            paid: walletSpent?.paid ?? 0,
+          }
+        : null;
+    const kind = kindForService(b.service);
+    if (!kind) return reply({ packages: [], wallet });
     const units = unitsForSession(b.service, JSON.parse(b.segments));
     const rows = (
       await db()
@@ -155,6 +215,7 @@ export async function usablePackages(tenant: string, bookingId: string) {
       units,
       covered: redemption?.covered ?? 0,
       usedUnits: redemption?.units ?? 0,
+      wallet,
     });
   } catch (e) {
     console.error('usable packages', e);
@@ -214,7 +275,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
               p.perks,
               1,
               now,
-              '',
+              p.section,
               'any',
             ),
         ),
@@ -444,6 +505,101 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         statements.push(d.prepare(PAY_BY_PACKAGE_SQL).bind(tenant, b.id, b.amount));
       await d.batch(statements);
       return reply({ ok: true, remainingDue, paid: remainingDue === 0, units });
+    }
+    if (input.action === 'wallet-topup') {
+      const topupId = await scopedShiftId(tenant, 'wtop-' + input.requestId);
+      const old = await d
+        .prepare('SELECT customer_id FROM wallet_ledger WHERE tenant=? AND id=?')
+        .bind(tenant, topupId)
+        .first<{ customer_id: string }>();
+      if (old)
+        return old.customer_id === input.customerId
+          ? reply({ ok: true, replayed: true })
+          : error('Mã yêu cầu đã dùng cho thao tác khác', 409);
+      const shift = await d
+        .prepare("SELECT id FROM shifts WHERE tenant=? AND status='open'")
+        .bind(tenant)
+        .first<{ id: string }>();
+      if (!shift) return error('Hãy mở ca trước khi nạp tiền', 409);
+      const bonus = walletBonus(input.amount);
+      const statements = [
+        d
+          .prepare(INSERT_WALLET_LEDGER_SQL)
+          .bind(topupId, tenant, input.customerId, input.amount, 'topup', null, actor, '', now),
+        ...(bonus > 0
+          ? [
+              d
+                .prepare(INSERT_WALLET_LEDGER_SQL)
+                .bind(
+                  await scopedShiftId(tenant, 'wbon-' + input.requestId),
+                  tenant,
+                  input.customerId,
+                  bonus,
+                  'bonus',
+                  null,
+                  actor,
+                  'Tặng khi nạp ' + input.amount.toLocaleString('vi-VN') + 'đ',
+                  now,
+                ),
+            ]
+          : []),
+        d
+          .prepare(INSERT_WALLET_TOPUP_ENTRY_SQL)
+          .bind(
+            crypto.randomUUID(),
+            tenant,
+            shift.id,
+            input.method,
+            input.amount,
+            'wtop-' + input.requestId,
+            'Nạp ví',
+            actor,
+            now,
+            topupId,
+          ),
+      ];
+      await d.batch(statements);
+      const total = await d
+        .prepare(WALLET_BALANCE_SQL)
+        .bind(tenant, input.customerId)
+        .first<{ balance: number }>();
+      return reply({ ok: true, bonus, balance: total?.balance ?? 0 });
+    }
+    if (input.action === 'wallet-pay') {
+      const b = await d
+        .prepare('SELECT id,status,phone,amount FROM bookings WHERE tenant=? AND id=?')
+        .bind(tenant, input.bookingId)
+        .first<{ id: string; status: string; phone: string; amount: number | null }>();
+      if (!b) return error('Không tìm thấy phiếu', 404);
+      const prior = await d
+        .prepare(
+          "SELECT 1 AS x FROM wallet_ledger WHERE tenant=? AND booking_id=? AND reason='spend'",
+        )
+        .bind(tenant, b.id)
+        .first();
+      if (prior) return reply({ ok: true, replayed: true });
+      if (b.status !== 'finished' || !b.amount || b.amount <= 0)
+        return error('Chỉ trả bằng ví cho phiên đã kết thúc và còn tiền phải thu', 409);
+      const owner = await d
+        .prepare('SELECT id FROM customers WHERE tenant=? AND phone=?')
+        .bind(tenant, normalizePhone(b.phone))
+        .first<{ id: string }>();
+      if (!owner) return error('Khách chưa có hồ sơ hội viên (số điện thoại không khớp)', 404);
+      const have =
+        (await d.prepare(WALLET_BALANCE_SQL).bind(tenant, owner.id).first<{ balance: number }>())
+          ?.balance ?? 0;
+      if (have < b.amount)
+        return error(
+          `Số dư ví ${have.toLocaleString('vi-VN')}đ không đủ cho phiếu ${b.amount.toLocaleString('vi-VN')}đ`,
+          409,
+        );
+      await d.batch([
+        d
+          .prepare(INSERT_WALLET_LEDGER_SQL)
+          .bind(crypto.randomUUID(), tenant, owner.id, -b.amount, 'spend', b.id, actor, '', now),
+        d.prepare(PAY_BY_WALLET_SQL).bind(tenant, b.id, b.amount),
+      ]);
+      return reply({ ok: true, paid: true, balance: have - b.amount });
     }
     if (input.action === 'adjust') {
       const id = await scopedShiftId(tenant, 'padj-' + input.requestId);

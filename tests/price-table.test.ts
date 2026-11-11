@@ -11,16 +11,31 @@ import {
 } from '../lib/price-table.ts';
 
 test('the official rules become the printed price list', () => {
-  const { rows, group } = buildPriceTable(officialPriceRules(), 'standard');
-  assert.deepEqual(
-    rows.map((r) => [r.days, r.from, r.to, r.gold, r.gdr, r.h9, r.h18]),
-    [
-      ['Thứ 2 – Thứ 6', '08:00', '11:00', true, 100_000, 300_000, 400_000],
-      ['Thứ 2 – Thứ 6', '11:00', '23:00', false, 250_000, 500_000, 650_000],
-      ['Thứ 7, Chủ nhật & ngày lễ', '08:00', '23:00', false, 250_000, 500_000, 650_000],
-    ],
-  );
-  assert.deepEqual(group, { h9: 900_000, h18: 1_000_000 });
+  const rows = (room: 'standard' | 'vip') =>
+    buildPriceTable(officialPriceRules(), room).rows.map((r) => [
+      r.days,
+      r.from,
+      r.to,
+      r.gold,
+      r.gdr,
+      r.h9,
+      r.h18,
+    ]);
+  assert.deepEqual(rows('standard'), [
+    ['Thứ 2 – Thứ 6', '06:00', '11:00', true, 100_000, 250_000, 350_000],
+    ['Thứ 2 – Thứ 6', '11:00', '23:00', false, 150_000, 300_000, 400_000],
+    ['Thứ 7, Chủ nhật & ngày lễ', '06:00', '23:00', false, 200_000, 350_000, 450_000],
+  ]);
+  assert.deepEqual(rows('vip'), [
+    ['Thứ 2 – Thứ 6', '06:00', '11:00', true, 150_000, 350_000, 450_000],
+    ['Thứ 2 – Thứ 6', '11:00', '23:00', false, 200_000, 400_000, 500_000],
+    ['Thứ 7, Chủ nhật & ngày lễ', '06:00', '23:00', false, 250_000, 450_000, 550_000],
+  ]);
+  // A group pays per person: there is no flat group price.
+  assert.deepEqual(buildPriceTable(officialPriceRules(), 'standard').group, {
+    h9: null,
+    h18: null,
+  });
 });
 
 test('a price edited in the admin shows up in the table', () => {
@@ -37,12 +52,14 @@ test('a price edited in the admin shows up in the table', () => {
   assert.equal(buildPriceTable(off, 'standard').rows[0].gdr, null);
 });
 
-test('VIP shares the list until it gets its own prices', () => {
-  assert.equal(vipDiffers(officialPriceRules()), false);
-  const own = officialPriceRules().map((r) =>
-    r.room === 'vip' && r.service === 'gdr' ? { ...r, amount: r.amount + 50_000 } : r,
-  );
-  assert.equal(vipDiffers(own), true);
+test('VIP has its own prices', () => {
+  assert.equal(vipDiffers(officialPriceRules()), true);
+  const shared = officialPriceRules().map((r) => {
+    if (r.room !== 'vip') return r;
+    const twin = officialPriceRules().find((x) => x.id === r.id.replace('vip-', 'standard-'))!;
+    return { ...r, amount: twin.amount };
+  });
+  assert.equal(vipDiffers(shared), false);
 });
 
 test('weekend and holiday stay separate lines when their prices differ', () => {
@@ -62,6 +79,7 @@ const items: PackageItem[] = OFFICIAL_PACKAGES.map((p, i) => ({
   grants: p.grants,
   validDays: p.validDays,
   perks: p.perks,
+  section: p.section,
 }));
 
 test('packages are grouped by what they give and VIP cards stay together', () => {
@@ -69,14 +87,11 @@ test('packages are grouped by what they give and VIP cards stay together', () =>
   assert.deepEqual(
     groups.map((g) => [g.id, g.items.length]),
     [
-      ['h9', 2],
-      ['h18', 2],
-      ['gdr', 7],
-      ['vip', 2],
+      ['s-th-gi', 2],
+      ['s-th-th-ng', 3],
     ],
   );
-  assert.ok(groups.at(-1)!.vip);
-  assert.ok(groups[2].items.every((p, i, a) => i === 0 || a[i - 1].price <= p.price));
+  assert.ok(groups[1].items.every((p, i, a) => i === 0 || a[i - 1].price <= p.price));
 });
 
 test('a package created in the admin lands in a sensible section', () => {
@@ -96,11 +111,13 @@ test('a package created in the admin lands in a sensible section', () => {
 });
 
 test('package bullets list contents, validity and perks', () => {
-  const platinum = items.find((p) => p.name.includes('Platinum'))!;
-  const bullets = packageBullets(platinum);
-  assert.equal(bullets[0], '10 Lượt 18 hố');
+  const month = items.find((p) => p.name.includes('6 tháng'))!;
+  const bullets = packageBullets(month);
+  assert.equal(bullets[0], 'Không giới hạn Giờ chơi');
   assert.ok(bullets.includes('Hiệu lực 6 tháng'));
-  assert.ok(bullets.includes('Phòng chờ VIP'));
+  assert.ok(bullets.includes('Không giới hạn giờ chơi'));
+  const hours = items.find((p) => p.name.includes('10 giờ'))!;
+  assert.equal(packageBullets(hours)[0], '12 Giờ chơi');
 });
 
 test('the same hours and prices on every day type read as one "Mỗi ngày" line', () => {

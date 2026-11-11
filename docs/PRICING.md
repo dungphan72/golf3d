@@ -1,40 +1,44 @@
-# Bảng giá chủ cơ sở cung cấp (250 Lương Định Của)
+# Bảng giá chính thức — Saigon Golf 3D Club (250 Lương Định Của)
 
-| Khung | GDR / 1 giờ | 9 hố | 18 hố |
-|---|---|---|---|
-| T2–T6, 08:00–11:00 (giờ vàng) | 100.000đ | 300.000đ | 400.000đ |
-| T2–T6, 11:01–23:00 | 250.000đ | 500.000đ | 650.000đ |
-| T7, CN & ngày lễ, 08:00–23:00 | 250.000đ | 500.000đ | 650.000đ |
-| Nhóm 4 người (cả ngày) | — | 900.000đ | 1.000.000đ |
+Bảng giá mới nhất (11/2026) thay thế toàn bộ bảng giá cũ. Giờ hoạt động 06:00–23:00.
 
-## Cách map vào mô hình `priceRules` (chưa áp vào dữ liệu thật)
-- GDR: theo phòng/giờ, `people = null` (3 dòng: weekday vàng, weekday thường, weekend+holiday).
-- 9/18 hố: `people = 1..3` = đơn giá/người × số người (đã chốt: thu trên đầu người).
-- Nhóm 4 người: `people = 4`, 900.000đ (9 hố) / 1.000.000đ (18 hố), áp mọi khung giờ và mọi loại ngày.
-- 11:00–11:01 coi là 11:00 (giờ vàng kết thúc 11:00, khung thường bắt đầu 11:00).
+## Giá theo line
 
-## Bổ sung từ tài liệu Chiến lược Kinh doanh & Marketing (09/2026)
-- Giờ vàng chỉ T2–T6, **không** áp cuối tuần/lễ; giờ vàng được **miễn phí đồ ăn & thức uống**.
-- 9/18 hố tính theo **lượt** (không theo giờ); giá nhóm 4 người áp **cả ngày**, không phân biệt giờ vàng.
-- Phòng VIP: bảng giá **không có giá riêng** (tài liệu giả định dùng chung; Bên A chưa xác nhận phụ phí phòng).
-- Giờ hoạt động 08:00–23:00. Giả định thời lượng: 9 hố ≈ 1,25 giờ, 18 hố ≈ 2,5 giờ (cần đo lại).
-- 10 line = 8 tiêu chuẩn + 2 VIP (thiết bị Foresight GC3).
-- Tích điểm: mỗi lượt 9 hố hoặc 18 hố = 1 điểm; 10 điểm = 1 lượt miễn phí.
-- Combo 9/18 hố: 10 lượt 3tr/5tr (hạn 3 tháng, +1 lượt), 20 lượt 6tr/10tr (hạn 6 tháng, +5 lượt).
-- Combo GDR (90 phút/buổi): 10 buổi giờ vàng 1tr (2 tháng); 10 buổi 2tr (3 tháng); 20 buổi 4tr (6 tháng); tháng 3tr; 3 tháng 7,5tr; 6 tháng 13,5tr (giảm 30% → 9,45tr); 12 tháng 25tr (giảm 30% → 17,5tr). Kèm tủ đồ/đỗ xe/lượt 18 hố tùy gói.
-- Thẻ VIP: Platinum 20tr/6 tháng (10 lượt 18 hố + 10 GDR, phòng chờ VIP, giảm 20% F&B); Diamond 50tr/12 tháng (20 + 20, phòng chờ VVIP, giảm 30% F&B). Cả hai tặng 1 bia/nước, miễn phí đỗ xe.
-- Thanh toán bằng thẻ: giảm 20% F&B.
-- Yêu cầu hợp đồng Bên A/Bên B: sổ doanh thu/chi phí thời gian thực và báo cáo chia doanh thu theo kỳ; gói trả trước còn hiệu lực phải truy vết được (điều khoản thoát vốn). Cơ chế chia (MG + bậc thang, hoặc 70/30, 65/35, Corporate/Event thưởng riêng) chưa chốt.
-- Mục tiêu chiến lược: CRM tự động sau buổi chơi (Zalo/SMS ngày 1/2/3/5/7, gửi dữ liệu GC3), Happy Hour 13–16h ngày thường giảm 20–25%, Member/Student Hour, Corporate theo block giờ.
+Theo giờ: đ/line/giờ · 9 và 18 hố: đ/người.
 
-## Đã xác nhận (chủ dự án)
-- 9/18 hố tính **mỗi người** cho 1–3 người; 4 người dùng giá nhóm.
-- Phòng VIP **dùng chung** bảng giá.
-- Triển khai: `lib/official-pricing.ts` (mặc định cho cơ sở mới).
+| Khung | Loại line | Theo giờ | 9 hố | 18 hố |
+|---|---|---|---|---|
+| T2–T6 · Giờ vàng 06:00–11:00 | Tiêu chuẩn | 100.000 | 250.000 | 350.000 |
+| | VIP | 150.000 | 350.000 | 450.000 |
+| T2–T6 · 11:10–23:00 | Tiêu chuẩn | 150.000 | 300.000 | 400.000 |
+| | VIP | 200.000 | 400.000 | 500.000 |
+| T7, CN & ngày lễ | Tiêu chuẩn | 200.000 | 350.000 | 450.000 |
+| | VIP | 250.000 | 450.000 | 550.000 |
 
-- VAT và phí dịch vụ **cộng thêm** trên giá niêm yết (cấu hình trong Cài đặt: `vat`, `fee`).
-- Combo và thẻ VIP **dùng được cho cả phòng VIP**.
-- Combo "10 tặng 110 + 1 free" nghĩa là mua 10 lượt được tặng thêm 1 lượt (tương tự 20 lượt tặng 5).
+## Thẻ giờ (chỉ áp dụng tập luyện)
+- Mua 10 giờ tặng 2 giờ → tổng 12 giờ.
+- Mua 20 giờ tặng 5 giờ → tổng 25 giờ.
 
-## Còn thiếu / cần xác nhận
-1. Tỷ lệ VAT và mức phí dịch vụ cụ thể (cần nhập trong Cài đặt trước khi thu tiền thật).
+## Nạp ví (ưu đãi nạp tiền)
+- Nạp 1.000.000đ được tặng 200.000đ (ví +1.200.000đ).
+- Nạp 2.000.000đ được tặng 500.000đ (ví +2.500.000đ).
+- Số tiền khác (từ 100.000đ) nhận mức tặng của bậc cao nhất đã đạt; dưới 1.000.000đ không có tặng.
+- Chỉ tiền thật nạp vào được ghi vào sổ ca; tiền tặng là số dư miễn phí. Ví trả trọn một phiếu đã kết thúc (cả tiền golf và F&B), không trả một phần.
+- Triển khai: `lib/wallet.ts`, migration `0026`, thao tác `wallet-topup` / `wallet-pay`.
+
+## Thẻ tháng — không giới hạn giờ chơi
+1 tháng 5.000.000đ · 3 tháng 14.000.000đ · 6 tháng 25.000.000đ. Thời hạn tính từ ngày kích hoạt thẻ.
+
+Đặt lịch: golfhub.cloud · Hotline 0902 030 185.
+
+## Cách map vào hệ thống
+- `lib/official-pricing.ts`: quy tắc giá (mặc định cho cơ sở mới và bảng giá công khai khi chưa lưu gì).
+- `lib/official-packages.ts`: thẻ giờ, thẻ tháng.
+- 9/18 hố tính theo **người**; nhóm N người trả N × đơn giá (không còn giá nhóm 4 người riêng).
+- Phòng VIP có giá riêng.
+
+## Giả định chờ chủ cơ sở xác nhận
+1. Bảng giá ghi khung thường bắt đầu 11:10; hệ thống tính 11:00–23:00 là khung thường để không có khoảng trống không có giá.
+2. Poster không ghi giá bán thẻ giờ: tạm đặt 150.000đ × số giờ mua (10 giờ = 1.500.000đ, 20 giờ = 3.000.000đ), thẻ không thời hạn.
+3. Thẻ tháng áp dụng cho cả phòng VIP (poster không nói khác).
+4. VAT và phí dịch vụ cộng thêm trên giá niêm yết (cấu hình trong Cài đặt: `vat`, `fee`).

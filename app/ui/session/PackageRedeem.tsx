@@ -24,6 +24,14 @@ export function PackageRedeem({
     kind?: string;
     units?: number;
     usedUnits?: number;
+    wallet?: {
+      customer: string;
+      balance: number;
+      amount: number;
+      enough: boolean;
+      payable: boolean;
+      paid: number;
+    } | null;
   };
   const [data, setData] = useState<Usable | null>(null);
   const [busy, setBusy] = useState(false);
@@ -37,7 +45,8 @@ export function PackageRedeem({
       live = false;
     };
   }, [booking.id, booking.status]);
-  if (!data || (!data.packages.length && !data.covered)) return null;
+  const wallet = data?.wallet && data.wallet.payable ? data.wallet : null;
+  if (!data || (!data.packages.length && !data.covered && !wallet)) return null;
   async function redeem(packageId: string) {
     setBusy(true);
     setError('');
@@ -56,6 +65,24 @@ export function PackageRedeem({
       setBusy(false);
     }
   }
+  async function payWallet() {
+    setBusy(true);
+    setError('');
+    try {
+      const r = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'wallet-pay', bookingId: booking.id }),
+      });
+      const result = (await r.json()) as { error?: string };
+      if (!r.ok) throw new Error(result.error || 'Không trả được bằng ví');
+      await onChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <div className="info-strip" style={{ marginBottom: 8, padding: '10px 14px', borderRadius: 8 }}>
       {data.covered > 0 ? (
@@ -65,7 +92,22 @@ export function PackageRedeem({
         </p>
       ) : (
         <>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Gói hội viên khả dụng:</div>
+          {wallet && (
+            <div style={{ marginBottom: data.packages.length ? 8 : 0 }}>
+              <button
+                className="secondary"
+                disabled={busy || !wallet.enough}
+                title={wallet.enough ? undefined : 'Số dư ví không đủ cho cả phiếu'}
+                onClick={payWallet}
+                style={{ height: 32, fontSize: 12.5, padding: '0 10px' }}
+              >
+                Trả bằng ví ({fmt(wallet.balance)}){wallet.enough ? '' : ' · không đủ'}
+              </button>
+            </div>
+          )}
+          {data.packages.length > 0 && (
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Gói hội viên khả dụng:</div>
+          )}
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
             {data.packages.map((p) => (
               <button

@@ -86,8 +86,8 @@ export const DEFAULT_LANDING_CONFIG: LandingConfig = {
   hotline: '0902030185',
   zalo: 'https://zalo.me/0902030185',
   address: '250 Lương Đình Của, Phường An Phú, TP. Thủ Đức (Bình Trưng), TP.HCM',
-  hours: '08:00 – 23:00 mỗi ngày',
-  goldTimeText: 'Sáng 08:00 – 14:00 (Ưu đãi)',
+  hours: '06:00 – 23:00 mỗi ngày',
+  goldTimeText: 'T2–T6 06:00 – 11:00 (Giờ vàng)',
   mapUrl: 'https://maps.google.com/?q=250+Lương+Đình+Của+Bình+Trưng+Hồ+Chí+Minh',
 
   heroDesktopImage: '/img/hero-room.webp',

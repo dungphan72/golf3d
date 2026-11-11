@@ -82,7 +82,9 @@ test('an hour of practice is quoted at the promotional rate, and only while it r
   const promoted = hour('2026-11-10T12:00:00');
   assert.equal(promoted.subtotal, Math.round(plain.subtotal * 0.8));
   assert.match(promoted.lines[0].label, /KM Thứ Ba vui vẻ/);
-  assert.equal(hour('2026-11-14T12:00:00').subtotal, plain.subtotal, 'Saturday is not covered');
+  const sat = at('2026-11-14T12:00:00');
+  const satPlain = quote([{ start: sat, end: sat + 3_600_000 }], config([]), false);
+  assert.equal(hour('2026-11-14T12:00:00').subtotal, satPlain.subtotal, 'Saturday is not covered');
 });
 
 test('a session crossing the start of a promotion is split into a list line and a promo line', () => {

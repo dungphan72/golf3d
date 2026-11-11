@@ -224,7 +224,7 @@ export default async function MembershipPage() {
         </section>
       </main>
 
-      <ClubFooter hours="08:00–23:00" />
+      <ClubFooter hours="06:00–23:00" />
       <LandingFx />
     </div>
   );

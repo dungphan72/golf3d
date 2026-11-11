@@ -7,128 +7,62 @@ export type PackageTemplate = {
   grants: Grant[];
   validDays: number;
   perks: string;
+  /** Heading on the public price list. */
+  section: string;
 };
 
 const DAYS = 30;
 /**
- * Prepaid packages from the owner's official price list (docs/PRICING.md). Purchased bonus uses are
- * already included in the grants (10 rounds + 1 free = 11, 20 + 5 = 25).
+ * Prepaid cards from the official "Bảng giá" poster (11/2026), see docs/PRICING.md.
+ *  - Hour cards: buy 10 get 2 (12 hours), buy 20 get 5 (25 hours); practice only.
+ *    The poster gives no card price: it is set at 150.000đ × purchased hours (the Mon–Fri
+ *    standard hourly rate) and awaits owner confirmation.
+ *  - Monthly cards: unlimited playing hours, validity counted from the activation date.
  */
 export const OFFICIAL_PACKAGES: PackageTemplate[] = [
   {
-    key: 'h9-10',
-    name: 'Combo 9 hố · 10 lượt (+1)',
+    key: 'hour-10',
+    name: 'Thẻ giờ · mua 10 giờ tặng 2 giờ',
+    price: 1_500_000,
+    grants: [{ kind: 'gdr', qty: 12 }],
+    validDays: 3650,
+    perks: 'Tổng 12 giờ · chỉ áp dụng tập luyện',
+    section: 'Thẻ giờ',
+  },
+  {
+    key: 'hour-20',
+    name: 'Thẻ giờ · mua 20 giờ tặng 5 giờ',
     price: 3_000_000,
-    grants: [{ kind: 'holes9', qty: 11 }],
-    validDays: 3 * DAYS,
-    perks: 'Giảm 20% F&B khi thanh toán thẻ',
-  },
-  {
-    key: 'h9-20',
-    name: 'Combo 9 hố · 20 lượt (+5)',
-    price: 6_000_000,
-    grants: [{ kind: 'holes9', qty: 25 }],
-    validDays: 6 * DAYS,
-    perks: 'Giảm 20% F&B khi thanh toán thẻ',
-  },
-  {
-    key: 'h18-10',
-    name: 'Combo 18 hố · 10 lượt (+1)',
-    price: 5_000_000,
-    grants: [{ kind: 'holes18', qty: 11 }],
-    validDays: 3 * DAYS,
-    perks: 'Giảm 20% F&B khi thanh toán thẻ',
-  },
-  {
-    key: 'h18-20',
-    name: 'Combo 18 hố · 20 lượt (+5)',
-    price: 10_000_000,
-    grants: [{ kind: 'holes18', qty: 25 }],
-    validDays: 6 * DAYS,
-    perks: 'Giảm 20% F&B khi thanh toán thẻ',
-  },
-  {
-    key: 'gdr-peak-10',
-    name: 'Luyện tập giờ vàng · 10 buổi (+5)',
-    price: 1_000_000,
-    grants: [{ kind: 'gdr', qty: 15 }],
-    validDays: 2 * DAYS,
-    perks: '90 phút/buổi, giờ vàng 08:00–11:00',
-  },
-  {
-    key: 'gdr-10',
-    name: 'Luyện tập · 10 buổi (+1)',
-    price: 2_000_000,
-    grants: [{ kind: 'gdr', qty: 11 }],
-    validDays: 3 * DAYS,
-    perks: '90 phút/buổi',
-  },
-  {
-    key: 'gdr-20',
-    name: 'Luyện tập · 20 buổi (+5)',
-    price: 4_000_000,
     grants: [{ kind: 'gdr', qty: 25 }],
-    validDays: 6 * DAYS,
-    perks: '90 phút/buổi · miễn phí đỗ xe',
+    validDays: 3650,
+    perks: 'Tổng 25 giờ · chỉ áp dụng tập luyện',
+    section: 'Thẻ giờ',
   },
   {
-    key: 'gdr-1m',
-    name: 'Luyện tập · 1 tháng',
-    price: 3_000_000,
+    key: 'month-1',
+    name: 'Thẻ tháng · 1 tháng',
+    price: 5_000_000,
     grants: [{ kind: 'gdr', qty: UNLIMITED }],
     validDays: 1 * DAYS,
-    perks: 'Tặng tủ đồ 1 tháng',
+    perks: 'Không giới hạn giờ chơi · thời hạn tính từ ngày kích hoạt thẻ',
+    section: 'Thẻ tháng',
   },
   {
-    key: 'gdr-3m',
-    name: 'Luyện tập · 3 tháng',
-    price: 7_500_000,
+    key: 'month-3',
+    name: 'Thẻ tháng · 3 tháng',
+    price: 14_000_000,
     grants: [{ kind: 'gdr', qty: UNLIMITED }],
     validDays: 3 * DAYS,
-    perks: 'Tặng tủ đồ 3 tháng',
+    perks: 'Không giới hạn giờ chơi · thời hạn tính từ ngày kích hoạt thẻ',
+    section: 'Thẻ tháng',
   },
   {
-    key: 'gdr-6m',
-    name: 'Luyện tập · 6 tháng (giảm 30%)',
-    price: 9_450_000,
-    grants: [
-      { kind: 'gdr', qty: UNLIMITED },
-      { kind: 'holes18', qty: 6 },
-    ],
+    key: 'month-6',
+    name: 'Thẻ tháng · 6 tháng',
+    price: 25_000_000,
+    grants: [{ kind: 'gdr', qty: UNLIMITED }],
     validDays: 6 * DAYS,
-    perks: 'Tặng 6 lượt 18 hố · tủ đồ 6 tháng · miễn phí đỗ xe',
-  },
-  {
-    key: 'gdr-12m',
-    name: 'Luyện tập · 12 tháng (giảm 30%)',
-    price: 17_500_000,
-    grants: [
-      { kind: 'gdr', qty: UNLIMITED },
-      { kind: 'holes18', qty: 12 },
-    ],
-    validDays: 12 * DAYS,
-    perks: 'Tặng 12 lượt 18 hố · tủ đồ 12 tháng · miễn phí đỗ xe',
-  },
-  {
-    key: 'vip-platinum',
-    name: 'Thẻ VIP Platinum',
-    price: 20_000_000,
-    grants: [
-      { kind: 'holes18', qty: 10 },
-      { kind: 'gdr', qty: 10 },
-    ],
-    validDays: 6 * DAYS,
-    perks: 'Phòng chờ VIP · 1 bia/nước · giảm 20% F&B · miễn phí đỗ xe',
-  },
-  {
-    key: 'vip-diamond',
-    name: 'Thẻ VIP Diamond',
-    price: 50_000_000,
-    grants: [
-      { kind: 'holes18', qty: 20 },
-      { kind: 'gdr', qty: 20 },
-    ],
-    validDays: 12 * DAYS,
-    perks: 'Phòng chờ VVIP · 1 bia/nước · giảm 30% F&B · miễn phí đỗ xe',
+    perks: 'Không giới hạn giờ chơi · thời hạn tính từ ngày kích hoạt thẻ',
+    section: 'Thẻ tháng',
   },
 ];

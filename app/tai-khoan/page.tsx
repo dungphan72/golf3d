@@ -46,7 +46,7 @@ export default async function AccountPage({
       <main>
         <MemberPortal registerFirst={sp['dang-ky'] !== undefined} />
       </main>
-      <ClubFooter hours="08:00–23:00" />
+      <ClubFooter hours="06:00–23:00" />
     </div>
   );
 }

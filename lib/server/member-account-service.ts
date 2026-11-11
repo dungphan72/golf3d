@@ -11,7 +11,7 @@ import {
   temporaryPassword,
 } from '../auth/password';
 import { normalizePhone, validPhone } from '../member';
-import { CREATE_CUSTOMER_SQL } from '../package-sql';
+import { CREATE_CUSTOMER_SQL, WALLET_BALANCE_SQL } from '../package-sql';
 import { rooms } from '../club';
 import { submitRequest } from './online-service';
 import { sendWebsiteLead } from './website-lead';
@@ -355,12 +355,17 @@ export async function memberOverview(user: MemberUser): Promise<R> {
       .all<{ id: string; name: string; price: number; created: number }>(),
   ]);
   const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.name ?? id ?? '';
+  const wallet = await d
+    .prepare(WALLET_BALANCE_SQL)
+    .bind(user.tenant, user.customerId)
+    .first<{ balance: number }>();
   return reply({
     profile,
     club: { name: config.name, address: config.address },
     code: memberCode(user.customerId),
     since: customer?.created ?? null,
     points: points?.points ?? 0,
+    wallet: wallet?.balance ?? 0,
     packages: packages.results.map((p) => ({
       ...p,
       balances: p.balances ? (JSON.parse(p.balances) as { kind: string; remaining: number }[]) : [],

@@ -51,6 +51,7 @@ type Overview = {
   code?: string;
   since?: number | null;
   points?: number;
+  wallet?: number;
   packages?: Pack[];
   usage?: {
     created: number;
@@ -1001,6 +1002,14 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
               <div className="mp-tile-bar">
                 <div className="mp-bar-fill gold" style={{ width: holes9Count + holes18Count > 0 ? '80%' : '0%' }}></div>
               </div>
+            </div>
+
+            <div className="mp-pro-tile">
+              <div className="mp-tile-head">
+                <span>Số dư ví</span>
+                <CreditCard size={16} />
+              </div>
+              <strong>{(data.wallet ?? 0).toLocaleString('vi-VN')} <small style={{ fontSize: '0.9rem', color: 'var(--gold)' }}>đ</small></strong>
             </div>
 
             <div className="mp-pro-tile">

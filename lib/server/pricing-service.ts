@@ -69,6 +69,7 @@ const fallbackItems = (): PackageItem[] =>
     grants: p.grants,
     validDays: p.validDays,
     perks: p.perks,
+    section: p.section,
   }));
 
 /** Live prices from the admin (price rules + active package catalogue); the official list if nothing is saved yet. */
@@ -131,7 +132,7 @@ export async function publicPricing(): Promise<PublicPricing> {
     groups: groupPackages(fallbackItems()),
     vat: null,
     fee: null,
-    open: '08:00',
+    open: '06:00',
     close: '23:00',
     offers: [],
     promotions: [],

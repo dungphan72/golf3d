@@ -96,7 +96,7 @@ test('cấu hình cơ sở và nạp danh mục gói', async ({ request }) => {
     },
   });
   const seeded = await post(request, '/api/members', { action: 'types-seed' });
-  expect(seeded.created).toBe(13);
+  expect(seeded.created).toBe(5);
   await post(request, '/api/members', { action: 'types-seed' }, 409);
 });
 
@@ -115,6 +115,19 @@ test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', as
     name: 'Khách Gói',
     phone: '0912000111',
     note: '',
+  });
+  // The official catalogue has no 18-hole combo any more: create one for this flow.
+  await post(request, '/api/members', {
+    action: 'type-save',
+    requestId: key(),
+    name: 'Combo 18 hố · 10 lượt',
+    price: 5_000_000,
+    grants: [{ kind: 'holes18', qty: 10 }],
+    validDays: 90,
+    perks: '',
+    section: '',
+    room: 'any',
+    active: true,
   });
   const list = await (await request.get('/api/members')).json();
   const type = list.types.find((t: { name: string }) => t.name.startsWith('Combo 18 hố · 10'));

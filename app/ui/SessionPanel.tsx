@@ -373,7 +373,7 @@ export function SessionPanel({
               <strong style={{ color: '#065f46', fontSize: 14 }}>Đã thanh toán</strong>
               <div style={{ fontSize: 12, color: '#047857' }}>
                 {b.payment
-                  ? `Hình thức: ${b.payment === 'cash' ? 'Tiền mặt' : b.payment === 'transfer' ? 'Chuyển khoản' : b.payment === 'card' ? 'Quẹt thẻ' : 'Gói hội viên'}`
+                  ? `Hình thức: ${b.payment === 'cash' ? 'Tiền mặt' : b.payment === 'transfer' ? 'Chuyển khoản' : b.payment === 'card' ? 'Quẹt thẻ' : b.payment === 'wallet' ? 'Ví hội viên' : 'Gói hội viên'}`
                   : 'Đã hoàn tất'}
               </div>
             </div>

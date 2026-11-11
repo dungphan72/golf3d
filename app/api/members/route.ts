@@ -30,6 +30,8 @@ const NEEDED: Record<string, Permission> = {
   sell: 'member.sell',
   'points-redeem': 'member.sell',
   redeem: 'finance.operate',
+  'wallet-pay': 'finance.operate',
+  'wallet-topup': 'member.sell',
   'type-save': 'member.adjust',
   'types-seed': 'member.adjust',
   'account-verify': 'member.sell',
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   const result = await applyMember(auth.tenant, auth.userId, input);
   // A round fully covered by a package is paid: send the receipt like any other payment.
-  if (result.status === 200 && input.action === 'redeem') {
+  if (result.status === 200 && (input.action === 'redeem' || input.action === 'wallet-pay')) {
     try {
       await onPaid(auth.tenant, [input.bookingId], originOf(req), requestNow(req));
     } catch (e) {

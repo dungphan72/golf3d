@@ -1147,14 +1147,14 @@ export async function completeTask(c: Ctx, id: string): Promise<Result> {
   return reply({ ok: true });
 }
 
-export async function overview(c: Ctx): Promise<Result> {
+export async function overview(c: Ctx, days = 30): Promise<Result> {
   const d = db();
   const mgr = isManager(c.role);
-  const since = c.now - 30 * DAY;
+  const since = c.now - days * DAY;
   const scope = mgr ? '' : ' AND (owner=? OR owner IS NULL)';
   const args = (...a: (string | number)[]) => (mgr ? a : [...a, c.userId]);
   const dayEnd = vnDayStart(c.now) + DAY;
-  const [stages, sources, newCount, taskStats] = await Promise.all([
+  const [stages, sources, newCount, taskStats, apptToday, ranking] = await Promise.all([
     d
       .prepare(
         `SELECT stage,COUNT(*) AS n FROM crm2_leads WHERE tenant=? AND created>=?${scope} GROUP BY stage`,
@@ -1179,6 +1179,22 @@ export async function overview(c: Ctx): Promise<Result> {
       )
       .bind(c.now, vnDayStart(c.now), dayEnd, c.tenant, mgr ? 1 : 0, c.userId)
       .first<{ overdue: number | null; today: number | null }>(),
+    d
+      .prepare(
+        `SELECT COUNT(*) AS n FROM crm2_appointments WHERE tenant=? AND at>=? AND at<? AND status IN ('PENDING','CONFIRMED') AND (?=1 OR owner=?)`,
+      )
+      .bind(c.tenant, vnDayStart(c.now), dayEnd, mgr ? 1 : 0, c.userId)
+      .first<{ n: number }>(),
+    mgr
+      ? d
+          .prepare(
+            `SELECT l.owner AS userId,COALESCE(u.name,'(đã xóa)') AS name,COUNT(*) AS leads,SUM(l.stage='WON') AS won
+             FROM crm2_leads l LEFT JOIN users u ON u.id=l.owner
+             WHERE l.tenant=? AND l.created>=? AND l.owner IS NOT NULL GROUP BY l.owner ORDER BY won DESC,leads DESC LIMIT 10`,
+          )
+          .bind(c.tenant, since)
+          .all()
+      : Promise.resolve({ results: [] as unknown[] }),
   ]);
   return reply({
     stages: stages.results,
@@ -1186,6 +1202,9 @@ export async function overview(c: Ctx): Promise<Result> {
     newUnhandled: newCount?.n ?? 0,
     overdueTasks: taskStats?.overdue ?? 0,
     todayTasks: taskStats?.today ?? 0,
+    apptToday: apptToday?.n ?? 0,
+    ranking: ranking.results,
+    days,
     now: c.now,
   });
 }

@@ -2,6 +2,7 @@
 import { CareTasksView } from './CareTasks';
 import { MarketingScreen } from './MarketingScreen';
 import { ViewLogScreen } from './ViewLogScreen';
+import { BlockedScreen } from './BlockedScreen';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
@@ -32,6 +33,7 @@ import { call, errText, type Staff } from './api';
 import { ChannelsScreen } from './ChannelsScreen';
 import { LeadDetail } from './LeadDetail';
 import { SalesStaffManager } from './SalesStaffManager';
+import { LeadDistributionScreen } from './LeadDistributionScreen';
 import {
   AppointmentsScreen,
   CustomersScreen,
@@ -1367,12 +1369,14 @@ export function CrmModule({
               onChange={selectTab}
               tabs={[
                 { key: 'leads', label: 'Danh sách lead' },
+                { key: 'distribute', label: 'Chia lead (Máy chia data)' },
                 { key: 'pipeline', label: 'Pipeline' },
                 { key: 'pool', label: 'Kho số' },
                 { key: 'overview', label: 'Tổng quan phễu' },
               ]}
             />
             {tab === 'leads' && <LeadsScreen s={shared} board={false} />}
+            {tab === 'distribute' && <LeadDistributionScreen s={shared} />}
             {tab === 'pipeline' && <LeadsScreen s={shared} board />}
             {tab === 'pool' && <PoolScreen s={shared} />}
             {tab === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
@@ -1405,6 +1409,7 @@ export function CrmModule({
                 { key: 'channels', label: 'Kênh & tích hợp' },
                 { key: 'orders', label: 'Đơn bán & Giữ chỗ' },
                 { key: 'viewlog', label: 'Nhật ký xem số' },
+                { key: 'blocked', label: 'Số bị chặn' },
                 { key: 'migration', label: 'Chuyển dữ liệu CRM cũ' },
               ]}
             />
@@ -1412,6 +1417,7 @@ export function CrmModule({
             {tab === 'channels' && <ChannelsScreen />}
             {tab === 'orders' && <OrdersScreen s={shared} />}
             {tab === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
+            {tab === 'blocked' && <BlockedScreen />}
             {tab === 'migration' && <MigrationScreen />}
           </>
         )}

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Phone,
   MessageCircle,
+  MessageSquare,
+  Copy,
   Calendar,
   FileText,
   Check,
@@ -16,6 +18,7 @@ import {
 import {
   Chips,
   DataTable,
+  KpiTile,
   FilterBar,
   Loading,
   StatusBadge,
@@ -23,6 +26,7 @@ import {
   type Tone,
 } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
+import { RANGE_DAYS, WIDGETS, visibleWidgets, type DashLayout } from '../core/dashboard';
 import {
   CALL_RESULTS,
   CALL_RESULT_LABELS,
@@ -92,48 +96,78 @@ const Err = ({ text }: { text: string }) =>
 type Overview = {
   stages: { stage: string; n: number }[];
   sources: { source: string; leads: number; won: number }[];
+  ranking: { userId: string; name: string; leads: number; won: number }[];
   newUnhandled: number;
   overdueTasks: number;
   todayTasks: number;
+  apptToday: number;
+  days: number;
+  layout: DashLayout;
 };
+const Card = ({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) => (
+  <div className="crm-section-card">
+    <header>
+      <h3>{title}</h3>
+      {sub && <small className="muted">{sub}</small>}
+    </header>
+    {children}
+  </div>
+);
 export function OverviewScreen({
   cron,
 }: {
   cron: { value: Record<string, unknown>; updated: number } | null;
   manager: boolean;
 }) {
-  const { data, error } = useLoad<Overview>('/api/crm2/overview', 30_000);
-  if (error) return <Err text={error} />;
+  const { data, error, reload, setError } = useLoad<Overview>('/api/crm2/overview', 30_000);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<DashLayout | null>(null);
+  if (error && !data) return <Err text={error} />;
   if (!data) return <Loading />;
+  const layout = draft ?? data.layout;
   const n = (s: string) => data.stages.find((x) => x.stage === s)?.n ?? 0;
   const total = data.stages.reduce((a, x) => a + x.n, 0);
-  return (
-    <>
-      <div className="crm-kpis">
-        {[
-          ['Việc quá hạn', data.overdueTasks],
-          ['Việc hôm nay', data.todayTasks],
-          ['Lead mới chưa xử lý', data.newUnhandled],
-          ['Lead 30 ngày', total],
-        ].map(([label, v]) => (
-          <div
-            key={String(label)}
-            className={label === 'Việc quá hạn' && Number(v) > 0 ? 'late' : ''}
-          >
-            <span>{label}</span>
-            <strong>{v}</strong>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 16 }}>
-        <div className="crm-section-card">
-          <header>
-            <h3 role="heading" aria-level={2}>
-              Phễu 30 ngày
-            </h3>
-            <small className="muted">Tỷ lệ chuyển đổi qua các giai đoạn</small>
-          </header>
+  const won = n('WON');
+  const label = (id: string) => WIDGETS.find((w) => w.id === id)?.label ?? id;
+  const kpi: Record<string, [string, string | number, boolean?]> = {
+    kpi_overdue: ['Việc quá hạn', data.overdueTasks, data.overdueTasks > 0],
+    kpi_today: ['Việc hôm nay', data.todayTasks],
+    kpi_new: ['Lead mới chưa xử lý', data.newUnhandled],
+    kpi_leads: [`Lead ${data.days} ngày`, total],
+    kpi_won: [`Đã chốt ${data.days} ngày`, won],
+    kpi_rate: ['Tỷ lệ chốt', total ? Math.round((won / total) * 100) + '%' : '—'],
+    kpi_appts: ['Lịch hẹn hôm nay', data.apptToday],
+  };
+  const save = async (next: DashLayout | { reset: true }) => {
+    try {
+      await call('/api/crm2/overview', { action: 'layout', ...next });
+      setDraft(null);
+      setEditing(false);
+      reload();
+    } catch (e) {
+      setError(errText(e));
+    }
+  };
+  const move = (id: string, d: -1 | 1) => {
+    const order = [...layout.order];
+    const i = order.indexOf(id);
+    const j = i + d;
+    if (j < 0 || j >= order.length) return;
+    [order[i], order[j]] = [order[j], order[i]];
+    setDraft({ ...layout, order });
+  };
+  const toggle = (id: string) =>
+    setDraft({
+      ...layout,
+      hidden: layout.hidden.includes(id) ? layout.hidden.filter((x) => x !== id) : [...layout.hidden, id],
+    });
+  const shown = visibleWidgets(layout);
+  const kpis = shown.filter((id) => id.startsWith('kpi_'));
+  const cards = shown.filter((id) => !id.startsWith('kpi_'));
+  const render = (id: string) => {
+    if (id === 'funnel')
+      return (
+        <Card key={id} title={`Phễu ${data.days} ngày`} sub="Tỷ lệ chuyển đổi qua các giai đoạn">
           <DataTable
             rows={STAGES.map((s) => ({ s, n: n(s) }))}
             rowKey={(r) => r.s}
@@ -141,21 +175,14 @@ export function OverviewScreen({
             columns={[
               { key: 's', header: 'Giai đoạn', cell: (r) => STAGE_LABELS[r.s] },
               { key: 'n', header: 'Số lead', align: 'right', cell: (r) => r.n },
-              {
-                key: 'p',
-                header: 'Tỷ lệ',
-                align: 'right',
-                cell: (r) => (total ? Math.round((r.n / total) * 100) + '%' : '0%'),
-              },
+              { key: 'p', header: 'Tỷ lệ', align: 'right', cell: (r) => (total ? Math.round((r.n / total) * 100) + '%' : '0%') },
             ]}
           />
-        </div>
-
-        <div className="crm-section-card">
-          <header>
-            <h3>Nguồn khách</h3>
-            <small className="muted">Hiệu quả các kênh tiếp cận 30 ngày</small>
-          </header>
+        </Card>
+      );
+    if (id === 'sources')
+      return (
+        <Card key={id} title="Nguồn khách" sub={`Hiệu quả các kênh, ${data.days} ngày`}>
           <DataTable
             rows={data.sources}
             rowKey={(r) => r.source}
@@ -166,18 +193,109 @@ export function OverviewScreen({
               { key: 'w', header: 'Chốt', align: 'right', cell: (r) => r.won ?? 0 },
             ]}
           />
-        </div>
-      </div>
-
-      {cron && (
-        <div style={{ background: '#f8faf8', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 6, padding: '10px 14px' }}>
+        </Card>
+      );
+    if (id === 'ranking')
+      return (
+        <Card key={id} title="Xếp hạng nhân viên" sub={`Theo số lead chốt, ${data.days} ngày`}>
+          <DataTable
+            rows={data.ranking}
+            rowKey={(r) => r.userId}
+            empty="Chưa có dữ liệu"
+            columns={[
+              { key: 'n', header: 'Nhân viên', cell: (r) => r.name },
+              { key: 'l', header: 'Lead', align: 'right', cell: (r) => r.leads },
+              { key: 'w', header: 'Chốt', align: 'right', cell: (r) => r.won ?? 0 },
+            ]}
+          />
+        </Card>
+      );
+    if (id === 'cron' && cron)
+      return (
+        <div key={id} style={{ background: '#f8faf8', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 6, padding: '10px 14px' }}>
           <p className="crm-meta" style={{ margin: 0, fontSize: 12.5 }}>
             🕒 Lần chạy nền gần nhất: <strong>{stamp(cron.updated)}</strong> — hết hạn giữ chỗ{' '}
             <span className="crm-chip">{String(cron.value.holdsExpired ?? 0)}</span>, cảnh báo quá hạn{' '}
             <span className="crm-chip">{String(cron.value.slaAlerts ?? 0)}</span>
           </p>
         </div>
+      );
+    return null;
+  };
+  return (
+    <>
+      <Err text={error} />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+        {editing ? (
+          <Chips
+            value={String(layout.days)}
+            onChange={(v) => setDraft({ ...layout, days: Number(v) })}
+            options={RANGE_DAYS.map((d) => ({ key: String(d), label: `${d} ngày` }))}
+          />
+        ) : (
+          <small className="muted">Số liệu {data.days} ngày gần nhất</small>
+        )}
+        {editing ? (
+          <span style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => void save(layout)}>Lưu bố cục</button>
+            <button className="secondary" onClick={() => void save({ reset: true })}>
+              Về mặc định
+            </button>
+            <button
+              className="secondary"
+              onClick={() => {
+                setDraft(null);
+                setEditing(false);
+              }}
+            >
+              Hủy
+            </button>
+          </span>
+        ) : (
+          <button className="secondary" onClick={() => setEditing(true)}>
+            Tùy biến
+          </button>
+        )}
+      </div>
+
+      {editing && (
+        <ul aria-label="Các thẻ trên tổng quan" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
+          {layout.order.map((id, i) => (
+            <li key={id} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center', flex: 1 }}>
+                <input type="checkbox" checked={!layout.hidden.includes(id)} onChange={() => toggle(id)} />
+                {label(id)}
+              </label>
+              <button className="secondary" aria-label={`Đưa ${label(id)} lên`} disabled={i === 0} onClick={() => move(id, -1)}>
+                ↑
+              </button>
+              <button
+                className="secondary"
+                aria-label={`Đưa ${label(id)} xuống`}
+                disabled={i === layout.order.length - 1}
+                onClick={() => move(id, 1)}
+              >
+                ↓
+              </button>
+            </li>
+          ))}
+        </ul>
       )}
+
+      {kpis.length > 0 && (
+        <div className="crm-kpis">
+          {kpis.map((id) => (
+            <div key={id} className={kpi[id]?.[2] ? 'late' : ''}>
+              <span>{kpi[id]?.[0]}</span>
+              <strong>{kpi[id]?.[1]}</strong>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(360px, 100%), 1fr))', gap: 16 }}>
+        {cards.map(render)}
+      </div>
+      {shown.length === 0 && <p className="muted">Bạn đã ẩn hết các thẻ. Bấm Tùy biến để hiện lại.</p>}
     </>
   );
 }
@@ -222,10 +340,63 @@ type WorkDeskData = {
   dayEnd?: number;
 };
 
+export const TELESALES_SCRIPTS = [
+  {
+    id: 'intro',
+    title: '1. Chào mừng & Mời trải nghiệm 99k',
+    template: (name: string, sale: string) =>
+      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên Saigon Golf 3D Club. Em thấy anh/chị có quan tâm đến trải nghiệm phòng tập Golf 3D tại CLB. Em xin phép gửi anh/chị ưu đãi trải nghiệm 60 phút chỉ 99k/người cùng chuyên viên hướng dẫn sensor cảm biến đo swing. Không biết hôm nay hoặc ngày mai anh/chị tiện giờ nào ghé trải nghiệm thử ạ?',
+  },
+  {
+    id: 'quote',
+    title: '2. Báo giá thẻ hội viên & Gói GDR',
+    template: (name: string, sale: string) =>
+      'Dạ anh/chị ' + name + ' ơi, em ' + sale + ' gửi anh/chị bảng giá gói hội viên ưu đãi tháng này tại Saigon Golf 3D:\n- Gói Tập Không Giới Hạn: 3.500.000đ/tháng\n- Gói 30 giờ GDR linh hoạt: 4.800.000đ (hạn 3 tháng)\n- Gói 18 Hố 3D màn hình cong VIP: 350.000đ/giờ\nAnh/chị đăng ký trong tuần này được tặng thêm 2 buổi chỉnh swing cùng HLV nữa ạ!',
+  },
+  {
+    id: 'appointment',
+    title: '3. Xác nhận lịch hẹn trải nghiệm',
+    template: (name: string, sale: string) =>
+      'Saigon Golf 3D xin chào anh/chị ' + name + '. CLB đã giữ chỗ phòng tập trải nghiệm cho anh/chị tại số 18 Tôn Dực, Q.7. Khi đến nơi anh/chị chỉ cần đọc tên và SĐT tại quầy lễ tân là được hỗ trợ ngay ạ. Em ' + sale + ' chúc anh/chị có buổi tập thật sảng khoái!',
+  },
+  {
+    id: 'after',
+    title: '4. Thăm hỏi sau buổi tập & Khảo sát',
+    template: (name: string, sale: string) =>
+      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên Saigon Golf 3D. Buổi tập hôm trước của anh/chị tại phòng 3D thế nào ạ? Thiết bị và cảm biến đo bóng có ưng ý anh/chị không ạ? Nếu anh/chị cần hỗ trợ thêm thông tin gói tập dài hạn thì nhắn em nhé!',
+  },
+];
+
 export function WorkScreen({ s }: { s: Shared }) {
   const { data, error, reload } = useLoad<WorkDeskData>('/api/crm2/leads?view=work', 15_000);
   const [subTab, setSubTab] = useState<'new' | 'overdue' | 'today' | 'appointments' | 'care'>('new');
   
+  // Script modal state
+  const [scriptModalLead, setScriptModalLead] = useState<Lead | null>(null);
+  const [selectedScriptId, setSelectedScriptId] = useState('intro');
+  const [customScriptText, setCustomScriptText] = useState('');
+  const [copiedScript, setCopiedScript] = useState(false);
+  const [kpiFilter, setKpiFilter] = useState<'ALL' | 'UNCONTACTED' | 'CONTACTED' | 'OVERDUE' | 'APPOINTMENTS'>('ALL');
+
+  const openScriptModal = (lead: Lead, scriptId = 'intro') => {
+    setScriptModalLead(lead);
+    setSelectedScriptId(scriptId);
+    const sc = TELESALES_SCRIPTS.find((item) => item.id === scriptId) || TELESALES_SCRIPTS[0];
+    const saleName = s.staff.find((m) => m.id === s.me)?.name || 'chuyên viên tư vấn';
+    setCustomScriptText(sc.template(lead.fullName, saleName));
+    setCopiedScript(false);
+  };
+
+  const handleSelectScript = (newId: string) => {
+    setSelectedScriptId(newId);
+    if (scriptModalLead) {
+      const sc = TELESALES_SCRIPTS.find((item) => item.id === newId) || TELESALES_SCRIPTS[0];
+      const saleName = s.staff.find((m) => m.id === s.me)?.name || 'chuyên viên tư vấn';
+      setCustomScriptText(sc.template(scriptModalLead.fullName, saleName));
+      setCopiedScript(false);
+    }
+  };
+
   // Call result modal state
   const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
   const [callResult, setCallResult] = useState<CallResult>('INTERESTED');
@@ -299,7 +470,14 @@ export function WorkScreen({ s }: { s: Shared }) {
         <a
           href={`tel:${r.phone}`}
           className="crm-action-btn"
-          title="Gọi điện trực tiếp (không tự động hoàn tất)"
+          title="Gọi điện & Ghi kết quả"
+          onClick={() => {
+            setCallModalLead(r);
+            setCallResult('INTERESTED');
+            setCallNote('');
+            setCallWhen('');
+            setModalErr('');
+          }}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -314,6 +492,15 @@ export function WorkScreen({ s }: { s: Shared }) {
         >
           <Phone size={15} />
         </a>
+        <button
+          type="button"
+          className="secondary"
+          title="Kịch bản tin nhắn Zalo / SMS"
+          onClick={() => openScriptModal(r, 'intro')}
+          style={{ height: 32, padding: '0 8px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+        >
+          <MessageSquare size={14} /> Mẫu tin
+        </button>
         {cleanPhone && (
           <a
             href={`https://zalo.me/${cleanPhone}`}
@@ -453,6 +640,75 @@ export function WorkScreen({ s }: { s: Shared }) {
           </div>
         </div>
       )}
+
+      {/* SandboxVN Telesales KPI Counters */}
+      <section className="ds-tiles" aria-label="Chỉ số Telesales" style={{ marginBottom: 14 }}>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            setKpiFilter('ALL');
+            setSubTab('new');
+          }}
+        >
+          <KpiTile
+            label="Tất cả lead đang xử lý"
+            value={leads.length}
+            hint={kpiFilter === 'ALL' ? '● Đang xem' : 'Bấm để lọc'}
+          />
+        </div>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            setKpiFilter('UNCONTACTED');
+            setSubTab('new');
+          }}
+        >
+          <KpiTile
+            label="Chưa tương tác"
+            value={leads.filter((l) => l.callAttempts === 0 && (!l.lastContactAt || l.lastContactAt === 0)).length}
+            hint={kpiFilter === 'UNCONTACTED' ? '● Đang xem' : 'Chưa gọi lần nào'}
+          />
+        </div>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            setKpiFilter('CONTACTED');
+            setSubTab('new');
+          }}
+        >
+          <KpiTile
+            label="Đã tương tác"
+            value={leads.filter((l) => l.callAttempts > 0 || (l.lastContactAt && l.lastContactAt > 0)).length}
+            hint={kpiFilter === 'CONTACTED' ? '● Đang xem' : 'Đang chăm sóc tiếp'}
+          />
+        </div>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            setKpiFilter('OVERDUE');
+            setSubTab('overdue');
+          }}
+        >
+          <KpiTile
+            label="Quá hạn SLA"
+            value={overdue.length}
+            hint={overdue.length > 0 ? '⚠️ Cần gọi ngay' : 'Đạt 100% SLA'}
+          />
+        </div>
+        <div
+          style={{ cursor: 'pointer' }}
+          onClick={() => {
+            setKpiFilter('APPOINTMENTS');
+            setSubTab('appointments');
+          }}
+        >
+          <KpiTile
+            label="Lịch hẹn trải nghiệm"
+            value={appointments.length}
+            hint={kpiFilter === 'APPOINTMENTS' ? '● Đang xem' : 'Khách sắp đến CLB'}
+          />
+        </div>
+      </section>
 
       {/* 5 View Subtabs */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
@@ -853,6 +1109,116 @@ export function WorkScreen({ s }: { s: Shared }) {
               >
                 {savingResult ? 'Đang lưu…' : 'Lưu kết quả'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Kịch bản tin nhắn Zalo / SMS SandboxVN */}
+      {scriptModalLead && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setScriptModalLead(null)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: 10,
+              padding: 24,
+              width: '100%',
+              maxWidth: 520,
+              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <MessageSquare size={18} color="#0284c7" /> Kịch bản tin nhắn tư vấn Zalo / SMS
+            </h3>
+            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: 13 }}>
+              Gửi cho khách: <strong>{scriptModalLead.fullName}</strong> ({scriptModalLead.phone})
+            </p>
+
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                Chọn mẫu kịch bản theo giai đoạn:
+              </label>
+              <select
+                value={selectedScriptId}
+                onChange={(e) => handleSelectScript(e.target.value)}
+                style={{ width: '100%', height: 38, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, padding: '0 10px' }}
+              >
+                {TELESALES_SCRIPTS.map((sc) => (
+                  <option key={sc.id} value={sc.id}>
+                    {sc.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                Nội dung tin nhắn (có thể chỉnh sửa trước khi gửi):
+              </label>
+              <textarea
+                rows={6}
+                value={customScriptText}
+                onChange={(e) => setCustomScriptText(e.target.value)}
+                style={{ width: '100%', borderRadius: 6, border: '1px solid #cbd5e1', padding: 10, fontSize: 13, lineHeight: 1.5 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                type="button"
+                className="secondary"
+                onClick={async () => {
+                  await navigator.clipboard?.writeText(customScriptText);
+                  setCopiedScript(true);
+                  setTimeout(() => setCopiedScript(false), 2000);
+                }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Copy size={14} /> {copiedScript ? 'Đã sao chép!' : 'Sao chép tin nhắn'}
+              </button>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button type="button" className="secondary" onClick={() => setScriptModalLead(null)}>
+                  Đóng
+                </button>
+                <a
+                  href={`https://zalo.me/${scriptModalLead.phone.replace(/[^0-9]/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="primary"
+                  onClick={async () => {
+                    await navigator.clipboard?.writeText(customScriptText);
+                    setScriptModalLead(null);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    textDecoration: 'none',
+                    padding: '0 14px',
+                    height: 38,
+                    borderRadius: 6,
+                    background: '#0284c7',
+                    color: '#fff',
+                    fontWeight: 600,
+                    fontSize: 13,
+                  }}
+                >
+                  <MessageCircle size={15} /> Mở Zalo & Gửi
+                </a>
+              </div>
             </div>
           </div>
         </div>

@@ -37,8 +37,6 @@ async function target(value: 'LEGACY' | 'CRM2') {
 }
 const newLeads = async () =>
   ((await (await owner.get('/api/crm2/leads?limit=200&q=')).json()) as Json).leads as Json[];
-const oldLeads = async () =>
-  ((await (await owner.get('/api/crm/leads')).json()) as Json).leads as Json[];
 const detail = async (id: string) =>
   (await (await owner.get('/api/crm2/leads?id=' + id)).json()) as Json;
 const byPhone = async (p: string) => (await newLeads()).filter((l) => l.phone === p);
@@ -82,17 +80,6 @@ test('mặc định lead quảng cáo vào CRM mới', async () => {
   });
   expect(lead.notes).toContain('Muốn chơi 18 hố');
   expect(lead.notes).toContain('Chiến dịch: tiktok');
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
-});
-
-test('chuyển về CRM cũ nếu cấu hình: lead quảng cáo vào bên cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  const r = await send({ source: 'tiktok', id: adId(), name: 'Khách Cũ', phone: p });
-  expect(r.ok).toBe(true);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-  await target('CRM2');
 });
 
 test('bên gửi đặt chiến dịch riêng thì dùng chiến dịch đó', async () => {
@@ -155,10 +142,3 @@ test('mã webhook sai bị từ chối; dữ liệu thừa trường lạ bị t
   await send({ source: 'tiktok', name: 'X', phone: phone(), truong_la: 1 }, 400);
 });
 
-test('tắt lại: lead quảng cáo trở về CRM cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  await send({ source: 'tiktok', id: adId(), name: 'Khách Lại Cũ', phone: p });
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-});

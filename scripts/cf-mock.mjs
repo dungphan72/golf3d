@@ -28,4 +28,5 @@ export const env = {
   DB,
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'https://golfhub.cloud',
   DISABLE_SITES_IDENTITY: '1',
+  ...(process.env.TRUST_PROXY ? { TRUST_PROXY: process.env.TRUST_PROXY } : {}),
 };

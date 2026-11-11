@@ -1,8 +1,7 @@
 'use client';
 import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
-import { useRef } from 'react';
-import { Bell, Play, Pause, Square, Printer } from 'lucide-react';
-import { BRAND } from '../../lib/brand';
+import { useRef, useState } from 'react';
+import { Bell, Play, Pause, Square, Printer, QrCode, CreditCard, Check, X, MessageCircle } from 'lucide-react';
 import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import type { Bill } from '../../lib/pricing';
@@ -12,6 +11,7 @@ import { useBill, BillAdjustments, DiscountForm, CashPay, RefundForm } from './B
 import { PackageRedeem } from './session/PackageRedeem';
 import { type Bank, TransferPanel } from './session/TransferPanel';
 import { SplitPay } from './session/SplitPay';
+import { generateK80Html, printK80Receipt, formatBillZaloText, sendBillToZalo } from '../../lib/thermal-receipt';
 
 const STATUS_TONE: Record<string, Tone> = {
   booked: 'info',
@@ -78,6 +78,38 @@ export function SessionPanel({
   const payAs = (method: string) =>
     onAction('pay', { method, requestId: paymentKey.current, expectedAmount: b.amount! });
   const operating = ['booked', 'playing', 'paused'].includes(b.status);
+
+  const [zaloNotice, setZaloNotice] = useState('');
+  const roomName = rooms.find((r) => r.id === b.room)?.name ?? b.room;
+
+  const handlePrint = () => {
+    const html = generateK80Html({
+      booking: b,
+      quote: q,
+      bill,
+      roomName,
+      food: food.data,
+    });
+    printK80Receipt(html);
+  };
+
+  const handleZalo = async () => {
+    const text = formatBillZaloText({
+      booking: b,
+      quote: q,
+      bill,
+      roomName,
+      food: food.data,
+    });
+    await sendBillToZalo({
+      phone: b.phone,
+      billText: text,
+      onNotify: (msg) => {
+        setZaloNotice(msg);
+        setTimeout(() => setZaloNotice(''), 6000);
+      },
+    });
+  };
   return (
     <ModalDialog label="Chi tiết phiên chơi" onClose={onClose} className="session">
       <DialogHeading onClose={onClose}>
@@ -110,25 +142,36 @@ export function SessionPanel({
         <div className="sp-actions">
           {b.status === 'booked' && (
             <>
-              <button className="primary" disabled={busy} onClick={() => onAction('start')}>
-                <Play size={18} />
-                Bắt đầu chơi
+              <button
+                className="primary"
+                disabled={busy}
+                aria-label="Bắt đầu chơi"
+                onClick={() => onAction('start')}
+              >
+                <Play size={17} />
+                Bắt đầu
               </button>
               <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
+                <X size={16} />
                 Hủy lịch
               </button>
             </>
           )}
           {b.status === 'paused' && (
             <button className="secondary" disabled={busy} onClick={() => onAction('resume')}>
-              <Play size={17} />
+              <Play size={16} />
               Tiếp tục
             </button>
           )}
           {['playing', 'paused'].includes(b.status) && (
-            <button className="primary" disabled={busy} onClick={() => onAction('finish')}>
-              <Square size={18} />
-              Kết thúc chơi
+            <button
+              className="primary"
+              disabled={busy}
+              aria-label="Kết thúc chơi"
+              onClick={() => onAction('finish')}
+            >
+              <Square size={17} />
+              Kết thúc
             </button>
           )}
           {b.status === 'playing' && (
@@ -138,44 +181,18 @@ export function SessionPanel({
               disabled={busy}
               onClick={() => onAction('pause')}
             >
-              <Pause size={17} />
-              Tạm dừng do sự cố
+              <Pause size={16} />
+              Tạm dừng
             </button>
           )}
         </div>
       )}
       {quoteError ? (
         <div className="info-strip" role="alert">
-          {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến khi
-          giá được xử lý.
+          {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến khi giá được xử lý.
         </div>
       ) : (
         <div className="bill">
-          <div className="receipt-thermal-header">
-            <div className="receipt-brand-logo">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={BRAND.logo} alt="" width={38} height={38} />
-            </div>
-            <div className="receipt-thermal-title">SAIGON GOLF 3D CLUB</div>
-            <div className="receipt-thermal-sub">
-              Hệ thống Golf 3D Foresight GC3 USA<br />
-              Hotline: 0901 234 567 · www.golfhub.cloud
-            </div>
-            <div className="receipt-thermal-divider" />
-            <div className="receipt-meta-row">
-              <span>Phòng: <strong>{rooms.find((r) => r.id === b.room)?.name}</strong></span>
-              <span>Số phiếu: <strong>#{b.id.slice(-6).toUpperCase()}</strong></span>
-            </div>
-            <div className="receipt-meta-row">
-              <span>Khách hàng: <strong>{b.customer}</strong></span>
-              <span>{b.phone || ''}</span>
-            </div>
-            <div className="receipt-meta-row">
-              <span>Giờ vào: {time(b.started || b.start)}</span>
-              <span>Thời gian: {Math.round(minutes)} phút</span>
-            </div>
-            <div className="receipt-thermal-divider" />
-          </div>
           <h3 className="bill-screen-title">{b.status === 'paid' ? 'Phiếu thanh toán' : 'Tạm tính'}</h3>
           {q.lines.map((l, i) => (
             <div key={i}>
@@ -227,21 +244,6 @@ export function SessionPanel({
             <span>Tổng cộng</span>
             <strong>{money(b.amount ?? q.total + (b.food_total ?? 0))}</strong>
           </div>
-          <div className="receipt-thermal-footer">
-            <div className="receipt-thermal-divider" />
-            <p className="thermal-thanks">Cảm ơn Quý khách & Hẹn gặp lại!</p>
-            <p className="thermal-micro">Phần mềm quản trị Saigon Golf 3D Club · Foresight GC3 USA</p>
-          </div>
-          <details className="bill-note">
-            <summary>Cách tính</summary>
-            <p>
-              Giá được lưu tại thời điểm đặt.{' '}
-              {snap.config.feeMode === 'fixed'
-                ? 'Phí cố định tính một lần mỗi phiên.'
-                : 'Phí theo tỷ lệ tiền dịch vụ.'}{' '}
-              VAT tính trên tiền dịch vụ cộng phí. Chưa kết nối hóa đơn điện tử.
-            </p>
-          </details>
         </div>
       )}
       {food.error && (
@@ -250,10 +252,10 @@ export function SessionPanel({
         </div>
       )}
       {!foodVerified && (
-        <div className="info-strip">
-          Đang kiểm tra chi tiết đơn món trước khi thanh toán/in phiếu.
-          <button className="secondary" onClick={food.reload}>
-            Tải lại đơn món
+        <div className="info-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Đang kiểm tra đơn món...</span>
+          <button className="secondary" onClick={food.reload} style={{ height: 30, fontSize: 12 }}>
+            Tải lại
           </button>
         </div>
       )}
@@ -269,20 +271,26 @@ export function SessionPanel({
       )}
       {pendingFood > 0 && (
         <div className="info-strip">
-          Còn {pendingFood} đơn chưa phục vụ hoặc hủy; chưa thể thanh toán.
+          Còn {pendingFood} món chưa phục vụ.
         </div>
       )}
       {b.status === 'finished' && (
         <section className="sp-pay" aria-label="Thu tiền">
           <div className="sp-pay-head">
-            <h3>Thu tiền</h3>
-            <strong>{b.amount == null ? '—' : money(b.amount)}</strong>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Thu tiền</h3>
+              <span style={{ fontSize: 12, color: 'var(--ds-muted)' }}>{rooms.find((r) => r.id === b.room)?.name}</span>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <small style={{ display: 'block', fontSize: 11, color: 'var(--ds-muted)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Cần thu</small>
+              <strong>{b.amount == null ? '—' : money(b.amount)}</strong>
+            </div>
           </div>
           {!canPay ? (
-            <div className="info-strip">
-              Cần mở ca trước khi thu tiền.
-              <button className="secondary" onClick={onOpenShift}>
-                Đi đến mở ca
+            <div className="info-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Cần mở ca trước khi thu tiền.</span>
+              <button className="secondary" onClick={onOpenShift} style={{ height: 32, fontSize: 13 }}>
+                Mở ca
               </button>
             </div>
           ) : (
@@ -301,22 +309,26 @@ export function SessionPanel({
                   })
                 }
               />
-              <p className="muted">Chỉ bấm sau khi đã nhận đủ tiền.</p>
               <div className="pay-methods">
                 <CashPay bookingId={b.id} disabled={cannotPay} onPay={() => payAs('cash')} />
-                {[
-                  ['transfer', 'Chuyển khoản đã đối soát'],
-                  ['card', 'Thẻ tại quầy'],
-                ].map(([method, t]) => (
-                  <button
-                    className="primary"
-                    disabled={cannotPay}
-                    key={method}
-                    onClick={() => payAs(method)}
-                  >
-                    {t}
-                  </button>
-                ))}
+                <button
+                  className="primary"
+                  disabled={cannotPay}
+                  onClick={() => payAs('transfer')}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <QrCode size={18} />
+                  Chuyển khoản
+                </button>
+                <button
+                  className="primary"
+                  disabled={cannotPay}
+                  onClick={() => payAs('card')}
+                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <CreditCard size={18} />
+                  Quẹt thẻ
+                </button>
               </div>
               <div className="pay-extras">
                 {permissions.includes('billing.discount') &&
@@ -328,47 +340,116 @@ export function SessionPanel({
                     <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />
                   )}
                 <SplitPay booking={b} onChanged={refreshAll} disabled={cannotPay} />
+                <button
+                  type="button"
+                  aria-label="In phiếu"
+                  className="secondary"
+                  disabled={!!quoteError || !foodVerified}
+                  onClick={handlePrint}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
+                >
+                  <Printer size={15} /> In phiếu
+                </button>
+                <button
+                  type="button"
+                  aria-label="Gửi Zalo"
+                  className="secondary"
+                  disabled={!!quoteError}
+                  onClick={handleZalo}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
+                >
+                  <MessageCircle size={15} /> Gửi Zalo
+                </button>
               </div>
             </>
           )}
         </section>
       )}
+      {b.status === 'paid' && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '12px 16px', borderRadius: 8, margin: '12px 0', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Check size={18} color="#059669" />
+            <div>
+              <strong style={{ color: '#065f46', fontSize: 14 }}>Đã thanh toán</strong>
+              <div style={{ fontSize: 12, color: '#047857' }}>
+                {b.payment
+                  ? `Hình thức: ${b.payment === 'cash' ? 'Tiền mặt' : b.payment === 'transfer' ? 'Chuyển khoản' : b.payment === 'card' ? 'Quẹt thẻ' : 'Gói hội viên'}`
+                  : 'Đã hoàn tất'}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              type="button"
+              className="secondary"
+              aria-label="Gửi Zalo"
+              onClick={handleZalo}
+              style={{ height: 32, fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
+              <MessageCircle size={14} /> Gửi Zalo
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              aria-label="In phiếu"
+              onClick={handlePrint}
+              style={{ height: 32, fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+            >
+              <Printer size={14} /> In phiếu
+            </button>
+          </div>
+        </div>
+      )}
+      {zaloNotice && (
+        <div
+          role="status"
+          style={{
+            background: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            color: '#1e40af',
+            padding: '10px 14px',
+            borderRadius: 8,
+            fontSize: 13,
+            margin: '8px 0',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <Check size={16} color="#2563eb" />
+          <span>{zaloNotice}</span>
+        </div>
+      )}
       {b.status === 'paid' && b.payment === 'package' && permissions.includes('billing.refund') && (
-        <div className="info-strip">
-          Phiếu trả bằng gói. Để hoàn giờ/lượt cho khách, vào Hội viên, chọn khách, bấm &quot;Điều
-          chỉnh&quot; trên gói và cộng lại số giờ kèm lý do.
+        <div className="info-strip" style={{ fontSize: 12.5 }}>
+          Phiếu thanh toán bằng gói. Để hoàn giờ cho khách, vào mục Hội viên để điều chỉnh gói.
         </div>
       )}
       {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
         <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
       )}
-      {['finished', 'paid'].includes(b.status) && (
-        <div className="sp-print">
-          <button
-            aria-label="In phiếu"
-            className="secondary"
-            disabled={!!quoteError || !foodVerified}
-            onClick={() => window.print()}
-          >
-            <Printer size={17} />
-            In phiếu
-          </button>
-        </div>
-      )}
       {['playing', 'paused'].includes(b.status) && (
         <div className="support-actions">
-          <h3>Gửi yêu cầu hỗ trợ</h3>
-          {['Nhân viên hỗ trợ', 'Hỗ trợ thiết bị', 'Yêu cầu khác'].map((kind) => (
-            <button
-              disabled={busy}
-              className="secondary"
-              key={kind}
-              onClick={() => onAction('support', { kind })}
-            >
-              <Bell size={16} />
-              {kind}
-            </button>
-          ))}
+          <h3>Hỗ trợ tại phòng</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {[
+              ['Nhân viên hỗ trợ', 'Gọi nhân viên'],
+              ['Hỗ trợ thiết bị', 'Thiết bị'],
+              ['Yêu cầu khác', 'Khác'],
+            ].map(([kind, shortLabel]) => (
+              <button
+                disabled={busy}
+                className="secondary"
+                key={kind}
+                aria-label={kind}
+                onClick={() => onAction('support', { kind })}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+              >
+                <Bell size={15} />
+                {shortLabel}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </ModalDialog>

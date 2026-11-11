@@ -1,9 +1,7 @@
 import { overLimit } from '../../../../lib/server/throttle';
 import { sendResult, httpError, originOf, requestNow, clientIp } from '../../../../lib/server/http';
-import { websiteLeadSchema, fromWebsite } from '../../../../lib/leads';
-import { intake } from '../../../../lib/server/lead-intake';
+import { websiteLeadSchema } from '../../../../lib/leads';
 import { tenantForToken } from '../../../../modules/crm/server/tokens';
-import { getSettings } from '../../../../modules/crm/server/store';
 import { ingestWebsiteLead } from '../../../../modules/crm/server/leads';
 export const dynamic = 'force-dynamic';
 
@@ -36,19 +34,10 @@ export async function POST(req: Request) {
   const parsed = websiteLeadSchema.safeParse(body);
   if (!parsed.success) return withCors(httpError('Thông tin chưa hợp lệ'));
   const now = requestNow(req);
-  // The club decides in CRM > Cấu hình where website leads go; the old CRM stays the default.
-  if ((await getSettings(tenant)).websiteLeads === 'CRM2')
-    return withCors(
-      sendResult({
-        status: 200,
-        body: { ok: true, ...(await ingestWebsiteLead(tenant, parsed.data, originOf(req), now)) },
-      }),
-    );
-  const r = await intake(tenant, fromWebsite(parsed.data, now), originOf(req), now);
   return withCors(
     sendResult({
       status: 200,
-      body: { ok: true, leadId: r.leadId, duplicate: r.duplicate, status: r.status },
+      body: { ok: true, ...(await ingestWebsiteLead(tenant, parsed.data, originOf(req), now)) },
     }),
   );
 }

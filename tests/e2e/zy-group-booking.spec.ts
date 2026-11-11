@@ -18,7 +18,7 @@ test('nhóm 9 người: tính tiền theo 3 line và xác nhận đặt đủ 3 
   const day = new Date(Date.now() + 86_400_000 + 7 * 3_600_000).toISOString().slice(0, 10);
   const start = Date.parse(`${day}T09:00:00+07:00`);
   const guest = await browser.newContext();
-  const ask = (guests: number, phone: string) =>
+  const ask = (guests: number, phone: string, requestedStart = start) =>
     post(guest.request, '/api/public/booking', {
       slug: 'e2e-golf',
       name: 'Đoàn Giải ' + guests,
@@ -26,7 +26,7 @@ test('nhóm 9 người: tính tiền theo 3 line và xác nhận đặt đủ 3 
       service: '18',
       vip: false,
       guests,
-      start,
+      start: requestedStart,
       minutes: 0,
       note: '',
       website: '',
@@ -74,4 +74,23 @@ test('nhóm 9 người: tính tiền theo 3 line và xác nhận đặt đủ 3 
   const mine = after.filter((b) => done.bookingIds.includes(b.id));
   expect(mine.map((b) => b.people)).toEqual([3, 3, 3]);
   expect(new Set(mine.map((b) => b.room)).size).toBe(3);
+
+  const farDay = new Date(Date.now() + 400 * 86_400_000 + 7 * 3_600_000)
+    .toISOString()
+    .slice(0, 10);
+  const farStart = Date.parse(`${farDay}T09:00:00+07:00`);
+  const farRequest = await ask(1, '0933111003', farStart);
+  expect(farRequest.total).toBeGreaterThan(0);
+  const refreshed = (await (await owner.get('/api/online')).json()).requests as {
+    id: string;
+    name: string;
+    freeRooms: { id: string }[];
+  }[];
+  const pendingFar = refreshed.find((r) => r.name === 'Đoàn Giải 1')!;
+  const farConfirmed = await post(owner, '/api/online', {
+    action: 'confirm',
+    id: pendingFar.id,
+    room: pendingFar.freeRooms[0].id,
+  });
+  expect(farConfirmed).toMatchObject({ ok: true });
 });

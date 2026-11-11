@@ -20,7 +20,38 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   await free.getByRole('button', { name: /Vào chơi/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Vào chơi ngay' });
   await expect(dialog).toBeVisible();
-  await expect(
-    dialog.getByRole('button', { name: 'Bắt đầu chơi và tính tiền ngay' }),
-  ).toBeVisible();
+  const start = dialog.getByRole('button', { name: 'Bắt đầu chơi và tính tiền ngay' });
+  await expect(start).toBeVisible();
+  expect(
+    await page.evaluate(() => getComputedStyle(document.documentElement).scrollbarWidth),
+  ).toBe('none');
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  const content = dialog.locator('.walk-in-form-content');
+  await expect(dialog.locator('.modal-heading')).toBeInViewport();
+  await expect(start).toBeInViewport();
+  expect(
+    await start.evaluate((el) => {
+      const { top, bottom } = el.getBoundingClientRect();
+      return top >= 0 && bottom <= window.innerHeight;
+    }),
+  ).toBe(true);
+  expect(await content.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+
+  await content.evaluate((el) => {
+    el.scrollTop = el.scrollHeight;
+  });
+  await expect(dialog.locator('.modal-heading')).toBeInViewport();
+  await expect(start).toBeInViewport();
+  expect(
+    await start.evaluate((el) => {
+      const { top, bottom } = el.getBoundingClientRect();
+      return top >= 0 && bottom <= window.innerHeight;
+    }),
+  ).toBe(true);
+  expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+
+  await dialog.getByRole('button', { name: 'Đóng' }).click();
+  await page.evaluate(() => window.scrollTo(0, 200));
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
 });

@@ -15,6 +15,9 @@ import {
   assignLeads,
   recallLeads,
   importLeads,
+  previewImport,
+  undoImport,
+  importBatches,
 } from '../../../../modules/crm/server/leads';
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +27,7 @@ const route = crmRoute({ read: 'crm.view', write: 'crm.work' }, async (c, req, b
     if (p.get('id')) return leadDetail(c, p.get('id')!);
     if (p.get('view') === 'pool') return poolList(c);
     if (p.get('view') === 'work') return workDesk(c);
+    if (p.get('view') === 'imports') return importBatches(c);
     return listLeads(c, {
       stage: p.get('stage') ?? undefined,
       status: p.get('status') ?? undefined,
@@ -55,6 +59,10 @@ const route = crmRoute({ read: 'crm.view', write: 'crm.work' }, async (c, req, b
       return assignLeads(c, a.ids, a.userId);
     case 'import':
       return importLeads(c, a.leads);
+    case 'import-preview':
+      return previewImport(c, a.leads);
+    case 'import-undo':
+      return undoImport(c, a.batch);
     case 'recall': {
       if (c.role !== 'owner' && c.role !== 'manager')
         return fail('Chỉ quản lý được thu hồi lead', 403);

@@ -3,14 +3,13 @@ import { useEffect, useRef, useState } from 'react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
 import { BRAND } from '../../lib/brand';
+import { QUICK_BOOKING_EVENT, type QuickBookingSelection } from './quick-booking-event';
 
 type Info = {
   name: string;
   address: string;
   open: string;
   close: string;
-  days: number;
-  minLeadMinutes: number;
   vip: boolean;
   maxPeople: number;
   services?: string[];
@@ -128,6 +127,17 @@ export default function BookingPage({
   const [captchaReset, setCaptchaReset] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [quickNotice, setQuickNotice] = useState('');
+
+  useEffect(() => {
+    const applyQuickBooking = (event: Event) => {
+      const { service, vip, start, notice } = (event as CustomEvent<QuickBookingSelection>).detail;
+      setForm((current) => ({ ...current, service, vip, start }));
+      setQuickNotice(notice);
+    };
+    window.addEventListener(QUICK_BOOKING_EVENT, applyQuickBooking);
+    return () => window.removeEventListener(QUICK_BOOKING_EVENT, applyQuickBooking);
+  }, []);
 
   // A link from the consultant (/book/slug?service=18&start=2026-11-10T10:00&guests=4&name=..&phone=..) fills the form.
   useEffect(() => {
@@ -300,7 +310,10 @@ export default function BookingPage({
           <form className="auth-card" onSubmit={submit}>
             <h1>{info.name}</h1>
             <p>
-              {info.address} · mở cửa {info.open}–{info.close}
+              {info.address}
+              {info.open && info.close
+                ? ` · mở cửa ${info.open}–${info.close}`
+                : ' · vui lòng chọn ngày và giờ mong muốn'}
             </p>
             <label>
               <select
@@ -328,10 +341,18 @@ export default function BookingPage({
                 type="datetime-local"
                 step={900}
                 value={form.start}
-                onChange={(e) => setForm({ ...form, start: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, start: e.target.value });
+                  setQuickNotice('');
+                }}
                 required
               />
             </label>
+            {quickNotice && (
+              <p className="form-note" role="status">
+                {quickNotice}
+              </p>
+            )}
             <label>
               <input
                 aria-label="Số người"
@@ -415,8 +436,9 @@ export default function BookingPage({
             )}
             <p className="form-note">
               Mỗi line tối đa 4 người; nhóm đông được xếp nhiều line và tính tiền theo từng line.
-              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên xác nhận. Đặt trước tối thiểu{' '}
-              {info.minLeadMinutes} phút, tối đa {info.days} ngày.
+              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên kiểm tra và xác nhận. Chọn giờ
+              bắt đầu theo mốc 15 phút. Nếu cơ sở chưa cấu hình đủ giờ hoạt động hoặc giá, nhân viên
+              sẽ liên hệ để xác nhận và báo giá.
             </p>
             <button className="primary" disabled={busy || (!!info.captchaSiteKey && !captcha)}>
               {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}

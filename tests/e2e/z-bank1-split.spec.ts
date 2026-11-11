@@ -1,6 +1,6 @@
 import { test, expect, type APIRequestContext } from '@playwright/test';
 
-// Runs after z-bank.spec.ts and reuses the open shift and configured club.
+// Runs immediately after z-bank.spec.ts, before other specs fill the rooms.
 test.describe.configure({ mode: 'serial' });
 
 const OWNER = { email: 'owner@e2e.test', password: 'e2e-owner-password' };
@@ -12,26 +12,23 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   return (await response.json()) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-const ALL_ROOMS = Array.from({ length: 12 }, (_, i) => (i < 10 ? `line-${i + 1}` : `vip-${i - 9}`));
-
 async function finishedRound(request: APIRequestContext, room: string, customer: string) {
   const club = await (await request.get('/api/club')).json();
   const config = club.config;
   const start = Math.ceil(Date.now() / 900_000) * 900_000;
-  const myEnd = start + 180 * 60_000;
   const busyRooms = new Set(
     (club.bookings || [])
       .filter(
-        (b: { status: string; start?: number; end?: number; room: string }) =>
+        (b: { status: string; end?: number; room: string }) =>
           ['playing', 'paused'].includes(b.status) ||
-          (['finished', 'paid'].includes(b.status) && (b.end ?? 0) > Date.now()) ||
-          (b.status !== 'cancelled' && (b.start ?? 0) < myEnd && (b.end ?? 0) > start),
+          (['finished', 'paid'].includes(b.status) && (b.end ?? 0) > Date.now()),
       )
       .map((b: { room: string }) => b.room),
   );
-  // line-2 and line-8 are reserved for zzz-leads, which starts sessions on them straight away.
-  const targetRoom =
-    ALL_ROOMS.find((r) => !busyRooms.has(r) && !['line-2', 'line-8'].includes(r)) || room;
+  const targetRoom = busyRooms.has(room)
+    ? (club.rooms || []).find((r: { id: string }) => !busyRooms.has(r.id))?.id
+    : room;
+  expect(targetRoom, 'No room is available for the test booking').toBeTruthy();
   const booked = await post(request, '/api/club', {
     action: 'book',
     room: targetRoom,
@@ -50,10 +47,30 @@ async function finishedRound(request: APIRequestContext, room: string, customer:
   return { id: booked.id as string, amount: b.amount as number };
 }
 
+async function finishedRounds(request: APIRequestContext) {
+  const { config: original } = await (await request.get('/api/club')).json();
+  // Avoid leaving cleanup windows that block later fixed-room tests in the shared E2E database.
+  await post(request, '/api/club', {
+    action: 'settings',
+    value: { ...original, clean: 0, vipClean: 0 },
+  });
+  try {
+    const mixed = await finishedRound(request, 'line-5', 'Khách chia tiền');
+    await finishedRound(request, 'line-6', 'Khách chia UI');
+    return mixed;
+  } finally {
+    const { config: current } = await (await request.get('/api/club')).json();
+    await post(request, '/api/club', {
+      action: 'settings',
+      value: { ...current, clean: original.clean, vipClean: original.vipClean },
+    });
+  }
+}
+
 test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi trùng', async ({ page }) => {
   const owner = page.request;
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
-  const { id, amount } = await finishedRound(owner, 'line-5', 'Khách chia tiền');
+  const { id, amount } = await finishedRounds(owner);
   expect(amount).toBeGreaterThan(1000);
   const cash = Math.floor(amount / 3);
   const requestId = key();
@@ -119,7 +136,6 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
   );
 
   // The payment dialog offers the split form for an unpaid bill.
-  await finishedRound(owner, 'line-6', 'Khách chia UI');
   await page.goto('/quan-ly');
   await page
     .locator('aside[aria-label="Menu chính"]')

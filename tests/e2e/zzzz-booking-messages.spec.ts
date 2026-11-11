@@ -55,7 +55,7 @@ test('đổi lịch: lead CRM mới của khách chuyển Chốt; nhắc lịch 
   const customers = (await get('/api/members?q=' + p)).customers as Json[];
   const customer = customers.find((c) => c.phone === p);
   expect(customer, 'customer exists').toBeTruthy();
-  await post('/api/crm', { action: 'contact-set', customerId: customer!.id, email, zaloId: '' });
+  await post('/api/crm2/care-customers', { action: 'contact-set', customerId: customer!.id, email, zaloId: '' });
 
   const { config } = await get('/api/club');
   const day = new Date(Date.now() + 3 * DAY + 7 * 3_600_000).toISOString().slice(0, 10);
@@ -110,7 +110,7 @@ test('khách không đến: báo khách và tạo việc liên hệ lại trong 
   const customer = ((await get('/api/members?q=' + p)).customers as Json[]).find(
     (c) => c.phone === p,
   )!;
-  await post('/api/crm', { action: 'contact-set', customerId: customer.id, email, zaloId: '' });
+  await post('/api/crm2/care-customers', { action: 'contact-set', customerId: customer.id, email, zaloId: '' });
   const { config } = await get('/api/club');
   const start = Math.ceil((Date.now() + 20 * MIN) / 900_000) * 900_000;
   const booked = await post('/api/club', {

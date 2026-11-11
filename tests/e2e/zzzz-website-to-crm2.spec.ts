@@ -35,8 +35,6 @@ async function target(value: 'LEGACY' | 'CRM2') {
 }
 const newLeads = async () =>
   ((await (await owner.get('/api/crm2/leads?limit=200&q=')).json()) as Json).leads as Json[];
-const oldLeads = async () =>
-  ((await (await owner.get('/api/crm/leads')).json()) as Json).leads as Json[];
 
 test.beforeAll(async ({ playwright }) => {
   owner = await playwright.request.newContext({ baseURL: 'http://127.0.0.1:8787' });
@@ -70,7 +68,6 @@ test('mặc định lead từ form website vào CRM mới', async () => {
   expect(['assigned', 'queued']).toContain(r.status);
   expect(r.leadId).toBeTruthy();
   expect((await newLeads()).some((l) => l.phone === p)).toBe(true);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
 
   const detail = (await (await owner.get('/api/crm2/leads?id=' + r.leadId)).json()) as Json;
   expect(detail.lead).toMatchObject({
@@ -91,17 +88,6 @@ test('mặc định lead từ form website vào CRM mới', async () => {
     'Khách đồng ý nhận tin ưu đãi',
   ])
     expect(detail.lead.notes).toContain(line);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
-});
-
-test('chuyển về CRM cũ nếu cấu hình: lead vào bên cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  const r = await send({ name: 'Khách Cũ', phone: p, need: '9' });
-  expect(r.ok).toBe(true);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect((await newLeads()).some((l) => l.phone === p)).toBe(false);
-  await target('CRM2');
 });
 
 test('gửi lại cùng số: cùng lead, tính thêm một lần hỏi', async () => {
@@ -143,10 +129,3 @@ test('mã webhook sai vẫn bị từ chối, bật CRM mới cũng vậy', asyn
   expect(r.status()).toBe(401);
 });
 
-test('tắt lại: lead trở về CRM cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  await send({ name: 'Khách Lại Cũ', phone: p, need: '18' });
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect((await newLeads()).some((l) => l.phone === p)).toBe(false);
-});

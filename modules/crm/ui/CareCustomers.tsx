@@ -45,6 +45,14 @@ type Detail = {
     outcome: string;
   }[];
   leads: { id: string; stage: string; source: string; created: number }[];
+  timeline: {
+    id: string;
+    kind: string;
+    at: number;
+    title: string;
+    detail: string;
+    amount?: number;
+  }[];
   now: number;
 };
 const SERVICE: Record<string, string> = { gdr: 'Luyện tập', '9': 'Game 9 hố', '18': 'Game 18 hố' };
@@ -138,7 +146,9 @@ function FilePanel({
           <button
             type="button"
             className="secondary"
-            onClick={() => onNavigate('members', { customerId: c.id, phone: c.phone, name: c.name })}
+            onClick={() =>
+              onNavigate('members', { customerId: c.id, phone: c.phone, name: c.name })
+            }
           >
             🎟️ Bán gói hội viên
           </button>
@@ -361,20 +371,26 @@ function FilePanel({
       )}
       {sub === 'history' && (
         <>
-          <h4>Lịch sử chăm sóc</h4>
+          <h4>Lịch sử khách hàng</h4>
           <ul className="crm-timeline">
-            {d.notes.map((n) => (
-              <li key={n.id}>
-                <strong>
-                  {CARE_CHANNEL_LABELS[n.channel as keyof typeof CARE_CHANNEL_LABELS] ?? 'Ghi chú'}
-                </strong>{' '}
-                · {stamp(n.created)}
-                {n.actor ? ` · ${n.actor}` : ''}
-                <br />
-                {n.content}
+            {d.timeline.map((item) => (
+              <li key={item.id}>
+                <strong>{item.title}</strong> · {stamp(item.at)}
+                {item.detail && (
+                  <>
+                    <br />
+                    {item.detail}
+                  </>
+                )}
+                {item.amount !== undefined && (
+                  <>
+                    <br />
+                    <strong>{money(item.amount)}</strong>
+                  </>
+                )}
               </li>
             ))}
-            {!d.notes.length && <li>Chưa có liên hệ nào được ghi nhận.</li>}
+            {!d.timeline.length && <li>Chưa có lịch sử nào được ghi nhận.</li>}
           </ul>
         </>
       )}

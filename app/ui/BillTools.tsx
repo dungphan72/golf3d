@@ -1,6 +1,7 @@
 'use client';
 import { askConfirm } from './kit';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Banknote, Tag } from 'lucide-react';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { discountFromPercent, changeDue, type BillInfo } from '../../lib/billing';
@@ -43,7 +44,7 @@ export function BillAdjustments({ bill }: { bill: BillInfo | null }) {
       {bill.refunds.map((r) => (
         <div key={r.id}>
           <span>
-            Đã hoàn lại ({METHOD_LABELS[r.method]})<small>{r.note}</small>
+            Đã hoàn ({METHOD_LABELS[r.method]})<small>{r.note}</small>
           </span>
           <strong>−{money(r.amount)}</strong>
         </div>
@@ -82,43 +83,66 @@ export function DiscountForm({
   const valid = discount > 0 && discount < amount && reason.trim().length >= 3;
   if (!open)
     return (
-      <button className="secondary" onClick={() => setOpen(true)}>
-        Giảm giá
+      <button
+        className="secondary"
+        onClick={() => setOpen(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
+      >
+        <Tag size={15} /> Giảm giá
       </button>
     );
   return (
-    <div className="info-strip">
-      <p>
-        <strong>Giảm giá phiếu</strong> · tiền đang cần thu {money(amount)}
-      </p>
-      <p>
+    <div
+      className="info-strip"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 8,
+        padding: '14px 16px',
+        borderRadius: 8,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <strong style={{ fontSize: 13.5 }}>Giảm giá phiếu</strong>
+        <span style={{ fontSize: 12.5, color: 'var(--ds-muted)' }}>Cần thu: {money(amount)}</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
         {[5, 10, 20].map((p) => (
           <button
             key={p}
             className="secondary"
             type="button"
+            style={{ height: 30, padding: '0 10px', fontSize: 12.5 }}
             onClick={() => setValue(String(discountFromPercent(amount, p)))}
           >
             {p}%
           </button>
         ))}
-      </p>
-      <label>
-        Số tiền giảm (đồng)
+      </div>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, width: '100%' }}>
+        <span>Số tiền giảm (đồng)</span>
         <input
           inputMode="numeric"
+          placeholder="0"
           value={value}
           onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
         />
       </label>
-      <label>
-        Lý do (bắt buộc)
-        <input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, width: '100%' }}>
+        <span>Lý do (bắt buộc)</span>
+        <input
+          value={reason}
+          maxLength={300}
+          placeholder="Khách thân thiết, ưu đãi giờ vàng..."
+          onChange={(e) => setReason(e.target.value)}
+        />
       </label>
       {discount > 0 && discount < amount && (
-        <p role="status">
-          Sau giảm: <strong>{money(amount - discount)}</strong>. Giảm giá trừ trên tiền chơi (đã gồm
-          VAT) và không thể sửa sau khi ghi.
+        <p role="status" style={{ margin: '6px 0', fontSize: 13 }}>
+          Sau giảm: <strong style={{ color: 'var(--ds-green-dark)' }}>{money(amount - discount)}</strong>
         </p>
       )}
       {error && (
@@ -126,37 +150,41 @@ export function DiscountForm({
           {error}
         </div>
       )}
-      <button
-        className="primary"
-        disabled={!valid || busy}
-        onClick={async () => {
-          if (
-            !(await askConfirm({
-              title: `Giảm ${money(discount)} cho phiếu này?`,
-              confirmLabel: 'Ghi giảm giá',
-            }))
-          )
-            return;
-          setBusy(true);
-          setError('');
-          try {
-            await post({ action: 'discount', bookingId, amount: discount, reason: reason.trim() });
-            setOpen(false);
-            setValue('');
-            setReason('');
-            await onDone();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        Ghi giảm giá
-      </button>
-      <button className="secondary" onClick={() => setOpen(false)}>
-        Đóng
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button
+          className="primary"
+          disabled={!valid || busy}
+          aria-label="Ghi giảm giá"
+          style={{ height: 34, fontSize: 13, padding: '0 14px' }}
+          onClick={async () => {
+            if (
+              !(await askConfirm({
+                title: `Giảm ${money(discount)} cho phiếu này?`,
+                confirmLabel: 'Ghi giảm giá',
+              }))
+            )
+              return;
+            setBusy(true);
+            setError('');
+            try {
+              await post({ action: 'discount', bookingId, amount: discount, reason: reason.trim() });
+              setOpen(false);
+              setValue('');
+              setReason('');
+              await onDone();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : String(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Áp dụng
+        </button>
+        <button className="secondary" style={{ height: 34, fontSize: 13, padding: '0 14px' }} onClick={() => setOpen(false)}>
+          Đóng
+        </button>
+      </div>
     </div>
   );
 }
@@ -186,59 +214,103 @@ export function CashPay({
   }, [open, bookingId]);
   if (!open)
     return (
-      <button className="primary" disabled={disabled} onClick={() => setOpen(true)}>
+      <button
+        className="primary"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+      >
+        <Banknote size={18} />
         Tiền mặt
       </button>
     );
   const given = tendered === '' ? (due ?? 0) : Number(tendered);
   const enough = due != null && given >= due;
   return (
-    <div className="info-strip">
-      <p>
-        <strong>Thu tiền mặt</strong>
-        {due != null && <> · cần thu {money(due)}</>}
-      </p>
-      <label>
-        Khách đưa (đồng)
+    <div
+      className="info-strip cash-pay-box"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 10,
+        padding: '14px 16px',
+        borderRadius: 8,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <strong style={{ fontSize: 14 }}>Thu tiền mặt</strong>
+        {due != null && (
+          <span style={{ fontSize: 12.5, color: 'var(--ds-muted)' }}>
+            Cần thu: <strong style={{ color: 'var(--ds-text)' }}>{money(due)}</strong>
+          </span>
+        )}
+      </div>
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, width: '100%' }}>
+        <span style={{ fontSize: 12.5, color: 'var(--ds-muted)', fontWeight: 500 }}>Khách đưa (đồng)</span>
         <input
           inputMode="numeric"
           placeholder={due != null ? String(due) : ''}
           value={tendered}
           onChange={(e) => setTendered(e.target.value.replace(/\D/g, ''))}
+          autoFocus
+          style={{ height: 38, fontSize: 15, fontWeight: 600, width: '100%', boxSizing: 'border-box' }}
         />
       </label>
-      <p>
+      <div style={{ display: 'flex', gap: 6, margin: '2px 0', flexWrap: 'wrap' }}>
         {[100_000, 200_000, 500_000].map((n) => (
           <button
             key={n}
             className="secondary"
             type="button"
+            style={{ height: 30, padding: '0 12px', fontSize: 12.5 }}
             onClick={() => setTendered(String(n))}
           >
-            {money(n)}
+            {n === 100_000 ? '100k' : n === 200_000 ? '200k' : '500k'}
           </button>
         ))}
-        <button className="secondary" type="button" onClick={() => setTendered('')}>
+        <button
+          className="secondary"
+          type="button"
+          style={{ height: 30, padding: '0 12px', fontSize: 12.5 }}
+          onClick={() => setTendered(due != null ? String(due) : '')}
+        >
           Vừa đủ
         </button>
-      </p>
+      </div>
       {due != null && (
-        <p role="status">
+        <div role="status" style={{ margin: '4px 0', fontSize: 13.5 }}>
           {enough ? (
-            <>
-              Tiền thối: <strong>{money(changeDue(given, due))}</strong>
-            </>
+            <span style={{ color: 'var(--ds-green-dark)', fontWeight: 600 }}>
+              Tiền thối: <strong style={{ fontSize: 16 }}>{money(changeDue(given, due))}</strong>
+            </span>
           ) : (
-            <>Còn thiếu {money(due - given)}</>
+            <span style={{ color: '#dc2626' }}>
+              Còn thiếu: <strong>{money(due - given)}</strong>
+            </span>
           )}
-        </p>
+        </div>
       )}
-      <button className="primary" disabled={disabled || !enough} onClick={onPay}>
-        Đã nhận đủ tiền mặt
-      </button>
-      <button className="secondary" onClick={() => setOpen(false)}>
-        Đóng
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+        <button
+          className="primary"
+          disabled={disabled || !enough}
+          onClick={onPay}
+          aria-label="Đã nhận đủ tiền mặt"
+          style={{ flex: 1, height: 36, fontSize: 13.5, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          Xác nhận thu
+        </button>
+        <button
+          className="secondary"
+          style={{ height: 36, fontSize: 13, padding: '0 16px' }}
+          onClick={() => setOpen(false)}
+        >
+          Đóng
+        </button>
+      </div>
     </div>
   );
 }
@@ -274,17 +346,34 @@ export function RefundForm({
   const valid = amount > 0 && amount <= max && reason.trim().length >= 3;
   if (!open)
     return (
-      <button className="secondary" onClick={() => setOpen(true)}>
+      <button
+        className="secondary"
+        onClick={() => setOpen(true)}
+        style={{ height: 34, fontSize: 13 }}
+      >
         Hoàn tiền
       </button>
     );
   return (
-    <div className="info-strip">
-      <p>
-        <strong>Hoàn tiền cho khách</strong> · cần mở ca; tiền mặt trả từ két
-      </p>
+    <div
+      className="info-strip"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 8,
+        padding: '14px 16px',
+        borderRadius: 8,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <strong style={{ fontSize: 13.5 }}>Hoàn tiền cho khách</strong>
+        <span style={{ fontSize: 12.5, color: 'var(--ds-muted)' }}>Tối đa: {money(max)}</span>
+      </div>
       <label>
-        Hình thức hoàn
+        <span>Hình thức</span>
         <select
           value={method}
           onChange={(e) => {
@@ -294,13 +383,13 @@ export function RefundForm({
         >
           {remaining.map((r) => (
             <option key={r.method} value={r.method}>
-              {METHOD_LABELS[r.method]} (tối đa {money(r.left)})
+              {METHOD_LABELS[r.method]} ({money(r.left)})
             </option>
           ))}
         </select>
       </label>
-      <label>
-        Số tiền hoàn (đồng)
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, width: '100%' }}>
+        <span>Số tiền hoàn (đồng)</span>
         <input
           inputMode="numeric"
           placeholder={String(max)}
@@ -308,55 +397,64 @@ export function RefundForm({
           onChange={(e) => setValue(e.target.value.replace(/\D/g, ''))}
         />
       </label>
-      <label>
-        Lý do (bắt buộc)
-        <input value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} />
+      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, width: '100%' }}>
+        <span>Lý do (bắt buộc)</span>
+        <input
+          value={reason}
+          maxLength={300}
+          placeholder="Lỗi máy, bớt giờ chơi..."
+          onChange={(e) => setReason(e.target.value)}
+        />
       </label>
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
-      <button
-        className="primary"
-        disabled={!valid || busy}
-        onClick={async () => {
-          if (
-            !(await askConfirm({
-              title: `Hoàn ${money(amount)} (${METHOD_LABELS[method]}) cho khách?`,
-              confirmLabel: 'Hoàn tiền',
-              danger: true,
-            }))
-          )
-            return;
-          setBusy(true);
-          setError('');
-          try {
-            await post({
-              action: 'refund',
-              requestId: key.current,
-              bookingId,
-              method,
-              amount,
-              reason: reason.trim(),
-            });
-            key.current = operationKey();
-            setOpen(false);
-            setValue('');
-            setReason('');
-            await onDone();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : String(e));
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        Xác nhận hoàn tiền
-      </button>
-      <button className="secondary" onClick={() => setOpen(false)}>
-        Đóng
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button
+          className="primary"
+          disabled={!valid || busy}
+          aria-label="Xác nhận hoàn tiền"
+          style={{ height: 34, fontSize: 13, padding: '0 14px' }}
+          onClick={async () => {
+            if (
+              !(await askConfirm({
+                title: `Hoàn ${money(amount)} (${METHOD_LABELS[method]}) cho khách?`,
+                confirmLabel: 'Hoàn tiền',
+                danger: true,
+              }))
+            )
+              return;
+            setBusy(true);
+            setError('');
+            try {
+              await post({
+                action: 'refund',
+                requestId: key.current,
+                bookingId,
+                method,
+                amount,
+                reason: reason.trim(),
+              });
+              key.current = operationKey();
+              setOpen(false);
+              setValue('');
+              setReason('');
+              await onDone();
+            } catch (e) {
+              setError(e instanceof Error ? e.message : String(e));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Hoàn tiền
+        </button>
+        <button className="secondary" style={{ height: 34, fontSize: 13, padding: '0 14px' }} onClick={() => setOpen(false)}>
+          Đóng
+        </button>
+      </div>
     </div>
   );
 }

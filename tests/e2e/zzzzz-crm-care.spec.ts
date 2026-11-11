@@ -152,6 +152,18 @@ test('hồ sơ khách: gói và lịch sử chơi của hội viên, nhóm khác
   expect(detail.packages.length).toBeGreaterThanOrEqual(1);
   expect(detail.visits.length).toBeGreaterThanOrEqual(1);
   expect(detail.customer.segments).not.toContain('idle');
+  expect(detail.timeline.some((e: Json) => e.kind === 'booking')).toBe(true);
+  const sessionStarted = detail.timeline.find(
+    (e: Json) => e.kind === 'session' && e.title === 'Bắt đầu chơi',
+  );
+  const sessionFinished = detail.timeline.find(
+    (e: Json) => e.kind === 'session' && e.title === 'Kết thúc chơi',
+  );
+  expect(sessionStarted).toBeTruthy();
+  expect(sessionFinished).toBeTruthy();
+  expect(sessionStarted.at).toBeLessThanOrEqual(sessionFinished.at);
+  expect(detail.timeline.some((e: Json) => e.kind === 'payment')).toBe(true);
+  expect(detail.timeline.some((e: Json) => e.kind === 'package')).toBe(true);
 
   const c = await newCustomer('Khách Hồ Sơ Mới');
   const row = (await files(c.phone)).find((x) => x.id === c.id)!;
@@ -228,6 +240,16 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
   await panel.getByRole('button', { name: 'Lưu', exact: true }).click();
   await panel.getByRole('tab', { name: 'Lịch sử' }).click();
   await expect(panel).toContainText('Khách hỏi lịch cuối tuần');
+
+  await panel.getByRole('button', { name: 'Đóng' }).click();
+  await page.getByLabel('Tìm hồ sơ khách').fill('Khách Gói');
+  await page.getByRole('row', { name: /^Khách Gói 0912/ }).click();
+  const memberPanel = page.getByRole('region', { name: 'Hồ sơ Khách Gói' });
+  await memberPanel.getByRole('tab', { name: 'Lịch sử' }).click();
+  await expect(memberPanel).toContainText('Bắt đầu chơi');
+  await expect(memberPanel).toContainText('Kết thúc chơi');
+  await expect(memberPanel).toContainText('Thanh toán');
+  await expect(memberPanel).toContainText('Thẻ giờ');
 
   // From a care task, the customer's name opens the same file.
   await page.getByRole('tab', { name: 'Chăm sóc khách' }).click();

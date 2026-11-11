@@ -26,6 +26,7 @@ import {
   type Tone,
 } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
+import { VERDICT_LABELS, parseImportText, type PreviewRow, type Verdict } from '../core/import';
 import { RANGE_DAYS, WIDGETS, visibleWidgets, type DashLayout } from '../core/dashboard';
 import {
   CALL_RESULTS,
@@ -1337,6 +1338,8 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
   const [importText, setImportText] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importStatus, setImportStatus] = useState('');
+  const [importPreview, setImportPreview] = useState<{ total: number; counts: Record<Verdict, number>; rows: PreviewRow[] } | null>(null);
+  const [importBatch, setImportBatch] = useState('');
   const [f, setF] = useState({ fullName: '', phone: '', targetService: '', notes: '' });
   const url = `/api/crm2/leads?limit=200&q=${encodeURIComponent(q)}${stage ? '&stage=' + stage : ''}`;
   const { data, error, reload, setError } = useLoad<{ leads: Lead[]; total: number }>(url);
@@ -1344,58 +1347,55 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
   if (!data) return <Loading />;
   const rows = data.leads ?? [];
 
+  const rowsToImport = () => parseImportText(importText);
+  const handlePreview = async () => {
+    setImportLoading(true);
+    setImportStatus('');
+    setImportBatch('');
+    try {
+      const leads = rowsToImport();
+      if (!leads.length) {
+        setImportStatus('Lỗi: Không tìm thấy dữ liệu hợp lệ để nhập.');
+        return;
+      }
+      setImportPreview(
+        await call<{ total: number; counts: Record<Verdict, number>; rows: PreviewRow[] }>('/api/crm2/leads', {
+          action: 'import-preview',
+          leads,
+        }),
+      );
+    } catch (e) {
+      setImportStatus(`Lỗi: ${errText(e)}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
   const handleDoImport = async () => {
     setImportLoading(true);
     setImportStatus('');
     try {
-      const lines = importText
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      const parsedLeads: Array<{
-        fullName: string;
-        phone: string;
-        email?: string;
-        targetService?: string;
-        source?: string;
-        notes?: string;
-      }> = [];
-
-      for (const line of lines) {
-        if (line.toLowerCase().includes('họ tên') || line.toLowerCase().includes('fullname')) continue;
-        const parts = line.includes('\t') ? line.split('\t') : line.split(',');
-        const fullName = parts[0]?.trim();
-        const phone = parts[1]?.trim() || '';
-        const email = parts[2]?.trim() || '';
-        const targetService = parts[3]?.trim() || '';
-        const source = parts[4]?.trim() || 'Excel/CSV';
-        const notes = parts.slice(5).join(', ').trim() || '';
-
-        if (fullName) {
-          parsedLeads.push({ fullName, phone, email, targetService, source, notes });
-        }
-      }
-
-      if (parsedLeads.length === 0) {
-        setImportStatus('Lỗi: Không tìm thấy dữ liệu hợp lệ để nhập.');
-        setImportLoading(false);
-        return;
-      }
-
-      const res = await call<{
-        ok: boolean;
-        total: number;
-        created: number;
-        absorbed: number;
-        errors?: string[];
-      }>('/api/crm2/leads', {
+      const res = await call<{ created: number; absorbed: number; batch: string; errors?: string[] }>('/api/crm2/leads', {
         action: 'import',
-        leads: parsedLeads,
+        leads: rowsToImport(),
       });
-
       setImportStatus(
         `Thành công: Đã tạo mới ${res.created} lead, gộp ${res.absorbed} lead trùng lặp. ${res.errors?.length ? `Có ${res.errors.length} cảnh báo.` : ''}`,
       );
+      setImportBatch(res.batch);
+      setImportPreview(null);
+      await reload();
+    } catch (e) {
+      setImportStatus(`Lỗi: ${errText(e)}`);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+  const handleUndo = async () => {
+    setImportLoading(true);
+    try {
+      const res = await call<{ removed: number; kept: number }>('/api/crm2/leads', { action: 'import-undo', batch: importBatch });
+      setImportStatus(`Đã hoàn tác: xóa ${res.removed} lead${res.kept ? `, giữ ${res.kept} lead đã có người xử lý` : ''}.`);
+      setImportBatch('');
       await reload();
     } catch (e) {
       setImportStatus(`Lỗi: ${errText(e)}`);
@@ -1454,9 +1454,9 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
               Nhập danh sách Lead từ Excel / CSV
             </h3>
             <p style={{ margin: '0 0 14px 0', color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>
-              Dán dữ liệu từ bảng tính (Excel/Google Sheets) hoặc tệp CSV. Mỗi dòng một khách hàng theo định dạng:
+              Dán dữ liệu từ bảng tính (Excel/Google Sheets) hoặc tệp CSV. Dòng đầu có thể là tiêu đề cột (Họ tên, Số điện thoại, Email, Dịch vụ, Nguồn, Chiến dịch, Ghi chú) theo thứ tự bất kỳ; không có tiêu đề thì dùng thứ tự đó.
               <br />
-              <code>Họ tên, Số điện thoại, Email, Dịch vụ quan tâm, Nguồn, Ghi chú</code>
+              Bấm <strong>Xem trước</strong> để biết dòng nào mới, trùng, bị chặn hay sai số trước khi nhập.
             </p>
 
             <textarea
@@ -1464,7 +1464,10 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
               style={{ width: '100%', fontSize: 13, padding: 10, fontFamily: 'monospace', boxSizing: 'border-box' }}
               placeholder={`Nguyễn Văn A, 0901234567, a@gmail.com, Gói 18 hố, Facebook Ads, Muốn tập cuối tuần\nTrần Thị B, 0987654321, , GDR 30 giờ, Bạn giới thiệu, `}
               value={importText}
-              onChange={(e) => setImportText(e.target.value)}
+              onChange={(e) => {
+                setImportText(e.target.value);
+                setImportPreview(null);
+              }}
             />
 
             {importStatus && (
@@ -1482,17 +1485,50 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
               </div>
             )}
 
+            {importPreview && (
+              <div role="region" aria-label="Xem trước nhập" style={{ marginTop: 12, fontSize: 13 }}>
+                <p style={{ margin: '0 0 6px' }}>
+                  {(Object.keys(VERDICT_LABELS) as Verdict[])
+                    .filter((v) => importPreview.counts[v] > 0)
+                    .map((v) => `${VERDICT_LABELS[v]}: ${importPreview.counts[v]}`)
+                    .join(' · ')}
+                </p>
+                <div style={{ maxHeight: 180, overflow: 'auto' }}>
+                  <DataTable
+                    label="Các dòng sẽ nhập"
+                    rows={importPreview.rows}
+                    rowKey={(r) => String(r.line)}
+                    empty="Không có dòng nào"
+                    columns={[
+                      { key: 'l', header: 'Dòng', align: 'right', cell: (r) => r.line },
+                      { key: 'n', header: 'Họ tên', cell: (r) => r.fullName },
+                      { key: 'p', header: 'Số điện thoại', cell: (r) => r.phone || '—' },
+                      { key: 'v', header: 'Kết quả', cell: (r) => VERDICT_LABELS[r.verdict] },
+                    ]}
+                  />
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 16 }}>
               <button type="button" className="secondary" onClick={() => setImporting(false)}>
                 Đóng
               </button>
+              {importBatch && s.manager && (
+                <button type="button" className="secondary" disabled={importLoading} onClick={handleUndo}>
+                  Hoàn tác lần nhập này
+                </button>
+              )}
+              <button type="button" className="secondary" disabled={!importText.trim() || importLoading} onClick={handlePreview}>
+                Xem trước
+              </button>
               <button
                 type="button"
                 className="primary"
-                disabled={!importText.trim() || importLoading}
+                disabled={!importPreview || importPreview.counts.new + importPreview.counts.existing === 0 || importLoading}
                 onClick={handleDoImport}
               >
-                {importLoading ? 'Đang nhập…' : 'Bắt đầu nhập dữ liệu'}
+                {importLoading ? 'Đang xử lý…' : 'Bắt đầu nhập dữ liệu'}
               </button>
             </div>
           </div>

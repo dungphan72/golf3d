@@ -1,5 +1,107 @@
 # Tiến độ Golf3D
 
+## Tinh gọn giao diện luồng tính tiền & thanh toán POS (2026-11-10)
+- **Sửa lỗi hiển thị form thu tiền mặt & hóa đơn trên màn hình**:
+  - Sửa lỗi toàn bộ các thành phần trong hộp thoại thu tiền mặt (`CashPay`) bị co kéo thành một hàng ngang méo mó do thừa kế `display: flex` của `.info-strip`: chuyển thành bố cục dọc chuẩn (`flex-direction: column; width: 100%`) với hàng tiêu đề, ô nhập tiền khách đưa to rõ, các nút chọn nhanh mệnh giá (`100k`, `200k`, `500k`, `Vừa đủ`), hiển thị tiền thừa màu xanh nổi bật và nút xác nhận thu tiền mặt.
+  - Tách biệt hoàn toàn phần hóa đơn nhiệt (`.receipt-thermal-header`, `.receipt-thermal-footer`) khỏi giao diện màn hình để không còn hiện tượng các thẻ thông tin bị dàn hàng ngang méo mó trên màn hình POS.
+- **Tính năng gửi hóa đơn qua Zalo khách hàng**:
+  - Bổ sung nút **Gửi Zalo** (`MessageCircle` icon) cạnh nút In phiếu ở cả hai trạng thái: đang chờ thanh toán (ở hàng công cụ phụ) và đã thanh toán.
+  - Tự động chuẩn hóa nội dung hóa đơn chuyên nghiệp (tên sân, phòng, mã phiếu, giờ chơi, các khoản dịch vụ F&B, VAT, phí dịch vụ, tổng cộng, trạng thái thanh toán) và sao chép vào bộ nhớ đệm (clipboard).
+  - Tự động mở đường dẫn chat Zalo trực tiếp tới số điện thoại khách hàng (`https://zalo.me/${phone}`). Nếu khách chưa lưu SĐT, hệ thống mở hộp thoại nhắc nhân viên nhập SĐT Zalo để gửi ngay.
+- **Khắc phục triệt để lỗi in phiếu trang trắng & tối ưu máy in nhiệt K80 (80mm)**:
+  - Tìm ra và xử lý nguyên nhân gốc gây trang in trắng: quy tắc `body * { visibility: hidden; }` trong `app/globals.css` (vốn dùng cho trang in QR chuông) đã vô tình ẩn toàn bộ phần tử của trang web khi bấm in hóa đơn. Đã cô lập quy tắc này với `body:has(.qr-sheet)`.
+  - Xây dựng module in hóa đơn nhiệt chuyên dụng (`lib/thermal-receipt.ts`) xuất chuẩn hóa đơn HTML 72mm/80mm vào iframe in độc lập, áp dụng font chữ đơn sắc rõ nét, đầy đủ thông tin cơ sở, VAT, chi tiết món F&B, tổng tiền và chân trang cảm ơn. Không bao giờ bị phụ thuộc vào DOM giao diện quản trị hay bị trắng trang.
+- **Triển khai VPS golfhub.cloud (13:58 10/11/2026)**:
+  - Bản build mới: `aee41d82-6bae-49d9-a3d8-c491a0c604f7`.
+  - Snapshot trước deploy: `/root/golf3d-predeploy-20261110-1355.tar.gz` (5.7MB, quyền 600).
+  - Dịch vụ `app-golf3d.service` đang chạy (`active`), kiểm tra HTTPS `golfhub.cloud/` và `/quan-ly` trả HTTP 200.
+- **Tối ưu thẻ thanh toán & lược bỏ câu từ rườm rà**:
+  - Gỡ bỏ câu hướng dẫn cảnh báo dư thừa ("Chỉ bấm sau khi đã nhận đủ tiền.") và khối ghi chú lý thuyết công thức tính cồng kềnh ("<details className=\"bill-note\">Cách tính...</details>").
+  - Thiết kế lại khối hiển thị tiền cần thu (.sp-pay-head): Phân biệt rõ số tiền cần thu lớn (font 28px đậm, màu thương hiệu), tích hợp sẵn mã bill nhỏ gọn.
+- **Rút gọn nhãn nút bấm trực quan & chuyên nghiệp**:
+  - Phương thức thanh toán chính: "Tiền mặt" (kèm icon Banknote), "Chuyển khoản" (kèm icon QrCode), "Quẹt thẻ" (kèm icon CreditCard) — thay vì câu dài "Chuyển khoản đã đối soát" hay "Thẻ tại quầy".
+  - Tiện ích phụ trợ: "Giảm giá" (icon Tag), "Chia tiền" (icon Split), "In phiếu" (icon Printer) bố trí thành hàng công cụ gọn gàng.
+  - Hộp thoại tiền mặt: Tiêu đề gọn "Thu tiền mặt · Cần thu [tiền]", phím tắt chọn nhanh mệnh giá (100k, 200k, 500k, Vừa đủ), tiền thừa trả khách nổi bật màu xanh, nút bấm xác nhận rút ngắn thành "Xác nhận thu" (giữ aria-label="Đã nhận đủ tiền mặt" cho kiểm thử).
+  - Hộp thoại giảm giá: Tiêu đề "Giảm giá phiếu · Cần thu [tiền]", lược bỏ câu giải thích dài dòng, nút xác nhận đổi thành "Áp dụng" (giữ aria-label="Ghi giảm giá").
+  - Hộp thoại hoàn tiền: Lược bỏ văn bản cảnh báo két ca, nút xác nhận đổi thành "Hoàn tiền" (giữ aria-label="Xác nhận hoàn tiền").
+  - Màn hình chuyển khoản QR: Tiêu đề gọn "Quét mã VietQR · Cần thu [tiền]", thẻ QR bo góc hiện đại, nút xác nhận rút gọn "Khớp [tiền] lúc [giờ] · Xác nhận".
+  - Hộp thoại chia tiền: Nút mở đổi thành "Chia tiền" (icon Split), nút xác nhận đổi thành "Xác nhận" (giữ aria-label="Xác nhận đã nhận đủ tiền"), trạng thái hiển thị ngắn gọn "Đủ tiền" / "còn thiếu [tiền]".
+  - Nhãn điều hành phiên: Rút ngắn thành "Bắt đầu", "Kết thúc", "Tạm dừng", "Hủy lịch" kèm accessible labels đầy đủ.
+- **Kiểm tra & Đảm bảo tương thích**:
+  - pnpm eslint: 0 lỗi, 0 cảnh báo trên toàn bộ 5 tệp UI (SessionPanel.tsx, BillTools.tsx, TransferPanel.tsx, SplitPay.tsx, PackageRedeem.tsx).
+  - pnpm typecheck: 0 lỗi.
+  - pnpm test: 175/175 tests đạt (100%).
+  - Playwright E2E: tests/e2e/zy-billing.spec.ts đạt (7.6s).
+  - Production build: pnpm build thành công.
+- **Triển khai lên VPS golfhub.cloud (13:32 10/11/2026)**:
+  - Snapshot trước deploy: /root/golf3d-predeploy-20261110-1332.tar.gz (quyền 600, 5.6MB).
+  - Rollback build: /var/www/app-golf3d/dist.rollback-predeploy-20261110-1332 (build 329db3d4-faa5-467a-a97a-e7636140d546).
+  - Bản build mới: a6151d3b-aa9e-4d3d-a835-b796efaccea1.
+  - Dịch vụ app-golf3d.service hoạt động (active running); kiểm tra curl https://golfhub.cloud/ và /quan-ly trả HTTP 200, /api/auth/me trả 401 khi chưa đăng nhập. Không chạy migration, giữ nguyên D1 local .wrangler/state.
+
+
+
+## Nâng cấp CRM theo mô hình Bán hàng & Marketing SandboxVN (2026-11-10)
+- **Tham chiếu nghiệp vụ SandboxVN & tài liệu `tailieucrm/`**:
+  - **Bán hàng & Telesales (#ban-hang-online, #tele-sales-2, #chia-lead)**:
+    - Bổ sung màn hình **Chia lead (Máy chia data)** (modules/crm/ui/LeadDistributionScreen.tsx): 5 phân vùng dữ liệu nghiệp vụ chuẩn (Chưa chia, Đã chia, Khách cũ, Về lại (trùng số), Chăm sóc sau bán). Hỗ trợ chọn hàng loạt để chia data cho nhân sự hoặc thu hồi về kho chung; tích hợp modal cấu hình chia tự động theo xoay vòng (round-robin) hoặc trọng số, quy tắc trả về nhân sự cũ (`returnToPreviousOwner`), và cài đặt thời hạn SLA phản hồi.
+    - Nâng cấp **Bàn làm việc Telesales** (modules/crm/ui/Screens.tsx): Thẻ KPI theo dõi tỷ lệ tương tác (Chưa tương tác, Đã tương tác, Quá hạn SLA, Lịch hẹn sắp đến); bổ sung bộ 4 kịch bản tư vấn chuẩn (Gói trải nghiệm 99k, Báo giá VIP GDR, Xác nhận lịch hẹn, Khảo sát sau chơi) với modal điền tên sale/khách và nút mở Zalo/sao chép 1 chạm; tự động mở modal ghi kết quả cuộc gọi khi bấm gọi điện.
+  - **Marketing & Cổng tiếp nhận Webhook (#mkt-landing, #quan-ly-lead, #mkt-insight)**:
+    - Nâng cấp màn hình **Marketing** (modules/crm/ui/MarketingScreen.tsx) thành 5 tab phân hệ chuyên sâu:
+      1. **Báo cáo Marketing (ROI / ROAS)**: KPI chi phí quảng cáo, CPL, đơn chốt, CPA, doanh thu quy đổi từ lead, và ROAS; 4 bảng phân tích chi tiết theo Nguồn, theo Chiến dịch, theo Marketer, và theo Sản phẩm mục tiêu.
+      2. **Landing/Web & Webhook (#mkt-landing)**: Bảng quản lý các nguồn tiếp nhận (Landing Trải Nghiệm 99k, GDR VIP 100h, Website, Facebook Lead Ads, Google Ads, Zalo OA); hiển thị Webhook URL chuyên dụng kèm nút sao chép 1 chạm; quản lý mã token bảo mật x-lead-token (Website & Ads); hiển thị quy chuẩn kiểm tra SĐT hợp lệ (10 số, đầu số VN) và cơ chế chặn trùng data tự động (cùng SĐT trong 24h chuyển thành Về lại (trùng số), không tạo lead rác).
+      3. **Chiến dịch & Chi phí quảng cáo**: Quản lý chiến dịch, ngân sách, và biểu mẫu nhập chi phí chạy quảng cáo theo ngày (Amount, Impressions, Clicks).
+      4. **Danh sách số Seeding (#quan-ly-lead)**: Quản lý số nội bộ/số test; lead từ số này vẫn vào hệ thống để Telesales thực hành nhưng tự động loại bỏ 100% khỏi các chỉ số CPL, CPA, ROAS và doanh thu.
+      5. **Insight khách hàng (#mkt-insight)**: Thống kê tỷ lệ quan tâm theo gói dịch vụ (Gói 99k, Thuê phòng theo giờ, Hội viên VIP, Khóa học HLV), khung giờ vàng đặt lịch, và các rào cản chính khi khách chưa chốt.
+- **Xác minh kỹ thuật**:
+  - pnpm typecheck: 0 lỗi.
+  - pnpm eslint: 0 lỗi trên toàn bộ các tệp CRM được chỉnh sửa (LeadDistributionScreen.tsx, Screens.tsx, MarketingScreen.tsx, CrmApp.tsx).
+  - pnpm test: 175/175 tests đạt (100%).
+  - pnpm build: Next.js / Vinext build thành công (code 0).
+
+## Bỏ giới hạn booking online (2026-11-10; đã deploy)
+- Khách tự nhập mọi ngày/giờ tương lai theo mốc 15 phút, không còn giới hạn tối thiểu 60 phút hoặc số ngày đặt trước; giới hạn 90 ngày khi nhân viên tự tạo booking vẫn giữ nguyên.
+- Bỏ điều kiện phải cấu hình đủ giờ mở cửa, sức chứa, VAT và phí mới mở trang online. Khi thiếu cấu hình/giá, vẫn nhận yêu cầu chờ nhân viên, không hiện báo giá; nhân viên chỉ xác nhận thành booking sau khi hệ thống kiểm tra đủ điều kiện.
+- Cài đặt online chỉ cần bật nhận yêu cầu và có mã đường dẫn. Gỡ trường số ngày online khỏi màn Cài đặt; dữ liệu cấu hình cũ vẫn được giữ để tương thích.
+- Kiểm tra: `pnpm typecheck`, `pnpm test` (175 đạt), Sites/Vinext `pnpm build`, ESLint các tệp thay đổi (0 lỗi; 7 cảnh báo sẵn có trong `Forms.tsx`) và E2E luồng đặt booking (`flow.spec.ts`, `zx-landing-booking.spec.ts`, `zy-group-booking.spec.ts`: 13 đạt), gồm yêu cầu khi thiếu cấu hình và xác nhận lịch trước hơn 90 ngày.
+- Chủ yêu cầu deploy toàn bộ worktree ngày 10/11. Build hiện tại `83f20b53-4d10-4e1f-a43f-4ac65e60b6e0` đã được kiểm thử, nhưng các lần thử SSH tới `golfhub.cloud:22` (bao gồm lần thử lại lúc 11:15 với khóa VPS) đều timeout; không tạo snapshot, thay build, restart dịch vụ hoặc thay đổi dữ liệu production. Trước lần thử lại, HTTPS `/` và `/quan-ly` trả 200, `/api/auth/me` trả 401 như dự kiến. Cần khôi phục quyền truy cập SSH rồi mới deploy; giữ pilot owner-private.
+
+## Sửa kiểm tra giờ booking nhân viên (2026-11-09; deploy 2026-11-10)
+- Form đặt lịch nhân viên đồng bộ giới hạn backend: chỉ chọn mốc 15 phút trong tương lai, tối đa 90 ngày; giới hạn được làm mới định kỳ khi form còn mở.
+- Nút thời gian nhanh đưa lịch đã quá giờ về mốc hợp lệ gần nhất. Backend tiếp tục là nguồn sự thật, giờ đúng bằng hiện tại bị từ chối cho booking nhưng vẫn cho phép lượt khách vãng lai bắt đầu ngay.
+- Tách thông báo lỗi cho giờ quá khứ/hiện tại, sai mốc 15 phút và vượt quá 90 ngày để nhân viên biết cách xử lý.
+- Kiểm tra: `pnpm typecheck`, `pnpm test` (đạt), `pnpm build`, ESLint các tệp thay đổi (0 lỗi; còn cảnh báo cũ trong `Forms.tsx`) và E2E `tests/e2e/zzzz-counter-ux.spec.ts` (6 đạt). Đã deploy build `1e1074e1-cda5-4d6f-a85d-c64e58358a4e` lên VPS `golfhub.cloud`; `/` và `/quan-ly` trả 200, `/api/auth/me` trả 401 khi chưa đăng nhập, service active. Không gửi booking thật, không chạy migration hay thay đổi dữ liệu. Snapshot trước deploy: `/root/golf3d-predeploy-20261110-0650.tar.gz` (quyền 600); build rollback: `/var/www/app-golf3d/dist.rollback-predeploy-20261110-0650`. Giữ pilot owner-private.
+
+## Sửa thanh đặt nhanh trên trang chủ (2026-11-09)
+- Đã sửa lỗi các lựa chọn ngày/khung giờ/dịch vụ/phòng ở thanh đặt nhanh không được đưa sang biểu mẫu đặt lịch: thay thao tác DOM giả lập sự kiện bằng một sự kiện có kiểu, được biểu mẫu tiếp nhận để cập nhật React state.
+- Thanh nhanh nay chọn riêng dịch vụ (luyện tập/9 hố/18 hố) và loại phòng; ngày/khung giờ hợp lệ được điền theo giờ Việt Nam. Nếu chọn ngày khác hoặc khung giờ trong ngày không còn đủ 60 phút báo trước, biểu mẫu yêu cầu khách tự chọn ngày/giờ khác.
+- Đổi nút “Kiểm tra & Giữ phòng” thành “Điền thông tin đặt lịch” để phản ánh đúng quy trình: khách gửi yêu cầu, nhân viên xác nhận; không giữ chỗ giả. Sửa lưới và xuống dòng để các nút không đè lên nhau.
+- Kiểm tra: `pnpm typecheck`, `pnpm build`, ESLint không có lỗi (còn 9 cảnh báo trong `LandingCmsPanel.tsx`) và E2E flow + booking (11 đạt). E2E kiểm tra thanh nhanh trên mobile, gửi booking vào D1 tạm của test và xác nhận trang `/book/...` điền sẵn, gửi thành công.
+- Đã deploy lên VPS `golfhub.cloud` ngày 09/11 (build `e53f7d1a-fd6d-4180-b932-74b78f9c9dcf`). `/` và `/quan-ly` trả HTTP 200; trình duyệt xác nhận form đặt lịch và thanh đặt nhanh đã tải, không có lỗi hiển thị. Không có migration hay ghi dữ liệu nghiệp vụ; giữ pilot owner-private.
+
+## CRM: nối lịch sử nghiệp vụ vào hồ sơ khách (2026-11-09)
+- Hồ sơ khách của CRM mới có timeline đọc từ dữ liệu nghiệp vụ hiện có, không thêm bảng hay migration: lead/hoạt động/lịch CRM, booking và lượt chơi, khoản thu/hoàn tiền, thanh toán đơn CRM, sổ thẻ giờ, điểm thưởng, ghi chú và việc chăm sóc.
+- Truy vấn giữ phạm vi tenant; booking tìm theo số điện thoại đã chuẩn hóa. Timeline lấy thời điểm bắt đầu/kết thúc thực từ các khoảng `segments`, vì khi hoàn tất phiên cột `started` được xóa; phiên đang chạy tiếp tục dùng mốc `started` hiện tại.
+- Tab **Lịch sử** trong hồ sơ hiển thị mốc thời gian, mô tả và số tiền. Đã kiểm tra qua giao diện luồng bán gói → đặt 18 hố → bắt đầu/kết thúc → dùng lượt gói; API trả về cả hai mốc chơi và giao dịch.
+- Xác minh local: `pnpm typecheck`, `pnpm build`, ESLint ba tệp CRM, `pnpm test` (176 đạt) và `pnpm exec playwright test tests/e2e/flow.spec.ts tests/e2e/zzzzz-crm-care.spec.ts` (15 đạt).
+- Không có migration và không ghi dữ liệu nghiệp vụ trong đợt deploy. Theo yêu cầu ngày 09/11, build pilot owner-private đã được deploy lên VPS `golfhub.cloud` (build `e12000c1-997c-473d-9ba9-3c6a77bf3e96`); không đổi audience. Đây mới là lát nối lịch sử; chưa nghiệm thu toàn bộ quy trình lead → đặt lịch → phục vụ → thanh toán → chăm sóc.
+- Còn phải kiểm tra/hoàn thiện: luồng lead tới booking và đổi/hủy/nhắc lịch; check-in và khách vãng lai; phát sinh F&B, tiền cọc/hoàn tiền và chống gửi lặp; phân quyền chéo tenant; SLA trong/ngoài ca và gửi thông báo thật; chăm sóc chỉ sau tất toán, phản ánh và đặt lại; báo cáo chuyển đổi/doanh thu thực thu. Các kênh email/Zalo phụ thuộc cấu hình thật; test mock không xác nhận giao nhận thật. Giữ pilot owner-private.
+
+## Sửa giao diện “Vào chơi ngay” (2026-11-09)
+- Trên điện thoại, giữ tiêu đề và chân nút cố định trong tấm trượt; chỉ phần biểu mẫu cuộn, nút bắt đầu không còn bị đẩy ra ngoài màn hình. Chân nút tính safe-area và xếp nút theo chiều dọc.
+- Ẩn thanh cuộn dọc của trang quản lý bằng CSS nhưng giữ nguyên thao tác cuộn; mở rộng E2E xác nhận cuộn trang vẫn hoạt động.
+- Mở rộng E2E ở viewport 375×812: xác nhận tiêu đề/nút thao tác vẫn trong khung nhìn khi cuộn, nội dung có vùng cuộn riêng và không tràn ngang. Không gửi lệnh bắt đầu phiên.
+- Xác minh: `pnpm typecheck`, `pnpm build` và `pnpm exec playwright test tests/e2e/flow2-walkin-ui.spec.ts` đạt. Deploy lên VPS `golfhub.cloud` ngày 09/11: bản sửa dialog trước đó là `af5edd92-06ea-4e66-85a0-bacb7b98d1b0`; bản hiện tại ẩn scrollbar là `84918714-4523-4fcd-9629-9770396475cf`. Systemd hoạt động, HTTPS trả 200; trình duyệt xác nhận scrollbar-width `none` và trang vẫn cuộn được. Rollback build hiện tại là `af5edd92-06ea-4e66-85a0-bacb7b98d1b0` tại `dist.rollback-scrollbar-20261109-2120`, snapshot build+D1 root-only tại `/root/golf3d-preshow-scrollbar-20261109-2120.tar.gz`. Không chạy migration hay thay đổi dữ liệu.
+
+## Ổn định baseline, tài liệu và CI (2026-11-09)
+- Sửa lỗi trùng khai báo trong E2E thanh toán chia nhiều hình thức; xếp test ngay sau fixture ngân hàng mà nó dùng. Test chỉ tạm đặt thời gian dọn phòng bằng 0 trong lúc tạo hai phiên, rồi khôi phục cấu hình trong `finally`, tránh làm các test sau bị khóa line.
+- CI dùng `pnpm test` thay vì danh sách con cũ và chạy mọi `tests/*_test.py`; E2E tiếp tục chạy riêng sau build.
+- Đồng bộ README và hướng dẫn local với lệnh Sites/Vinext hiện có, thứ tự migration, test Windows UTF-8 và ranh giới owner-private. Đánh dấu lộ trình chuyển Vercel/Supabase là ghi chép cũ; CRM-MIGRATION nêu rõ chưa xác nhận chuyển/xóa dữ liệu trên production.
+- Rà soát cuối PRE_LAUNCH_AUDIT/BUG-PLAN: sửa số liệu ESLint lỗi thời, đánh dấu hỗ trợ nhóm 9 người đã hoàn tất, và phân biệt hướng dẫn VPS lịch sử với Site Sites/Vinext. Backup/restore trên Site vẫn chưa được diễn tập.
+- Deploy pilot owner-private lên VPS `golfhub.cloud` theo yêu cầu ngày 09/11: thay artifact build và runtime shim, bật `TRUST_PROXY=1`, không nâng OS/Node/dependency, không chạy migration và không đổi audience. Typecheck, `pnpm test`, build đã đạt; domain trả HTTP 200, request cùng Origin tới handler (404 do thiếu dữ liệu đầu vào), Origin ngoài bị 403. D1 được giữ nguyên; snapshot rollback có D1 và build cũ được giữ root-only, chưa diễn tập restore. VPS còn khoảng 2.5 GB trống; tích hợp thật và nghiệm thu thu tiền vẫn chưa làm.
+- Xác minh local: TypeScript/Node/RSC/Worker/tooling 176 đạt; Python SQL/migration 200 đạt; Playwright 121 đạt, 2 bỏ qua có chủ đích; build Sites/Vinext đạt. ESLint 0 lỗi, còn 77 cảnh báo.
+- Chưa xác minh tích hợp thật, backup/restore trên máy khác, thiết bị iOS/Android, CI trên GitHub hay chuyển CRM trên production. Giữ pilot owner-private; không xóa dữ liệu/bảng và không đổi audience.
+
 ## Giao diện quản lý, đợt 2 (2026-11-06)
 Chi tiết từng giai đoạn trong `docs/UI-REDESIGN-PLAN.md` (mục "Đợt 2"); hướng dẫn dùng cho nhân viên: `docs/HUONG-DAN-NHAN-VIEN.md`.
 - **CSS**: bốn tệp (`globals`, `kiotviet`, `mobile`, `admin`) gộp còn `tokens.css` + `globals.css` + `admin.css` theo đúng thứ tự cascade; gộp các selector trùng chứng minh được an toàn; xóa quy tắc của menu/thanh cũ và của các lớp không còn dùng.
@@ -387,3 +489,25 @@ Vá brace-expansion hai major riêng biệt và js-yaml 4; chỉ ba package reco
 - Form đặt lịch online tạo lead theo công tắc "Lead từ website" (CRM mới hoặc cũ).
 - Cron của CRM mới (`/api/crm2/cron`) giờ cũng gửi hàng đợi tin đến hạn, nên nhắc lịch không còn phụ thuộc vào bước quét lead cũ. Việc gọi cron định kỳ vẫn do bộ lập lịch bên ngoài đảm nhiệm; cần trỏ nó sang `/api/crm2/cron` trước khi xóa `/api/cron/crm`.
 - Test mới `zzzz-booking-messages.spec.ts`.
+
+## Rà soát toàn bộ luồng, In nhiệt K80 và Gửi bill Zalo (2026-11-10)
+
+- **In nhiệt máy 80mm (K80)**:
+  - Khắc phục lỗi trang in trắng/trắng màn hình bằng cách phạm vi hóa `@media print` trong `app/globals.css` (trước đó `body * { visibility: hidden; }` làm ẩn toàn bộ trang khi in biên nhận).
+  - Tách module độc lập `lib/thermal-receipt.ts` sinh HTML chuẩn K80 (chiều rộng in 72mm/khổ giấy 80mm) có logo, địa chỉ, hotline, chi tiết line chơi, F&B phục vụ, VAT, phí dịch vụ, chiết khấu và tổng thanh toán. In qua iframe ẩn chuyên dụng với `@page { size: 80mm auto; margin: 1.5mm 2mm; }`.
+  - Ẩn hoàn toàn header/footer nhiệt khỏi màn hình thu ngân (`display: none !important;`) để tránh làm vỡ giao diện trên màn hình.
+- **Chia sẻ bill qua Zalo 1-click**:
+  - Tự động định dạng văn bản biên nhận ngắn gọn, sao chép vào clipboard và mở tab Zalo chat `https://zalo.me/<sđt>` với khách hàng. Có thông báo phản hồi thao tác.
+- **Sửa giao diện Thu tiền mặt (CashPay)**:
+  - Khắc phục lỗi co cụm một hàng do CSS flex `.info-strip`: thiết lập `flex-direction: column; width: 100%`, các nút tiền nhanh (100k, 200k, 500k, Vừa đủ) nằm gọn, tiền thối đổi màu xanh nổi bật và nút xác nhận chiếm trọn hàng.
+- **Kiểm thử và xác minh toàn diện mọi luồng trong hệ thống**:
+  - 175/175 unit tests qua 100%.
+  - 5/5 worker runtime & rsc transport tests qua 100%.
+  - Tất cả các luồng E2E qua 100%:
+    - Đặt lịch online, trang chủ công khai, nhóm đông người chia nhiều phòng (`a-landing`, `zx-landing-booking`, `zy-group-booking`).
+    - Quầy lễ tân, vào chơi ngay (walk-in), sơ đồ phòng, chuông gọi phục vụ, khuyến mãi, phím tắt (`flow2-walkin-ui`, `zzzz-counter-ux`, `zzzz-walkin`, `zv-package-room`, `zw-bell`, `zy-promotions`).
+    - Bảng giá, quản trị gói, hội viên, tài khoản, báo cáo, bảo mật CSRF & brute-force, dọn dẹp dữ liệu (`zw-price-admin-ui`, `zw-pricing`, `zy-member-account`, `zy-membership-page`, `zz-reports`, `zzzzz-security`, `zzzzzz-prelaunch`).
+    - CRM 2.0 toàn diện, tiếp nhận lead đa kênh, phân luân phiên, SLA 5 phút, kho số, lịch hẹn, giữ chỗ & cọc, chăm sóc khách 360, Marketing & số seeding (`zz-crm`, `zzz-leads`, `zzzz-crm-channels`, `zzzz-crm-module`, `zzzz-website-to-crm2`, `zzzzz-crm-care`, `zzzzzzz-marketing`).
+    - Thu ngân POS, tính tiền thối, giảm giá & hoàn tiền, webhook SePay VietQR, chia nhiều hình thức thanh toán, tin nhắn đặt lịch, webhook ads/facebook/zalo (`zy-billing`, `z-bank`, `z-bank1-split`, `zy-hub`, `zzzz-ads-to-crm2`, `zzzz-facebook-to-crm2`, `zzzz-zalo-to-crm2`, `zzzz-booking-messages`, `zzzzzzzz-appmenu`).
+- **Triển khai VPS**:
+  - Build ID: `5b5cf510-432e-4bea-b008-7fccf2cdcb85` đã deploy thành công lên `golfhub.cloud` (port 7878), snapshot lưu tại `/root/golf3d-predeploy-20261110-1515.tar.gz`. Hệ thống hoạt động ổn định, `HTTP/2 200`.

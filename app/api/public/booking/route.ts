@@ -1,7 +1,8 @@
 import { publicInfo, submitRequest } from '../../../../lib/server/online-service';
-import { sendResult, httpError, clientIp } from '../../../../lib/server/http';
+import { sendResult, httpError, clientIp, originOf } from '../../../../lib/server/http';
 import { turnstilePasses } from '../../../../lib/server/turnstile';
 import { SLUG_PATTERN } from '../../../../lib/online';
+import { sameOrigin } from '../../../auth-session';
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
@@ -11,9 +12,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const origin = req.headers.get('origin');
-  if (origin && origin !== new URL(req.url).origin)
-    return httpError('Nguồn yêu cầu không hợp lệ', 403);
+  // The shared check understands reverse proxies (nginx in front of the Node server): comparing with the URL the
+  // server itself sees would reject every browser request on the VPS.
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
   let body: Record<string, unknown>;
   try {
     const text = await req.text();
@@ -28,5 +29,5 @@ export async function POST(req: Request) {
   const ip = clientIp(req);
   if (!(await turnstilePasses(captcha, ip)))
     return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
-  return sendResult(await submitRequest(slug, rest, ip, new URL(req.url).origin));
+  return sendResult(await submitRequest(slug, rest, ip, originOf(req)));
 }

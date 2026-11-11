@@ -1,6 +1,6 @@
 # Module CRM (`modules/crm`)
 
-Viết lại từ `CRM-SPEC-CHO-CLAUDE-CODE.md` (CRM bán hàng bất động sản), chuyển sang **tư vấn dịch vụ golf**. Chạy độc lập với "Chăm sóc KH" cũ: bảng `crm2_*`, API `/api/crm2/*`, menu **CRM**. CRM cũ giữ nguyên cho tới khi chuyển dữ liệu xong.
+Viết lại từ `CRM-SPEC-CHO-CLAUDE-CODE.md` (CRM bán hàng bất động sản), chuyển sang **tư vấn dịch vụ golf**. Bảng `crm2_*`, API `/api/crm2/*`, menu **CRM**. **CRM cũ (tab Chăm sóc KH, `/api/crm`, `/api/leads` cũ, `lead-service`, `crm-service`) đã bị gỡ khỏi mã (11/11/2026)**: các cổng website, Zalo, Facebook, quảng cáo luôn vào CRM mới; `/api/cron/crm` giờ chạy cron của CRM mới (giữ để bộ lập lịch cũ không hỏng). Bảng `crm_*` cũ vẫn nằm trong DB (rỗng, không có dữ liệu thật) và chưa bị DROP.
 
 ## Cấu trúc
 

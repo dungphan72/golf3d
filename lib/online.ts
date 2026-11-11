@@ -1,7 +1,6 @@
 import { z } from 'zod';
 
 export const SLUG_PATTERN = /^[a-z0-9][a-z0-9-]{2,39}$/;
-export const MIN_LEAD_MINUTES = 60;
 
 /** Public, unauthenticated request. The `website` field is a honeypot and must stay empty. */
 export const publicRequestInput = z

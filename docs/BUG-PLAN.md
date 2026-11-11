@@ -24,7 +24,7 @@ Không chạy được: kiểm tra trạng thái CI trên GitHub (máy này khô
 4. **Phụ thuộc có lỗ hổng** (mục 1). Cần nâng/override và chạy lại audit.
 
 ### Ưu tiên vừa (nghiệp vụ chưa đủ)
-5. **Nhóm trên 4 người** (đặt online): chỉ giữ được 1 line khi xác nhận, báo giá không tính; nhân viên phải đặt các line còn lại bằng tay. Cần xếp nhiều line.
+5. ~~**Nhóm trên 4 người** (đặt online): chỉ giữ được 1 line khi xác nhận, báo giá không tính.~~ **Đã hoàn thành:** nhóm được chia theo sức chứa tối đa 4 người/line, báo giá cộng theo từng line và xác nhận đặt đủ phòng; có E2E nhóm 9 người. Xem v0.12.3 trong `docs/PROGRESS.md`.
 6. **Báo cáo doanh thu theo dịch vụ** chưa trừ hoàn tiền (theo ngày đã trừ).
 7. **Hoàn tiền phiếu trả bằng gói** chưa hoàn về gói; hoàn tiền phiếu của ca cũ ghi vào ca đang mở (đúng nhưng cần nói rõ trên giao diện).
 8. **Trang cá nhân hội viên**: thời điểm "bây giờ" bị đóng băng lúc mở trang, mở lâu sẽ hiện sai trạng thái hết hạn.
@@ -47,7 +47,6 @@ Không chạy được: kiểm tra trạng thái CI trên GitHub (máy này khô
 
 **Đợt 2: cần anh quyết định trước**
 - Mục 1: chốt giá các gói giờ và thẻ so với giá lẻ; chốt phòng VIP có bảng giá riêng không.
-- Mục 5: chọn cách tính giá và xếp line cho nhóm đông (chia theo line 4 người, hay giá nhóm cố định).
 
 **Đợt 3: hoàn thiện**
 - Mục 6, 7: báo cáo trừ hoàn theo dịch vụ, hoàn về gói, ghi chú ca.

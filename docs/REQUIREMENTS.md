@@ -16,7 +16,8 @@ Ngày ghi nhận: 02/11/2026. Chủ sản phẩm: Phan Tiến Dũng.
 - Khách BẮT BUỘC đăng nhập trước khi đặt (thay thế quyết định đặt nhanh ban đầu). OTP điện thoại quốc tế, email đã xác minh làm kênh thay thế.
 - Nhân viên được tạo booking từ điện thoại/Zalo/khách trực tiếp. Ghi nguồn.
 - Chọn line/phòng cụ thể. GDR bắt đầu theo bước 15 phút, tối thiểu 60 phút, tăng mỗi 30 phút.
-- Khách online đặt trước tối đa 2 ngày, không giới hạn đặt sát giờ; nhân viên có quyền đặt xa hơn, số ngày admin cấu hình.
+- Khách online tự chọn ngày giờ tương lai theo mốc 15 phút, không giới hạn đặt trước; nhân viên kiểm tra giờ hoạt động, tình trạng phòng và báo giá rồi mới xác nhận. Nhân viên tạo lịch thủ công tối đa 90 ngày trước.
+- Chỉ cần bật nhận yêu cầu và có mã đường dẫn để mở trang đặt lịch. Nếu thiếu giờ hoạt động, sức chứa hoặc giá/phí, vẫn nhận yêu cầu chưa báo giá; nhân viên phải bổ sung cấu hình và xác nhận thủ công, không tạo booking đã xác nhận.
 - Phê duyệt tự động/thủ công, thời gian giữ booking chờ thanh toán đều cấu hình.
 - Mặc định miễn cọc cho tất cả. Có thể bật theo nhóm khách, phòng, booking sự kiện; hỗ trợ tiền cố định/%/thanh toán toàn bộ.
 - Giữ khách muộn mặc định 15 phút; cảnh báo, nhân viên quyết định giải phóng, không tự hủy. Admin thay mốc.

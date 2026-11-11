@@ -2,21 +2,23 @@ import { sendResult, httpError, originOf, requestNow } from '../../../../lib/ser
 import { secret } from '../../../../lib/server/providers';
 import { db } from '../../../../lib/server/common';
 import { safeEqual } from '../../../../lib/server/throttle';
-import { sweepLeads } from '../../../../lib/server/lead-service';
+import { runCrmCron } from '../../../../modules/crm/server/cron';
 export const dynamic = 'force-dynamic';
 
 /**
- * Runs the lead sweep (overdue calls, queue, due messages) for every club. Call it every minute from
- * a scheduler (Cloudflare Cron, cron-job.org, UptimeRobot) with `Authorization: Bearer CRON_SECRET`.
+ * Kept so schedulers already pointed at /api/cron/crm keep working: runs the CRM module's background work
+ * (same as /api/crm2/cron). Call every 5 minutes with `Authorization: Bearer CRON_SECRET`.
  */
 export async function POST(req: Request) {
+  await req.text().catch(() => '');
   const expected = secret('CRON_SECRET');
   if (!expected || expected.length < 16) return httpError('Chưa cấu hình CRON_SECRET', 503);
   if (!safeEqual(req.headers.get('authorization') ?? '', `Bearer ${expected}`))
     return httpError('Không được phép', 401);
-  const tenants = (await db().prepare('SELECT tenant FROM settings').all<{ tenant: string }>())
-    .results;
-  const now = requestNow(req);
-  for (const t of tenants) await sweepLeads(t.tenant, originOf(req), now);
-  return sendResult({ status: 200, body: { ok: true, clubs: tenants.length } });
+  const tenants = (
+    await db().prepare('SELECT DISTINCT tenant FROM memberships').all<{ tenant: string }>()
+  ).results;
+  const reports = [];
+  for (const t of tenants) reports.push(await runCrmCron(t.tenant, originOf(req), requestNow(req)));
+  return sendResult({ status: 200, body: { ok: true, reports } });
 }

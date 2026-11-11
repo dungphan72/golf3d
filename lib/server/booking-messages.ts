@@ -12,7 +12,6 @@ import {
 } from '../leads';
 import { enqueue, cancelPending, dispatchDue, type Msg } from './outbox-service';
 import { addActivity, addTask } from '../../modules/crm/server/store';
-import { legacyBooked, legacyNoShowTask } from './lead-service';
 
 // Customer messages that follow a booking: details and reminders, cancel / no-show notice, receipt and thank-you.
 // They go through the shared outbox, so each is sent once, and cancelling a booking stops its reminders.
@@ -131,8 +130,7 @@ export async function onBookingConfirmed(
   const config = await loadConfig(tenant);
   const customer = await customerChannels(tenant, who.phone);
   const first = bookings[0];
-  const legacyId = await legacyBooked(tenant, who.phone, bookings, now);
-  const leadId = (await crmBooked(tenant, who.phone, first, now)) ?? legacyId;
+  const leadId = await crmBooked(tenant, who.phone, first, now);
   if (!customer) return;
   const rooms_ = bookings.map((b) => roomName(b.room)).join(', ');
   const info = bookingInfoMessage(config.name, {
@@ -197,7 +195,6 @@ export async function onBookingEnded(
     now,
   );
   if (kind === 'no_show') {
-    await legacyNoShowTask(tenant, customer, b.id, whenText(b.start), now);
     const norm = leadPhone(b.phone);
     const lead = norm
       ? await db()

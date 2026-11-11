@@ -6,7 +6,12 @@ import { Flag, Check, ArrowRight, Save, Crown, Clock, Users, Calendar, Award, Bu
 
 import { DialogHeading, ModalDialog } from './kit';
 
-import { planBooking } from '../../lib/booking';
+import {
+  bookingDateTimeLocal,
+  latestStaffBookingStart,
+  nextBookingStart,
+  planBooking,
+} from '../../lib/booking';
 
 import { PriceEditor } from './PriceEditor';
 
@@ -68,21 +73,6 @@ const POPULAR_BANKS = [
 
 
 
-const onlineMissing = (c: Config) =>
-
-  [
-
-    !c.open || !c.close ? 'giờ mở/đóng cửa' : '',
-
-    !c.capacity ? 'số line tiêu chuẩn' : '',
-
-    !c.vipCapacity ? 'số phòng VIP' : '',
-
-    c.vat == null ? 'VAT' : '',
-
-    c.fee == null ? 'phí dịch vụ' : '',
-
-  ].filter(Boolean);
 
 
 
@@ -120,13 +110,15 @@ export function BookingForm({
 
 }) {
 
-  const [local] = useState(() => {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    return () => clearInterval(timer);
+  }, []);
 
-    const next = Math.ceil((Date.now() + 60000) / 900000) * 900000;
-
-    return new Date(next + 7 * 3600000).toISOString().slice(0, 16);
-
-  });
+  const [local] = useState(() => bookingDateTimeLocal(nextBookingStart(Date.now())));
+  const minStart = bookingDateTimeLocal(nextBookingStart(now));
+  const maxStart = bookingDateTimeLocal(latestStaffBookingStart(now));
 
   const [room, setRoom] = useState(initialRoom),
 
@@ -168,8 +160,7 @@ export function BookingForm({
 
       config,
 
-      // eslint-disable-next-line react-hooks/purity -- quote is relative to the current time
-      Date.now(),
+      now,
 
     );
 
@@ -182,14 +173,12 @@ export function BookingForm({
 
 
   // Quick jump time helper (adds minutes to current start)
-
   function adjustTime(addMinutes: number) {
-
-    const curr = Date.parse(start + ':00+07:00') || Date.now();
-
-    const target = curr + addMinutes * 60_000;
-
-    setStart(new Date(target + 7 * 3600000).toISOString().slice(0, 16));
+    const curr = Date.parse(start + ':00+07:00');
+    const target = Number.isFinite(curr) && curr > now
+      ? curr + addMinutes * 60_000
+      : nextBookingStart(now);
+    setStart(bookingDateTimeLocal(target));
 
   }
 
@@ -455,8 +444,8 @@ export function BookingForm({
 
                 type="datetime-local"
 
-                step="900"
-
+                min={minStart}
+                max={maxStart}
                 value={start}
 
                 onChange={(e) => setStart(e.target.value)}
@@ -1247,12 +1236,9 @@ export function SettingsForm({
             <div>
 
               <h2>Khoảng đệm & chính sách</h2>
-
               <p>
-
-                Các mốc khách online sẽ áp dụng khi mở cổng golfer. Nhân viên bản thử được đặt trước
-
-                tối đa 90 ngày.
+                Khách online tự chọn ngày giờ mong muốn; nhân viên kiểm tra và xác nhận. Nhân viên
+                tạo lịch thủ công tối đa 90 ngày trước.
 
               </p>
 
@@ -1265,8 +1251,6 @@ export function SettingsForm({
               {numberField('clean', 'Dọn line tiêu chuẩn (phút)')}
 
               {numberField('vipClean', 'Dọn VIP (phút)')}
-
-              {numberField('days', 'Khách online đặt trước (ngày)')}
 
               {numberField('grace', 'Giữ chỗ khách muộn (phút)')}
 
@@ -1307,32 +1291,20 @@ export function SettingsForm({
               </label>
 
               {c.onlineEnabled && (
-
                 <p className="form-note" role="status">
-
-                  {onlineMissing(c).length
-
-                    ? 'Chưa mở được cho khách vì còn thiếu: ' + onlineMissing(c).join(', ') + '.'
-
-                    : !c.onlineSlug
-
-                      ? 'Hãy đặt mã đường dẫn để mở trang đặt lịch.'
-
-                      : 'Sẵn sàng: khách đặt lịch tại /book/' +
-
-                        c.onlineSlug +
-
-                        ' và trên trang chủ.'}
-
+                  {!c.onlineSlug
+                    ? 'Hãy đặt mã đường dẫn để mở trang đặt lịch.'
+                    : 'Khách có thể gửi yêu cầu tại /book/' +
+                      c.onlineSlug +
+                      '. Nhân viên sẽ kiểm tra giờ hoạt động, tình trạng phòng và báo giá trước khi xác nhận.'}
                 </p>
-
               )}
 
             </div>
 
           </section>
 
-          {c.onlineEnabled && c.onlineSlug && !onlineMissing(c).length && (
+          {c.onlineEnabled && c.onlineSlug && (
 
             <section className="settings-section">
 
@@ -1819,4 +1791,3 @@ function ShieldText() {
   return <small>Thay đổi được lưu vào nhật ký cơ sở.</small>;
 
 }
-

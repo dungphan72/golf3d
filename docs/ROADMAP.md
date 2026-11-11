@@ -1,4 +1,6 @@
-# Lộ trình Golf3D (chốt theo trả lời của chủ dự án)
+# Lộ trình Golf3D cũ (cần đối chiếu trước khi thực hiện)
+
+> Đây là ghi chép của một giai đoạn lập kế hoạch trước, không phải lộ trình hiện hành. Khi có khác biệt, ưu tiên [REQUIREMENTS.md](./REQUIREMENTS.md) và [PROGRESS.md](./PROGRESS.md). Hiện phải giữ Sites/Vinext và tích hợp xác thực hiện có; không chuyển sang Vercel/Supabase, đổi audience hoặc triển khai production nếu chưa có chỉ đạo mới.
 
 ## Quyết định đã chốt
 - Mục tiêu song song: chạy thật tại 250 Lương Định Của + nền SaaS đa cơ sở (tenant).

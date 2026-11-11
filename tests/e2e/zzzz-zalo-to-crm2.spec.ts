@@ -49,8 +49,6 @@ const newLeads = async () =>
   ((await (await owner.get('/api/crm2/leads?limit=200&q=')).json()) as Json).leads as Json[];
 const ofUser = async (u: string) =>
   (await newLeads()).filter((l) => String(l.notes).includes(`Zalo ID: ${u}`));
-const oldLeads = async () =>
-  ((await (await owner.get('/api/crm/leads')).json()) as Json).leads as Json[];
 const detail = async (id: string) =>
   (await (await owner.get('/api/crm2/leads?id=' + id)).json()) as Json;
 
@@ -83,17 +81,6 @@ test('mặc định tin Zalo vào CRM mới', async () => {
   expect(lead.notes).toContain('Em muốn tập swing cuối tuần');
   expect(lead.notes).toContain(`Zalo ID: ${u}`);
   expect(activities.length).toBeGreaterThan(0);
-  expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(false);
-});
-
-test('chuyển về CRM cũ nếu cấu hình: tin Zalo vào bên cũ', async () => {
-  await target('LEGACY');
-  const u = user();
-  const r = await zalo(text(u, 'Cho em hỏi giá tập swing', `m-${u}-1`));
-  expect(r.status()).toBe(200);
-  expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(true);
-  expect(await ofUser(u)).toHaveLength(0);
-  await target('CRM2');
 });
 
 test('Zalo gửi lại đúng sự kiện: không tạo thêm gì', async () => {
@@ -152,10 +139,3 @@ test('chữ ký sai bị từ chối; sự kiện không phải tin nhắn chữ
   expect(((await ignored.json()) as Json).ignored).toBe(true);
 });
 
-test('tắt lại: tin Zalo trở về CRM cũ', async () => {
-  await target('LEGACY');
-  const u = user();
-  await zalo(text(u, 'Cho em hỏi giá', `m-${u}-1`));
-  expect((await oldLeads()).some((l) => l.channel_ref === `zalo:${u}`)).toBe(true);
-  expect(await ofUser(u)).toHaveLength(0);
-});

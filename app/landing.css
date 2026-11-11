@@ -1325,7 +1325,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-quick-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1.2rem;
   align-items: flex-end;
 }
@@ -1333,6 +1333,7 @@ a:hover > .fw-arrow-dot {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  min-width: 0;
 }
 .fw-quick-label {
   display: flex;
@@ -1344,6 +1345,8 @@ a:hover > .fw-arrow-dot {
 }
 .fw-quick-pills {
   display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
   gap: 0.4rem;
   background: rgba(4, 18, 8, 0.45);
   padding: 0.3rem;
@@ -1351,7 +1354,8 @@ a:hover > .fw-arrow-dot {
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 .fw-quick-pills button {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -1362,7 +1366,7 @@ a:hover > .fw-arrow-dot {
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.2s ease;
-  white-space: nowrap;
+  white-space: normal;
   font-family: inherit;
   text-align: center;
 }
@@ -1386,6 +1390,7 @@ a:hover > .fw-arrow-dot {
 }
 .fw-quick-action {
   display: flex;
+  grid-column: 1 / -1;
 }
 .fw-btn-book-quick {
   display: inline-flex;
@@ -1404,6 +1409,7 @@ a:hover > .fw-arrow-dot {
   box-shadow: 0 4px 16px rgba(245, 175, 5, 0.35);
   font-family: inherit;
   white-space: nowrap;
+  width: 100%;
 }
 .fw-btn-book-quick:hover {
   transform: translateY(-2px);

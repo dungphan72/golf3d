@@ -1,6 +1,6 @@
 import { cookies } from 'next/headers';
 import { sendResult, httpError, sameOrigin } from '../../auth-session';
-import { clientIp } from '../../../lib/server/http';
+import { clientIp, originOf } from '../../../lib/server/http';
 import { turnstilePasses } from '../../../lib/server/turnstile';
 import {
   memberActionInput,
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       return httpError('Chưa xác minh được bạn là người thật. Vui lòng thử lại.', 403);
     const outcome =
       input.action === 'register'
-        ? await registerMember(input, clientIp(req), new URL(req.url).origin)
+        ? await registerMember(input, clientIp(req), originOf(req))
         : await loginMember(input.phone, input.password, clientIp(req));
     const response = sendResult(outcome.result);
     if (outcome.token) response.headers.append('Set-Cookie', cookieFor(outcome.token, req));

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { Calendar, Clock, Crown, ArrowRight, Sparkles } from 'lucide-react';
+import { QUICK_BOOKING_EVENT, type QuickBookingSelection } from './quick-booking-event';
 
 interface QuickBookingBarProps {
   lowestPrice?: number;
@@ -10,32 +11,46 @@ interface QuickBookingBarProps {
 export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBookingBarProps) {
   const [dayType, setDayType] = useState<'today' | 'tomorrow' | 'other'>('today');
   const [slot, setSlot] = useState<'gold' | 'afternoon' | 'evening'>('gold');
-  const [service, setService] = useState<'gdr' | 'vip' | 'holes'>('gdr');
+  const [service, setService] = useState<'gdr' | '9' | '18'>('gdr');
+  const [vip, setVip] = useState(false);
+  const [notice, setNotice] = useState('');
 
-  const handleBookClick = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleBookClick = () => {
+    const ranges = {
+      gold: goldTimeText?.match(/(\d{2}:\d{2})\s*[–-]\s*(\d{2}:\d{2})/) ?? [],
+      afternoon: ['14:00', '18:00'],
+      evening: ['18:00', '22:00'],
+    };
+    const [from, to] =
+      slot === 'gold'
+        ? [ranges.gold[1] || '08:00', ranges.gold[2] || '11:00']
+        : ranges[slot];
+    const date = new Date(Date.now() + (dayType === 'tomorrow' ? 86_400_000 : 0) + 7 * 3600_000)
+      .toISOString()
+      .slice(0, 10);
+    const endsAt = Date.parse(`${date}T${to}:00+07:00`);
+    let start = Date.parse(`${date}T${from}:00+07:00`);
+    if (dayType === 'today')
+      start = Math.ceil(Math.max(start, Date.now() + 60 * 60_000) / 900_000) * 900_000;
+    const validStart = dayType !== 'other' && start < endsAt;
+    const selection: QuickBookingSelection = {
+      service,
+      vip,
+      start: validStart ? new Date(start + 7 * 3600_000).toISOString().slice(0, 16) : '',
+      notice:
+        dayType === 'other'
+          ? 'Vui lòng chọn ngày và giờ trong biểu mẫu.'
+          : validStart
+            ? ''
+            : 'Khung giờ đã chọn không còn đủ thời gian đặt trước. Vui lòng chọn ngày và giờ khác.',
+    };
+    setNotice(selection.notice);
+    window.dispatchEvent(
+      new CustomEvent<QuickBookingSelection>(QUICK_BOOKING_EVENT, { detail: selection }),
+    );
     const target = document.getElementById('dat-cho');
     if (target) {
       target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      // If there are inputs in the booking form, we can try to pre-select service or date
-      setTimeout(() => {
-        const serviceSelect = document.querySelector('select[name="service"]') as unknown as {
-          options: ArrayLike<{ text: string; value: string }>;
-          value: string;
-          dispatchEvent(e: Event): boolean;
-        } | null;
-        if (serviceSelect) {
-          if (service === 'vip') {
-            const vipOption = Array.from(serviceSelect.options as ArrayLike<{ text: string; value: string }>).find(o => o.text.toLowerCase().includes('vip'));
-            if (vipOption) serviceSelect.value = vipOption.value;
-          } else if (service === 'holes') {
-            const hOption = Array.from(serviceSelect.options as ArrayLike<{ text: string; value: string }>).find(o => o.value.includes('9') || o.value.includes('18'));
-            if (hOption) serviceSelect.value = hOption.value;
-          }
-          serviceSelect.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }, 500);
     }
   };
 
@@ -117,11 +132,11 @@ export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBook
           </div>
         </div>
 
-        {/* Room / Experience Type */}
+        {/* Service */}
         <div className="fw-quick-col">
           <label className="fw-quick-label">
             <Crown size={15} />
-            <span>Loại phòng & Trải nghiệm</span>
+            <span>Dịch vụ</span>
           </label>
           <div className="fw-quick-pills">
             <button
@@ -129,19 +144,42 @@ export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBook
               className={service === 'gdr' ? 'active' : ''}
               onClick={() => setService('gdr')}
             >
-              Line Tiêu Chuẩn
+              Luyện tập
             </button>
             <button
               type="button"
-              className={service === 'holes' ? 'active' : ''}
-              onClick={() => setService('holes')}
+              className={service === '9' ? 'active' : ''}
+              onClick={() => setService('9')}
             >
-              Đấu sân 9/18 hố
+              Game 9 hố
             </button>
             <button
               type="button"
-              className={`pill-vip ${service === 'vip' ? 'active' : ''}`}
-              onClick={() => setService('vip')}
+              className={service === '18' ? 'active' : ''}
+              onClick={() => setService('18')}
+            >
+              Game 18 hố
+            </button>
+          </div>
+        </div>
+
+        <div className="fw-quick-col">
+          <label className="fw-quick-label">
+            <Crown size={15} />
+            <span>Loại phòng</span>
+          </label>
+          <div className="fw-quick-pills">
+            <button
+              type="button"
+              className={!vip ? 'active' : ''}
+              onClick={() => setVip(false)}
+            >
+              Line tiêu chuẩn
+            </button>
+            <button
+              type="button"
+              className={`pill-vip ${vip ? 'active' : ''}`}
+              onClick={() => setVip(true)}
             >
               Phòng VIP riêng
             </button>
@@ -151,9 +189,14 @@ export default function QuickBookingBar({ lowestPrice, goldTimeText }: QuickBook
         {/* CTA Button */}
         <div className="fw-quick-action">
           <button type="button" className="fw-btn-book-quick" onClick={handleBookClick}>
-            <span>Kiểm tra & Giữ phòng</span>
+            <span>Điền thông tin đặt lịch</span>
             <ArrowRight size={18} />
           </button>
+          {notice && (
+            <p className="form-note" role="status">
+              {notice}
+            </p>
+          )}
         </div>
       </div>
     </div>

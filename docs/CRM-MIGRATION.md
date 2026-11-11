@@ -1,6 +1,10 @@
+> **Đã lỗi thời (11/11/2026):** CRM cũ đã bị gỡ khỏi mã vì không có dữ liệu thật cần chuyển; các script nhập `crm-legacy-to-crm2.sql`, `crm-care-to-crm2.sql` và công tắc cổng đã bị xóa. Giữ tài liệu này chỉ để tham khảo lịch sử.
+
 # Chuyển lead từ CRM cũ sang module CRM mới
 
-Nhập **một lần** các lead của màn "Chăm sóc KH" (bảng `crm_*`) vào module CRM (bảng `crm2_*`), để xem và làm việc với lịch sử lead cũ ở màn **CRM** mới. Đây là hướng 1 trong kế hoạch: chỉ chuyển lịch sử, **chưa** chuyển các cổng nhận lead.
+> **Tình trạng 09/11/2026:** Tài liệu bên dưới mô tả quy trình nhập lịch sử lead ban đầu. Các cổng nhận lead, chăm sóc khách và tin nhắn đặt lịch đã có đường chuyển sang CRM mới trong mã nguồn; việc bật/chạy chuyển dữ liệu trên production, đối chiếu, ngừng CRM cũ và xóa bảng cũ **chưa được xác nhận hoàn tất**. Đối chiếu [PROGRESS.md](./PROGRESS.md), sao lưu và thử trên bản sao trước mọi thao tác production. Không xóa bảng hoặc đổi audience của Site theo tài liệu này.
+
+Nhập **một lần** các lead của màn "Chăm sóc KH" (bảng `crm_*`) vào module CRM (bảng `crm2_*`), để xem và làm việc với lịch sử lead cũ ở màn **CRM** mới. Đây là quy trình lịch sử ban đầu; các bước chuyển cổng và chăm sóc được ghi ở phần cập nhật bên dưới.
 
 > Chưa bỏ được tab "Chăm sóc KH (cũ)". Các cổng `/api/leads/website`, `/facebook`, `/zalo`, `/ads` vẫn ghi lead mới vào bảng cũ, và module mới chưa có màn cấu hình kênh, thông báo Zalo/email cho nhân viên. Xem `docs/CRM-MODULE.md`, mục "Chưa làm".
 
@@ -152,12 +156,12 @@ Migration thêm bảng `crm2_inbound` (nhớ mã từng sự kiện, vì Zalo g�
 | Chống gửi lại | Theo `id` của bên gửi; không có `id` thì theo nền tảng cộng liên hệ trong cùng một phút (như cổng cũ). |
 | Cùng số từ quảng cáo khác | Gộp vào lead đã có, ghi "Khách gửi lại" với người gửi là "Quảng cáo". |
 
-## Việc còn lại để bỏ tab "Chăm sóc KH (cũ)"
+## Trạng thái chuyển đổi CRM hiện tại
 
-Cả bốn cổng nhận lead (website, Zalo, Facebook, quảng cáo) đã chuyển được sang module mới bằng công tắc. Còn lại:
-1. Thêm cấu hình kênh và thông báo Zalo/email cho nhân viên vào module mới.
-2. Quyết định số phận của `crm_tasks` (việc tự sinh theo khách hàng), `crm_interactions` và `crm_agents`.
-3. Bật từng công tắc trên production, chạy nhập lịch sử lead cũ, chọn ngày dừng làm việc ở màn cũ, nhập lần cuối, rồi bỏ tab.
+- Mã nguồn có công tắc riêng để chuyển bốn cổng nhận lead sang CRM mới; có màn hình quản lý kênh, chăm sóc khách và việc tự sinh, cùng tin nhắn đặt lịch tách khỏi CRM cũ. Xem [PROGRESS.md](./PROGRESS.md) để biết lát cắt đã làm.
+- Trước production: xác minh schema/migration thực tế, sao lưu, thử nhập `crm-legacy-to-crm2.sql` và `crm-care-to-crm2.sql` trên bản sao, rồi chạy truy vấn đối chiếu.
+- Chỉ sau khi đã chọn ngày chuyển và nhân viên làm quen CRM mới: bật các công tắc đã kiểm tra, cấu hình cron ngoài hệ thống gọi `/api/crm2/cron`, xác minh webhook/kênh và theo dõi lỗi. Nhập lại dữ liệu đến thời điểm chuyển, đối chiếu lần cuối.
+- Việc xóa tab/API/mã/bảng CRM cũ là giai đoạn riêng: trước khi làm phải xác nhận không còn traffic hay dữ liệu chưa nhập, có bản sao lưu phục hồi được và có phê duyệt rõ ràng. Giữ `crm_outbox` theo quyết định hiện tại.
 
 
 ## Chăm sóc khách hàng: đã làm lại trong module CRM mới

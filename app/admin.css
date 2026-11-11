@@ -335,6 +335,16 @@ body:has(.app-shell) {
   background: #fff;
 }
 
+html:has(.app-shell) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+html:has(.app-shell)::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 .app-shell .empty,
 .app-shell .info-strip {
   background: #fff;
@@ -1785,11 +1795,19 @@ body:has(.app-shell) {
   line-height: 1.5;
   color: var(--ds-muted);
 }
-.ds-root .modal.session .info-strip {
+.ds-root .modal.session .info-strip,
+.pay-methods > .info-strip,
+.pay-extras > .info-strip {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
   font-size: 14px;
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-radius: 8px;
   margin: 0;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  grid-column: 1 / -1 !important;
 }
 .sp-pay {
   border: 2px solid var(--ds-green);
@@ -3519,6 +3537,61 @@ body:has(.app-shell) {
   .ds-root .native-dialog .form-footer {
     flex-direction: column-reverse;
     align-items: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .native-dialog:has(> .modal.walk-in) {
+    display: flex !important;
+    height: 92dvh !important;
+    overflow: hidden !important;
+  }
+  .native-dialog .modal.walk-in {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden !important;
+    padding: 18px 16px 0 !important;
+  }
+  .native-dialog .modal.walk-in .modal-heading {
+    flex: 0 0 auto;
+    margin-bottom: 0;
+  }
+  .ds-root .native-dialog .modal.walk-in .operate-walkin-form {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden;
+    padding: 0;
+  }
+  .walk-in-form-content {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    gap: 16px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 12px 0 16px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .native-dialog .modal.walk-in .operate-form-footer {
+    flex: 0 0 auto;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 8px;
+    margin: 0;
+    padding: 12px 0 calc(12px + env(safe-area-inset-bottom));
+    background: #fff;
+  }
+  .native-dialog .modal.walk-in .operate-form-footer button {
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    white-space: normal;
   }
 }
 
@@ -10687,12 +10760,11 @@ body:has(.app-shell) {
 .gcd-bay-mini-tile .tile-status-txt.text-muted { color: #94a3b8; }
 
 /* 7.7 Thermal POS Receipt Styles (K80 / 80mm) */
-.receipt-thermal-header {
-  display: none;
-}
-
-.receipt-thermal-footer {
-  display: none;
+.receipt-thermal-header,
+.receipt-thermal-footer,
+.ds-root .modal.session .bill .receipt-thermal-header,
+.ds-root .modal.session .bill .receipt-thermal-footer {
+  display: none !important;
 }
 
 @media print {

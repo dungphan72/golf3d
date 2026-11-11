@@ -3,7 +3,7 @@ import { turnstileSiteKey } from './turnstile';
 import { runClubAction } from './club-service';
 import { sendWebsiteLead } from './website-lead';
 import { onBookingConfirmed } from './booking-messages';
-import { planBooking } from '../booking';
+import { BOOKING_START_STEP_MS, planBooking } from '../booking';
 import { ready, rooms, type Config } from '../club';
 import { normalizePhone, validPhone } from '../member';
 import { newToken, tokenId } from '../auth/password';
@@ -11,7 +11,6 @@ import {
   publicRequestInput,
   staffRequestInput,
   codeLooksValid,
-  MIN_LEAD_MINUTES,
   SLUG_PATTERN,
   lineSizes,
   type PublicRequestInput,
@@ -32,7 +31,6 @@ export { publicRequestInput, staffRequestInput };
 type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
 const error = (message: string, status = 400): R => reply({ error: message }, status);
-const DAY = 86_400_000;
 
 export async function tenantBySlug(slug: string) {
   const row = await db()
@@ -43,7 +41,7 @@ export async function tenantBySlug(slug: string) {
     .first<{ tenant: string }>();
   if (!row) return null;
   const config = await loadConfig(row.tenant);
-  return config.onlineEnabled && config.onlineSlug === slug && ready(config)
+  return config.onlineEnabled && config.onlineSlug === slug
     ? { tenant: row.tenant, config }
     : null;
 }
@@ -59,14 +57,9 @@ export async function publicInfo(slug: string): Promise<R> {
       address: c.address,
       open: c.open,
       close: c.close,
-      days: c.days,
-      minLeadMinutes: MIN_LEAD_MINUTES,
       vip: (c.vipCapacity ?? 0) > 0,
       maxPeople: Math.min(4, c.capacity ?? 4),
-      // Only services that currently have a price can be requested online.
-      services: (['gdr', '9', '18'] as const).filter((s) =>
-        (c.priceRules ?? []).some((r) => r.enabled && r.service === s),
-      ),
+      services: ['gdr', '9', '18'],
       captchaSiteKey: turnstileSiteKey(),
     });
   } catch (e) {
@@ -93,41 +86,48 @@ export async function submitRequest(
     if (!site) return error('Cơ sở chưa mở nhận đặt lịch online', 404);
     const now = Date.now();
     const c = site.config;
+    if (!Number.isSafeInteger(input.start) || input.start <= now)
+      return error('Giờ bắt đầu phải ở tương lai');
+    if (input.start % BOOKING_START_STEP_MS !== 0)
+      return error('Giờ bắt đầu phải theo mốc 15 phút');
     if (input.vip && !(c.vipCapacity && c.vipCapacity > 0))
       return error('Cơ sở không có phòng VIP');
-    if (input.start < now + MIN_LEAD_MINUTES * 60_000)
-      return error(`Vui lòng đặt trước ít nhất ${MIN_LEAD_MINUTES} phút`);
-    if (input.start > now + Math.max(1, c.days) * DAY)
-      return error(`Chỉ nhận đặt trước tối đa ${c.days} ngày`);
     // A line holds at most 4: a bigger group is priced line by line and booked on several lines.
     const sizes = input.guests > 0 ? lineSizes(input.guests) : [input.people];
     const perLine = Math.max(...sizes);
-    let plan;
-    let total = 0;
-    try {
-      for (const size of sizes) {
-        const p = planBooking(
-          {
-            room: REPRESENTATIVE[input.vip ? 'vip' : 'standard'],
-            service: input.service,
-            start: input.start,
-            people: size,
-            minutes: input.minutes,
-          },
-          c,
-          now,
-        );
-        plan ??= p;
-        total += p.bill.total;
+    let plan: ReturnType<typeof planBooking> | undefined;
+    let total: number | null = null;
+    if (ready(c)) {
+      total = 0;
+      try {
+        for (const size of sizes) {
+          const p = planBooking(
+            {
+              room: REPRESENTATIVE[input.vip ? 'vip' : 'standard'],
+              service: input.service,
+              start: input.start,
+              people: size,
+              minutes: input.minutes,
+            },
+            c,
+            now,
+            { onlineRequest: true },
+          );
+          plan ??= p;
+          total += p.bill.total;
+        }
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Khung giờ này chưa nhận đặt';
+        if (!message.startsWith('Chưa cấu hình') && !message.startsWith('Chưa có giá '))
+          return error(message);
+        plan = undefined;
+        total = null;
       }
-    } catch (e) {
-      return error(e instanceof Error ? e.message : 'Khung giờ này chưa nhận đặt');
     }
     const code = newToken();
     const quote = JSON.stringify({
       total,
-      bill: plan!.bill,
-      rule: plan!.ruleLabel,
+      ...(plan ? { bill: plan.bill, rule: plan.ruleLabel } : {}),
       guests: input.guests,
       lines: sizes.length,
     });
@@ -259,6 +259,7 @@ async function freeRooms(tenant: string, row: RequestRow, c: Config, now: number
         },
         c,
         now,
+        { onlineRequest: true },
       );
       const clean = (room.vip ? c.vipClean : c.clean) * 60_000;
       const clash = await db()
@@ -344,17 +345,22 @@ export async function applyRequest(
     const c = await loadConfig(tenant);
     const made: string[] = [];
     for (const [i, room] of chosen.entries()) {
-      const booked = await runClubAction(tenant, {
-        action: 'book',
-        room: room!.id,
-        service: row.service,
-        start: row.start,
-        people: sizes[i],
-        minutes: row.minutes,
-        customer: row.name,
-        phone: row.phone,
-        expectedRevision: c.pricingRevision,
-      });
+      const booked = await runClubAction(
+        tenant,
+        {
+          action: 'book',
+          room: room!.id,
+          service: row.service,
+          start: row.start,
+          people: sizes[i],
+          minutes: row.minutes,
+          customer: row.name,
+          phone: row.phone,
+          expectedRevision: c.pricingRevision,
+        },
+        now,
+        { onlineRequest: true },
+      );
       if (booked.status !== 200 || typeof booked.body.id !== 'string') {
         // Undo the lines already booked so the request can be handled again.
         for (const id of made) await runClubAction(tenant, { action: 'cancel', id });

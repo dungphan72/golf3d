@@ -20,7 +20,7 @@ export const leadActions = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
-      action: z.literal('import'),
+      action: z.enum(['import', 'import-preview']),
       leads: z
         .array(
           z.object({
@@ -29,6 +29,7 @@ export const leadActions = z.discriminatedUnion('action', [
             email: text(200).default(''),
             notes: text(2000).default(''),
             source: text(100).default('Excel/CSV'),
+            campaign: text(120).default(''),
             targetService: text(255).default(''),
           }),
         )
@@ -36,6 +37,7 @@ export const leadActions = z.discriminatedUnion('action', [
         .max(500),
     })
     .strict(),
+  z.object({ action: z.literal('import-undo'), batch: text(40).min(1) }).strict(),
   z
     .object({
       action: z.literal('result'),

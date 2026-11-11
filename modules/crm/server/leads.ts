@@ -1,5 +1,6 @@
-import { db } from '../../../lib/server/common';
-import { normalizePhone, isDedupable } from '../core/phone';
+import { audit, db } from '../../../lib/server/common';
+import { normalizePhone, isDedupable, MIN_DEDUP_DIGITS } from '../core/phone';
+import { classifyRows } from '../core/import';
 import {
   isStage,
   statusFor,
@@ -25,9 +26,11 @@ import {
   addActivity,
   addTask,
   fail,
+  getRuntime,
   getSettings,
   notifyStaff,
   reply,
+  setRuntime,
   staffList,
   vnDayStart,
   DAY,
@@ -331,23 +334,52 @@ export async function ingestLead(
   return reply({ ok: true, id, duplicate: false, owner, pooled: !owner });
 }
 
-export async function importLeads(
-  c: Ctx,
-  leads: Array<{
-    fullName: string;
-    phone: string;
-    email?: string;
-    notes?: string;
-    source?: string;
-    targetService?: string;
-  }>,
-): Promise<Result> {
+type ImportItem = {
+  fullName: string;
+  phone: string;
+  email?: string;
+  notes?: string;
+  source?: string;
+  campaign?: string;
+  targetService?: string;
+};
+const chunks = <T,>(a: T[], n: number) => Array.from({ length: Math.ceil(a.length / n) }, (_, i) => a.slice(i * n, i * n + n));
+
+/** What an import would do, row by row, without changing anything. */
+export async function previewImport(c: Ctx, leads: ImportItem[]): Promise<Result> {
+  const d = db();
+  const norms = [...new Set(leads.map((l) => normalizePhone(l.phone)).filter((n) => n.length >= MIN_DEDUP_DIGITS))];
+  const existing = new Set<string>();
+  const blocked = new Set<string>();
+  for (const part of chunks(norms, 80)) {
+    const marks = part.map(() => '?').join(',');
+    for (const r of (
+      await d.prepare(`SELECT DISTINCT phone_norm AS p FROM crm2_leads WHERE tenant=? AND phone_norm IN (${marks})`).bind(c.tenant, ...part).all<{ p: string }>()
+    ).results)
+      existing.add(r.p);
+    for (const r of (
+      await d.prepare(`SELECT phone_norm AS p FROM crm2_blocked_phones WHERE tenant=? AND phone_norm IN (${marks})`).bind(c.tenant, ...part).all<{ p: string }>()
+    ).results)
+      blocked.add(r.p);
+  }
+  const { rows, counts } = classifyRows(leads, existing, blocked);
+  return reply({ ok: true, total: leads.length, counts, rows: rows.slice(0, 200) });
+}
+
+export async function importLeads(c: Ctx, leads: ImportItem[]): Promise<Result> {
   let created = 0;
   let absorbed = 0;
+  let blocked = 0;
   const errors: string[] = [];
+  const createdIds: string[] = [];
 
   for (let idx = 0; idx < leads.length; idx++) {
     const item = leads[idx];
+    const norm = normalizePhone(item.phone);
+    if (norm.length < MIN_DEDUP_DIGITS || norm.length > 15) {
+      errors.push(`Dòng ${idx + 1} (${item.fullName}): số điện thoại không hợp lệ, bỏ qua`);
+      continue;
+    }
     try {
       const res = await ingestLead(
         c.tenant,
@@ -357,6 +389,7 @@ export async function importLeads(
           email: item.email,
           notes: item.notes,
           source: item.source || 'Excel/CSV',
+          campaign: item.campaign,
           targetService: item.targetService,
         },
         c.base,
@@ -364,10 +397,13 @@ export async function importLeads(
       );
       if (res.status === 200 || res.status === 201) {
         const body = res.body as Record<string, unknown>;
-        if (body.duplicate) {
+        if (body.blocked) {
+          blocked++;
+        } else if (body.duplicate) {
           absorbed++;
         } else {
           created++;
+          if (typeof body.id === 'string' && body.id) createdIds.push(body.id);
         }
       } else {
         errors.push(`Dòng ${idx + 1} (${item.fullName}): ${(res.body as { error?: string } | undefined)?.error || 'Lỗi'}`);
@@ -377,13 +413,72 @@ export async function importLeads(
     }
   }
 
+  // Remember what this batch created so a manager can undo it while the leads are still untouched.
+  const batch = crypto.randomUUID().slice(0, 8);
+  if (createdIds.length)
+    await setRuntime(c.tenant, `import:${batch}`, { by: c.userId, at: c.now, ids: createdIds, undone: false }, c.now);
+
   return reply({
     ok: true,
+    batch: createdIds.length ? batch : '',
     total: leads.length,
     created,
     absorbed,
+    blocked,
     errors: errors.slice(0, 10),
   });
+}
+
+/** Recent import batches (newest first) so the manager can undo one. */
+export async function importBatches(c: Ctx): Promise<Result> {
+  if (!isManager(c.role)) return fail('Chỉ quản lý xem các lần nhập', 403);
+  const rows = (
+    await db()
+      .prepare("SELECT key,value FROM crm2_runtime WHERE tenant=? AND key LIKE 'import:%' ORDER BY updated DESC LIMIT 10")
+      .bind(c.tenant)
+      .all<{ key: string; value: string }>()
+  ).results;
+  return reply({
+    batches: rows.map((r) => {
+      const v = JSON.parse(r.value) as { at: number; ids: string[]; undone: boolean };
+      return { batch: r.key.slice(7), at: v.at, count: v.ids.length, undone: !!v.undone };
+    }),
+  });
+}
+
+/**
+ * Undo one import batch (managers only). Only leads nobody has worked yet are removed (still NEW, never called);
+ * anything staff already touched stays and is reported.
+ */
+export async function undoImport(c: Ctx, batch: string): Promise<Result> {
+  if (!isManager(c.role)) return fail('Chỉ quản lý được hoàn tác lần nhập', 403);
+  const saved = await getRuntime<{ ids: string[]; undone: boolean; by: string; at: number }>(c.tenant, `import:${batch}`);
+  if (!saved) return fail('Không tìm thấy lần nhập này', 404);
+  if (saved.value.undone) return fail('Lần nhập này đã được hoàn tác', 409);
+  const d = db();
+  let removed = 0;
+  let kept = 0;
+  for (const id of saved.value.ids) {
+    const lead = await d
+      .prepare(
+        'SELECT 1 AS x FROM crm2_leads WHERE tenant=? AND id=? AND stage=\'NEW\' AND call_attempts=0 AND last_contact_at IS NULL AND first_response_at IS NULL',
+      )
+      .bind(c.tenant, id)
+      .first();
+    if (!lead) {
+      kept++;
+      continue;
+    }
+    await d.batch([
+      d.prepare('DELETE FROM crm2_tasks WHERE tenant=? AND lead_id=?').bind(c.tenant, id),
+      d.prepare('DELETE FROM crm2_activities WHERE tenant=? AND lead_id=?').bind(c.tenant, id),
+      d.prepare('DELETE FROM crm2_leads WHERE tenant=? AND id=?').bind(c.tenant, id),
+    ]);
+    removed++;
+  }
+  await setRuntime(c.tenant, `import:${batch}`, { ...saved.value, undone: true }, c.now);
+  await audit(c.tenant, 'crm.import-undo', `Hoàn tác lần nhập ${batch}: xóa ${removed} lead, giữ ${kept} lead đã có người xử lý`);
+  return reply({ ok: true, removed, kept });
 }
 
 /**

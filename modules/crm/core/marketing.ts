@@ -6,6 +6,7 @@
 export type MktLead = {
   source: string;
   campaign: string;
+  service?: string;
   seeding: boolean;
   inquiryCount: number;
   contacted: boolean;
@@ -92,6 +93,7 @@ export type MarketingReport = {
   bySource: MktRow[];
   byCampaign: MktRow[];
   byRunner: MktRow[];
+  byService: MktRow[];
 };
 
 type Slot = MktMetrics & { label: string };
@@ -120,6 +122,7 @@ export function buildMarketingReport(input: {
   const src = new Map<string, Slot>();
   const cmp = new Map<string, Slot>();
   const run = new Map<string, Slot>();
+  const svc = new Map<string, Slot>();
   const slot = (map: Map<string, Slot>, key: string, text: string) => {
     let m = map.get(key);
     if (!m) map.set(key, (m = { ...empty(), label: text }));
@@ -158,6 +161,9 @@ export function buildMarketingReport(input: {
     addLead(slot(cmp, norm(label(l.campaign)), camp?.name ?? label(l.campaign)), l);
     // Leads from a campaign are credited to whoever runs it; others have no runner.
     addLead(slot(run, norm(label(camp?.runner ?? '')), label(camp?.runner ?? '')), l);
+    if (l.service && l.service.trim()) {
+      addLead(slot(svc, norm(label(l.service)), label(l.service)), l);
+    }
   }
 
   const rows = (map: Map<string, Slot>): MktRow[] =>
@@ -171,5 +177,6 @@ export function buildMarketingReport(input: {
     bySource: rows(src),
     byCampaign: rows(cmp),
     byRunner: rows(run),
+    byService: rows(svc),
   };
 }

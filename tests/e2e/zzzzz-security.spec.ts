@@ -20,9 +20,9 @@ test('mọi API quản lý từ chối người chưa đăng nhập, kể cả k
     'fnb',
     'billing',
     'finance',
-    'crm',
-    'crm/leads',
-    'crm/agents',
+    'crm2/leads',
+    'crm2/overview',
+    'crm2/blocked',
     'crm/channels',
     'coaching',
     'online',
@@ -34,7 +34,7 @@ test('mọi API quản lý từ chối người chưa đăng nhập, kể cả k
       401,
     );
   }
-  for (const path of ['club', 'staff', 'finance', 'billing', 'members', 'fnb', 'crm']) {
+  for (const path of ['club', 'staff', 'finance', 'billing', 'members', 'fnb', 'crm2/leads']) {
     // No body: the local worker runtime restarts when a request body is left unread after an early reply.
     const r = await request.post('/api/' + path, { headers: spoof });
     expect(r.status(), 'POST ' + path).toBe(401);

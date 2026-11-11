@@ -41,36 +41,49 @@ export function TransferPanel({
   const exact = data.transactions.filter((t) => t.amount === data.due);
   const other = data.transactions.filter((t) => t.amount !== data.due);
   return (
-    <div className="info-strip transfer-panel">
-      <p>
+    <div className="info-strip transfer-panel" style={{ padding: '14px 16px', borderRadius: 8, textAlign: 'center' }}>
+      <p style={{ margin: '0 0 8px', fontSize: 13.5, textAlign: 'center' }}>
         <strong>Chuyển khoản {money(data.due)}</strong> · nội dung: <code>{data.code}</code>
       </p>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt="Mã QR chuyển khoản"
-        width={220}
-        height={220}
-        src={vietQrUrl({
-          bin: bank.bin,
-          account: bank.account,
-          holder: bank.holder,
-          amount: data.due,
-          note: data.code,
-        })}
-      />
+      <div style={{ background: '#fff', padding: 10, borderRadius: 8, display: 'inline-block', border: '1px solid #e2e8f0', margin: '4px 0' }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          alt="Mã QR chuyển khoản"
+          width={190}
+          height={190}
+          style={{ display: 'block', margin: '0 auto' }}
+          src={vietQrUrl({
+            bin: bank.bin,
+            account: bank.account,
+            holder: bank.holder,
+            amount: data.due,
+            note: data.code,
+          })}
+        />
+        <div style={{ fontSize: 12, color: 'var(--ds-muted)', marginTop: 4 }}>
+          Nội dung: <strong style={{ color: 'var(--ds-text)' }}>{data.code}</strong>
+        </div>
+      </div>
       {exact.map((t) => (
-        <button key={t.id} className="primary" disabled={busy} onClick={() => onUse(t.id)}>
-          Đã nhận {money(t.amount)} lúc {time(t.tx_time)} — xác nhận thanh toán
+        <button
+          key={t.id}
+          className="primary"
+          disabled={busy}
+          onClick={() => onUse(t.id)}
+          style={{ width: '100%', marginTop: 8, height: 38, fontSize: 13.5 }}
+        >
+          Khớp {money(t.amount)} lúc {time(t.tx_time)} · Xác nhận
         </button>
       ))}
       {other.map((t) => (
-        <p key={t.id} role="status">
-          Có giao dịch {money(t.amount)} nhưng khác số phải thu {money(data.due!)}; hãy kiểm tra
-          lại.
-        </p>
+        <div key={t.id} role="status" style={{ color: '#b45309', fontSize: 12.5, marginTop: 6 }}>
+          Lệch tiền: {money(t.amount)} (cần {money(data.due!)})
+        </div>
       ))}
       {data.configured && !data.transactions.length && (
-        <p className="muted">Đang chờ ngân hàng báo có… (tự cập nhật)</p>
+        <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+          Chờ giao dịch ngân hàng...
+        </p>
       )}
     </div>
   );

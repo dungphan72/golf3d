@@ -51,8 +51,6 @@ async function target(value: 'LEGACY' | 'CRM2') {
 }
 const newLeads = async () =>
   ((await (await owner.get('/api/crm2/leads?limit=200&q=')).json()) as Json).leads as Json[];
-const oldLeads = async () =>
-  ((await (await owner.get('/api/crm/leads')).json()) as Json).leads as Json[];
 const detail = async (id: string) =>
   (await (await owner.get('/api/crm2/leads?id=' + id)).json()) as Json;
 const byPhone = async (p: string) => (await newLeads()).filter((l) => l.phone === p);
@@ -98,17 +96,6 @@ test('mặc định lead Facebook vào CRM mới', async () => {
   expect(lead.notes).toContain('Chiến dịch: ad-fb-1');
   expect(lead.notes).toContain(`Facebook lead: ${id}`);
   expect(activities.length).toBeGreaterThan(0);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(false);
-});
-
-test('chuyển về CRM cũ nếu cấu hình: lead Facebook vào bên cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  const r = await facebook(form(fbId(), fields('Khách Cũ', p)));
-  expect(((await r.json()) as Json).processed).toBe(1);
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-  await target('CRM2');
 });
 
 test('Facebook gửi lại đúng biểu mẫu: không tạo thêm gì', async () => {
@@ -159,10 +146,3 @@ test('chữ ký sai bị từ chối; thay đổi không phải leadgen bị b�
   expect(((await other.json()) as Json).processed).toBe(0);
 });
 
-test('tắt lại: lead Facebook trở về CRM cũ', async () => {
-  await target('LEGACY');
-  const p = phone();
-  await facebook(form(fbId(), fields('Khách Lại Cũ', p)));
-  expect((await oldLeads()).some((l) => l.phone === p)).toBe(true);
-  expect(await byPhone(p)).toHaveLength(0);
-});

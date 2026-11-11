@@ -86,6 +86,7 @@ type LeadRaw = {
   firstResponseAt: number | null;
   stage: string;
   revenue: number;
+  targetService: string;
 };
 
 async function loadReport(c: Ctx, p: Period) {
@@ -95,7 +96,7 @@ async function loadReport(c: Ctx, p: Period) {
       .prepare(
         // Revenue = CRM order payments of the lead + paid bookings of its phone, the latter credited once
         // (to the earliest lead of that phone) so several leads of one customer never count a booking twice.
-        `SELECT l.source,l.campaign,l.seeding,l.inquiry_count AS inquiryCount,l.first_response_at AS firstResponseAt,l.stage,
+        `SELECT l.source,l.campaign,l.seeding,l.inquiry_count AS inquiryCount,l.first_response_at AS firstResponseAt,l.stage,COALESCE(l.target_service, '') AS targetService,
            COALESCE((SELECT SUM(p.paid_amount) FROM crm2_order_payments p JOIN crm2_orders o ON o.id=p.order_id AND o.tenant=p.tenant
              WHERE o.lead_id=l.id AND o.tenant=l.tenant AND p.status<>'CANCELLED'),0)
            + CASE WHEN l.phone_norm<>'' AND l.id=(SELECT x.id FROM crm2_leads x WHERE x.tenant=l.tenant AND x.phone_norm=l.phone_norm ORDER BY x.created,x.id LIMIT 1)
@@ -121,6 +122,7 @@ async function loadReport(c: Ctx, p: Period) {
   const leads: MktLead[] = leadRows.results.map((r) => ({
     source: r.source,
     campaign: r.campaign,
+    service: r.targetService,
     seeding: !!r.seeding,
     inquiryCount: r.inquiryCount,
     contacted: r.firstResponseAt != null,

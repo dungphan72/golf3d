@@ -1,5 +1,22 @@
 import { rooms, ready, quote, wholeQuote, type Config } from './club.ts';
 import { clockMinute, packagePrice, type Service } from './pricing.ts';
+export const BOOKING_START_STEP_MS = 15 * 60_000;
+export const STAFF_BOOKING_MAX_DAYS = 90;
+const DAY_MS = 24 * 60 * 60_000;
+
+export function nextBookingStart(now: number) {
+  return Math.ceil((now + 60_000) / BOOKING_START_STEP_MS) * BOOKING_START_STEP_MS;
+}
+
+export function latestStaffBookingStart(now: number) {
+  return Math.floor((now + STAFF_BOOKING_MAX_DAYS * DAY_MS) / BOOKING_START_STEP_MS) *
+    BOOKING_START_STEP_MS;
+}
+
+export function bookingDateTimeLocal(start: number) {
+  return new Date(start + 7 * 60 * 60_000).toISOString().slice(0, 16);
+}
+
 export type BookingInput = {
   room: string;
   service: Service;
@@ -28,7 +45,7 @@ export function planBooking(
   input: BookingInput,
   c: Config,
   now: number,
-  opts: { walkIn?: boolean } = {},
+  opts: { walkIn?: boolean; onlineRequest?: boolean } = {},
 ) {
   if (!ready(c))
     throw new Error('Hãy cấu hình giờ mở cửa, sức chứa, VAT và phí dịch vụ trước khi đặt thử.');
@@ -42,16 +59,19 @@ export function planBooking(
     people > Math.min(4, (room.vip ? c.vipCapacity : c.capacity)!)
   )
     throw new Error('Số người hoặc dịch vụ không hợp lệ');
-  // A walk-in customer starts this very moment; a booking is on a 15-minute mark in the future.
+  // Walk-ins start now; staff bookings must use a future 15-minute mark.
   if (
     !Number.isSafeInteger(start) ||
-    start < now ||
-    start > now + 90 * 86400000 ||
-    (!opts.walkIn && start % 900000 !== 0)
-  )
-    throw new Error(
-      'Giờ bắt đầu phải ở tương lai, cách nhau 15 phút và không quá 90 ngày cho nhân viên.',
-    );
+    (!opts.walkIn && start <= now) ||
+    (!opts.walkIn && !opts.onlineRequest && start > now + STAFF_BOOKING_MAX_DAYS * DAY_MS) ||
+    (!opts.walkIn && start % BOOKING_START_STEP_MS !== 0)
+  ) {
+    if (!Number.isSafeInteger(start)) throw new Error('Giờ bắt đầu không hợp lệ.');
+    if (!opts.walkIn && start <= now) throw new Error('Giờ bắt đầu phải ở tương lai.');
+    if (!opts.walkIn && !opts.onlineRequest && start > now + STAFF_BOOKING_MAX_DAYS * DAY_MS)
+      throw new Error('Nhân viên chỉ có thể đặt lịch trước tối đa 90 ngày.');
+    throw new Error('Giờ bắt đầu phải theo mốc 15 phút.');
+  }
   let end: number,
     base = 0,
     ruleId: string | null = null,

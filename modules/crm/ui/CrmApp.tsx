@@ -587,14 +587,6 @@ function ConfigScreen() {
                   <p className="crm-channel-desc">
                     Khách đăng ký qua form trang chủ hoặc trang giá. Tự động gắn nguồn và dịch vụ quan tâm.
                   </p>
-                  <select
-                    className="crm-channel-select"
-                    value={s.websiteLeads}
-                    onChange={(e) => setS({ ...s, websiteLeads: e.target.value as 'LEGACY' | 'CRM2' })}
-                  >
-                    <option value="CRM2">CRM mới (Khuyên dùng)</option>
-                    <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
-                  </select>
                 </div>
 
                 <div className="crm-channel-card">
@@ -610,14 +602,6 @@ function ConfigScreen() {
                   <p className="crm-channel-desc">
                     Khách nhắn Zalo không có SĐT: các tin cùng khách gộp vào 1 lead theo Zalo ID trong ghi chú.
                   </p>
-                  <select
-                    className="crm-channel-select"
-                    value={s.zaloLeads}
-                    onChange={(e) => setS({ ...s, zaloLeads: e.target.value as 'LEGACY' | 'CRM2' })}
-                  >
-                    <option value="CRM2">CRM mới (Khuyên dùng)</option>
-                    <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
-                  </select>
                 </div>
 
                 <div className="crm-channel-card">
@@ -633,14 +617,6 @@ function ConfigScreen() {
                   <p className="crm-channel-desc">
                     Chiến dịch và Form ID Facebook được gắn tự động; chống trùng lặp lead khi Facebook gửi lại.
                   </p>
-                  <select
-                    className="crm-channel-select"
-                    value={s.facebookLeads}
-                    onChange={(e) => setS({ ...s, facebookLeads: e.target.value as 'LEGACY' | 'CRM2' })}
-                  >
-                    <option value="CRM2">CRM mới (Khuyên dùng)</option>
-                    <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
-                  </select>
                 </div>
 
                 <div className="crm-channel-card">
@@ -656,14 +632,6 @@ function ConfigScreen() {
                   <p className="crm-channel-desc">
                     Tên nền tảng (tiktok, google, v.v.) được ghi nhận là nguồn chiến dịch trong hồ sơ khách.
                   </p>
-                  <select
-                    className="crm-channel-select"
-                    value={s.adsLeads}
-                    onChange={(e) => setS({ ...s, adsLeads: e.target.value as 'LEGACY' | 'CRM2' })}
-                  >
-                    <option value="CRM2">CRM mới (Khuyên dùng)</option>
-                    <option value="LEGACY">Màn Chăm sóc KH (cũ)</option>
-                  </select>
                 </div>
               </div>
             </section>
@@ -1083,155 +1051,12 @@ function ConfigScreen() {
   );
 }
 
-function MigrationScreen() {
-  const { data, error, reload } = useLoad<{
-    legacy: Record<string, number>;
-    migrated: Record<string, number>;
-  }>('/api/crm2/migrate');
-  const [working, setWorking] = useState(false);
-  const [msg, setMsg] = useState<{ text: string; tone: 'ok' | 'err' } | null>(null);
-
-  const act = async (action: 'migrate' | 'rollback') => {
-    setWorking(true);
-    setMsg(null);
-    try {
-      const res = await call<{
-        ok: boolean;
-        action: string;
-        leads?: number;
-        contacts?: number;
-        events?: number;
-        tasks?: number;
-        notes?: number;
-      }>('/api/crm2/migrate', { action });
-      if (action === 'migrate') {
-        setMsg({
-          text: `Chuyển đổi thành công: ${res.leads ?? 0} lead, ${res.contacts ?? 0} khách hàng/liên hệ, ${res.events ?? 0} sự kiện, ${res.tasks ?? 0} việc, ${res.notes ?? 0} ghi chú. Dữ liệu cũ vẫn được bảo toàn nguyên vẹn!`,
-          tone: 'ok',
-        });
-      } else {
-        setMsg({
-          text: 'Đã hoàn tác (rollback) an toàn các bản ghi đã chuyển từ CRM cũ.',
-          tone: 'ok',
-        });
-      }
-      await reload();
-    } catch (e) {
-      setMsg({ text: errText(e), tone: 'err' });
-    } finally {
-      setWorking(false);
-    }
-  };
-
-  if (error && !data) return <div className="error-box" role="alert">{error}</div>;
-  if (!data) return <Loading />;
-
-  const items = [
-    { label: 'Khách hàng tiềm năng (Leads)', legacy: data.legacy.leads, migrated: data.migrated.leads },
-    { label: 'Liên hệ / Golfer (Contacts)', legacy: data.legacy.contacts, migrated: data.migrated.contacts },
-    { label: 'Lịch sử / Sự kiện (Events)', legacy: data.legacy.events, migrated: data.migrated.events },
-    { label: 'Tác vụ / Lịch nhắc (Tasks)', legacy: data.legacy.tasks, migrated: data.migrated.tasks },
-    { label: 'Ghi chú chăm sóc (Notes)', legacy: data.legacy.notes, migrated: data.migrated.notes },
-  ];
-
-  return (
-    <div className="crm-section-card" style={{ maxWidth: 860, margin: '16px auto' }}>
-      <header>
-        <h3>
-          <Layers size={18} style={{ color: 'var(--kv-blue, #1f7a4d)' }} />
-          Chuyển đổi dữ liệu từ Chăm sóc KH (cũ) sang CRM mới
-        </h3>
-        <p>
-          Hệ thống hỗ trợ chuyển toàn bộ dữ liệu lead, khách hàng, lịch sử và tác vụ từ hệ thống cũ sang CRM mới.
-          Dữ liệu gốc ở CRM cũ được bảo toàn 100%, không bị xóa hay thay đổi.
-        </p>
-      </header>
-
-      {msg && (
-        <div
-          style={{
-            padding: '12px 16px',
-            borderRadius: 8,
-            marginBottom: 16,
-            background: msg.tone === 'ok' ? '#f0fdf4' : '#fef2f2',
-            border: `1px solid ${msg.tone === 'ok' ? '#bbf7d0' : '#fecaca'}`,
-            color: msg.tone === 'ok' ? '#166534' : '#991b1b',
-            fontSize: 14,
-            fontWeight: 500,
-          }}
-        >
-          {msg.text}
-        </div>
-      )}
-
-      <table className="crm-table" style={{ width: '100%', marginBottom: 20 }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: 'left' }}>Phân loại dữ liệu</th>
-            <th style={{ textAlign: 'center' }}>Số lượng ở CRM cũ</th>
-            <th style={{ textAlign: 'center' }}>Đã chuyển sang CRM mới</th>
-            <th style={{ textAlign: 'center' }}>Trạng thái</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((it) => (
-            <tr key={it.label}>
-              <td><strong>{it.label}</strong></td>
-              <td style={{ textAlign: 'center' }}>{it.legacy}</td>
-              <td style={{ textAlign: 'center', fontWeight: 600, color: it.migrated > 0 ? '#16a34a' : 'inherit' }}>
-                {it.migrated}
-              </td>
-              <td style={{ textAlign: 'center' }}>
-                {it.migrated >= it.legacy && it.legacy > 0 ? (
-                  <span className="crm-chip" style={{ background: '#dcfce7', color: '#15803d' }}>Đã đồng bộ</span>
-                ) : it.migrated > 0 ? (
-                  <span className="crm-chip" style={{ background: '#fef3c7', color: '#b45309' }}>Một phần</span>
-                ) : (
-                  <span className="crm-chip" style={{ background: '#f1f5f9', color: '#64748b' }}>Chưa chuyển</span>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button
-          className="primary"
-          disabled={working}
-          onClick={() => act('migrate')}
-          style={{ height: 40, padding: '0 20px', fontWeight: 600 }}
-        >
-          {working ? 'Đang chuyển dữ liệu…' : 'Bắt đầu chuyển sang CRM mới'}
-        </button>
-        {Object.values(data.migrated).some((v) => v > 0) && (
-          <button
-            className="secondary"
-            disabled={working}
-            onClick={() => {
-              if (confirm('Bạn có chắc muốn hoàn tác các bản ghi đã chuyển từ CRM cũ? Các lead mới tạo riêng trên CRM mới sẽ không bị ảnh hưởng.')) {
-                act('rollback');
-              }
-            }}
-            style={{ height: 40, padding: '0 16px', color: '#dc2626' }}
-          >
-            Hoàn tác (Rollback)
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export function CrmModule({
   permissions,
-  legacy = null,
   initialTab = 'work',
   onNavigate,
 }: {
   permissions: string[];
-  /** The older "Chăm sóc KH" screens, kept as a tab until their data moves to the crm2 tables. */
-  legacy?: ReactNode;
   initialTab?: string;
   onNavigate?: (
     view: string,
@@ -1249,7 +1074,6 @@ export function CrmModule({
     | 'marketing'
     | 'report'
     | 'config'
-    | 'legacy'
   >(() => {
     if (initialTab === 'leads' || initialTab === 'pipeline' || initialTab === 'pool' || initialTab === 'overview') return 'leads';
     if (initialTab === 'files' || initialTab === 'customers') return 'customers';
@@ -1257,8 +1081,7 @@ export function CrmModule({
     if (initialTab === 'care') return 'care';
     if (initialTab === 'marketing') return 'marketing';
     if (initialTab === 'report') return 'report';
-    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'viewlog' || initialTab === 'migration') return 'config';
-    if (initialTab === 'legacy') return 'legacy';
+    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'viewlog') return 'config';
     return 'work';
   });
 
@@ -1268,11 +1091,10 @@ export function CrmModule({
     else if (t === 'care') setSpace('care');
     else if (t === 'marketing') setSpace('marketing');
     else if (t === 'leads' || t === 'pipeline' || t === 'pool' || t === 'overview') setSpace('leads');
-    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'viewlog' || t === 'migration') setSpace('config');
+    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'viewlog') setSpace('config');
     else if (t === 'files' || t === 'customers') setSpace('customers');
     else if (t === 'appointments') setSpace('appointments');
     else if (t === 'report') setSpace('report');
-    else if (t === 'legacy') setSpace('legacy');
     else setSpace('work');
   };
 
@@ -1283,7 +1105,7 @@ export function CrmModule({
     } else if (s === 'leads') {
       if (tab !== 'leads' && tab !== 'pipeline' && tab !== 'pool' && tab !== 'overview') setTab('leads');
     } else if (s === 'config') {
-      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'viewlog' && tab !== 'migration') setTab('config');
+      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'viewlog') setTab('config');
     } else if (s === 'customers') {
       setTab('customers');
     } else {
@@ -1356,7 +1178,6 @@ export function CrmModule({
           { key: 'marketing', label: 'Marketing', hidden: !manager },
           { key: 'report', label: 'Báo cáo', hidden: !manager },
           { key: 'config', label: 'Cấu hình', hidden: !manager },
-          { key: 'legacy', label: 'Chăm sóc KH (cũ)', hidden: !legacy },
         ]}
       />
       <div key={space}>
@@ -1410,7 +1231,6 @@ export function CrmModule({
                 { key: 'orders', label: 'Đơn bán & Giữ chỗ' },
                 { key: 'viewlog', label: 'Nhật ký xem số' },
                 { key: 'blocked', label: 'Số bị chặn' },
-                { key: 'migration', label: 'Chuyển dữ liệu CRM cũ' },
               ]}
             />
             {tab === 'config' && <ConfigScreen />}
@@ -1418,10 +1238,8 @@ export function CrmModule({
             {tab === 'orders' && <OrdersScreen s={shared} />}
             {tab === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
             {tab === 'blocked' && <BlockedScreen />}
-            {tab === 'migration' && <MigrationScreen />}
           </>
         )}
-        {space === 'legacy' && legacy}
       </div>
     </section>
   );

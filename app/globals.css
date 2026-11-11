@@ -2283,9 +2283,9 @@ select:focus {
 .qr-grid figcaption { display: grid; gap: 2px; margin-top: 8px; font-size: 12px; }
 .qr-grid figcaption strong { font-size: 14px; }
 @media print {
-  body * { visibility: hidden; }
-  .qr-sheet, .qr-sheet * { visibility: visible; }
-  .qr-sheet { position: absolute; left: 0; top: 0; width: 100%; }
+  body:has(.qr-sheet) * { visibility: hidden; }
+  body:has(.qr-sheet) .qr-sheet, body:has(.qr-sheet) .qr-sheet * { visibility: visible; }
+  body:has(.qr-sheet) .qr-sheet { position: absolute; left: 0; top: 0; width: 100%; }
   .qr-sheet .no-print, .qr-sheet .form-note { display: none; }
   .qr-grid { grid-template-columns: repeat(3, 1fr); }
 }

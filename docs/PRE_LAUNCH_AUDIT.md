@@ -1,6 +1,6 @@
-# Báo cáo kiểm toán trước khi vận hành (08/11/2026)
+# Báo cáo kiểm toán trước khi vận hành (snapshot 08/11/2026; xác minh lại 09/11/2026)
 
-Phạm vi: toàn bộ mã nguồn hiện tại (kể cả phần chưa commit: giao diện quản trị mới, Landing CMS, CRM nhân sự, tải ảnh). Môi trường kiểm tra: máy Windows, bản build production chạy local trên D1 trống (`scripts/e2e-server.mjs`), dữ liệu thử, tài khoản thử. **Không** đụng dữ liệu thật, không gửi tin thật, không triển khai production.
+Phạm vi kiểm toán ban đầu: toàn bộ mã nguồn hiện tại (kể cả phần chưa commit: giao diện quản trị mới, Landing CMS, CRM nhân sự, tải ảnh). Môi trường kiểm tra: máy Windows, bản build chạy local trên D1 trống (`scripts/e2e-server.mjs`), dữ liệu và tài khoản thử; không đụng dữ liệu thật, không gửi tin thật. Cập nhật 09/11: theo yêu cầu của chủ, build được deploy lên VPS hiện dùng cho `golfhub.cloud` theo chế độ pilot owner-private; không nâng cấp hệ thống, chạy migration hay đổi audience. Deploy không đồng nghĩa đã nghiệm thu production hoặc sẵn sàng thu tiền thật.
 
 ## 1. Kết luận
 
@@ -9,9 +9,9 @@ Phạm vi: toàn bộ mã nguồn hiện tại (kể cả phần chưa commit: g
 Lý do:
 - Lõi nghiệp vụ (đặt lịch chống trùng, tính tiền, thu tiền không trùng, sổ ca, báo cáo) chạy đúng trong mọi kiểm tra tự động và kiểm tra tay đồng thời đã làm.
 - Nhưng bản chưa commit có nhiều lỗi nghiêm trọng đã phát hiện và sửa trong đợt này (xem mục 2); các lỗi cùng loại có thể còn ở những màn hình chưa duyệt hết.
-- Bộ E2E đã được cập nhật theo giao diện mới: 113/113 bài đạt (2 bỏ qua có chủ đích).
+- Lần xác minh local mới nhất (09/11): 121/123 bài E2E đạt, 2 bỏ qua có chủ đích; không thay thế kiểm tra tích hợp thật hay nghiệm thu thiết bị.
 - Tích hợp thật (SePay, Zalo, Facebook, email, Turnstile) chưa xác minh được ở đây.
-- Cách chạy production hiện tại trên VPS là `wrangler dev --local` (chế độ phát triển của Wrangler), chưa phải cách chạy production chính thống.
+- Bản pilot đang chạy trên VPS qua systemd và Nginx; lần deploy 09/11 chỉ thay build, không nâng cấp Node/package hay thay dữ liệu. Kiểm tra tích hợp và khôi phục backup vẫn chưa hoàn tất.
 
 ## 2. Lỗi phát hiện và đã sửa
 
@@ -22,12 +22,12 @@ Lý do:
 | 3 | **Cao (chức năng hỏng)** | Thêm / sửa / xóa / cấp lại mật khẩu nhân sự bán hàng trong CRM luôn báo lỗi (`/api/crm2/config`) | Mã đọc `res.ok`, `res.error`, `res.data` nhưng dịch vụ trả `{status, body}`; luôn rơi vào nhánh lỗi, kể cả khi thành công | Đọc đúng `status`/`body`. Có test E2E (tạo, trùng email, cấp lại mật khẩu, xóa, xóa lại) |
 | 4 | **Cao (bảo mật)** | Đặt mật khẩu tùy chọn khi tạo nhân sự bỏ qua chính sách mật khẩu (chỉ cần ≥ 6 ký tự, chấp nhận `12345678`) | Gọi thẳng `hashPassword` | Dùng `passwordProblem()` như đăng ký thường |
 | 5 | **Cao (mất nội dung)** | Lưu **Cài đặt cơ sở** xóa mất nội dung Landing CMS đã soạn | Schema cấu hình (zod) bỏ khóa `landing` khi ghi lại toàn bộ dòng cài đặt | Giữ lại khóa `landing` khi lưu cài đặt. Có test E2E |
-| 6 | **Cao (bảo mật)** | `/api/upload` nhận SVG (XSS lưu trữ khi phục vụ cùng tên miền) và nhận tệp bất kỳ miễn đuôi `.png`; lộ nội dung lỗi hệ thống | Chỉ kiểm tra đuôi tên tệp | Xác định loại tệp bằng byte đầu (JPG/PNG/WebP), bỏ SVG, trả 415 nếu sai; lỗi chung chung; chỉ chạy được khi có ổ đĩa ghi (VPS), nếu không trả 501 rõ ràng. Có test E2E |
+| 6 | **Cao (bảo mật)** | `/api/upload` nhận SVG (XSS lưu trữ khi phục vụ cùng tên miền) và nhận tệp bất kỳ miễn đuôi `.png`; lộ nội dung lỗi hệ thống | Chỉ kiểm tra đuôi tên tệp | Xác định loại tệp bằng byte đầu (JPG/PNG/WebP), bỏ SVG, trả 415 nếu sai; lỗi chung chung; cần môi trường có ổ đĩa ghi, Workers trả 501 rõ ràng. Có test E2E |
 | 7 | Trung bình | `/api/landing` nhận nội dung không giới hạn kích thước, lộ lỗi nội bộ | Không kiểm tra | Giới hạn 200 KB, chỉ nhận object, lỗi chung chung |
 | 8 | Trung bình | POST chưa đăng nhập vào `/api/club`, `/api/landing`, `/api/upload` trả 503/500 và làm runtime tạm thời hỏng cho yêu cầu kế tiếp (ví dụ đăng nhập ngay sau trả 503) | Trả lời sớm mà chưa đọc hết thân yêu cầu (`Cannot reconstruct a Request with a used body`) | Đọc thân yêu cầu trước mọi phản hồi sớm (đúng quy ước của `crmRoute`) |
 | 9 | Trung bình | Dải 7 ngày ở Tổng quan chọn sai ngày nếu múi giờ trình duyệt khác Việt Nam | Dùng giờ cục bộ của trình duyệt | Tính ranh giới ngày theo UTC+7 |
 | 10 | Thấp | 37 lỗi `tsc` (kiểu `StaffUser.active` không tồn tại, `json` kiểu unknown, `title` trên icon, kiểu bảng giá `null`, ...) | Code mới chưa typecheck | Đã sửa; `tsc` sạch |
-| 11 | Thấp | ESLint: 26 lỗi → 13 lỗi | Dấu `"` trần trong JSX, `any`, hàm không thuần khi render | Sửa các lỗi thật; còn 13 lỗi quy tắc React Compiler (xem mục 5) |
+| 11 | Thấp | ESLint từng có lỗi quy tắc JSX/React Compiler | Mã cũ có dấu `"` trần trong JSX, `any`, hàm không thuần khi render | Trạng thái xác minh lại 09/11: 0 lỗi, còn 77 cảnh báo; xem mục 4 |
 | 12 | Thấp | Vòng tiến độ "ca trực" luôn ≥ 35% dù chưa có tiến độ | Hằng số `Math.max(35, ...)` | Bỏ sàn 35% và ghi đúng ý nghĩa (thời gian đã qua trong giờ mở cửa) |
 | 13 | Thấp | Test E2E đăng nhập chờ tiêu đề "Sơ đồ phòng", nay mặc định là "Tổng quan" | Giao diện đổi | Cập nhật test |
 | 14 | **Cao (bảo mật, rò dữ liệu)** | Bản chưa commit **gỡ 3 chốt xác nhận hội viên ở máy chủ**: tài khoản vừa đăng ký (chưa được lễ tân xác nhận số điện thoại) xem được thẻ, gói, lịch sử, đơn hàng gắn với số điện thoại đó, đồng thời đặt lịch và mua gói được. Ai đăng ký bằng số điện thoại của khách khác sẽ thấy dữ liệu của khách ấy | Xóa `if (!user.verified)` trong `memberOverview`, `orderPackage`, `bookAsMember` khi viết lại cổng hội viên | Khôi phục cả 3 chốt; cổng hội viên hiện màn "Đang chờ câu lạc bộ xác nhận", không hiện thẻ/mã. Test E2E đạt |
@@ -58,31 +58,31 @@ Lý do:
 
 | Kiểm tra | Kết quả |
 |---|---|
-| `pnpm typecheck` | Đạt (0 lỗi). Ban đầu 37 lỗi |
-| `pnpm lint` | **0 lỗi**, 79 cảnh báo (import thừa). Ban đầu 26 lỗi. Các chỗ setState-trong-effect có chú thích `eslint-disable-next-line` kèm lý do (giá trị chỉ biết ở trình duyệt, đúng như mã gốc đã làm) |
-| `pnpm test` (unit + runtime + RSC + tooling) | Đạt toàn bộ |
-| 17 bộ SQL Python + splitter migration + import backup (cần `PYTHONUTF8=1` trên Windows) | Đạt 19/19 |
+| `pnpm typecheck` | Đạt (0 lỗi) |
+| `pnpm lint` | **0 lỗi, 77 cảnh báo**; cần xử lý cảnh báo riêng |
+| `pnpm test` (unit + runtime + RSC + tooling) | Đạt toàn bộ (176 test) |
+| Các bộ Python `*_test.py` (cần `PYTHONUTF8=1` trên Windows) | Đạt toàn bộ (200 test) |
 | `pnpm build` | Đạt |
 | E2E Playwright (xem số liệu cuối báo cáo) | Xem mục 4.1 |
 | Test mới `tests/e2e/zzzzzz-prelaunch.spec.ts` (4 bài: dọn dữ liệu, CRM nhân sự, upload, giữ landing) | Đạt 4/4 |
 
 ### 4.1 E2E
-Lần chạy cuối của toàn bộ bộ E2E (115 bài, D1 trắng): **113 đạt, 0 lỗi, 2 bỏ qua (có chủ đích)**. Lần chạy đầu của đợt này: 48 đạt, 26 lỗi, 39 không chạy.
+Lần chạy ngày 08/11 (115 bài, D1 trắng): **113 đạt, 0 lỗi, 2 bỏ qua (có chủ đích)**. Xác minh lại ngày 09/11 (123 bài, D1 trắng): **121 đạt, 0 lỗi, 2 bỏ qua (có chủ đích)**. Test thanh toán chia nhiều hình thức được xếp sau fixture ngân hàng và khôi phục cấu hình dọn phòng sau khi tạo phiên, tránh ảnh hưởng các test dùng chung database.
 Các bài giao diện đã được viết lại theo giao diện quản trị mới (menu bên, "POS tính tiền", "Booking", "Khách hàng", cổng hội viên mới, CRM mới). Việc viết lại này tìm ra các lỗi 14, 15, 16, 18, 19 ở trên.
 
 ## 5. Lỗi và rủi ro còn tồn tại
 
-1. ~~2 bài E2E lỗi khi chạy cả bộ~~ **Đã sửa:** `zy-split` chọn line trống đầu tiên, trùng line-2/line-8 mà `zzz-leads` dành riêng (phiên đã thu còn "đang dọn" ở line-2). Nay `zy-split` bỏ hai line đó.
+1. ~~E2E thanh toán chia nhiều hình thức không ổn định theo thứ tự test~~ **Đã sửa và xác minh lại:** test `z-bank1-split` chạy ngay sau fixture ngân hàng, chọn phòng còn trống và khôi phục cấu hình dọn phòng trong `finally`; toàn bộ E2E đạt 121/123, 2 bỏ qua có chủ đích.
 2. ~~Lỗi hydration React #418~~ **Đã sửa:** máy chủ dựng màn mặc định "POS tính tiền" còn trình duyệt dựng "Tổng quan". Nay cả hai đều mở "Tổng quan"; đã kiểm tra bản build production, không còn lỗi console. Lỗi `RSC prefetch setup error` của vinext không còn thấy trong lần kiểm tra này.
 3. **Testimonial mặc định trên trang chủ** (`lib/landing-config.ts`: "Anh Lê Hoàng Nam HDC 18", "Chị Nguyễn Phương Thảo"...) trông như đánh giá khách thật. Nếu là nội dung mẫu, **cần thay bằng đánh giá thật hoặc ẩn** trước khi công khai (rủi ro pháp lý quảng cáo). Đây là quyết định của chủ nên tôi không tự xóa.
 4. **Dữ liệu giá gói mâu thuẫn bảng giá** (đã ghi từ trước trong `docs/BUG-PLAN.md`): cần chủ quyết định.
 5. **Khóa tài khoản / đăng ký hội viên bị lạm dụng** (đã ghi trong `docs/BUG-PLAN.md`): cần Turnstile.
 6. **Landing public chọn "cơ sở đầu tiên"** (`LIMIT 1`) khi có nhiều cơ sở; chỉ ổn khi chạy một cơ sở.
-7. **Cách chạy production trên VPS**: PM2 chạy `wrangler dev --local`; D1 giả lập lưu ở `.wrangler/state`. Phù hợp pilot một cơ sở; cần có sao lưu định kỳ (mục 7).
+7. **VPS pilot chưa được nghiệm thu vận hành**: Golf3D chạy bằng systemd, Nginx proxy cổng 8787; HTTPS và Origin được kiểm tra sau deploy. Không chạy migration hoặc nâng cấp môi trường trong đợt này. Snapshot trước deploy và build cũ còn để rollback nhưng chưa diễn tập restore; xem `docs/DEPLOY-VPS.md`.
 8. Upload ảnh chỉ hoạt động khi có ổ đĩa ghi (VPS); trên Cloudflare Workers trả 501. `deploy_bundle.tar.gz` nay đã được ignore.
 9. `actualPaidTotal` trong báo cáo CRM cộng tiền thanh toán đơn CRM với booking đã thu. Đã sửa phép nối làm nhân đôi booking khi có nhiều lead cùng số điện thoại (nay dùng `EXISTS`). Một khoản vừa là đơn CRM vừa là booking vẫn có thể bị tính hai lần; cần chủ xác nhận cách đối soát với dữ liệu thật.
 10. Bảng màu/độ tương phản và các màn không nêu ở mục 3 (Cài đặt, Nhân viên, Landing CMS trên điện thoại) chưa duyệt thị giác đầy đủ.
-11. Các hạn chế đã biết: chưa có 2FA nhân viên, CSP còn `unsafe-inline`, khách đặt nhóm >4 người chỉ giữ 1 line khi xác nhận (xem `docs/BUG-PLAN.md`, `docs/SECURITY-REVIEW.md`).
+11. Các hạn chế đã biết: chưa có 2FA nhân viên, CSP còn `unsafe-inline` (xem `docs/SECURITY-REVIEW.md`). Đặt nhóm trên 4 người đã được hỗ trợ theo nhiều line; không còn là lỗi đang chờ xử lý (xem `docs/BUG-PLAN.md` và `docs/PROGRESS.md`).
 
 ## 6. Chưa thể kiểm tra trong môi trường này
 - Thanh toán thật SePay / ngân hàng (chỉ kiểm tra webhook giả lập với khóa thử).
@@ -90,33 +90,28 @@ Các bài giao diện đã được viết lại theo giao diện quản trị m
 - Quên mật khẩu tự động (chưa có tính năng; đặt lại do quản lý cấp mật khẩu tạm).
 - Phiên bản đa ngôn ngữ (giao diện chỉ có tiếng Việt; hiển thị tiếng Việt có dấu đúng trên mọi màn hình đã mở).
 - Kiểm tra hồi quy toàn bộ trình duyệt trên iOS/Android thật, bàn phím che nội dung (chỉ giả lập khung nhìn 375 px).
-- Chạy trên production thật golfhub.cloud (chưa được phép triển khai).
+- Kiểm tra tích hợp thật trên VPS (thanh toán, thông báo, thiết bị) và nghiệm thu thao tác thu tiền; bản pilot vẫn owner-private, không thay đổi audience.
 
 ## 7. Hướng dẫn khởi chạy, sao lưu, khôi phục
 
 **Chạy local / kiểm thử** (Windows, cần Node ≥ 22.13, pnpm):
-```bash
-pnpm install
-pnpm typecheck && pnpm lint && pnpm test
+```powershell
+pnpm install --frozen-lockfile
+pnpm typecheck
+pnpm lint
+pnpm test
 pnpm build
-PYTHONUTF8=1 npx playwright test      # dựng D1 trống riêng ở .e2e-state, không đụng dữ liệu thật
+pnpm exec playwright install chromium
+pnpm test:e2e
+$env:PYTHONUTF8 = '1'
+Get-ChildItem .\tests -Filter '*_test.py' | Sort-Object Name | ForEach-Object {
+  python $_.FullName
+  if ($LASTEXITCODE -ne 0) { throw "Test failed: $($_.Name)" }
+}
 ```
-Test SQL: `PYTHONUTF8=1 python tests/<tên>_sql_test.py`.
+Các lệnh và hướng dẫn tạo database local đầy đủ ở `docs/LOCAL_SETUP.md`. Playwright dùng D1 cục bộ riêng cho E2E, không phải database Site.
 
-**Chạy trên VPS** (xem `docs/DEPLOY-VPS.md`): `git pull && pnpm install && pnpm build && pm2 restart golf3d`. Luôn giữ `DISABLE_SITES_IDENTITY=1`. Áp migration mới đúng một lần (không sửa migration đã áp).
-
-**Sao lưu:**
-1. Dữ liệu D1 cục bộ nằm ở `.wrangler/state` trên VPS. Dừng app (`pm2 stop golf3d`) hoặc dùng bản sao tức thời rồi nén thư mục: `tar -czf golf3d-state-$(date +%F).tar.gz .wrangler/state`, chép ra nơi khác máy (ít nhất hằng ngày, giữ 14 ngày).
-2. Thêm bản xuất JSON từ giao diện (quyền chủ cơ sở, `/api/export`) hằng ngày; bản này không chứa mật khẩu, phiên, khóa.
-3. Sao lưu riêng `.dev.vars`/biến môi trường (khóa SePay, Turnstile) ở nơi an toàn; không nằm trong backup dữ liệu.
-
-**Khôi phục:**
-1. `pm2 stop golf3d`; đổi tên `.wrangler/state` hiện tại thành `.wrangler/state.bad`.
-2. Giải nén bản sao lưu gần nhất vào `.wrangler/state`; `pm2 start golf3d`.
-3. Đối chiếu số booking, ca, sổ tiền với số ghi trước đó (xem `docs/DEPLOY-CLOUDFLARE.md` mục 5–6 để nhập từ bản JSON vào D1 trống: `scripts/import-backup.mjs`, rồi tạo lại tài khoản chủ bằng `scripts/create-owner.mjs`).
-4. **Thử khôi phục thật trên máy khác ít nhất một lần trước ngày mở cửa**; chưa làm trong đợt này.
-
-**Trước ngày mở cửa:** dùng "Dọn dẹp dữ liệu thử nghiệm" (chỉ chủ cơ sở, nhập `XACNHAN`) **sau khi sao lưu**; hành động này không hoàn tác.
+**Sao lưu/khôi phục:** trong deploy VPS ngày 09/11 đã tạo snapshot root-only gồm D1 và build cũ; chưa xác minh restore. Chủ đã yêu cầu xóa `/var/www/backups`, nên backup định kỳ hiện chưa được thiết lập lại/xác minh. `/api/export` chứa thông tin khách hàng, cần lưu trữ an toàn và không thay thế snapshot cấu hình/identity. Trước khi dùng dữ liệu thật cần quy trình backup/restore được duyệt và diễn tập trên môi trường tách biệt. Không chạy thao tác dọn dữ liệu thử nghiệm trên dữ liệu thật.
 
 ## 8. Rà soát giao diện tổng thể (09/11/2026)
 

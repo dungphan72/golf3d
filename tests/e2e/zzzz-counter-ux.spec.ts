@@ -85,6 +85,25 @@ test('hộp thoại đặt lịch và bắt đầu nằm giữa màn hình, khô
   }
 });
 
+test('form đặt lịch nhân viên giới hạn thời gian từ mốc 15 phút kế tiếp đến 90 ngày', async ({
+  page,
+}) => {
+  expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
+  await page.goto('/quan-ly');
+  await page.getByRole('button', { name: 'Đặt lịch', exact: true }).first().click();
+  const start = page.getByLabel(/Ngày, giờ bắt đầu/);
+  await expect(start).toBeVisible();
+  const min = Date.parse(`${await start.getAttribute('min')}:00+07:00`);
+  const max = Date.parse(`${await start.getAttribute('max')}:00+07:00`);
+  const now = Date.now();
+  expect(min).toBeGreaterThan(now);
+  expect(min).toBeLessThanOrEqual(now + 16 * 60_000);
+  expect(min % (15 * 60_000)).toBe(0);
+  expect(max).toBeGreaterThan(now + 89 * 24 * 60 * 60_000);
+  expect(max).toBeLessThanOrEqual(now + 90 * 24 * 60 * 60_000);
+  expect(max % (15 * 60_000)).toBe(0);
+});
+
 test.describe('điện thoại: hộp thoại là tấm trượt từ dưới lên, nằm gọn trong màn hình', () => {
   test.use({ ...phone, locale: 'vi-VN' });
 

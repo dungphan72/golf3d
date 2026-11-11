@@ -9,6 +9,7 @@ export const PART_METHODS = [
   ['transfer', 'Chuyển khoản'],
   ['card', 'Thẻ'],
 ] as const;
+
 /** One bill paid with several methods (e.g. part cash, part transfer). Parts must add up to the amount due. */
 export function SplitPay({
   booking,
@@ -80,51 +81,81 @@ export function SplitPay({
         className="secondary"
         disabled={disabled}
         onClick={() => setOpen(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
       >
-        <Split size={16} />
-        <span className="btn-label">Chia nhiều hình thức thanh toán</span>
+        <Split size={15} />
+        <span>Chia tiền</span>
       </button>
     );
   return (
-    <div className="info-strip">
-      <p>
-        <strong>Chia thanh toán</strong>
-        {due != null && <> · cần thu {money(due)}</>}
-      </p>
-      {PART_METHODS.map(([method, label]) => (
-        <label key={method}>
-          {label}
-          <input
-            inputMode="numeric"
-            value={amounts[method] ?? ''}
-            onChange={(e) =>
-              setAmounts({ ...amounts, [method]: e.target.value.replace(/\D/g, '') })
-            }
-          />
-        </label>
-      ))}
+    <div
+      className="info-strip"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        gap: 10,
+        padding: '14px 16px',
+        borderRadius: 8,
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <strong style={{ fontSize: 13.5 }}>Chia thanh toán</strong>
+        {due != null && (
+          <span style={{ fontSize: 12.5, color: 'var(--ds-muted)' }}>
+            Cần thu: <strong style={{ color: 'var(--ds-text)' }}>{money(due)}</strong>
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 8 }}>
+        {PART_METHODS.map(([method, label]) => (
+          <label key={method} style={{ margin: 0 }}>
+            <span>{label}</span>
+            <input
+              inputMode="numeric"
+              placeholder="0"
+              value={amounts[method] ?? ''}
+              onChange={(e) =>
+                setAmounts({ ...amounts, [method]: e.target.value.replace(/\D/g, '') })
+              }
+            />
+          </label>
+        ))}
+      </div>
       {due != null && (
-        <p role="status">
-          Đã nhập {money(total)} ·{' '}
-          {total === due
-            ? 'đủ'
-            : total < due
-              ? `còn thiếu ${money(due - total)}`
-              : `thừa ${money(total - due)}`}
-          {bankTx && ' · tự gắn giao dịch ngân hàng đã báo có'}
-        </p>
+        <div role="status" style={{ margin: '8px 0', fontSize: 13 }}>
+          Đã nhập: <strong>{money(total)}</strong> ·{' '}
+          {total === due ? (
+            <span style={{ color: 'var(--ds-green-dark)', fontWeight: 600 }}>Đủ tiền</span>
+          ) : total < due ? (
+            <span style={{ color: '#dc2626' }}>còn thiếu {money(due - total)}</span>
+          ) : (
+            <span style={{ color: '#b45309' }}>thừa {money(total - due)}</span>
+          )}
+          {bankTx && ' · tự gắn giao dịch ngân hàng'}
+        </div>
       )}
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
-      <button className="primary" disabled={disabled || busy || !valid} onClick={submit}>
-        Xác nhận đã nhận đủ tiền
-      </button>
-      <button className="secondary" disabled={busy} onClick={() => setOpen(false)}>
-        Đóng
-      </button>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+        <button
+          className="primary"
+          disabled={disabled || busy || !valid}
+          onClick={submit}
+          aria-label="Xác nhận đã nhận đủ tiền"
+          style={{ height: 34, fontSize: 13, padding: '0 14px' }}
+        >
+          Xác nhận
+        </button>
+        <button className="secondary" disabled={busy} style={{ height: 34, fontSize: 13, padding: '0 14px' }} onClick={() => setOpen(false)}>
+          Đóng
+        </button>
+      </div>
     </div>
   );
 }

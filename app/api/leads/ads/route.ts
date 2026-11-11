@@ -1,9 +1,7 @@
 import { overLimit } from '../../../../lib/server/throttle';
 import { sendResult, httpError, originOf, requestNow, clientIp } from '../../../../lib/server/http';
 import { adsLeadSchema, fromAds } from '../../../../lib/leads';
-import { intake } from '../../../../lib/server/lead-intake';
 import { tenantForToken } from '../../../../modules/crm/server/tokens';
-import { getSettings } from '../../../../modules/crm/server/store';
 import { ingestAdsLead } from '../../../../modules/crm/server/channels';
 export const dynamic = 'force-dynamic';
 
@@ -26,14 +24,6 @@ export async function POST(req: Request) {
   if (!parsed.success) return httpError('Thông tin chưa hợp lệ');
   const now = requestNow(req);
   const lead = fromAds(parsed.data, now);
-  // The club decides in CRM > Cấu hình where ad leads go; the old CRM stays the default.
-  if ((await getSettings(tenant)).adsLeads === 'CRM2') {
-    const r = await ingestAdsLead(tenant, lead.extKey, parsed.data, originOf(req), now);
-    return sendResult({ status: 200, body: { ok: true, ...r } });
-  }
-  const r = await intake(tenant, lead, originOf(req), now);
-  return sendResult({
-    status: 200,
-    body: { ok: true, leadId: r.leadId, duplicate: r.duplicate, status: r.status },
-  });
+  const r = await ingestAdsLead(tenant, lead.extKey, parsed.data, originOf(req), now);
+  return sendResult({ status: 200, body: { ok: true, ...r } });
 }

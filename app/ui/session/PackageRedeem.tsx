@@ -57,35 +57,33 @@ export function PackageRedeem({
     }
   }
   return (
-    <div className="info-strip">
+    <div className="info-strip" style={{ marginBottom: 8, padding: '10px 14px', borderRadius: 8 }}>
       {data.covered > 0 ? (
-        <p>
-          Đã trả phần golf bằng gói ({fmt(data.covered)}
-          {data.kind === 'gdr' && data.usedUnits ? `, trừ ${data.usedUnits} giờ` : ''}). Chỉ thu
-          phần còn lại: <strong>{fmt((booking.amount ?? 0) - data.covered)}</strong>
+        <p style={{ margin: 0, fontSize: 13 }}>
+          Đã trừ gói: <strong>{fmt(data.covered)}</strong> · Còn lại:{' '}
+          <strong style={{ color: 'var(--ds-green-dark)' }}>{fmt((booking.amount ?? 0) - data.covered)}</strong>
         </p>
       ) : (
         <>
-          <p>
-            Khách có gói dùng được cho phiên này
-            {data.kind === 'gdr' && data.units ? ` (cần trừ ${data.units} giờ)` : ''}:
-          </p>
-          {data.packages.map((p) => (
-            <button
-              key={p.id}
-              className="secondary"
-              disabled={busy || !p.enough}
-              title={p.enough ? undefined : 'Gói không còn đủ giờ cho phiên này'}
-              onClick={() => redeem(p.id)}
-            >
-              Trả bằng gói: {p.name} (còn {p.remaining >= 99999 ? 'không giới hạn' : p.remaining}
-              {data.kind === 'gdr' ? ' giờ' : ''}){p.enough ? '' : ' · không đủ'}
-            </button>
-          ))}
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Gói hội viên khả dụng:</div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {data.packages.map((p) => (
+              <button
+                key={p.id}
+                className="secondary"
+                disabled={busy || !p.enough}
+                title={p.enough ? undefined : 'Gói không đủ giờ cho phiên này'}
+                onClick={() => redeem(p.id)}
+                style={{ height: 32, fontSize: 12.5, padding: '0 10px' }}
+              >
+                Dùng gói: {p.name} ({p.remaining >= 99999 ? '∞' : `${p.remaining}h`}){p.enough ? '' : ' · thiếu giờ'}
+              </button>
+            ))}
+          </div>
         </>
       )}
       {error && (
-        <div className="error-box" role="alert">
+        <div className="error-box" role="alert" style={{ marginTop: 6 }}>
           {error}
         </div>
       )}

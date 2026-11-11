@@ -88,6 +88,7 @@ export async function runClubAction(
   tenant: string,
   input: ClubInput,
   nowArg = Date.now(),
+  options: { onlineRequest?: boolean } = {},
 ): Promise<ServiceResult> {
   const c = await loadConfig(tenant);
   const now = nowArg;
@@ -163,6 +164,7 @@ export async function runClubAction(
         },
         c,
         now,
+        options.onlineRequest ? { onlineRequest: true } : {},
       );
     } catch (e) {
       return fail(e instanceof Error ? e.message : 'Lịch đặt không hợp lệ');

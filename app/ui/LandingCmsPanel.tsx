@@ -1114,7 +1114,7 @@ export default function LandingCmsPanel() {
                       <div className="mock-pill active">Hôm nay</div>
                       <div className="mock-pill gold active">{config.goldTimeText}</div>
                       <div className="mock-pill active">Line Tiêu Chuẩn</div>
-                      <div className="mock-btn-book">Kiểm tra & Giữ phòng ↗</div>
+                      <div className="mock-btn-book">Điền thông tin đặt lịch ↗</div>
                     </div>
                   </div>
                 </div>

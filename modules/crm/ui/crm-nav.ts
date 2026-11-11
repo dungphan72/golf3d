@@ -10,6 +10,7 @@ import {
   Eye,
   GitFork,
   KanbanSquare,
+  LifeBuoy,
   LayoutDashboard,
   ListChecks,
   Lock,
@@ -32,6 +33,7 @@ export const PAGES = [
   'care',
   'appointments',
   'customers',
+  'tickets',
   'orders',
   'marketing',
   'campaigns',
@@ -65,6 +67,7 @@ export const CRM_NAV: NavGroup[] = [
     title: 'Khách hàng',
     items: [
       { key: 'customers', label: 'Khách hàng', hint: 'Hồ sơ, gói, lịch sử chơi và chăm sóc', icon: Contact },
+      { key: 'tickets', label: 'Ticket hỗ trợ', hint: 'Khiếu nại, yêu cầu của khách: người xử lý, hạn SLA, điểm hài lòng', icon: LifeBuoy },
       { key: 'orders', label: 'Đơn bán & Giữ chỗ', hint: 'Giữ chỗ, đặt cọc, thanh toán từng đợt', icon: Lock },
     ],
   },

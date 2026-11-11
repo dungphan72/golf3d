@@ -9,6 +9,7 @@ import { findItem, pageFor, type PageKey } from './crm-nav';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
 import { ResponseScreen } from './ResponseScreen';
+import { TicketsScreen } from './TicketsScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
 import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
 import {
@@ -1137,6 +1138,7 @@ export function CrmModule({
       {current === 'customers' && (
         <CareCustomersView key={focus ?? 'all'} focus={focus} onNavigate={onNavigate} />
       )}
+      {current === 'tickets' && <TicketsScreen manager={manager} />}
       {current === 'orders' && <OrdersScreen s={shared} />}
       {current === 'marketing' && <MarketingScreen />}
       {current === 'campaigns' && <CampaignsScreen />}

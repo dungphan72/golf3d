@@ -17,6 +17,7 @@ import {
   PieChart,
   Settings,
   Share2,
+  Timer,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -36,6 +37,7 @@ export const PAGES = [
   'campaigns',
   'channels',
   'report',
+  'response',
   'config',
   'blocked',
   'viewlog',
@@ -76,7 +78,10 @@ export const CRM_NAV: NavGroup[] = [
   },
   {
     title: 'Báo cáo',
-    items: [{ key: 'report', label: 'Báo cáo', hint: 'Phễu, nguồn, nhân viên, lý do thất bại', icon: BarChart3, managerOnly: true }],
+    items: [
+      { key: 'report', label: 'Báo cáo', hint: 'Phễu, nguồn, nhân viên, lý do thất bại', icon: BarChart3, managerOnly: true },
+      { key: 'response', label: 'Phản hồi', hint: 'Thời gian từ lúc có người phụ trách đến lần liên hệ đầu', icon: Timer, managerOnly: true },
+    ],
   },
   {
     title: 'Hệ thống',

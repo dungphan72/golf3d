@@ -3,6 +3,7 @@ import {
   hashPassword,
   verifyPassword,
   passwordProblem,
+  STAFF_MIN_LENGTH,
   normalizeEmail,
   validEmail,
   newToken,
@@ -23,7 +24,7 @@ export type AuthUser = {
 };
 
 export const SESSION_COOKIE = 'g3d_session';
-export const SESSION_SECONDS = 14 * 24 * 3600;
+export const SESSION_SECONDS = 7 * 24 * 3600;
 const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60_000;
 // Verifying against a fixed hash keeps response time similar for unknown emails.
@@ -171,7 +172,7 @@ export async function changePassword(
     .first<{ password_hash: string }>();
   if (!row || !(await verifyPassword(current, row.password_hash)))
     return fail('Mật khẩu hiện tại không đúng', 403);
-  const problem = passwordProblem(next, user.email);
+  const problem = passwordProblem(next, user.email, STAFF_MIN_LENGTH);
   if (problem) return fail(problem);
   await db()
     .prepare('UPDATE users SET password_hash=?,must_change=0 WHERE id=?')
@@ -197,7 +198,7 @@ export async function bootstrapOwner(
 ): Promise<ServiceResult> {
   const normalized = normalizeEmail(email);
   if (!validEmail(normalized)) return fail('Email không hợp lệ');
-  const problem = passwordProblem(password, normalized);
+  const problem = passwordProblem(password, normalized, STAFF_MIN_LENGTH);
   if (problem) return fail(problem);
   const existing = await db()
     .prepare("SELECT 1 AS x FROM memberships WHERE tenant=? AND role='owner'")

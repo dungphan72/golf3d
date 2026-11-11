@@ -3,6 +3,8 @@
 // so it can be raised later without invalidating existing passwords.
 const ITERATIONS = 100_000;
 const MIN_LENGTH = 8;
+/** Staff accounts can read and export every customer record, so they need a longer password than members. */
+export const STAFF_MIN_LENGTH = 10;
 const MAX_LENGTH = 200;
 const COMMON_PASSWORDS = new Set([
   'password',
@@ -57,8 +59,12 @@ export const validEmail = (email: string) =>
   email.length <= 200 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /** Returns a Vietnamese error message, or null when the password is acceptable. */
-export function passwordProblem(password: string, email = ''): string | null {
-  if (password.length < MIN_LENGTH) return `Mật khẩu cần ít nhất ${MIN_LENGTH} ký tự`;
+export function passwordProblem(
+  password: string,
+  email = '',
+  minLength = MIN_LENGTH,
+): string | null {
+  if (password.length < minLength) return `Mật khẩu cần ít nhất ${minLength} ký tự`;
   if (password.length > MAX_LENGTH) return 'Mật khẩu quá dài';
   if (email && password.toLowerCase() === email.toLowerCase())
     return 'Mật khẩu không được trùng email';

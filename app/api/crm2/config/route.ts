@@ -16,7 +16,7 @@ import {
 } from '../../../../lib/server/auth-service';
 import type { ServiceResult } from '../../../../lib/server/common';
 import type { Role } from '../../../../lib/auth/permissions';
-import { hashPassword, passwordProblem } from '../../../../lib/auth/password';
+import { hashPassword, passwordProblem, STAFF_MIN_LENGTH } from '../../../../lib/auth/password';
 import { db } from '../../../../lib/server/common';
 import { audit } from '../../../../lib/server/common';
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,7 @@ const route = crmRoute({ read: 'crm.view', write: 'crm.manage' }, async (c, req,
     const pwd = body.password ? String(body.password).trim() : '';
 
     if (pwd) {
-      const problem = passwordProblem(pwd, email);
+      const problem = passwordProblem(pwd, email, STAFF_MIN_LENGTH);
       if (problem) return fail(problem);
     }
     const res = await createStaff(actor, { email, name, role });

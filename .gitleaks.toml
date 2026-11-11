@@ -1,0 +1,11 @@
+title = "golf3d"
+
+[extend]
+useDefault = true
+
+# Fake secrets used only by the test suite and the end-to-end test server.
+[allowlist]
+paths = [
+  '''^tests/''',
+  '''^scripts/e2e-server\.mjs$''',
+]

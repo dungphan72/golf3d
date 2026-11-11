@@ -25,7 +25,11 @@ export type AuthUser = {
 
 export const SESSION_COOKIE = 'g3d_session';
 export const SESSION_SECONDS = 7 * 24 * 3600;
-const MAX_FAILURES = 5;
+// A guesser is stopped per address+account (5 tries / 15 min), so someone typing the owner's email from far away cannot
+// lock the owner out; the account itself only locks for everyone after many failures from many addresses.
+const MAX_FAILURES_PER_IP_ACCOUNT = 5;
+const MAX_FAILURES = 25;
+const MAX_FAILURES_NO_IP = 5;
 const LOCK_MS = 15 * 60_000;
 // Verifying against a fixed hash keeps response time similar for unknown emails.
 const DUMMY_HASH =
@@ -63,6 +67,15 @@ export async function login(
       result: fail('Đăng nhập sai quá nhiều lần từ thiết bị này. Thử lại sau ít phút.', 429),
     };
   const email = normalizeEmail(emailInput);
+  if (
+    ip !== 'unknown' &&
+    (await recentAttempts('staff_acct_fail', ip, LOGIN_WINDOW_MS, email)) >=
+      MAX_FAILURES_PER_IP_ACCOUNT
+  )
+    return {
+      ok: false,
+      result: fail('Đăng nhập sai quá nhiều lần. Thử lại sau ít phút.', 429),
+    };
   const row = validEmail(email)
     ? await db().prepare('SELECT * FROM users WHERE email=?').bind(email).first<UserRow>()
     : null;
@@ -78,13 +91,17 @@ export async function login(
       result: fail('Tài khoản tạm khóa do nhập sai nhiều lần. Thử lại sau ít phút.', 429),
     };
   if (!(await verifyPassword(password, row.password_hash))) {
-    if (ip !== 'unknown') await noteAttempt('staff_login_fail', ip);
+    if (ip !== 'unknown') {
+      await noteAttempt('staff_login_fail', ip);
+      await noteAttempt('staff_acct_fail', ip, email);
+    }
+    const limit = ip === 'unknown' ? MAX_FAILURES_NO_IP : MAX_FAILURES;
     const failures = row.failed_count + 1;
     await db()
       .prepare('UPDATE users SET failed_count=?,locked_until=? WHERE id=?')
       .bind(
-        failures >= MAX_FAILURES ? 0 : failures,
-        failures >= MAX_FAILURES ? now + LOCK_MS : 0,
+        failures >= limit ? 0 : failures,
+        failures >= limit ? now + LOCK_MS : 0,
         row.id,
       )
       .run();

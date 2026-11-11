@@ -7,10 +7,15 @@ import { tokenId } from '../auth/password';
  */
 const HOUR_MS = 3_600_000;
 
-export async function recentAttempts(kind: string, ip: string, windowMs: number) {
+export async function recentAttempts(kind: string, ip: string, windowMs: number, subject?: string) {
   const row = await db()
-    .prepare('SELECT COUNT(*) AS n FROM member_attempts WHERE kind=? AND ip_hash=? AND created>?')
-    .bind(kind, await tokenId('ip:' + ip), Date.now() - windowMs)
+    .prepare(
+      `SELECT COUNT(*) AS n FROM member_attempts WHERE kind=? AND ip_hash=? AND created>?${subject === undefined ? '' : ' AND subject=?'}`,
+    )
+    .bind(
+      ...[kind, await tokenId('ip:' + ip), Date.now() - windowMs],
+      ...(subject === undefined ? [] : [subject]),
+    )
     .first<{ n: number }>();
   return row?.n ?? 0;
 }

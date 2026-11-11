@@ -136,3 +136,27 @@ test('cron và webhook: sai khóa bị từ chối', async ({ request }) => {
     ).status(),
   ).toBe(401);
 });
+
+test('đoán mật khẩu chủ cơ sở chỉ khóa địa chỉ đó, chủ vẫn đăng nhập từ nơi khác', async ({
+  request,
+}) => {
+  const attacker = { 'x-forwarded-for': '203.0.113.88' };
+  for (let i = 0; i < 5; i++) {
+    const r = await request.post('/api/auth/login', {
+      data: { email: OWNER.email, password: 'doan-sai-' + i },
+      headers: attacker,
+    });
+    expect(r.status()).toBe(401);
+  }
+  expect((await request.post('/api/auth/login', { data: OWNER, headers: attacker })).status()).toBe(
+    429,
+  );
+  expect(
+    (
+      await request.post('/api/auth/login', {
+        data: OWNER,
+        headers: { 'x-forwarded-for': '198.51.100.30' },
+      })
+    ).status(),
+  ).toBe(200);
+});

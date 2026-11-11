@@ -14,6 +14,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 8787,
         DISABLE_SITES_IDENTITY: '1',
+        TRUST_PROXY: '1',
         PUBLIC_BASE_URL: 'https://golfhub.cloud',
       },
     },

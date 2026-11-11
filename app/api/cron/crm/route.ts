@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   const expected = secret('CRON_SECRET');
-  if (!expected) return httpError('Chưa cấu hình CRON_SECRET', 503);
+  if (!expected || expected.length < 16) return httpError('Chưa cấu hình CRON_SECRET', 503);
   if (!safeEqual(req.headers.get('authorization') ?? '', `Bearer ${expected}`))
     return httpError('Không được phép', 401);
   const tenants = (await db().prepare('SELECT tenant FROM settings').all<{ tenant: string }>())

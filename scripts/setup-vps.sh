@@ -79,7 +79,7 @@ server {
     listen [::]:80;
     server_name $DOMAIN www.$DOMAIN;
 
-    client_max_body_size 50M;
+    client_max_body_size 12M;
 
     location / {
         proxy_pass http://127.0.0.1:8787;
@@ -88,6 +88,8 @@ server {
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
+        # Never let a client pick its own address for rate limits
+        proxy_set_header CF-Connecting-IP "";
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;

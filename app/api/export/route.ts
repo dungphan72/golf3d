@@ -1,5 +1,6 @@
 import { env } from 'cloudflare:workers';
 import { authorize } from '../../auth-session';
+import { audit } from '../../../lib/server/common';
 export const dynamic = 'force-dynamic';
 
 // Full per-tenant data export (backup and migration source). Read-only; tenant comes from the
@@ -60,6 +61,10 @@ export async function GET() {
         data[table] = [];
       }
     }
+    // Leave a trace: a full export is the most sensitive read in the system.
+    await audit(auth.tenant, 'data.export', `${auth.email} (${auth.role}) đã xuất toàn bộ dữ liệu`).catch(
+      (e) => console.error('export audit', e),
+    );
     const body = JSON.stringify({ format: 'golf3d-export/1', exportedAt: Date.now(), data });
     return new Response(body, {
       headers: {

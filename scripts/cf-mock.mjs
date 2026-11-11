@@ -29,4 +29,22 @@ export const env = {
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'https://golfhub.cloud',
   DISABLE_SITES_IDENTITY: '1',
   ...(process.env.TRUST_PROXY ? { TRUST_PROXY: process.env.TRUST_PROXY } : {}),
+  // Secrets and keys the app reads with env.NAME on Cloudflare; here they come from the service environment.
+  ...Object.fromEntries(
+    [
+      'CRON_SECRET',
+      'FB_VERIFY_TOKEN',
+      'FB_APP_SECRET',
+      'FB_PAGE_TOKEN',
+      'ZALO_APP_ID',
+      'ZALO_APP_SECRET',
+      'ZALO_OA_TOKEN',
+      'RESEND_API_KEY',
+      'MAIL_FROM',
+      'TURNSTILE_SITE_KEY',
+      'TURNSTILE_SECRET',
+    ]
+      .filter((k) => process.env[k])
+      .map((k) => [k, process.env[k]]),
+  ),
 };

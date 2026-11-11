@@ -27,6 +27,10 @@ export async function POST(req: Request) {
   const tenant = await publicTenant();
   if (!tenant) return httpError('Chưa có cơ sở', 404);
   const now = requestNow(req);
+  // The signature covers the timestamp, so a stale one means a captured request being replayed.
+  const sentAt = Number(body.timestamp);
+  if (!Number.isFinite(sentAt) || Math.abs(now - sentAt) > 10 * 60_000)
+    return httpError('Yêu cầu đã hết hạn', 401);
   const lead = fromZaloEvent(body, now);
   if (!lead) return sendResult({ status: 200, body: { ok: true, ignored: true } });
   // The club decides in CRM > Cấu hình where Zalo messages go; the old CRM stays the default.

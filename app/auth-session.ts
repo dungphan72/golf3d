@@ -65,7 +65,11 @@ export const clearedCookie = `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax
 
 export function sameOrigin(request: Request) {
   const origin = request.headers.get('origin');
-  if (!origin) return true;
+  if (!origin) {
+    // Non-browser clients send neither header. A browser always labels a cross-site request, so refuse those.
+    const site = request.headers.get('sec-fetch-site');
+    return !site || site === 'same-origin' || site === 'none';
+  }
 
   try {
     const reqUrl = new URL(request.url);

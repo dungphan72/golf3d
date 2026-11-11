@@ -10,6 +10,7 @@ export const WIDGETS: readonly Widget[] = [
   { id: 'kpi_won', label: 'Đã chốt', kind: 'kpi' },
   { id: 'kpi_rate', label: 'Tỷ lệ chốt', kind: 'kpi' },
   { id: 'kpi_appts', label: 'Lịch hẹn hôm nay', kind: 'kpi' },
+  { id: 'target', label: 'Mục tiêu doanh thu', kind: 'table' },
   { id: 'funnel', label: 'Phễu tư vấn', kind: 'table' },
   { id: 'sources', label: 'Nguồn khách', kind: 'table' },
   { id: 'ranking', label: 'Xếp hạng nhân viên', kind: 'table', managerOnly: true },

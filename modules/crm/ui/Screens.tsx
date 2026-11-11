@@ -27,6 +27,7 @@ import {
 } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { VERDICT_LABELS, parseImportText, type PreviewRow, type Verdict } from '../core/import';
+import { TargetCard } from './TargetCard';
 import { RANGE_DAYS, WIDGETS, visibleWidgets, type DashLayout } from '../core/dashboard';
 import {
   CALL_RESULTS,
@@ -166,6 +167,7 @@ export function OverviewScreen({
   const kpis = shown.filter((id) => id.startsWith('kpi_'));
   const cards = shown.filter((id) => !id.startsWith('kpi_'));
   const render = (id: string) => {
+    if (id === 'target') return <TargetCard key={id} />;
     if (id === 'funnel')
       return (
         <Card key={id} title={`Phễu ${data.days} ngày`} sub="Tỷ lệ chuyển đổi qua các giai đoạn">

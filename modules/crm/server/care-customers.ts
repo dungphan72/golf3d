@@ -569,3 +569,25 @@ export async function applyCustomerAction(c: Ctx, a: CustomerAction) {
     }
   }
 }
+
+/** Everyone a bulk campaign may reach (up to 2000), with their segments; consent and contacts decide who is kept. */
+export async function campaignContacts(c: Ctx) {
+  const vip = (await getSettings(c.tenant)).care.vipSpend;
+  const rows = (
+    await db()
+      .prepare(`${CUSTOMERS_SQL} WHERE c.tenant=? ORDER BY c.created DESC LIMIT 2000`)
+      .bind(c.now - 90 * DAY, c.tenant)
+      .all<Row>()
+  ).results;
+  return rows.map((r) => {
+    const w = withSegments(r, vip, c.now);
+    return {
+      id: w.id,
+      name: w.name,
+      email: w.email,
+      zalo_id: w.zalo_id,
+      marketing_consent: w.marketing_consent,
+      segments: w.segments as string[],
+    };
+  });
+}

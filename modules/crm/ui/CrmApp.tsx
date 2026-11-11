@@ -1,8 +1,8 @@
 'use client';
 import { CareTasksView } from './CareTasks';
-import { MarketingScreen } from './MarketingScreen';
 import { ViewLogScreen } from './ViewLogScreen';
 import { BlockedScreen } from './BlockedScreen';
+import { MarketingSpace } from './CampaignsScreen';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
@@ -1217,7 +1217,7 @@ export function CrmModule({
             }}
           />
         )}
-        {space === 'marketing' && manager && <MarketingScreen />}
+        {space === 'marketing' && manager && <MarketingSpace />}
         {space === 'report' && manager && <ReportScreen />}
         {space === 'config' && manager && (
           <>

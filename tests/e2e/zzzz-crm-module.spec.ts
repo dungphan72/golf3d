@@ -517,11 +517,10 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
-  await expect(crm.getByRole('tab', { name: 'Bàn làm việc' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Bàn làm việc', exact: true })).toBeVisible();
   await expect(crm.getByText('Phễu 30 ngày')).toBeVisible();
 
-  await crm.getByRole('tab', { name: 'Lead & Phễu' }).click();
-  await crm.getByRole('tab', { name: 'Danh sách lead' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Danh sách lead', exact: true }).click();
   await crm.getByRole('row', { name: /Khách Giao Diện CRM/ }).click();
   await expect(crm.getByText('Lịch sử hoạt động')).toBeVisible();
   await crm.getByLabel('Kết quả cuộc gọi').selectOption('INTERESTED');
@@ -534,16 +533,16 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   await expect(crm.getByRole('alert')).toContainText('chọn ngày giờ hẹn');
   await crm.getByRole('button', { name: '← Quay lại' }).click();
 
-  await crm.getByRole('tab', { name: 'Pipeline' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Pipeline', exact: true }).click();
   await expect(
     crm.getByRole('region', { name: 'Có nhu cầu' }).getByText('Khách Giao Diện CRM'),
   ).toBeVisible();
-  await crm.getByRole('tab', { name: 'Kho số' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Kho số', exact: true }).click();
   await expect(crm.getByText('Chọn lead để giao cho nhân viên.')).toBeVisible();
-  await crm.getByRole('tab', { name: 'Cấu hình' }).click();
-  await crm.getByRole('tab', { name: 'Đơn bán & Giữ chỗ' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Đơn bán & Giữ chỗ', exact: true }).click();
   await expect(crm.getByText('Tổng giá trị')).toBeVisible();
-  await crm.getByRole('tab', { name: 'Cài đặt chung' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
   await expect(crm.getByRole('heading', { name: 'Danh mục dịch vụ và gói' })).toBeVisible();
   await expect(crm.getByRole('cell', { name: 'Gói HLV 1 kèm 1' })).toBeVisible();
 });

@@ -129,7 +129,7 @@ test('giao diện: tab Marketing hiện chỉ số, chiến dịch và thêm đ�
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
-  await crm.getByRole('tab', { name: 'Marketing' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Marketing', exact: true }).click();
   await expect(crm.getByText('CPL (chi phí / lead)')).toBeVisible();
   await expect(crm.getByRole('region', { name: 'Hiệu quả theo chiến dịch' })).toContainText('Khai trương T11');
   await crm.getByLabel('Số điện thoại').fill('0933 444 555');

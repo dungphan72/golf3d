@@ -121,8 +121,8 @@ test('màn hình: tab Kênh & tích hợp, tạo mã hiện một lần', async 
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
-  await crm.getByRole('tab', { name: 'Cấu hình' }).click();
-  await crm.getByRole('tab', { name: 'Kênh & tích hợp' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Kênh & tích hợp', exact: true }).click();
   await expect(crm.getByRole('heading', { name: 'Kênh nhận lead và gửi tin' })).toBeVisible();
   await expect(crm.getByRole('heading', { name: 'Địa chỉ webhook' })).toBeVisible();
   await expect(crm.getByText(`${BASE}/api/leads/zalo`)).toBeVisible();
@@ -141,7 +141,7 @@ test('nhân viên sale không thấy tab Kênh & tích hợp', async ({ browser 
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
-  await expect(crm.getByRole('tab', { name: 'Bàn làm việc' })).toBeVisible();
-  await expect(crm.getByRole('tab', { name: 'Kênh & tích hợp' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Bàn làm việc', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Kênh & tích hợp', exact: true })).toHaveCount(0);
   await ctx.close();
 });

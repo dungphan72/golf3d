@@ -125,7 +125,7 @@ test('tắt một quy tắc trong cấu hình thì không tạo việc đó nữ
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
-  await page.getByRole('tab', { name: 'Chăm sóc khách' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: /^Việc của tôi/ }).click();
   const card = page.locator('.crm-task', { hasText: 'Khách Có Chào' });
   await expect(card).toContainText('Chào mừng khách mới');
   await expect(card).toContainText('Chào Khách Có Chào');
@@ -230,7 +230,7 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
-  await page.getByRole('region', { name: 'CRM' }).getByRole('tab', { name: 'Khách hàng' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Khách hàng', exact: true }).click();
   await page.getByLabel('Tìm hồ sơ khách').fill(c.phone);
   await page.getByRole('row', { name: /Khách Giao Diện Hồ Sơ/ }).click();
   const panel = page.getByRole('region', { name: 'Hồ sơ Khách Giao Diện Hồ Sơ' });
@@ -243,7 +243,7 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
 
   await panel.getByRole('button', { name: 'Đóng' }).click();
   await page.getByLabel('Tìm hồ sơ khách').fill('Khách Gói');
-  await page.getByRole('row', { name: /^Khách Gói 0912/ }).click();
+  await page.getByRole('row').filter({ hasText: '0912000111' }).click();
   const memberPanel = page.getByRole('region', { name: 'Hồ sơ Khách Gói' });
   await memberPanel.getByRole('tab', { name: 'Lịch sử' }).click();
   await expect(memberPanel).toContainText('Bắt đầu chơi');
@@ -252,7 +252,7 @@ test('giao diện: tab Hồ sơ khách tìm và mở hồ sơ; từ thẻ việc
   await expect(memberPanel).toContainText('Thẻ giờ');
 
   // From a care task, the customer's name opens the same file.
-  await page.getByRole('tab', { name: 'Chăm sóc khách' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: /^Việc của tôi/ }).click();
   await page
     .locator('.crm-task', { hasText: 'Khách Giao Diện Hồ Sơ' })
     .getByRole('button', { name: 'Khách Giao Diện Hồ Sơ' })
@@ -321,7 +321,7 @@ test('nhân sự: Zalo ID và email báo lưu được; nút trực bật tắt 
   await expect(page.getByRole('button', { name: /Đang nghỉ/ })).toBeVisible();
   await page.getByRole('button', { name: /Đang nghỉ/ }).click();
   await expect(page.getByRole('button', { name: /Đang trực/ })).toBeVisible();
-  await page.getByRole('tab', { name: /Thiết lập|Cấu hình/ }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
   await expect(page.getByText('zalo-owner-1')).toBeVisible();
 });
 
@@ -357,7 +357,7 @@ test('báo cáo tư vấn: phễu, nguồn, nhân viên và việc chăm sóc; c
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM' }).click();
-  await page.getByRole('tab', { name: 'Báo cáo' }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Báo cáo', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Phễu tư vấn' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Việc chăm sóc khách' })).toBeVisible();
   await expect(page.locator('.crm-kpis').getByText('Lead nhận được')).toBeVisible();

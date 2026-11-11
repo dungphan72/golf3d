@@ -2,7 +2,10 @@
 import { CareTasksView } from './CareTasks';
 import { ViewLogScreen } from './ViewLogScreen';
 import { BlockedScreen } from './BlockedScreen';
-import { MarketingSpace } from './CampaignsScreen';
+import { CampaignsScreen } from './CampaignsScreen';
+import { MarketingScreen } from './MarketingScreen';
+import { CrmShell } from './CrmShell';
+import { findItem, pageFor, type PageKey } from './crm-nav';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
@@ -18,16 +21,12 @@ import {
   Save,
   RotateCcw,
   CheckCircle2,
-  AlertCircle,
   Plus,
-  Clock,
-  Mail,
-  Phone,
   MessageSquare,
   Globe,
   Share2,
 } from 'lucide-react';
-import { Chips, Loading, PageTabs } from '../../../app/ui/kit';
+import { Loading } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
 import { call, errText, type Staff } from './api';
 import { ChannelsScreen } from './ChannelsScreen';
@@ -36,13 +35,10 @@ import { SalesStaffManager } from './SalesStaffManager';
 import { LeadDistributionScreen } from './LeadDistributionScreen';
 import {
   AppointmentsScreen,
-  CustomersScreen,
-  HoldsScreen,
   LeadsScreen,
   OrdersScreen,
   OverviewScreen,
   PoolScreen,
-  TasksScreen,
   WorkScreen,
   useLoad,
   type Shared,
@@ -1064,61 +1060,14 @@ export function CrmModule({
   ) => void;
 }) {
   const manager = permissions.includes('crm.manage');
-  const [tab, setTab] = useState(initialTab);
-  const [space, setSpace] = useState<
-    | 'work'
-    | 'leads'
-    | 'customers'
-    | 'appointments'
-    | 'care'
-    | 'marketing'
-    | 'report'
-    | 'config'
-  >(() => {
-    if (initialTab === 'leads' || initialTab === 'pipeline' || initialTab === 'pool' || initialTab === 'overview') return 'leads';
-    if (initialTab === 'files' || initialTab === 'customers') return 'customers';
-    if (initialTab === 'appointments') return 'appointments';
-    if (initialTab === 'care') return 'care';
-    if (initialTab === 'marketing') return 'marketing';
-    if (initialTab === 'report') return 'report';
-    if (initialTab === 'config' || initialTab === 'channels' || initialTab === 'orders' || initialTab === 'viewlog') return 'config';
-    return 'work';
-  });
-
-  const selectTab = (t: string) => {
-    setTab(t);
-    if (t === 'work' || t === 'tasks') setSpace('work');
-    else if (t === 'care') setSpace('care');
-    else if (t === 'marketing') setSpace('marketing');
-    else if (t === 'leads' || t === 'pipeline' || t === 'pool' || t === 'overview') setSpace('leads');
-    else if (t === 'config' || t === 'channels' || t === 'orders' || t === 'viewlog') setSpace('config');
-    else if (t === 'files' || t === 'customers') setSpace('customers');
-    else if (t === 'appointments') setSpace('appointments');
-    else if (t === 'report') setSpace('report');
-    else setSpace('work');
-  };
-
-  const onSelectSpace = (s: string) => {
-    setSpace(s as typeof space);
-    if (s === 'work') {
-      if (tab !== 'work' && tab !== 'tasks') setTab('work');
-    } else if (s === 'leads') {
-      if (tab !== 'leads' && tab !== 'pipeline' && tab !== 'pool' && tab !== 'overview') setTab('leads');
-    } else if (s === 'config') {
-      if (tab !== 'config' && tab !== 'channels' && tab !== 'orders' && tab !== 'viewlog') setTab('config');
-    } else if (s === 'customers') {
-      setTab('customers');
-    } else {
-      setTab(s);
-    }
-  };
-
+  const [page, setPage] = useState<PageKey>(() => pageFor(initialTab));
   const [lead, setLead] = useState<string | null>(null);
   const [focus, setFocus] = useState<string | null>(null);
   const [bump, setBump] = useState(0);
   const [clock, setClock] = useState(0);
   const cfg = useLoad<Config>('/api/crm2/config', 120_000);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- start the clock after mount
     setClock(Date.now());
     const t = setInterval(() => setClock(Date.now()), 15_000);
     return () => clearInterval(t);
@@ -1139,108 +1088,69 @@ export function CrmModule({
     open: setLead,
     onNavigate,
   };
-  if (lead)
-    return (
+  // Staff never reach the manager-only pages, even through an old link.
+  const current: PageKey = findItem(page)?.managerOnly && !manager ? 'work' : page;
+  const openCustomer = (id: string) => {
+    setLead(null);
+    setFocus(id);
+    setPage('customers');
+  };
+  const shell = (children: ReactNode) => (
+    <CrmShell
+      page={current}
+      onPage={(p) => {
+        setLead(null);
+        setPage(p);
+      }}
+      manager={manager}
+      onBack={onNavigate ? () => onNavigate('dashboard') : undefined}
+      onLead={setLead}
+      onCustomer={openCustomer}
+    >
       <section className="crm-panel" aria-label="CRM">
-        <LeadDetail
-          id={lead}
-          now={clock}
-          me={cfg.data.me}
-          manager={manager}
-          staff={cfg.data.staff}
-          onClose={() => {
-            setLead(null);
-            setBump((b) => b + 1);
-          }}
-          onChanged={() => setBump((b) => b + 1)}
-          onOpenCustomer={(id) => {
-            setLead(null);
-            setFocus(id);
-            setSpace('customers');
-            setTab('customers');
-          }}
-          onNavigate={onNavigate}
-        />
+        <DutyToggle />
+        {children}
       </section>
+    </CrmShell>
+  );
+  if (lead)
+    return shell(
+      <LeadDetail
+        id={lead}
+        now={clock}
+        me={cfg.data.me}
+        manager={manager}
+        staff={cfg.data.staff}
+        onClose={() => {
+          setLead(null);
+          setBump((b) => b + 1);
+        }}
+        onChanged={() => setBump((b) => b + 1)}
+        onOpenCustomer={openCustomer}
+        onNavigate={onNavigate}
+      />,
     );
-  return (
-    <section className="crm-panel" aria-label="CRM">
-      <DutyToggle />
-      <PageTabs
-        value={space}
-        onChange={onSelectSpace}
-        tabs={[
-          { key: 'work', label: 'Bàn làm việc' },
-          { key: 'leads', label: 'Lead & Phễu' },
-          { key: 'customers', label: 'Khách hàng' },
-          { key: 'appointments', label: 'Lịch hẹn' },
-          { key: 'care', label: 'Chăm sóc khách' },
-          { key: 'marketing', label: 'Marketing', hidden: !manager },
-          { key: 'report', label: 'Báo cáo', hidden: !manager },
-          { key: 'config', label: 'Cấu hình', hidden: !manager },
-        ]}
-      />
-      <div key={space}>
-        {space === 'work' && <WorkScreen s={shared} />}
-        {space === 'leads' && (
-          <>
-            <PageTabs
-              sub
-              value={tab}
-              onChange={selectTab}
-              tabs={[
-                { key: 'leads', label: 'Danh sách lead' },
-                { key: 'distribute', label: 'Chia lead (Máy chia data)' },
-                { key: 'pipeline', label: 'Pipeline' },
-                { key: 'pool', label: 'Kho số' },
-                { key: 'overview', label: 'Tổng quan phễu' },
-              ]}
-            />
-            {tab === 'leads' && <LeadsScreen s={shared} board={false} />}
-            {tab === 'distribute' && <LeadDistributionScreen s={shared} />}
-            {tab === 'pipeline' && <LeadsScreen s={shared} board />}
-            {tab === 'pool' && <PoolScreen s={shared} />}
-            {tab === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
-          </>
-        )}
-        {space === 'customers' && (
-          <CareCustomersView key={focus ?? 'all'} focus={focus} onNavigate={onNavigate} />
-        )}
-        {space === 'appointments' && <AppointmentsScreen s={shared} />}
-        {space === 'care' && (
-          <CareTasksView
-            s={shared}
-            onOpenCustomer={(id) => {
-              setFocus(id);
-              setSpace('customers');
-              setTab('customers');
-            }}
-          />
-        )}
-        {space === 'marketing' && manager && <MarketingSpace />}
-        {space === 'report' && manager && <ReportScreen />}
-        {space === 'config' && manager && (
-          <>
-            <PageTabs
-              sub
-              value={tab}
-              onChange={selectTab}
-              tabs={[
-                { key: 'config', label: 'Cài đặt chung' },
-                { key: 'channels', label: 'Kênh & tích hợp' },
-                { key: 'orders', label: 'Đơn bán & Giữ chỗ' },
-                { key: 'viewlog', label: 'Nhật ký xem số' },
-                { key: 'blocked', label: 'Số bị chặn' },
-              ]}
-            />
-            {tab === 'config' && <ConfigScreen />}
-            {tab === 'channels' && <ChannelsScreen />}
-            {tab === 'orders' && <OrdersScreen s={shared} />}
-            {tab === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
-            {tab === 'blocked' && <BlockedScreen />}
-          </>
-        )}
-      </div>
-    </section>
+  return shell(
+    <div key={current + bump}>
+      {current === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
+      {current === 'work' && <WorkScreen s={shared} />}
+      {current === 'pool' && <PoolScreen s={shared} />}
+      {current === 'leads' && <LeadsScreen s={shared} board={false} />}
+      {current === 'distribute' && <LeadDistributionScreen s={shared} />}
+      {current === 'pipeline' && <LeadsScreen s={shared} board />}
+      {current === 'care' && <CareTasksView s={shared} onOpenCustomer={openCustomer} />}
+      {current === 'appointments' && <AppointmentsScreen s={shared} />}
+      {current === 'customers' && (
+        <CareCustomersView key={focus ?? 'all'} focus={focus} onNavigate={onNavigate} />
+      )}
+      {current === 'orders' && <OrdersScreen s={shared} />}
+      {current === 'marketing' && <MarketingScreen />}
+      {current === 'campaigns' && <CampaignsScreen />}
+      {current === 'channels' && <ChannelsScreen />}
+      {current === 'report' && <ReportScreen />}
+      {current === 'config' && <ConfigScreen />}
+      {current === 'blocked' && <BlockedScreen />}
+      {current === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
+    </div>,
   );
 }

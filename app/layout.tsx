@@ -3,6 +3,7 @@ import MobileAppNavBar from './ui/MobileAppNavBar';
 import './tokens.css';
 import './globals.css';
 import './admin.css';
+import './crm-shell.css';
 export const metadata: Metadata = {
   title: 'Saigon Golf 3D Club — Play. Connect. Repeat.',
   description:

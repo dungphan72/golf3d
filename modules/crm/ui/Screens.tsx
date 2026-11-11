@@ -1338,6 +1338,9 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
   const [importText, setImportText] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [importStatus, setImportStatus] = useState('');
+  const [viewName, setViewName] = useState('');
+  const [saving, setSaving] = useState(false);
+  const views = useLoad<{ views: { id: string; name: string; stage: string; q: string }[] }>('/api/crm2/views');
   const [importPreview, setImportPreview] = useState<{ total: number; counts: Record<Verdict, number>; rows: PreviewRow[] } | null>(null);
   const [importBatch, setImportBatch] = useState('');
   const [f, setF] = useState({ fullName: '', phone: '', targetService: '', notes: '' });
@@ -1425,6 +1428,60 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
           <Plus size={14} /> Thêm lead
         </button>
       </FilterBar>
+
+      {!board && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', margin: '0 0 10px' }} aria-label="Chế độ xem đã lưu" role="group">
+          {(views.data?.views ?? []).map((v) => (
+            <span key={v.id} style={{ display: 'inline-flex', gap: 2, alignItems: 'center' }}>
+              <button
+                className={q === v.q && stage === v.stage ? 'primary' : 'secondary'}
+                onClick={() => {
+                  setQ(v.q);
+                  setStage(v.stage);
+                }}
+              >
+                {v.name}
+              </button>
+              <button
+                className="secondary"
+                aria-label={`Xóa chế độ xem ${v.name}`}
+                onClick={async () => {
+                  await call('/api/crm2/views', { action: 'delete', id: v.id });
+                  views.reload();
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {saving ? (
+            <form
+              style={{ display: 'inline-flex', gap: 6 }}
+              onSubmit={async (e) => {
+                e.preventDefault();
+                try {
+                  await call('/api/crm2/views', { action: 'save', name: viewName, stage, q });
+                  setViewName('');
+                  setSaving(false);
+                  views.reload();
+                } catch (err) {
+                  setError(errText(err));
+                }
+              }}
+            >
+              <input aria-label="Tên chế độ xem" placeholder="Tên chế độ xem" value={viewName} onChange={(e) => setViewName(e.target.value)} />
+              <button type="submit">Lưu</button>
+              <button type="button" className="secondary" onClick={() => setSaving(false)}>
+                Hủy
+              </button>
+            </form>
+          ) : (
+            <button className="secondary" onClick={() => setSaving(true)}>
+              Lưu bộ lọc hiện tại
+            </button>
+          )}
+        </div>
+      )}
 
       {importing && (
         <div

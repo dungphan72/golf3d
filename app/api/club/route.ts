@@ -23,6 +23,7 @@ const ACTION_PERMISSION: Record<string, Permission> = {
   'no-show': 'booking.cancel',
   reschedule: 'booking.create',
   extend: 'session.operate',
+  'switch-service': 'session.operate',
   walkin: 'session.operate',
   'request-update': 'support.handle',
   'clean-test-data': 'settings.manage',

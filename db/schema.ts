@@ -292,8 +292,41 @@ export const customerPackages = sqliteTable(
     purchased: integer('purchased').notNull(),
     expires: integer('expires').notNull(),
     actor: text('actor').notNull(),
+    // Card term (migration 0028). Rows are immutable except expires/activated_at (see the trigger).
+    // A monthly card must be activated within 30 days of purchase (activate_by); until then
+    // activated_at is NULL and expires is only an upper bound. activated_at is set on first use,
+    // by staff/customer, or automatically on activate_by. validDays is the length of the card.
+    validDays: integer('valid_days').notNull().default(0),
+    activatedAt: integer('activated_at'),
+    activateBy: integer('activate_by'),
+    // The expired hour card this one replaced (its leftover hours were carried over).
+    renewedFrom: text('renewed_from'),
+    // Reminder flags, so the daily job tells each customer once.
+    remindedExpiry: integer('reminded_expiry'),
+    remindedActivate: integer('reminded_activate'),
   },
   (t) => [index('customer_package_customer').on(t.tenant, t.customerId)],
+);
+// Absence notices for monthly cards: each one pushes the card's expiry out by its day count.
+export const packageAbsences = sqliteTable(
+  'package_absences',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    packageId: text('package_id')
+      .notNull()
+      .references(() => customerPackages.id),
+    startDay: text('start_day').notNull(), // 'YYYY-MM-DD' (club-local), inclusive
+    endDay: text('end_day').notNull(), // inclusive
+    days: integer('days').notNull(),
+    status: text('status').notNull().default('active'), // active | cancelled
+    source: text('source').notNull(), // customer | staff
+    actor: text('actor').notNull(),
+    note: text('note').notNull().default(''),
+    created: integer('created').notNull(),
+    cancelledAt: integer('cancelled_at'),
+  },
+  (t) => [index('package_absence_package').on(t.tenant, t.packageId)],
 );
 export const packageLedger = sqliteTable(
   'package_ledger',

@@ -26,9 +26,7 @@ test('service maps to the package kind it consumes', () => {
 });
 test('official packages match the price list', () => {
   const byKey = Object.fromEntries(OFFICIAL_PACKAGES.map((p) => [p.key, p]));
-  assert.equal(OFFICIAL_PACKAGES.length, 5);
-  assert.deepEqual(byKey['hour-10'].grants, [{ kind: 'gdr', qty: 12 }]);
-  assert.deepEqual(byKey['hour-20'].grants, [{ kind: 'gdr', qty: 25 }]);
+  assert.equal(OFFICIAL_PACKAGES.length, 3);
   assert.equal(byKey['month-1'].price, 5_000_000);
   assert.equal(byKey['month-3'].price, 14_000_000);
   assert.equal(byKey['month-6'].price, 25_000_000);

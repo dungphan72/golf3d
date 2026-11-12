@@ -5,22 +5,20 @@ import {
   MessageCircle,
   MessageSquare,
   Copy,
-  Calendar,
-  FileText,
-  Check,
-  AlertCircle,
-  Clock,
   Upload,
   Plus,
-  AlertTriangle,
-  CheckCircle2,
 } from 'lucide-react';
 import {
   Chips,
   DataTable,
+  Card,
   KpiTile,
   FilterBar,
+  DialogHeading,
+  Field,
   Loading,
+  ModalDialog,
+  PageTabs,
   StatusBadge,
   useDialogs,
   type Tone,
@@ -106,15 +104,6 @@ type Overview = {
   days: number;
   layout: DashLayout;
 };
-const Card = ({ title, sub, children }: { title: string; sub?: string; children: React.ReactNode }) => (
-  <div className="crm-section-card">
-    <header>
-      <h3>{title}</h3>
-      {sub && <small className="muted">{sub}</small>}
-    </header>
-    {children}
-  </div>
-);
 export function OverviewScreen({
   cron,
 }: {
@@ -372,859 +361,255 @@ export const TELESALES_SCRIPTS = [
 
 export function WorkScreen({ s }: { s: Shared }) {
   const { data, error, reload } = useLoad<WorkDeskData>('/api/crm2/leads?view=work', 15_000);
-  const [subTab, setSubTab] = useState<'new' | 'overdue' | 'today' | 'appointments' | 'care'>('new');
-  
-  // Script modal state
-  const [scriptModalLead, setScriptModalLead] = useState<Lead | null>(null);
-  const [selectedScriptId, setSelectedScriptId] = useState('intro');
-  const [customScriptText, setCustomScriptText] = useState('');
-  const [copiedScript, setCopiedScript] = useState(false);
-  const [kpiFilter, setKpiFilter] = useState<'ALL' | 'UNCONTACTED' | 'CONTACTED' | 'OVERDUE' | 'APPOINTMENTS'>('ALL');
-
-  const openScriptModal = (lead: Lead, scriptId = 'intro') => {
-    setScriptModalLead(lead);
-    setSelectedScriptId(scriptId);
-    const sc = TELESALES_SCRIPTS.find((item) => item.id === scriptId) || TELESALES_SCRIPTS[0];
-    const saleName = s.staff.find((m) => m.id === s.me)?.name || 'chuyên viên tư vấn';
-    setCustomScriptText(sc.template(lead.fullName, saleName));
-    setCopiedScript(false);
-  };
-
-  const handleSelectScript = (newId: string) => {
-    setSelectedScriptId(newId);
-    if (scriptModalLead) {
-      const sc = TELESALES_SCRIPTS.find((item) => item.id === newId) || TELESALES_SCRIPTS[0];
-      const saleName = s.staff.find((m) => m.id === s.me)?.name || 'chuyên viên tư vấn';
-      setCustomScriptText(sc.template(scriptModalLead.fullName, saleName));
-      setCopiedScript(false);
-    }
-  };
-
-  // Call result modal state
-  const [callModalLead, setCallModalLead] = useState<Lead | null>(null);
-  const [callResult, setCallResult] = useState<CallResult>('INTERESTED');
-  const [callNote, setCallNote] = useState('');
-  const [callWhen, setCallWhen] = useState('');
-  const [savingResult, setSavingResult] = useState(false);
-  const [modalErr, setModalErr] = useState('');
-
+  const [tab, setTab] = useState<'call' | 'overdue' | 'today' | 'appointments' | 'care'>('call');
+  const [result, setResult] = useState<Lead | null>(null);
+  const [script, setScript] = useState<Lead | null>(null);
+  const [f, setF] = useState<{ result: CallResult; note: string; when: string }>({
+    result: 'INTERESTED',
+    note: '',
+    when: '',
+  });
+  const [scriptId, setScriptId] = useState('intro');
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
   if (error && !data) return <Err text={error} />;
   if (!data) return <Loading />;
 
   const leads = data.leads ?? [];
   const appointments = data.appointments ?? [];
-  const careTasks = data.careTasks ?? [];
-  const dayEnd = data.dayEnd ?? (s.now + 86_400_000);
+  const care = data.careTasks ?? [];
+  const dayEnd = data.dayEnd ?? s.now + 86_400_000;
+  const fresh = leads.filter((l) => l.stage === 'NEW' || l.callAttempts === 0 || l.nextAction === 'NEW');
+  const overdue = leads.filter((l) => l.nextDue != null && l.nextDue < s.now);
+  const today = leads.filter((l) => l.nextDue != null && l.nextDue >= s.now && l.nextDue <= dayEnd);
+  const saleName = s.staff.find((m) => m.id === s.me)?.name || 'chuyên viên tư vấn';
 
-  // Partition leads
-  const newNeeded = leads.filter(
-    (l) => l.stage === 'NEW' || l.callAttempts === 0 || l.nextAction === 'NEW',
-  );
-  const overdue = leads.filter(
-    (l) => l.nextDue != null && l.nextDue < s.now,
-  );
-  const today = leads.filter(
-    (l) => l.nextDue != null && l.nextDue >= s.now && l.nextDue <= dayEnd,
-  );
-
-  const unassignedCount = leads.filter((l) => !l.owner).length;
-
-  const handleSaveResult = async () => {
-    if (!callModalLead) return;
-    setSavingResult(true);
-    setModalErr('');
+  const openResult = (l: Lead) => {
+    setF({ result: 'INTERESTED', note: '', when: '' });
+    setMsg('');
+    setResult(l);
+  };
+  const openScript = (l: Lead, id = 'intro') => {
+    setScriptId(id);
+    setText((TELESALES_SCRIPTS.find((x) => x.id === id) ?? TELESALES_SCRIPTS[0]).template(l.fullName, saleName));
+    setScript(l);
+  };
+  const saveResult = async () => {
+    if (!result) return;
+    setBusy(true);
+    setMsg('');
     try {
       await call('/api/crm2/leads', {
         action: 'result',
-        id: callModalLead.id,
-        result: callResult,
-        note: callNote,
-        ...(callWhen ? { when: toMs(callWhen) } : {}),
+        id: result.id,
+        result: f.result,
+        note: f.note,
+        ...(f.when ? { when: toMs(f.when) } : {}),
       });
-      setCallModalLead(null);
-      setCallNote('');
-      setCallWhen('');
+      setResult(null);
       await reload();
     } catch (e) {
-      setModalErr(errText(e));
+      setMsg(errText(e));
     } finally {
-      setSavingResult(false);
+      setBusy(false);
     }
   };
-
-  const handleFinishCare = async (id: string) => {
+  const finishCare = async (id: string) => {
     try {
-      await call('/api/crm2/tasks', {
-        action: 'care-done',
-        id,
-        channel: 'call',
-        note: 'Đã liên hệ chăm sóc khách hàng',
-      });
+      await call('/api/crm2/tasks', { action: 'care-done', id, channel: 'call', note: 'Đã liên hệ chăm sóc khách hàng' });
       await reload();
     } catch (e) {
-      alert(errText(e));
+      setMsg(errText(e));
     }
   };
-
-  const renderLeadActions = (r: Lead) => {
-    const cleanPhone = r.phone.replace(/[^0-9]/g, '');
-    return (
-      <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-        <a
-          href={`tel:${r.phone}`}
-          className="crm-action-btn"
-          title="Gọi điện & Ghi kết quả"
-          onClick={() => {
-            setCallModalLead(r);
-            setCallResult('INTERESTED');
-            setCallNote('');
-            setCallWhen('');
-            setModalErr('');
-          }}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 32,
-            height: 32,
-            borderRadius: 6,
-            background: '#e0f2fe',
-            color: '#0369a1',
-            textDecoration: 'none',
-          }}
-        >
-          <Phone size={15} />
-        </a>
-        <button
-          type="button"
-          className="secondary"
-          title="Kịch bản tin nhắn Zalo / SMS"
-          onClick={() => openScriptModal(r, 'intro')}
-          style={{ height: 32, padding: '0 8px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-        >
-          <MessageSquare size={14} /> Mẫu tin
-        </button>
-        {cleanPhone && (
-          <a
-            href={`https://zalo.me/${cleanPhone}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="crm-action-btn"
-            title="Mở nhắn tin Zalo"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 32,
-              height: 32,
-              borderRadius: 6,
-              background: '#e0e7ff',
-              color: '#3730a3',
-              textDecoration: 'none',
-            }}
-          >
-            <MessageCircle size={15} />
-          </a>
-        )}
-        <button
-          type="button"
-          className="secondary"
-          title="Ghi kết quả cuộc gọi"
-          onClick={() => {
-            setCallModalLead(r);
-            setCallResult('INTERESTED');
-            setCallNote('');
-            setCallWhen('');
-            setModalErr('');
-          }}
-          style={{ height: 32, padding: '0 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-        >
-          <FileText size={14} /> Ghi KQ
-        </button>
-        <button
-          type="button"
-          className="primary"
-          title="Đặt lịch phòng tập cho khách"
-          onClick={() => s.onNavigate?.('rooms', { name: r.fullName, phone: r.phone })}
-          style={{ height: 32, padding: '0 10px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-        >
-          <Calendar size={14} /> Đặt lịch
-        </button>
-      </div>
-    );
+  const due = (at: number | null) => {
+    const c = countdown(at, s.now);
+    return <span className={c.late ? 'late tnum' : 'tnum'}>{c.text}</span>;
   };
 
-  const leadColumns = [
+  const leadCols = [
     {
       key: 'n',
-      header: 'Khách hàng',
+      header: 'Khách',
       cell: (r: Lead) => (
-        <div>
-          <strong style={{ fontSize: 14 }}>{r.fullName}</strong>
-          <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-            {!r.owner && (
-              <span className="crm-chip" style={{ background: '#fef3c7', color: '#92400e', fontSize: 11, margin: 0 }}>
-                ⚠️ Chưa phân công
-              </span>
-            )}
-            {(!r.nextAction || !r.nextDue) && (
-              <span className="crm-chip" style={{ background: '#fee2e2', color: '#991b1b', fontSize: 11, margin: 0 }}>
-                ⚠️ Thiếu việc kế tiếp
-              </span>
-            )}
-          </div>
-        </div>
+        <button className="link" onClick={() => s.open(r.id)}>
+          <strong>{r.fullName}</strong>
+        </button>
       ),
     },
+    { key: 'p', header: 'Điện thoại', cell: (r: Lead) => <span className="tnum">{r.phone}</span> },
+    { key: 'sv', header: 'Quan tâm', cell: (r: Lead) => r.targetService || '—' },
     {
-      key: 'service',
-      header: 'Nhu cầu & Nguồn',
+      key: 'na',
+      header: 'Việc kế tiếp',
       cell: (r: Lead) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{r.targetService || 'Chưa rõ nhu cầu'}</div>
-          <small className="muted">{r.source || 'Trực tiếp'}</small>
-        </div>
+        <StatusBadge tone="info">{NEXT_ACTION_LABELS[r.nextAction as NextAction] ?? 'Khách mới'}</StatusBadge>
       ),
     },
+    { key: 'due', header: 'Hạn', cell: (r: Lead) => due(r.nextDue) },
     {
-      key: 'owner',
-      header: 'Phụ trách',
-      cell: (r: Lead) =>
-        r.owner ? (s.staff.find((m) => m.id === r.owner)?.name ?? r.owner) : (
-          <span style={{ color: '#d97706', fontWeight: 600 }}>Hàng chờ (Kho số)</span>
-        ),
-    },
-    {
-      key: 'next',
-      header: 'Việc kế tiếp & Hạn',
-      cell: (r: Lead) => {
-        const c = countdown(r.nextDue, s.now);
-        return (
-          <div>
-            <div style={{ fontWeight: 600 }}>{NEXT_ACTION_LABELS[r.nextAction as NextAction] || 'Gọi tư vấn'}</div>
-            <span className={c.late ? 'late' : ''} style={{ fontSize: 12 }}>
-              {r.nextDue ? `${stamp(r.nextDue)} · ${c.text}` : '—'}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      key: 'actions',
-      header: 'Thao tác nhanh',
-      cell: (r: Lead) => renderLeadActions(r),
+      key: 'a',
+      header: '',
+      cell: (r: Lead) => (
+        <span className="crm-actions">
+          <a className="button primary" href={`tel:${r.phone}`} onClick={() => openResult(r)} aria-label={`Gọi ${r.fullName}`}>
+            <Phone size={14} /> Gọi
+          </a>
+          <button className="secondary" onClick={() => openResult(r)}>
+            Ghi kết quả
+          </button>
+          <button className="secondary" aria-label={`Kịch bản tin cho ${r.fullName}`} onClick={() => openScript(r)}>
+            <MessageSquare size={14} />
+          </button>
+        </span>
+      ),
     },
   ];
+  const tabs = [
+    { key: 'call', label: 'Cần gọi', count: fresh.length },
+    { key: 'overdue', label: 'Quá hạn', count: overdue.length },
+    { key: 'today', label: 'Hôm nay', count: today.length },
+    { key: 'appointments', label: 'Lịch hẹn', count: appointments.length },
+    { key: 'care', label: 'Chăm sóc', count: care.length },
+  ];
+  const list = tab === 'call' ? fresh : tab === 'overdue' ? overdue : today;
 
   return (
     <>
-      <Err text={error} />
-      
-      {unassignedCount > 0 && s.manager && (
-        <div
-          style={{
-            background: '#fffbeb',
-            border: '1px solid #fde68a',
-            borderRadius: 8,
-            padding: '10px 16px',
-            marginBottom: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#92400e', fontSize: 13, fontWeight: 500 }}>
-            <AlertTriangle size={16} />
-            <span>
-              Có <strong>{unassignedCount}</strong> lead mới trong hàng chờ chưa phân công. Quản lý vui lòng phân công để đảm bảo SLA gọi trong 5 phút!
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* SandboxVN Telesales KPI Counters */}
-      <section className="ds-tiles" aria-label="Chỉ số Telesales" style={{ marginBottom: 14 }}>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            setKpiFilter('ALL');
-            setSubTab('new');
-          }}
-        >
-          <KpiTile
-            label="Tất cả lead đang xử lý"
-            value={leads.length}
-            hint={kpiFilter === 'ALL' ? '● Đang xem' : 'Bấm để lọc'}
-          />
-        </div>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            setKpiFilter('UNCONTACTED');
-            setSubTab('new');
-          }}
-        >
-          <KpiTile
-            label="Chưa tương tác"
-            value={leads.filter((l) => l.callAttempts === 0 && (!l.lastContactAt || l.lastContactAt === 0)).length}
-            hint={kpiFilter === 'UNCONTACTED' ? '● Đang xem' : 'Chưa gọi lần nào'}
-          />
-        </div>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            setKpiFilter('CONTACTED');
-            setSubTab('new');
-          }}
-        >
-          <KpiTile
-            label="Đã tương tác"
-            value={leads.filter((l) => l.callAttempts > 0 || (l.lastContactAt && l.lastContactAt > 0)).length}
-            hint={kpiFilter === 'CONTACTED' ? '● Đang xem' : 'Đang chăm sóc tiếp'}
-          />
-        </div>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            setKpiFilter('OVERDUE');
-            setSubTab('overdue');
-          }}
-        >
-          <KpiTile
-            label="Quá hạn SLA"
-            value={overdue.length}
-            hint={overdue.length > 0 ? '⚠️ Cần gọi ngay' : 'Đạt 100% SLA'}
-          />
-        </div>
-        <div
-          style={{ cursor: 'pointer' }}
-          onClick={() => {
-            setKpiFilter('APPOINTMENTS');
-            setSubTab('appointments');
-          }}
-        >
-          <KpiTile
-            label="Lịch hẹn trải nghiệm"
-            value={appointments.length}
-            hint={kpiFilter === 'APPOINTMENTS' ? '● Đang xem' : 'Khách sắp đến CLB'}
-          />
-        </div>
+      <Err text={error || msg} />
+      <section className="ds-tiles" aria-label="Việc hôm nay">
+        <KpiTile label="Đang xử lý" value={leads.length} />
+        <KpiTile label="Chưa gọi" value={fresh.length} />
+        <KpiTile label="Quá hạn" value={overdue.length} />
+        <KpiTile label="Lịch hẹn" value={appointments.length} />
       </section>
+      <PageTabs tabs={tabs} value={tab} onChange={(k) => setTab(k as typeof tab)} />
+      {(tab === 'call' || tab === 'overdue' || tab === 'today') && (
+        <Card title={tabs.find((t) => t.key === tab)!.label} sub="Mỗi dòng một khách, việc kế tiếp và hạn gọi.">
+          <DataTable
+            rows={list}
+            rowKey={(r) => r.id}
+            empty="Không có khách nào"
+            emptyText="Khách mới và việc gọi lại sẽ hiện ở đây."
+            columns={leadCols}
+          />
+        </Card>
+      )}
+      {tab === 'appointments' && (
+        <Card title="Lịch hẹn sắp tới">
+          <DataTable
+            rows={appointments}
+            rowKey={(r) => r.id}
+            empty="Chưa có lịch hẹn"
+            columns={[
+              { key: 'at', header: 'Giờ hẹn', cell: (r) => stamp(r.at) },
+              {
+                key: 'n',
+                header: 'Khách',
+                cell: (r) =>
+                  r.leadId ? (
+                    <button className="link" onClick={() => s.open(r.leadId!)}>
+                      {r.fullName}
+                    </button>
+                  ) : (
+                    r.fullName
+                  ),
+              },
+              { key: 'p', header: 'Điện thoại', cell: (r) => <span className="tnum">{r.phone}</span> },
+              { key: 'sv', header: 'Dịch vụ', cell: (r) => r.service || r.targetService || '—' },
+              { key: 'st', header: 'Trạng thái', cell: (r) => <StatusBadge tone="info">{r.status}</StatusBadge> },
+            ]}
+          />
+        </Card>
+      )}
+      {tab === 'care' && (
+        <Card title="Việc chăm sóc khách hàng">
+          <DataTable
+            rows={care}
+            rowKey={(r) => r.id}
+            empty="Không có việc chăm sóc"
+            columns={[
+              { key: 'n', header: 'Khách', cell: (r) => r.customerName },
+              { key: 'p', header: 'Điện thoại', cell: (r) => <span className="tnum">{r.phone}</span> },
+              { key: 't', header: 'Việc', cell: (r) => r.title },
+              { key: 'd', header: 'Hạn', cell: (r) => due(r.dueAt) },
+              {
+                key: 'a',
+                header: '',
+                cell: (r) => (
+                  <button className="primary" onClick={() => finishCare(r.id)}>
+                    Đã liên hệ
+                  </button>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
-      {/* 5 View Subtabs */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-        {[
-          { key: 'new', label: 'Lead mới cần gọi', count: newNeeded.length, isWarning: newNeeded.some((l) => l.nextDue && l.nextDue < s.now) },
-          { key: 'overdue', label: 'Việc quá hạn', count: overdue.length, isDanger: overdue.length > 0 },
-          { key: 'today', label: 'Việc hôm nay', count: today.length },
-          { key: 'appointments', label: 'Lịch khách sắp đến', count: appointments.length },
-          { key: 'care', label: 'Chăm sóc sau chơi', count: careTasks.length },
-        ].map((tab) => {
-          const active = subTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setSubTab(tab.key as typeof subTab)}
-              style={{
-                height: 38,
-                padding: '0 14px',
-                borderRadius: 8,
-                border: active ? '1px solid var(--kv-blue, #1f7a4d)' : '1px solid #e2e8f0',
-                background: active ? '#f0fdf4' : '#ffffff',
-                color: active ? '#15803d' : '#334155',
-                fontWeight: active ? 700 : 500,
-                fontSize: 13,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <span>{tab.label}</span>
-              <span
-                style={{
-                  padding: '2px 7px',
-                  borderRadius: 12,
-                  fontSize: 11,
-                  fontWeight: 700,
-                  background: tab.isDanger ? '#fee2e2' : tab.isWarning ? '#fef3c7' : active ? '#dcfce7' : '#f1f5f9',
-                  color: tab.isDanger ? '#dc2626' : tab.isWarning ? '#b45309' : active ? '#166534' : '#64748b',
-                }}
-              >
-                {tab.count}
-              </span>
+      {result && (
+        <ModalDialog label="Ghi kết quả cuộc gọi" onClose={() => setResult(null)} locked={busy}>
+          <DialogHeading onClose={() => setResult(null)} eyebrow={result.phone} locked={busy}>
+            Kết quả cuộc gọi: {result.fullName}
+          </DialogHeading>
+          <Err text={msg} />
+          <Field label="Kết quả">
+            <select value={f.result} onChange={(e) => setF({ ...f, result: e.target.value as CallResult })}>
+              {CALL_RESULTS.map((cr) => (
+                <option key={cr} value={cr}>
+                  {CALL_RESULT_LABELS[cr]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Ghi chú">
+            <textarea rows={3} value={f.note} onChange={(e) => setF({ ...f, note: e.target.value })} />
+          </Field>
+          <Field label="Hẹn giờ (nếu có)">
+            <input type="datetime-local" value={f.when} onChange={(e) => setF({ ...f, when: e.target.value })} />
+          </Field>
+          <div className="crm-actions">
+            <button className="primary" disabled={busy} onClick={saveResult}>
+              {busy ? 'Đang lưu…' : 'Lưu kết quả'}
             </button>
-          );
-        })}
-      </div>
-
-      {/* View 1: Lead mới cần gọi */}
-      {subTab === 'new' && (
-        <DataTable
-          rows={newNeeded}
-          rowKey={(r) => r.id}
-          empty="Không có lead mới cần gọi"
-          emptyText="Khách mới tiếp nhận sẽ hiển thị ở đây với hạn gọi 5 phút đầu tiên."
-          onRowClick={(r) => s.open(r.id)}
-          columns={leadColumns}
-        />
-      )}
-
-      {/* View 2: Việc quá hạn */}
-      {subTab === 'overdue' && (
-        <DataTable
-          rows={overdue}
-          rowKey={(r) => r.id}
-          empty="Không có việc quá hạn"
-          emptyText="Tuyệt vời! Tất cả các tác vụ và cuộc gọi hẹn trước đều đúng hạn."
-          onRowClick={(r) => s.open(r.id)}
-          columns={leadColumns}
-        />
-      )}
-
-      {/* View 3: Việc hôm nay */}
-      {subTab === 'today' && (
-        <DataTable
-          rows={today}
-          rowKey={(r) => r.id}
-          empty="Không có việc đến hạn hôm nay"
-          emptyText="Các lịch hẹn gọi lại trong ngày sẽ xuất hiện ở đây."
-          onRowClick={(r) => s.open(r.id)}
-          columns={leadColumns}
-        />
-      )}
-
-      {/* View 4: Lịch khách sắp đến */}
-      {subTab === 'appointments' && (
-        <DataTable
-          rows={appointments}
-          rowKey={(r) => r.id}
-          empty="Chưa có lịch hẹn sắp đến"
-          emptyText="Lịch hẹn trải nghiệm hoặc đặt lịch của golfer trong 48h tới sẽ hiện ở đây."
-          columns={[
-            {
-              key: 'cust',
-              header: 'Khách hàng',
-              cell: (r) => (
-                <div>
-                  <strong style={{ fontSize: 14 }}>{r.fullName}</strong>
-                  <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
-                </div>
-              ),
-            },
-            {
-              key: 'sv',
-              header: 'Dịch vụ / Gói hẹn',
-              cell: (r) => <strong>{r.service}</strong>,
-            },
-            {
-              key: 'time',
-              header: 'Thời gian hẹn',
-              cell: (r) => (
-                <div>
-                  <strong style={{ color: '#0369a1' }}>{stamp(r.at)}</strong>
-                  {r.note && <div style={{ fontSize: 12, color: '#64748b' }}>{r.note}</div>}
-                </div>
-              ),
-            },
-            {
-              key: 'st',
-              header: 'Trạng thái',
-              cell: (r) => (
-                <StatusBadge
-                  tone={
-                    r.status === 'ARRIVED' ? 'ok' : r.status === 'CONFIRMED' ? 'info' : r.status === 'CANCELLED' || r.status === 'NO_SHOW' ? 'warn' : 'muted'
-                  }
-                >
-                  {r.status === 'PENDING' ? 'Chờ duyệt' : r.status === 'CONFIRMED' ? 'Đã xác nhận' : r.status === 'ARRIVED' ? 'Đã đến' : r.status === 'NO_SHOW' ? 'Vắng mặt' : r.status}
-                </StatusBadge>
-              ),
-            },
-            {
-              key: 'staff',
-              header: 'Phụ trách',
-              cell: (r) => (r.owner ? (s.staff.find((m) => m.id === r.owner)?.name ?? r.owner) : '—'),
-            },
-            {
-              key: 'act',
-              header: 'Thao tác',
-              cell: (r) => {
-                const cleanPhone = r.phone.replace(/[^0-9]/g, '');
-                return (
-                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <a
-                      href={`tel:${r.phone}`}
-                      className="crm-action-btn"
-                      title="Gọi điện"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 32,
-                        height: 32,
-                        borderRadius: 6,
-                        background: '#e0f2fe',
-                        color: '#0369a1',
-                      }}
-                    >
-                      <Phone size={15} />
-                    </a>
-                    {cleanPhone && (
-                      <a
-                        href={`https://zalo.me/${cleanPhone}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="crm-action-btn"
-                        title="Zalo"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          borderRadius: 6,
-                          background: '#e0e7ff',
-                          color: '#3730a3',
-                        }}
-                      >
-                        <MessageCircle size={15} />
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => s.onNavigate?.('rooms', { name: r.fullName, phone: r.phone })}
-                      style={{ height: 32, padding: '0 10px', fontSize: 12 }}
-                    >
-                      Mở đặt phòng
-                    </button>
-                    {r.leadId && (
-                      <button
-                        type="button"
-                        className="secondary"
-                        onClick={() => s.open(r.leadId!)}
-                        style={{ height: 32, padding: '0 10px', fontSize: 12 }}
-                      >
-                        Xem Lead
-                      </button>
-                    )}
-                  </div>
-                );
-              },
-            },
-          ]}
-        />
-      )}
-
-      {/* View 5: Chăm sóc sau chơi */}
-      {subTab === 'care' && (
-        <DataTable
-          rows={careTasks}
-          rowKey={(r) => r.id}
-          empty="Không có lịch chăm sóc sau chơi"
-          emptyText="Các tác vụ cảm ơn sau chơi, hỏi thăm trải nghiệm và mời quay lại sẽ hiện ở đây."
-          columns={[
-            {
-              key: 'cust',
-              header: 'Khách hàng',
-              cell: (r) => (
-                <div>
-                  <strong style={{ fontSize: 14 }}>{r.customerName}</strong>
-                  <div style={{ color: '#64748b', fontSize: 13 }}>{r.phone}</div>
-                </div>
-              ),
-            },
-            {
-              key: 'title',
-              header: 'Nội dung chăm sóc',
-              cell: (r) => (
-                <div>
-                  <strong>{r.title}</strong>
-                  {r.targetService && <small className="muted" style={{ display: 'block' }}>Quan tâm: {r.targetService}</small>}
-                </div>
-              ),
-            },
-            {
-              key: 'due',
-              header: 'Hạn xử lý',
-              cell: (r) => (r.dueAt ? stamp(r.dueAt) : '—'),
-            },
-            {
-              key: 'staff',
-              header: 'Phụ trách',
-              cell: (r) => (r.assignee ? (s.staff.find((m) => m.id === r.assignee)?.name ?? r.assignee) : 'Chưa gán'),
-            },
-            {
-              key: 'act',
-              header: 'Thao tác',
-              cell: (r) => {
-                const cleanPhone = r.phone.replace(/[^0-9]/g, '');
-                return (
-                  <div style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-                    <a
-                      href={`tel:${r.phone}`}
-                      className="crm-action-btn"
-                      title="Gọi điện"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        width: 32,
-                        height: 32,
-                        borderRadius: 6,
-                        background: '#e0f2fe',
-                        color: '#0369a1',
-                      }}
-                    >
-                      <Phone size={15} />
-                    </a>
-                    {cleanPhone && (
-                      <a
-                        href={`https://zalo.me/${cleanPhone}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="crm-action-btn"
-                        title="Zalo"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 32,
-                          height: 32,
-                          borderRadius: 6,
-                          background: '#e0e7ff',
-                          color: '#3730a3',
-                        }}
-                      >
-                        <MessageCircle size={15} />
-                      </a>
-                    )}
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => handleFinishCare(r.id)}
-                      style={{ height: 32, padding: '0 12px', fontSize: 12, display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                    >
-                      <Check size={14} /> Hoàn tất
-                    </button>
-                  </div>
-                );
-              },
-            },
-          ]}
-        />
-      )}
-
-      {/* Modal: Ghi kết quả cuộc gọi */}
-      {callModalLead && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-          onClick={() => setCallModalLead(null)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 10,
-              padding: 24,
-              width: '100%',
-              maxWidth: 480,
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 17 }}>
-              Ghi kết quả cuộc gọi
-            </h3>
-            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: 13 }}>
-              Khách: <strong>{callModalLead.fullName}</strong> ({callModalLead.phone})
-            </p>
-
-            {modalErr && (
-              <div style={{ padding: '8px 12px', background: '#fee2e2', color: '#991b1b', borderRadius: 6, marginBottom: 12, fontSize: 13 }}>
-                {modalErr}
-              </div>
-            )}
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-                Kết quả liên hệ:
-              </label>
-              <select
-                style={{ width: '100%', height: 38, fontSize: 13 }}
-                value={callResult}
-                onChange={(e) => setCallResult(e.target.value as CallResult)}
-              >
-                {CALL_RESULTS.map((cr) => (
-                  <option key={cr} value={cr}>
-                    {CALL_RESULT_LABELS[cr]}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {(callResult === 'INTERESTED' || callResult === 'THINKING' || callResult === 'APPOINTMENT') && (
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-                  Hẹn liên hệ lại / Thời gian đến:
-                </label>
-                <input
-                  type="datetime-local"
-                  style={{ width: '100%', height: 38, fontSize: 13 }}
-                  value={callWhen}
-                  onChange={(e) => setCallWhen(e.target.value)}
-                />
-              </div>
-            )}
-
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ display: 'block', fontWeight: 600, fontSize: 13, marginBottom: 6 }}>
-                Ghi chú chi tiết trao đổi:
-              </label>
-              <textarea
-                rows={3}
-                style={{ width: '100%', fontSize: 13, padding: 8, boxSizing: 'border-box' }}
-                placeholder="Nhu cầu golfer, tình trạng swing, gói quan tâm, lịch rảnh..."
-                value={callNote}
-                onChange={(e) => setCallNote(e.target.value)}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-              <button type="button" className="secondary" onClick={() => setCallModalLead(null)}>
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="primary"
-                disabled={savingResult}
-                onClick={handleSaveResult}
-              >
-                {savingResult ? 'Đang lưu…' : 'Lưu kết quả'}
-              </button>
-            </div>
+            <button className="secondary" disabled={busy} onClick={() => setResult(null)}>
+              Hủy
+            </button>
           </div>
-        </div>
+        </ModalDialog>
       )}
-
-      {/* Modal: Kịch bản tin nhắn Zalo / SMS SandboxVN */}
-      {scriptModalLead && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-          }}
-          onClick={() => setScriptModalLead(null)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              borderRadius: 10,
-              padding: 24,
-              width: '100%',
-              maxWidth: 520,
-              boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 17, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <MessageSquare size={18} color="#0284c7" /> Kịch bản tin nhắn tư vấn Zalo / SMS
-            </h3>
-            <p style={{ margin: '0 0 16px 0', color: '#64748b', fontSize: 13 }}>
-              Gửi cho khách: <strong>{scriptModalLead.fullName}</strong> ({scriptModalLead.phone})
-            </p>
-
-            <div style={{ marginBottom: 14 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                Chọn mẫu kịch bản theo giai đoạn:
-              </label>
-              <select
-                value={selectedScriptId}
-                onChange={(e) => handleSelectScript(e.target.value)}
-                style={{ width: '100%', height: 38, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, padding: '0 10px' }}
-              >
-                {TELESALES_SCRIPTS.map((sc) => (
-                  <option key={sc.id} value={sc.id}>
-                    {sc.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                Nội dung tin nhắn (có thể chỉnh sửa trước khi gửi):
-              </label>
-              <textarea
-                rows={6}
-                value={customScriptText}
-                onChange={(e) => setCustomScriptText(e.target.value)}
-                style={{ width: '100%', borderRadius: 6, border: '1px solid #cbd5e1', padding: 10, fontSize: 13, lineHeight: 1.5 }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                type="button"
-                className="secondary"
-                onClick={async () => {
-                  await navigator.clipboard?.writeText(customScriptText);
-                  setCopiedScript(true);
-                  setTimeout(() => setCopiedScript(false), 2000);
-                }}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
-              >
-                <Copy size={14} /> {copiedScript ? 'Đã sao chép!' : 'Sao chép tin nhắn'}
-              </button>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button type="button" className="secondary" onClick={() => setScriptModalLead(null)}>
-                  Đóng
-                </button>
-                <a
-                  href={`https://zalo.me/${scriptModalLead.phone.replace(/[^0-9]/g, '')}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="primary"
-                  onClick={async () => {
-                    await navigator.clipboard?.writeText(customScriptText);
-                    setScriptModalLead(null);
-                  }}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    textDecoration: 'none',
-                    padding: '0 14px',
-                    height: 38,
-                    borderRadius: 6,
-                    background: '#0284c7',
-                    color: '#fff',
-                    fontWeight: 600,
-                    fontSize: 13,
-                  }}
-                >
-                  <MessageCircle size={15} /> Mở Zalo & Gửi
-                </a>
-              </div>
-            </div>
+      {script && (
+        <ModalDialog label="Kịch bản tin nhắn" onClose={() => setScript(null)}>
+          <DialogHeading onClose={() => setScript(null)} eyebrow={script.phone}>
+            Tin nhắn cho {script.fullName}
+          </DialogHeading>
+          <Field label="Kịch bản">
+            <select value={scriptId} onChange={(e) => openScript(script, e.target.value)}>
+              {TELESALES_SCRIPTS.map((x) => (
+                <option key={x.id} value={x.id}>
+                  {x.title}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Nội dung">
+            <textarea rows={6} value={text} onChange={(e) => setText(e.target.value)} />
+          </Field>
+          <div className="crm-actions">
+            <button className="primary" onClick={() => void navigator.clipboard?.writeText(text)}>
+              <Copy size={14} /> Sao chép
+            </button>
+            <a
+              className="button secondary"
+              target="_blank"
+              rel="noopener noreferrer"
+              href={`https://zalo.me/${script.phone.replace(/[^0-9]/g, '')}`}
+            >
+              <MessageCircle size={14} /> Mở Zalo
+            </a>
           </div>
-        </div>
+        </ModalDialog>
       )}
     </>
   );
@@ -1232,13 +617,21 @@ export function WorkScreen({ s }: { s: Shared }) {
 
 // ---------------------------------------------------------------- pool
 
-type PoolData = { leads: Lead[]; quota: number; claimedToday: number };
+type PoolData = { leads: Lead[]; quota?: number; claimedToday?: number };
+/** Kho số: leads nobody owns. Staff claim; managers hand out, and recall leads that stalled (back to the pool, with a reason). */
 export function PoolScreen({ s }: { s: Shared }) {
-  const { data, error, reload, setError } = useLoad<PoolData>('/api/crm2/leads?view=pool', 20_000);
+  const [mode, setMode] = useState<'pool' | 'assigned'>('pool');
+  const { data, error, reload, setError } = useLoad<PoolData>(
+    mode === 'pool' ? '/api/crm2/leads?view=pool' : '/api/crm2/leads?limit=300',
+    20_000,
+  );
   const [picked, setPicked] = useState<string[]>([]);
   const [to, setTo] = useState('');
+  const { prompt, node } = useDialogs();
   if (error && !data) return <Err text={error} />;
   if (!data) return <Loading />;
+  const rows =
+    mode === 'pool' ? data.leads : data.leads.filter((l) => l.owner && l.stage !== 'WON' && l.stage !== 'LOST');
   const act = async (body: Record<string, unknown>) => {
     try {
       await call('/api/crm2/leads', body);
@@ -1248,84 +641,109 @@ export function PoolScreen({ s }: { s: Shared }) {
       setError(errText(e));
     }
   };
+  const recall = async () => {
+    const reason = await prompt({ title: `Thu hồi ${picked.length} lead về kho số`, label: 'Lý do', initial: 'Quản lý thu hồi để chia lại' });
+    if (reason) await act({ action: 'recall', ids: picked, reason });
+  };
   const toggle = (id: string) =>
     setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  const owner = (id: string | null) => s.staff.find((m) => m.id === id)?.name ?? '—';
   return (
     <>
+      {node}
       <Err text={error} />
-      <div style={{ background: '#fff', border: '1px solid var(--kv-line, #dde5de)', borderRadius: 8, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <p className="crm-meta" style={{ margin: 0, fontWeight: 500 }}>
-          {s.manager
-            ? 'Chọn lead để giao cho nhân viên.'
-            : `Hạn mức nhận số hôm nay: còn ${Math.max(data.quota - data.claimedToday, 0)}/${data.quota}`}
-        </p>
-        <span className="crm-chip" style={{ margin: 0 }}>
-          Tổng số: <strong>{data.leads.length}</strong> lead trong kho
-        </span>
-      </div>
-      {s.manager && picked.length > 0 && (
-        <div className="crm-actions" style={{ background: '#f0f7f3', border: '1px solid #b5dec6', borderRadius: 8, padding: '10px 14px' }}>
-          <select style={{ height: 36, fontSize: 13 }} aria-label="Giao cho" value={to} onChange={(e) => setTo(e.target.value)}>
-            <option value="">Giao {picked.length} lead cho…</option>
-            {s.staff.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
-          <button
-            className="primary"
-            style={{ height: 36, padding: '0 16px', fontSize: 13 }}
-            disabled={!to}
-            onClick={() => act({ action: 'assign', ids: picked, userId: to })}
-          >
-            Giao ngay
-          </button>
-        </div>
+      {s.manager && (
+        <PageTabs
+          sub
+          value={mode}
+          onChange={(k) => {
+            setPicked([]);
+            setMode(k as 'pool' | 'assigned');
+          }}
+          tabs={[
+            { key: 'pool', label: 'Chưa chia' },
+            { key: 'assigned', label: 'Đã chia' },
+          ]}
+        />
       )}
-      <DataTable
-        rows={data.leads}
-        rowKey={(r) => r.id}
-        empty="Kho số trống"
-        emptyText="Lead chưa có người phụ trách sẽ nằm ở đây."
-        columns={[
-          ...(s.manager
-            ? [
-                {
-                  key: 'pick',
-                  header: '',
-                  cell: (r: Lead) => (
-                    <input
-                      type="checkbox"
-                      aria-label={`Chọn ${r.fullName}`}
-                      checked={picked.includes(r.id)}
-                      onChange={() => toggle(r.id)}
-                    />
-                  ),
-                },
-              ]
-            : []),
-          { key: 'n', header: 'Khách', cell: (r) => r.fullName },
-          { key: 'p', header: 'Điện thoại', cell: (r) => r.phone },
-          { key: 'sv', header: 'Quan tâm', cell: (r) => r.targetService || '—' },
-          { key: 'src', header: 'Nguồn', cell: (r) => r.source || '—' },
-          { key: 'c', header: 'Vào kho', cell: (r) => stamp(r.created) },
-          {
-            key: 'a',
-            header: '',
-            cell: (r) =>
-              s.manager ? (
-                <button className="secondary" onClick={() => s.open(r.id)}>
-                  Mở
+      <Card
+        title={mode === 'pool' ? 'Lead chưa có người phụ trách' : 'Lead đã chia, còn đang xử lý'}
+        sub={
+          s.manager
+            ? mode === 'pool'
+              ? 'Chọn lead để giao cho nhân viên.'
+              : 'Chọn lead để thu hồi về kho số.'
+            : `Hạn mức nhận số hôm nay: còn ${Math.max((data.quota ?? 0) - (data.claimedToday ?? 0), 0)}/${data.quota ?? 0}`
+        }
+      >
+        {s.manager && picked.length > 0 && (
+          <div className="crm-actions">
+            {mode === 'pool' ? (
+              <>
+                <select aria-label="Giao cho" value={to} onChange={(e) => setTo(e.target.value)}>
+                  <option value="">Giao {picked.length} lead cho…</option>
+                  {s.staff.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+                <button className="primary" disabled={!to} onClick={() => act({ action: 'assign', ids: picked, userId: to })}>
+                  Giao ngay
                 </button>
-              ) : (
-                <button className="primary" onClick={() => act({ action: 'claim', ids: [r.id] })}>
-                  Nhận số
-                </button>
-              ),
-          },
-        ]}
-      />
+              </>
+            ) : (
+              <button className="secondary" onClick={recall}>
+                Thu hồi {picked.length} lead
+              </button>
+            )}
+          </div>
+        )}
+        <DataTable
+          rows={rows}
+          rowKey={(r) => r.id}
+          empty={mode === 'pool' ? 'Kho số trống' : 'Không có lead nào đang chia'}
+          emptyText={mode === 'pool' ? 'Lead chưa có người phụ trách sẽ nằm ở đây.' : undefined}
+          columns={[
+            ...(s.manager
+              ? [
+                  {
+                    key: 'pick',
+                    header: '',
+                    cell: (r: Lead) => (
+                      <input
+                        type="checkbox"
+                        aria-label={`Chọn ${r.fullName}`}
+                        checked={picked.includes(r.id)}
+                        onChange={() => toggle(r.id)}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+            { key: 'n', header: 'Khách', cell: (r) => r.fullName },
+            { key: 'p', header: 'Điện thoại', cell: (r) => r.phone },
+            { key: 'sv', header: 'Quan tâm', cell: (r) => r.targetService || '—' },
+            { key: 'src', header: 'Nguồn', cell: (r) => r.source || '—' },
+            ...(mode === 'assigned' ? [{ key: 'o', header: 'Phụ trách', cell: (r: Lead) => owner(r.owner) }] : []),
+            { key: 'c', header: mode === 'pool' ? 'Vào kho' : 'Ngày tạo', cell: (r) => stamp(r.created) },
+            {
+              key: 'a',
+              header: '',
+              cell: (r) =>
+                s.manager || mode === 'assigned' ? (
+                  <button className="secondary" onClick={() => s.open(r.id)}>
+                    Mở
+                  </button>
+                ) : (
+                  <button className="primary" onClick={() => act({ action: 'claim', ids: [r.id] })}>
+                    Nhận số
+                  </button>
+                ),
+            },
+          ]}
+        />
+      </Card>
     </>
   );
 }
@@ -1720,120 +1138,6 @@ export function LeadsScreen({ s, board }: { s: Shared; board: boolean }) {
 
 // ---------------------------------------------------------------- tasks
 
-type Task = {
-  id: string;
-  leadId: string | null;
-  leadName: string | null;
-  title: string;
-  dueAt: number | null;
-  doneAt: number | null;
-  createdBy: string;
-};
-export function TasksScreen({ s }: { s: Shared }) {
-  const [scope, setScope] = useState('mine');
-  const { data, error, reload, setError } = useLoad<{ tasks: Task[] }>(
-    `/api/crm2/tasks?scope=${scope}&done=1`,
-    30_000,
-  );
-  const [title, setTitle] = useState('');
-  if (error && !data) return <Err text={error} />;
-  const tasks = data?.tasks ?? [];
-  const act = async (body: Record<string, unknown>) => {
-    try {
-      await call('/api/crm2/tasks', body);
-      await reload();
-    } catch (e) {
-      setError(errText(e));
-    }
-  };
-  return (
-    <>
-      <Err text={error} />
-      <FilterBar>
-        {s.manager && (
-          <Chips
-            value={scope}
-            onChange={setScope}
-            options={[
-              { key: 'mine', label: 'Việc của tôi' },
-              { key: 'all', label: 'Cả đội' },
-            ]}
-          />
-        )}
-        <input
-          aria-label="Việc mới"
-          placeholder="Thêm việc cần làm"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-        />
-        <button
-          className="secondary"
-          disabled={title.trim().length < 2}
-          onClick={async () => {
-            await act({ action: 'create', title: title.trim(), days: 0 });
-            setTitle('');
-          }}
-        >
-          Thêm việc
-        </button>
-      </FilterBar>
-      <DataTable
-        rows={tasks}
-        rowKey={(r) => r.id}
-        empty="Không có việc nào"
-        columns={[
-          {
-            key: 't',
-            header: 'Việc',
-            cell: (r) => (
-              <span style={r.doneAt ? { textDecoration: 'line-through' } : undefined}>
-                {r.title}
-              </span>
-            ),
-          },
-          {
-            key: 'l',
-            header: 'Khách',
-            cell: (r) =>
-              r.leadId ? (
-                <button className="link" onClick={() => s.open(r.leadId!)}>
-                  {r.leadName}
-                </button>
-              ) : (
-                '—'
-              ),
-          },
-          {
-            key: 'd',
-            header: 'Hạn',
-            cell: (r) => {
-              const c = countdown(r.dueAt, s.now);
-              return (
-                <span className={!r.doneAt && c.late ? 'late' : ''}>
-                  {stamp(r.dueAt)}
-                  {!r.doneAt && r.dueAt ? ` · ${c.text}` : ''}
-                </span>
-              );
-            },
-          },
-          { key: 'by', header: 'Tạo bởi', cell: (r) => r.createdBy },
-          {
-            key: 'a',
-            header: '',
-            cell: (r) =>
-              r.doneAt ? (
-                'Đã xong'
-              ) : (
-                <button className="secondary" onClick={() => act({ action: 'done', id: r.id })}>
-                  Xong
-                </button>
-              ),
-          },
-        ]}
-      />
-    </>
-  );
-}
 
 // ---------------------------------------------------------------- appointments
 
@@ -1969,180 +1273,9 @@ export function AppointmentsScreen({ s }: { s: Shared }) {
 
 // ---------------------------------------------------------------- customers
 
-type Cust = {
-  phoneNorm: string;
-  fullName: string;
-  phone: string;
-  code: string | null;
-  total: number;
-  deals: number;
-  lastWon: number | null;
-  tier: { name: string; color: string };
-};
-export function CustomersScreen() {
-  const [q, setQ] = useState('');
-  const { data, error } = useLoad<{
-    customers: Cust[];
-    summary: { total: number; wonToday: number; birthdayToday: number; birthdayMonth: number };
-  }>(`/api/crm2/customers?q=${encodeURIComponent(q)}`);
-  if (error && !data) return <Err text={error} />;
-  const sm = data?.summary;
-  return (
-    <>
-      <div className="crm-kpis">
-        {[
-          ['Tổng khách', sm?.total ?? 0],
-          ['Chốt hôm nay', sm?.wonToday ?? 0],
-          ['Sinh nhật hôm nay', sm?.birthdayToday ?? 0],
-          ['Sinh nhật tháng này', sm?.birthdayMonth ?? 0],
-        ].map(([label, v]) => (
-          <div key={String(label)}>
-            <span>{label}</span>
-            <strong>{v}</strong>
-          </div>
-        ))}
-      </div>
-      <FilterBar search={q} onSearch={setQ} placeholder="Tìm theo tên, số, mã KH" />
-      <DataTable
-        rows={data?.customers ?? []}
-        rowKey={(r) => r.phoneNorm}
-        empty="Chưa có khách hàng"
-        emptyText="Lead được chốt sẽ trở thành khách hàng và có mã KH."
-        columns={[
-          { key: 'c', header: 'Mã KH', cell: (r) => r.code ?? '—' },
-          {
-            key: 'n',
-            header: 'Khách',
-            cell: (r) => (
-              <>
-                <strong>{r.fullName}</strong>
-                <br />
-                {r.phone}
-              </>
-            ),
-          },
-          {
-            key: 't',
-            header: 'Hạng',
-            cell: (r) => (
-              <span className="crm-chip" style={{ borderColor: r.tier.color }}>
-                {r.tier.name}
-              </span>
-            ),
-          },
-          { key: 'v', header: 'Tổng giá trị', align: 'right', cell: (r) => money(r.total) },
-          { key: 'd', header: 'Giao dịch', align: 'right', cell: (r) => r.deals },
-          { key: 'w', header: 'Chốt gần nhất', cell: (r) => dateOnly(r.lastWon) },
-        ]}
-      />
-    </>
-  );
-}
 
 // ---------------------------------------------------------------- holds and orders
 
-type Hold = {
-  id: string;
-  productName: string;
-  leadId: string;
-  leadName: string;
-  kind: string;
-  amount: number;
-  status: string;
-  expiresAt: number | null;
-};
-export function HoldsScreen({ s }: { s: Shared }) {
-  const dlg = useDialogs();
-  const { data, error, reload, setError } = useLoad<{ holds: Hold[] }>(
-    '/api/crm2/sales?view=holds',
-    30_000,
-  );
-  if (error && !data) return <Err text={error} />;
-  const act = async (body: Record<string, unknown>) => {
-    try {
-      await call('/api/crm2/sales', body);
-      await reload();
-    } catch (e) {
-      setError(errText(e));
-    }
-  };
-  return (
-    <>
-      {dlg.node}
-      <Err text={error} />
-      <DataTable
-        rows={data?.holds ?? []}
-        rowKey={(r) => r.id}
-        empty="Chưa có giữ chỗ"
-        emptyText="Giữ chỗ dịch vụ cho khách từ hồ sơ lead."
-        columns={[
-          { key: 'p', header: 'Dịch vụ', cell: (r) => r.productName },
-          {
-            key: 'l',
-            header: 'Khách',
-            cell: (r) => (
-              <button className="link" onClick={() => s.open(r.leadId)}>
-                {r.leadName}
-              </button>
-            ),
-          },
-          {
-            key: 'st',
-            header: 'Trạng thái',
-            cell: (r) =>
-              (
-                ({
-                  ACTIVE: 'Đang giữ',
-                  CONVERTED: 'Đã thành đơn',
-                  EXPIRED: 'Hết hạn',
-                  RELEASED: 'Đã nhả',
-                  CANCELLED: 'Đã hủy',
-                }) as Record<string, string>
-              )[r.status] ?? r.status,
-          },
-          { key: 'e', header: 'Hết hạn', cell: (r) => stamp(r.expiresAt) },
-          {
-            key: 'a',
-            header: 'Cọc',
-            align: 'right',
-            cell: (r) => (r.amount ? money(r.amount) : '—'),
-          },
-          {
-            key: 'x',
-            header: '',
-            cell: (r) =>
-              r.status === 'ACTIVE' ? (
-                <span className="crm-actions">
-                  {s.manager && (
-                    <button
-                      className="primary"
-                      onClick={async () => {
-                        const v = await dlg.prompt({
-                          title: `Ghi cọc cho ${r.productName}`,
-                          label: 'Số tiền cọc (đồng)',
-                          numeric: true,
-                          confirmLabel: 'Ghi cọc',
-                        });
-                        if (v) act({ action: 'deposit', id: r.id, amount: Number(v) });
-                      }}
-                    >
-                      Ghi cọc
-                    </button>
-                  )}
-                  <button
-                    className="secondary"
-                    onClick={() => act({ action: 'release', id: r.id })}
-                  >
-                    Nhả
-                  </button>
-                </span>
-              ) : null,
-          },
-        ]}
-      />
-    </>
-  );
-}
 
 type OrderRow = {
   id: string;

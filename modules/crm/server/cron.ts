@@ -14,6 +14,7 @@ import { recallLeads } from './leads';
 import { birthdayStep } from './customers';
 import { generateCareTasks } from './care';
 import { vnDate } from '../core/orders';
+import { runCardMaintenance } from '../../../lib/server/card-service';
 import { dispatchDue } from '../../../lib/server/outbox-service';
 
 export type CronReport = {
@@ -25,6 +26,8 @@ export type CronReport = {
   birthdays: number;
   careTasks: number;
   paymentReminders: number;
+  cardsActivated: number;
+  cardReminders: number;
   errors: string[];
 };
 
@@ -39,6 +42,8 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
     birthdays: 0,
     careTasks: 0,
     paymentReminders: 0,
+    cardsActivated: 0,
+    cardReminders: 0,
     errors: [],
   };
   const d = db();
@@ -274,6 +279,13 @@ export async function runCrmCron(tenant: string, base: string, now: number): Pro
       );
       rep.paymentReminders++;
     }
+  });
+
+  // Monthly cards: auto-activate on day 30, remind customers before activation / expiry.
+  await step('cards', async () => {
+    const c = await runCardMaintenance(tenant, now);
+    rep.cardsActivated = c.activated;
+    rep.cardReminders = c.reminders;
   });
 
   // Reminders and other customer / staff messages that have come due. The old lead sweep did this too; now the CRM cron owns it.

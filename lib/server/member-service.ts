@@ -20,6 +20,9 @@ import {
   CREATE_PACKAGE_TYPE_SQL,
   UPDATE_PACKAGE_TYPE_SQL,
   INSERT_PACKAGE_SQL,
+  INSERT_PACKAGE_TERM_SQL,
+  ACTIVATE_PACKAGE_SQL,
+  ABSENCES_SQL,
   INSERT_PACKAGE_LEDGER_SQL,
   INSERT_PACKAGE_SALE_ENTRY_SQL,
   INSERT_REDEMPTION_SQL,
@@ -34,6 +37,8 @@ import {
   WALLET_HISTORY_SQL,
 } from '../package-sql';
 import { walletBonus } from '../wallet';
+import { activateCard, addAbsence, cancelAbsence, saleTerm } from './card-service';
+import { expiryOnActivation } from '../card-term';
 
 export { memberInput };
 type R = ServiceResult;
@@ -128,7 +133,8 @@ export async function loadMembers(tenant: string, query: string, customerId: str
           )?.balance ?? 0,
         history: (await db().prepare(WALLET_HISTORY_SQL).bind(tenant, customerId).all()).results,
       };
-      detail = { customerId, packages, orders, wallet };
+      const absences = (await db().prepare(ABSENCES_SQL).bind(tenant, customerId).all()).results;
+      detail = { customerId, packages, orders, wallet, absences };
     }
     return reply({ customers, types, detail });
   } catch (e) {
@@ -355,9 +361,10 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .first<{ id: string }>();
       if (!shift) return error('Hãy mở ca trước khi bán gói', 409);
       const grants = JSON.parse(type.grants) as Grant[];
+      const term = saleTerm(now, type.valid_days, grants);
       await d.batch([
         d
-          .prepare(INSERT_PACKAGE_SQL)
+          .prepare(INSERT_PACKAGE_TERM_SQL)
           .bind(
             packageId,
             tenant,
@@ -369,9 +376,13 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             type.grants,
             type.perks,
             now,
-            now + type.valid_days * DAY,
+            term.expires,
             actor,
             type.room,
+            type.valid_days,
+            term.activatedAt,
+            term.activateBy,
+            null,
           ),
         ...grants.map((g) =>
           d
@@ -415,6 +426,10 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
       ]);
       return reply({ ok: true, packageId });
     }
+    if (input.action === 'activate') return activateCard(tenant, input.packageId, undefined, now);
+    if (input.action === 'absence-create')
+      return addAbsence(tenant, actor, 'staff', input, undefined, now);
+    if (input.action === 'absence-cancel') return cancelAbsence(tenant, input.id, undefined, now);
     if (input.action === 'redeem') {
       const b = await d
         .prepare(
@@ -449,9 +464,16 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
       )
         return error('Chỉ trả bằng gói cho phiên đã kết thúc, có tiền golf', 409);
       const pkg = await d
-        .prepare('SELECT room FROM customer_packages WHERE tenant=? AND id=?')
+        .prepare(
+          'SELECT room,valid_days,activated_at,activate_by FROM customer_packages WHERE tenant=? AND id=?',
+        )
         .bind(tenant, input.packageId)
-        .first<{ room: string }>();
+        .first<{
+          room: string;
+          valid_days: number;
+          activated_at: number | null;
+          activate_by: number | null;
+        }>();
       if (!pkg) return error('Không tìm thấy gói của khách', 404);
       if (!roomAllows(pkg.room, b.room))
         return error(
@@ -472,7 +494,16 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           409,
         );
       const remainingDue = b.amount - b.golf_amount;
+      // A monthly card starts its term the first time it is used.
+      const pending = pkg.activated_at == null && pkg.activate_by != null;
       const statements = [
+        ...(pending
+          ? [
+              d
+                .prepare(ACTIVATE_PACKAGE_SQL)
+                .bind(now, expiryOnActivation(now, pkg.valid_days), tenant, input.packageId),
+            ]
+          : []),
         d
           .prepare(INSERT_REDEMPTION_SQL)
           .bind(

@@ -82,6 +82,18 @@ export const memberInput = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('order-reject'), id }).strict(),
+  z.object({ action: z.literal('activate'), packageId: id }).strict(),
+  z
+    .object({
+      action: z.literal('absence-create'),
+      requestId,
+      packageId: id,
+      startDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      endDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      note: z.string().trim().max(200).default(''),
+    })
+    .strict(),
+  z.object({ action: z.literal('absence-cancel'), id }).strict(),
   z
     .object({
       action: z.literal('wallet-topup'),

@@ -15,10 +15,6 @@ Theo giờ: đ/line/giờ · 9 và 18 hố: đ/người.
 | T7, CN & ngày lễ | Tiêu chuẩn | 200.000 | 350.000 | 450.000 |
 | | VIP | 250.000 | 450.000 | 550.000 |
 
-## Thẻ giờ (chỉ áp dụng tập luyện)
-- Mua 10 giờ tặng 2 giờ → tổng 12 giờ.
-- Mua 20 giờ tặng 5 giờ → tổng 25 giờ.
-
 ## Nạp ví (ưu đãi nạp tiền)
 - Nạp 1.000.000đ được tặng 200.000đ (ví +1.200.000đ).
 - Nạp 2.000.000đ được tặng 500.000đ (ví +2.500.000đ).
@@ -33,7 +29,7 @@ Theo giờ: đ/line/giờ · 9 và 18 hố: đ/người.
 
 ## Cách map vào hệ thống
 - `lib/official-pricing.ts`: quy tắc giá (mặc định cho cơ sở mới và bảng giá công khai khi chưa lưu gì).
-- `lib/official-packages.ts`: thẻ giờ, thẻ tháng.
+- `lib/official-packages.ts`: thẻ tháng (thẻ giờ đã bỏ, thay bằng ưu đãi nạp ví).
 - 9/18 hố tính theo **người**; nhóm N người trả N × đơn giá (không còn giá nhóm 4 người riêng).
 - Phòng VIP có giá riêng.
 

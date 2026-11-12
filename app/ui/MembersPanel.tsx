@@ -4,6 +4,13 @@ import { DataTable, PageTabs, askConfirm, askText } from './kit';
 import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { KIND_LABELS, UNLIMITED, type Grant, type GrantKind } from '../../lib/member';
+import {
+  cardState,
+  isPeriodCard,
+  maxAbsences,
+  MIN_ABSENCE_DAYS,
+  clubDay,
+} from '../../lib/card-term';
 import { memberCode, tierOf, TIER_LABEL, type Tier } from '../../lib/member-card';
 import { PackageEditor } from './PackageEditor';
 import { MemberCard } from './MemberCard';
@@ -65,6 +72,21 @@ type OwnedPackage = {
   purchased: number;
   expires: number;
   balances: string | null;
+  grants: string;
+  type_id: string | null;
+  valid_days: number;
+  activated_at: number | null;
+  activate_by: number | null;
+  renewed_from: string | null;
+};
+type Absence = {
+  id: string;
+  package_id: string;
+  start_day: string;
+  end_day: string;
+  days: number;
+  status: string;
+  source: string;
 };
 type Overview = {
   customers: Customer[];
@@ -74,6 +96,7 @@ type Overview = {
     packages: OwnedPackage[];
     orders?: { id: string; type_id: string; name: string; price: number; created: number }[];
     wallet?: { balance: number; history: WalletEntry[] };
+    absences?: Absence[];
   } | null;
 };
 
@@ -844,11 +867,18 @@ export function MembersPanel({
 
                   <ul className="owned-packages-list">
                     {data?.detail?.packages.map((p) => {
-                      const isExpired = p.expires < now;
-                      const balances = JSON.parse(p.balances ?? '[]') as {
-                        kind: GrantKind;
-                        remaining: number;
-                      }[];
+                      const state = cardState({
+                        activatedAt: p.activated_at,
+                        activateBy: p.activate_by,
+                        expires: p.expires,
+                        now,
+                      });
+                      const isExpired = state === 'expired';
+                      const grants = JSON.parse(p.grants) as Grant[];
+                      const period = isPeriodCard(grants);
+                      const absences = (data?.detail?.absences ?? []).filter(
+                        (a) => a.package_id === p.id && a.status === 'active',
+                      );
 
                       return (
                         <li key={p.id} className={`owned-package-card ${isExpired ? 'expired' : ''}`}>
@@ -856,7 +886,11 @@ export function MembersPanel({
                             <div className="pkg-name-wrap">
                               <strong className="pkg-name">{p.name}</strong>
                               <span className={`pkg-status-chip ${isExpired ? 'expired' : 'active'}`}>
-                                {isExpired ? 'Đã hết hạn' : 'Đang hiệu lực'}
+                                {isExpired
+                                  ? 'Đã hết hạn'
+                                  : state === 'pending'
+                                    ? 'Chờ kích hoạt'
+                                    : 'Đang hiệu lực'}
                               </span>
                             </div>
 
@@ -904,8 +938,9 @@ export function MembersPanel({
 
                           <div className="pkg-card-meta">
                             <span>
-                              hạn {day(p.expires)}
-                              {isExpired ? ' (đã hết hạn)' : ''}
+                              {state === 'pending' && p.activate_by
+                                ? `kích hoạt trước ${day(p.activate_by)} (tự kích hoạt ngày này)`
+                                : `hạn ${day(p.expires)}${isExpired ? ' (đã hết hạn)' : ''}`}
                             </span>
                             {p.price_paid > 0 && (
                               <>
@@ -915,6 +950,88 @@ export function MembersPanel({
                             )}
                           </div>
 
+                          {canSell && (period || state === 'pending') && (
+                            <div className="pkg-card-actions">
+                              {canSell && state === 'pending' && (
+                                <button
+                                  className="secondary"
+                                  disabled={busy}
+                                  onClick={() =>
+                                    act(
+                                      () => post({ action: 'activate', packageId: p.id }),
+                                      'Đã kích hoạt thẻ',
+                                    )
+                                  }
+                                >
+                                  Kích hoạt ngay
+                                </button>
+                              )}
+                              {canSell && period && state === 'active' && p.activated_at != null && (
+                                <button
+                                  className="secondary"
+                                  disabled={busy || absences.length >= maxAbsences(p.valid_days)}
+                                  onClick={async () => {
+                                    const start = await askText({
+                                      title: 'Báo lịch vắng',
+                                      label: 'Ngày bắt đầu vắng (YYYY-MM-DD, sau hôm nay)',
+                                      initial: clubDay(now + 86_400_000),
+                                    });
+                                    if (!start) return;
+                                    const daysText = await askText({
+                                      title: 'Báo lịch vắng',
+                                      label: `Số ngày vắng liên tục (tối thiểu ${MIN_ABSENCE_DAYS})`,
+                                      initial: String(MIN_ABSENCE_DAYS),
+                                    });
+                                    const n = Number(daysText);
+                                    if (!Number.isInteger(n) || n < 1) return;
+                                    const end = new Date(
+                                      Date.parse(start + 'T00:00:00Z') + (n - 1) * 86_400_000,
+                                    )
+                                      .toISOString()
+                                      .slice(0, 10);
+                                    act(
+                                      () =>
+                                        post({
+                                          action: 'absence-create',
+                                          requestId: operationKey(),
+                                          packageId: p.id,
+                                          startDay: start,
+                                          endDay: end,
+                                        }),
+                                      `Đã báo vắng ${n} ngày, hạn thẻ được cộng thêm ${n} ngày`,
+                                    );
+                                  }}
+                                >
+                                  Báo vắng ({absences.length}/{maxAbsences(p.valid_days)})
+                                </button>
+                              )}
+                            </div>
+                          )}
+                          {absences.length > 0 && (
+                            <ul className="pkg-absences">
+                              {absences.map((a) => (
+                                <li key={a.id}>
+                                  Vắng {a.start_day.split('-').reverse().join('/')} –{' '}
+                                  {a.end_day.split('-').reverse().join('/')} ({a.days} ngày
+                                  {a.source === 'staff' ? ', nhân viên báo' : ''})
+                                  {canSell && a.start_day > clubDay(now) && (
+                                    <button
+                                      className="link"
+                                      disabled={busy}
+                                      onClick={() =>
+                                        act(
+                                          () => post({ action: 'absence-cancel', id: a.id }),
+                                          'Đã huỷ lịch vắng, hạn thẻ đã trừ lại',
+                                        )
+                                      }
+                                    >
+                                      Huỷ
+                                    </button>
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                           <div className="pkg-card-balances">
                             {(JSON.parse(p.balances ?? '[]') as { kind: GrantKind; remaining: number }[])
                               .map(

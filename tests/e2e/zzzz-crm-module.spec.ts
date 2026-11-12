@@ -543,6 +543,7 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Đơn bán & Giữ chỗ', exact: true }).click();
   await expect(crm.getByText('Tổng giá trị')).toBeVisible();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
+  await crm.getByRole('tab', { name: /Dịch vụ & Gói/ }).click();
   await expect(crm.getByRole('heading', { name: 'Danh mục dịch vụ và gói' })).toBeVisible();
   await expect(crm.getByRole('cell', { name: 'Gói HLV 1 kèm 1' })).toBeVisible();
 });

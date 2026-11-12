@@ -1,30 +1,14 @@
 import type { Metadata } from 'next';
-import {
-  ArrowDown,
-  ArrowRight,
-  ArrowUpRight,
-  Clock,
-  MapPin,
-  Phone,
-  UserRound,
-} from 'lucide-react';
 import { BRAND } from '../lib/brand';
 import { money } from '../lib/club';
 import BookingPage from './ui/BookingPage';
-import LandingFx from './ui/LandingFx';
-import { PromoCards } from './ui/PromoCards';
-import QuickBookingBar from './ui/QuickBookingBar';
-import RoomShowcase from './ui/RoomShowcase';
-import ClubAmenities from './ui/ClubAmenities';
-import ClubGalleryAlbum from './ui/ClubGalleryAlbum';
-import PriceEstimator from './ui/PriceEstimator';
-import TestimonialSection from './ui/TestimonialSection';
-import ClubFooter from './ui/ClubFooter';
+import HomeGallery from './ui/HomeGallery';
 import { grantLine, validityText, type PriceTable } from '../lib/price-table';
 import { publicPricing } from '../lib/server/pricing-service';
 import { getPublicLandingConfig } from '../lib/server/landing-service';
 import { bookingSlug } from '../lib/server/online-service';
-import './landing.css';
+import { SiteFooter } from './ui/SiteChrome';
+import './home.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,81 +29,41 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  {
-    t: 'Chọn line và giờ',
-    p: 'Đặt online ngay trên trang này hoặc gọi hotline; nhân viên xác nhận line phù hợp.',
-  },
-  {
-    t: 'Vào line riêng, vung gậy',
-    p: 'Mỗi line là một không gian riêng hướng tới màn hình mô phỏng sân. Nắng mưa đều chơi được.',
-  },
-  {
-    t: 'Foresight GC3 đo từng cú',
-    p: 'Tốc độ, góc phóng, độ xoáy và quỹ đạo bóng hiện ngay trên màn hình để bạn chỉnh swing.',
-  },
-  {
-    t: 'Chơi tiếp, thanh toán sau',
-    p: 'Chơi theo giờ đã đặt, gọi đồ uống tại line. Trả tiền mặt, thẻ hoặc quét mã QR.',
-  },
+  ['Chọn giờ', 'Đặt trên trang này hoặc gọi hotline. Nhân viên xác nhận line.'],
+  ['Vào line', 'Mỗi line riêng, hướng vào màn hình mô phỏng sân.'],
+  ['Đo từng cú', 'Tốc độ, góc phóng, độ xoáy và quỹ đạo hiện ngay trên màn hình.'],
+  ['Thanh toán sau', 'Chơi xong mới trả: tiền mặt, thẻ hoặc QR.'],
 ];
 
-const faqFor = (group: string, tax: string, goldText: string, holes: boolean) => [
+const faqFor = (group: string, goldText: string, holes: boolean) => [
   holes
     ? {
         q: 'Giá 9 hố, 18 hố tính thế nào?',
-        a: group
-          ? `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`
-          : 'Tính theo đầu người: nhóm nhiều người trả đơn giá một người nhân với số người chơi. Phòng tiêu chuẩn và phòng VIP có giá riêng.',
+        a: `Tính theo đầu người cho nhóm 1–3 người. Nhóm 4 người dùng giá nhóm${group} cho cả buổi, áp dụng cả ngày.`,
       }
     : {
         q: 'Giá theo giờ tính thế nào?',
-        a: 'Tính theo giờ cho mỗi phòng. Phòng tiêu chuẩn và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng bên trên.',
+        a: 'Tính theo giờ cho mỗi phòng. Phòng tiêu chuẩn và phòng VIP có giá riêng; giá thay đổi theo khung giờ như bảng giá.',
       },
-  {
-    q: 'Người mới chưa từng chơi golf có đến tập được không?',
-    a: 'Hoàn toàn được! Câu lạc bộ có sẵn gậy tập cho người mới, nhân viên hỗ trợ cài đặt máy và hướng dẫn cơ bản. Bạn cũng có thể đăng ký gói hướng dẫn cùng Huấn luyện viên.',
-  },
-  {
-    q: 'Có cần tự mang theo gậy và bóng riêng không?',
-    a: 'Không bắt buộc. Câu lạc bộ miễn phí mượn các bộ gậy cao cấp (TaylorMade, Callaway, Titleist) và bóng chuyên dụng. Golfer vẫn có thể mang túi gậy cá nhân nếu muốn làm quen.',
-  },
-  {
-    q: 'Câu lạc bộ có chỗ đỗ xe ô tô không?',
-    a: 'Có. Bãi đỗ xe ô tô và xe máy rộng rãi, an ninh ngay trước cửa cơ sở tại số 250 Lương Đình Của với bảo vệ hỗ trợ tận tình suốt buổi chơi.',
-  },
-  {
-    q: 'Giờ vàng là gì?',
-    a: `${goldText}. Giá trong khung giờ này thấp hơn khung thường.`,
-  },
+  { q: 'Giờ vàng là gì?', a: `${goldText}. Giá trong khung giờ này thấp hơn khung thường.` },
   {
     q: 'Đặt lịch online có cần thanh toán trước không?',
-    a: 'Không. Bạn chỉ cần gửi yêu cầu, nhân viên gọi xác nhận lịch và line. Bạn chỉ thanh toán sau khi kết thúc buổi chơi bằng tiền mặt, thẻ hoặc chuyển khoản quét mã VietQR.',
+    a: 'Mặc định không cần đặt cọc. Nhân viên sẽ xác nhận yêu cầu và thông tin thanh toán trước buổi chơi.',
   },
   {
     q: 'Gói trả trước dùng thế nào?',
-    a: 'Mua gói tại quầy hoặc gọi hotline. Gói ghi rõ số giờ, thời hạn và loại phòng áp dụng; nhân viên sẽ trừ giờ mỗi lần bạn đến chơi.',
+    a: 'Mua tại quầy hoặc gọi hotline. Mỗi lần chơi nhân viên trừ giờ trong gói.',
   },
 ];
 
-// Counting animation only when the price is a round thousand (it renders as N.000đ).
-function Count({ v }: { v: number | null }) {
-  if (v == null) return <>—</>;
-  if (v % 1000 !== 0) return <>{money(v)}</>;
-  return (
-    <>
-      <span data-sc-count={`0 ${v / 1000}`}>{v / 1000}</span>.000đ
-    </>
-  );
-}
-
 const dong = (v: number | null) => (v == null ? '—' : `${v.toLocaleString('vi-VN')}đ / VND`);
 
-/** Price grid, one per room: navy header, one row per time slot. */
+/** Price grid, one per room: one row per time slot. */
 function RateGrid({ title, table }: { title?: string; table: PriceTable }) {
   return (
-    <div className="fw-grid-wrap" data-sc-in>
+    <div className="hm-grid">
       {title && <h3>{title}</h3>}
-      <div className="fw-table-card fw-grid">
+      <div className="hm-table">
         <table>
           <thead>
             <tr>
@@ -157,27 +101,36 @@ function RateGrid({ title, table }: { title?: string; table: PriceTable }) {
 }
 
 export default async function LandingPage() {
-  const [slug, pricing, landing] = await Promise.all([bookingSlug(), publicPricing(), getPublicLandingConfig()]);
+  const [slug, pricing, landing] = await Promise.all([
+    bookingSlug(),
+    publicPricing(),
+    getPublicLandingConfig(),
+  ]);
   const rows = pricing.standard.rows;
   const group = pricing.standard.group;
   const gold = rows.find((r) => r.gold) ?? rows[0];
   const lowestGdr = Math.min(...rows.map((r) => r.gdr ?? Infinity));
+  const vipRows = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
+  const vipFrom = vipRows.get(gold.key)?.gdr ?? null;
   const groupText =
     group.h9 != null && group.h18 != null
       ? `: ${money(group.h9)} (9 hố) hoặc ${money(group.h18)} (18 hố)`
       : '';
   const hours = `${pricing.open}–${pricing.close}`;
   const hasHoles = rows.some((r) => r.h9 != null || r.h18 != null);
-  const vipRows = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
+  const vat = pricing.vat != null ? ` ${pricing.vat}%` : '';
   const faq = faqFor(
     groupText,
-    pricing.vat != null ? ` ${pricing.vat}%` : '',
     `Giờ vàng là khung giá ưu đãi: ${gold.days}, ${gold.from}–${gold.to}`,
     hasHoles,
   );
   const bookHref = slug ? '#dat-cho' : `tel:${BRAND.hotline}`;
   const bookLabel = slug ? 'Đặt chỗ' : 'Gọi đặt chỗ';
   const mapHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(BRAND.address)}`;
+  const heroImage =
+    landing.heroDesktopImage && landing.heroDesktopImage !== '/img/hero-room.webp'
+      ? landing.heroDesktopImage
+      : '/img/album-bays-panoramic.webp';
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SportsActivityLocation',
@@ -201,208 +154,134 @@ export default async function LandingPage() {
     ],
   };
   const nav = [
-    ['#dich-vu', 'Trải nghiệm'],
-    ['#album-anh', 'Hình ảnh'],
-    ['#tien-ich', 'Tiện ích'],
-    ['#gio-vang', 'Giờ vàng'],
-    ['#bang-gia', 'Bảng giá'],
-    ...(pricing.promotions.length ? [['#khuyen-mai', 'Khuyến mãi']] : []),
-    ['#danh-gia', 'Đánh giá'],
+    ['#phong', 'Phòng'],
+    ['#bang-gia', 'Giá'],
+    ['#goi', 'Gói'],
     ['#lien-he', 'Liên hệ'],
   ];
+
   return (
-    <div className="fw">
-      {/* eslint-disable-next-line @next/next/no-css-tags */}
-      <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
+    <div className="hm">
       <link
         rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap"
       />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
 
-      <header className="fw-fixed" aria-label="Điều hướng nhanh">
-        <a className="fw-brand" href="#top">
+      <header className="hm-bar">
+        <a className="hm-brand" href="#top">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND.logo} alt="" width={30} height={30} />
-          <span>{BRAND.short}</span>
+          <img src={BRAND.logo} alt="" width={32} height={32} />
+          <span>{BRAND.name}</span>
         </a>
-        <nav>
+        <nav aria-label="Điều hướng">
           {nav.map(([href, label]) => (
             <a key={href} href={href}>
               {label}
             </a>
           ))}
+          <a href="/tai-khoan">Cổng khách hàng</a>
         </nav>
-        {}
-        <a
-          className="fw-acct"
-          href="/tai-khoan"
-          aria-label="Đăng nhập / Đăng ký hội viên"
-          title="Đăng nhập / Đăng ký"
-        >
-          <UserRound size={18} />
+        <a className="hm-btn hm-btn-portal hm-portal-top" href="/tai-khoan">
+          Cổng khách hàng
         </a>
-        <a className="fw-pill-cta" href={bookHref}>
-          {bookLabel} <ArrowUpRight size={16} />
+        <a className="hm-btn hm-btn-solid hm-book-top" href={bookHref}>
+          {bookLabel}
         </a>
       </header>
 
       <main id="top">
-        <section className="fw-hero">
-          <div className="fw-stage">
-            <picture>
-              <source media="(max-width: 860px)" srcSet={landing.heroMobileImage || '/img/hero-room-m.webp'} />
-              {}
-              <img
-                className="fw-scene"
-                src={landing.heroDesktopImage || '/img/hero-room.webp'}
-                alt={landing.brandName || 'Phòng chơi Saigon Golf 3D Club'}
-                width={1458}
-                height={1201}
-                fetchPriority="high"
-              />
-            </picture>
-            <div className="fw-shade" aria-hidden="true" />
-
-            <div className="fw-nav">
-              <a className="fw-brand" href="#top">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={BRAND.logo} alt="" width={36} height={36} />
-                <span>{BRAND.short}</span>
+        <section className="hm-hero">
+          <div className="hm-hero-copy">
+            <p className="hm-badge">Foresight GC3 · Bình Trưng, TP.HCM</p>
+            <h1>
+              Trải nghiệm golf 3D, đo từng <em>cú đánh</em>
+            </h1>
+            <p>Phòng riêng, thiết bị Foresight GC3, mở cửa mỗi ngày.</p>
+            <div className="hm-hero-cta">
+              <a className="hm-btn hm-btn-brass" href={bookHref}>
+                {bookLabel}
               </a>
-              <nav>
-                {nav.slice(0, 4).map(([href, label]) => (
-                  <a key={href} href={href}>
-                    {label}
-                  </a>
-                ))}
-              </nav>
-            </div>
-            <div className="fw-top-right">
-              {}
-              <a
-                className="fw-arrow-dot fw-acct-hero"
-                href="/tai-khoan"
-                aria-label="Đăng nhập / Đăng ký hội viên"
-                title="Đăng nhập / Đăng ký"
-              >
-                <UserRound size={19} />
-              </a>
-              <a className="fw-top-book" href={bookHref}>
-                {bookLabel}{' '}
-                <span className="fw-arrow-dot">
-                  <ArrowUpRight size={17} />
-                </span>
+              <a className="hm-btn hm-btn-line" href={`tel:${BRAND.hotline}`}>
+                {BRAND.hotline}
               </a>
             </div>
-
-            <div className="fw-headline">
-              <h1>
-                <span>Nâng tầm</span>
-                <strong>cú đánh</strong>
-              </h1>
-              <p>
-                Golf 3D mô phỏng Foresight GC3, trải nghiệm khó quên và một cộng đồng cùng chung đam
-                mê, giữa lòng thành phố.
-              </p>
-            </div>
-
-            <div className="fw-side-time" aria-label="Giờ mở cửa">
-              <span>
-                {pricing.open} – {pricing.close}
-              </span>
-              <small>Mỗi ngày</small>
-            </div>
-
-            <a className="fw-card fw-card-gold" href="#gio-vang">
-              <div className="fw-chips" aria-hidden="true">
-                {hasHoles && (
-                  <>
-                    <i>9</i>
-                    <i>18</i>
-                  </>
-                )}
-                <i>Luyện tập</i>
-                <i>VIP</i>
-                <em>10 line</em>
-              </div>
-              <div className="fw-card-foot">
-                <span>
-                  <b>Giờ vàng giá ưu đãi</b>
-                  <small>
-                    {gold.days} · {gold.from}–{gold.to} · từ {money(lowestGdr)}/giờ
-                  </small>
-                </span>
-                <span className="fw-arrow-dot">
-                  <ArrowRight size={18} />
-                </span>
-              </div>
-            </a>
-
-            <a className="fw-card fw-card-discover" href="#dich-vu">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/img/fs-castle.webp" alt="Không gian phòng chơi golf 3D cao cấp" />
-              <div className="fw-card-foot">
-                <span>
-                  <b>Khám phá phòng chơi của bạn.</b>
-                  <small>10 line, trong đó 2 phòng VIP riêng tư.</small>
-                </span>
-                <span className="fw-arrow-dot">
-                  <ArrowRight size={18} />
-                </span>
-              </div>
-            </a>
-
-            <a className="fw-scroll" href="#dich-vu" aria-label="Cuộn xuống">
-              <ArrowDown size={20} />
-            </a>
           </div>
-          <QuickBookingBar
-            lowestPrice={lowestGdr}
-            goldTimeText={`${gold.days}, ${gold.from}–${gold.to}`}
-          />
+          <figure className="hm-hero-img">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={heroImage}
+              alt={landing.brandName || 'Phòng chơi Saigon Golf 3D Club'}
+              width={1024}
+              height={768}
+              fetchPriority="high"
+            />
+          </figure>
+          <dl className="hm-facts">
+            <div>
+              <dt>Line</dt>
+              <dd>10 + 2 VIP</dd>
+            </div>
+            <div>
+              <dt>Mở cửa</dt>
+              <dd>{hours}</dd>
+            </div>
+            <div>
+              <dt>Từ</dt>
+              <dd>{money(lowestGdr)}/giờ</dd>
+            </div>
+            <div>
+              <dt>Thiết bị</dt>
+              <dd>Foresight GC3</dd>
+            </div>
+          </dl>
         </section>
 
-        <section id="dich-vu" className="fw-section">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Trải nghiệm</p>
-            <h2>Một buổi chơi, bốn bước</h2>
-            <p className="fw-sub">Từ lúc đặt chỗ đến lúc thanh toán, mọi thứ gọn trong một buổi.</p>
-          </div>
-          <ol className="fw-steps" data-sc-in data-sc-stagger="80">
-            {STEPS.map((s, i) => (
-              <li key={s.t} className="fw-tile">
-                <span className="fw-num">{i + 1}</span>
-                <h3>{s.t}</h3>
-                <p>{s.p}</p>
+        <section className="hm-section" id="dich-vu">
+          <h2>Một buổi chơi</h2>
+          <ol className="hm-steps">
+            {STEPS.map(([t, p], i) => (
+              <li key={t}>
+                <span>{String(i + 1).padStart(2, '0')}</span>
+                <h3>{t}</h3>
+                <p>{p}</p>
               </li>
             ))}
           </ol>
+        </section>
 
-          <div className="fw-head" style={{ marginTop: '3.5rem' }} data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Không gian & Tiêu chuẩn</p>
-            <h2>Chọn phòng chơi phù hợp với bạn</h2>
-            <p className="fw-sub">
-              Hệ thống 10 line hiện đại: 8 line tiêu chuẩn thoáng đãng và 2 phòng VIP riêng tư.
-            </p>
-          </div>
-          <RoomShowcase
-            standardPrice={lowestGdr}
-            vipPrice={vipRows.get(gold.key)?.gdr ?? 350000}
-          />
-
-          <div className="fw-gc3" data-sc-in data-sc-stagger="90">
-            <div>
-              <p className="fw-kicker fw-kicker-light">Công nghệ</p>
-              <h3>Foresight GC3 đo từng cú đánh</h3>
-              <p>
-                Thiết bị theo dõi bóng với ba camera tốc độ cao, ghi lại tốc độ đầu gậy, góc phóng,
-                độ xoáy và quỹ đạo của từng cú đánh rồi hiển thị tức thì trên màn hình mô phỏng để
-                bạn hoàn thiện kỹ thuật swing.
+        <section className="hm-section" id="phong">
+          <h2>Phòng chơi</h2>
+          <div className="hm-rooms">
+            <article>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/img/space-wide.webp" alt="Line tiêu chuẩn" width={1024} height={768} loading="lazy" />
+              <h3>Line tiêu chuẩn</h3>
+              <p>10 line tiêu chuẩn, sử dụng thiết bị Foresight GC3.</p>
+              <p className="hm-price">
+                Từ <strong>{money(lowestGdr)}</strong> / giờ
               </p>
+            </article>
+            <article>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/img/fs-lounge.webp" alt="Phòng VIP" width={1024} height={576} loading="lazy" />
+              <h3>Phòng VIP</h3>
+              <p>2 phòng VIP riêng.</p>
+              <p className="hm-price">
+                Từ <strong>{money(vipFrom ?? 350000)}</strong> / giờ
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section className="hm-dark" id="gc3">
+          <div className="hm-dark-in">
+            <div>
+              <h2>Thiết bị Foresight GC3</h2>
+              <p>Foresight GC3 được trang bị tại các line tiêu chuẩn của câu lạc bộ.</p>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -415,115 +294,73 @@ export default async function LandingPage() {
           </div>
         </section>
 
-        {/* Real Club Space Photo Album Gallery */}
-        <ClubGalleryAlbum photos={landing.galleryPhotos} />
-
-        <section id="tien-ich" className="fw-section fw-tint">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Đặc quyền hội viên & khách chơi</p>
-            <h2>Tiện ích trọn vẹn từng buổi tập</h2>
-            <p className="fw-sub">
-              Từ thiết bị đo đạc PGA, gậy tập miễn phí đến quầy đồ uống phục vụ tận nơi.
-            </p>
-          </div>
-          <ClubAmenities />
+        <section className="hm-section" id="album-anh">
+          <h2>Không gian</h2>
+          <HomeGallery photos={landing.galleryPhotos} />
         </section>
 
-        <section id="gio-vang" className="fw-section fw-tight">
-          <div className="fw-gold-panel" data-sc-in data-sc-stagger="90">
-            <div>
-              <p className="fw-kicker fw-kicker-light">
-                {gold.days} · {gold.from}–{gold.to}
-              </p>
-              <h2>Giờ vàng, giá tốt nhất trong ngày</h2>
-              <p className="fw-sub fw-sub-light">
-                Giá trong khung giờ này thấp hơn khung thường. Giá chưa gồm VAT
-                {pricing.vat != null ? ` ${pricing.vat}%` : ''}.
-              </p>
-            </div>
-            <div className="fw-figs">
-              {hasHoles ? (
-                <>
-                  <div>
-                    <strong>
-                      <Count v={gold.gdr} />
-                    </strong>
-                    <span>luyện tập / giờ</span>
-                  </div>
-                  <div>
-                    <strong>
-                      <Count v={gold.h9} />
-                    </strong>
-                    <span>9 hố / người</span>
-                  </div>
-                  <div>
-                    <strong>
-                      <Count v={gold.h18} />
-                    </strong>
-                    <span>18 hố / người</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <strong>
-                      <Count v={gold.gdr} />
-                    </strong>
-                    <span>phòng tiêu chuẩn / giờ</span>
-                  </div>
-                  {vipRows.get(gold.key)?.gdr != null && (
-                    <div>
-                      <strong>
-                        <Count v={vipRows.get(gold.key)!.gdr} />
-                      </strong>
-                      <span>phòng VIP / giờ</span>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+        <section className="hm-section hm-gold" id="gio-vang">
+          <div>
+            <p className="hm-eyebrow">
+              {gold.days} · {gold.from}–{gold.to}
+            </p>
+            <h2>Giờ vàng</h2>
+            <p>Giá thấp hơn khung thường. Chưa gồm VAT{vat}.</p>
           </div>
+          <ul>
+            {hasHoles ? (
+              <>
+                <li>
+                  <strong>{money(gold.gdr ?? 0)}</strong>
+                  <span>luyện tập / giờ</span>
+                </li>
+                <li>
+                  <strong>{gold.h9 == null ? '—' : money(gold.h9)}</strong>
+                  <span>9 hố / người</span>
+                </li>
+                <li>
+                  <strong>{gold.h18 == null ? '—' : money(gold.h18)}</strong>
+                  <span>18 hố / người</span>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <strong>{money(gold.gdr ?? 0)}</strong>
+                  <span>phòng tiêu chuẩn / giờ</span>
+                </li>
+                {vipFrom != null && (
+                  <li>
+                    <strong>{money(vipFrom)}</strong>
+                    <span>phòng VIP / giờ</span>
+                  </li>
+                )}
+              </>
+            )}
+          </ul>
         </section>
 
-        <section id="bang-gia" className="fw-section">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Bảng giá</p>
-            <h2>Giá niêm yết, không phụ phí ẩn</h2>
-            <p className="fw-sub">
-              Giá chưa gồm VAT{pricing.vat != null ? ` ${pricing.vat}%` : ''}.
-              {group.h9 != null && group.h18 != null
-                ? ` Nhóm 4 người dùng giá nhóm cả ngày: ${money(group.h9)} cho 9 hố, ${money(group.h18)} cho 18 hố.`
-                : hasHoles
-                  ? ' Game 9 hố và 18 hố tính theo người, Luyện tập tính theo giờ.'
-                  : ''}
-            </p>
-          </div>
+        <section className="hm-section" id="bang-gia">
+          <h2>Bảng giá</h2>
+          <p className="hm-note">
+            Giá chưa gồm VAT{vat}.
+            {group.h9 != null && group.h18 != null
+              ? ` Nhóm 4 người dùng giá nhóm cả ngày: ${money(group.h9)} cho 9 hố, ${money(group.h18)} cho 18 hố.`
+              : ''}
+          </p>
           {hasHoles ? (
             <>
-              <RateGrid
-                title={pricing.vip ? 'Phòng tiêu chuẩn' : undefined}
-                table={pricing.standard}
-              />
+              <RateGrid title={pricing.vip ? 'Phòng tiêu chuẩn' : undefined} table={pricing.standard} />
               {pricing.vip && <RateGrid title="Phòng VIP" table={pricing.vip} />}
             </>
           ) : (
-            <div className="fw-table-card" data-sc-in>
+            <div className="hm-table">
               <table>
                 <thead>
                   <tr>
                     <th>Khung giờ</th>
-                    {hasHoles ? (
-                      <>
-                        <th>Luyện tập / giờ</th>
-                        <th>9 hố / người</th>
-                        <th>18 hố / người</th>
-                      </>
-                    ) : (
-                      <>
-                        <th>{pricing.vip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
-                        {pricing.vip && <th>Phòng VIP / giờ</th>}
-                      </>
-                    )}
+                    <th>{pricing.vip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
+                    {pricing.vip && <th>Phòng VIP / giờ</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -531,190 +368,148 @@ export default async function LandingPage() {
                     <tr key={r.key}>
                       <td>
                         {r.days} · {r.from}–{r.to}
-                        {r.gold && <em>Giờ vàng</em>}
+                        {r.gold && <em> Giờ vàng</em>}
                       </td>
                       <td>{r.gdr == null ? '—' : money(r.gdr)}</td>
-                      {hasHoles ? (
-                        <>
-                          <td>{r.h9 == null ? '—' : money(r.h9)}</td>
-                          <td>{r.h18 == null ? '—' : money(r.h18)}</td>
-                        </>
-                      ) : (
-                        pricing.vip && (
-                          <td>
-                            {vipRows.get(r.key)?.gdr == null
-                              ? '—'
-                              : money(vipRows.get(r.key)!.gdr!)}
-                          </td>
-                        )
+                      {pricing.vip && (
+                        <td>
+                          {vipRows.get(r.key)?.gdr == null ? '—' : money(vipRows.get(r.key)!.gdr!)}
+                        </td>
                       )}
                     </tr>
                   ))}
-                  {hasHoles && (group.h9 != null || group.h18 != null) && (
-                    <tr className="fw-group">
-                      <td>Nhóm 4 người (cả ngày)</td>
-                      <td>—</td>
-                      <td>{group.h9 == null ? '—' : `${money(group.h9)} / nhóm`}</td>
-                      <td>{group.h18 == null ? '—' : `${money(group.h18)} / nhóm`}</td>
-                    </tr>
-                  )}
                 </tbody>
               </table>
             </div>
           )}
-          <PriceEstimator
-            standardTable={pricing.standard}
-            vipTable={pricing.vip}
-            vat={pricing.vat}
-          />
-          <p className="fw-note">
-            <a href="/bang-gia">Xem bảng giá đầy đủ</a> · <a href="/thanh-vien">Thẻ hội viên</a> ·{' '}
-            <a href="/tai-khoan">Tài khoản hội viên</a>
+          <p className="hm-note">
+            <a href="/bang-gia">Bảng giá đầy đủ</a> · <a href="/thanh-vien">Thẻ hội viên</a> ·{' '}
+            <a href="/tai-khoan">Cổng khách hàng</a>
           </p>
         </section>
 
         {pricing.promotions.length > 0 && (
-          <section id="khuyen-mai" className="fw-section fw-tight">
-            <div className="fw-head" data-sc-in data-sc-stagger="70">
-              <p className="fw-kicker">Khuyến mãi</p>
-              <h2>Đang có ưu đãi</h2>
-              <p className="fw-sub">
-                Giá khuyến mãi tự áp dụng khi đặt và tính tiền, không cần nhập mã.
-              </p>
+          <section className="hm-section" id="khuyen-mai">
+            <h2>Khuyến mãi</h2>
+            <p className="hm-note">Tự áp dụng khi đặt và tính tiền.</p>
+            <div className="hm-promos">
+              {pricing.promotions.map((p) => (
+                <article key={p.id}>
+                  <h3>{p.name}</h3>
+                  <strong>{p.benefit}</strong>
+                  <p>{p.condition}</p>
+                  {p.description && <p>{p.description}</p>}
+                </article>
+              ))}
             </div>
-            <PromoCards promotions={pricing.promotions} />
           </section>
         )}
 
-        <section id="goi" className="fw-section fw-tint">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Gói hội viên</p>
-            <h2>Mua trước, chơi nhiều hơn</h2>
-            <p className="fw-sub">
-              {hasHoles
-                ? 'Mỗi lượt 9 hố hoặc 18 hố tích 1 điểm; đủ 10 điểm đổi 1 lượt miễn phí. '
-                : ''}
-              Đăng ký tại quầy hoặc gọi hotline để được tư vấn gói phù hợp.
-            </p>
-          </div>
-          <div className="fw-pk-groups">
-            {pricing.groups.map((g) => (
-              <div key={g.id} className="fw-pk-group" data-sc-in data-sc-stagger="60">
-                <h3>{g.title}</h3>
-                <div className="fw-pk-grid">
-                  {g.items.map((p) => (
-                    <article key={p.id} className={'fw-pk' + (g.vip ? ' vip' : '')}>
-                      <h4>{p.name}</h4>
-                      <strong>{money(p.price)}</strong>
-                      <p>{p.grants.map(grantLine).join(' + ')}</p>
-                      <small>
-                        {validityText(p.validDays)}
-                        {p.perks ? ` · ${p.perks}` : ''}
-                      </small>
-                    </article>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="fw-note">
-            Đăng ký gói tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
+        <section className="hm-section" id="goi">
+          <h2>Gói hội viên</h2>
+          <p className="hm-note">
+            Đăng ký tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>.
           </p>
-        </section>
-
-        <section id="danh-gia" className="fw-section">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Cộng đồng Golfer</p>
-            <h2>Khách hàng nói gì về Saigon Golf 3D</h2>
-            <p className="fw-sub">
-              Hơn 1,200 Golfer tại TP.HCM đã lựa chọn chúng tôi để luyện tập và giao lưu mỗi tuần.
-            </p>
-          </div>
-          <TestimonialSection />
-        </section>
-
-        <section id="dat-cho" className="fw-section">
-          <div className="fw-booking">
-            <div data-sc-in data-sc-stagger="70">
-              <p className="fw-kicker">Đặt chỗ</p>
-              <h2>Chọn giờ, nhân viên xác nhận</h2>
-              <p className="fw-sub">
-                Gửi yêu cầu chưa đầy một phút. Chúng tôi xếp line phù hợp và gọi xác nhận; không cần
-                thanh toán trước. Trạng thái yêu cầu tự cập nhật ngay trên trang.
-              </p>
-              <div className="fw-faq">
-                {faq.map((f) => (
-                  <details key={f.q}>
-                    <summary>{f.q}</summary>
-                    <p>{f.a}</p>
-                  </details>
+          {pricing.groups.map((g) => (
+            <div key={g.id} className="hm-pk-group">
+              <h3>{g.title}</h3>
+              <div className="hm-pk-grid">
+                {g.items.map((p) => (
+                  <article key={p.id} className={g.vip ? 'vip' : undefined}>
+                    <h4>{p.name}</h4>
+                    <strong>{money(p.price)}</strong>
+                    <p>{p.grants.map(grantLine).join(' + ')}</p>
+                    <small>
+                      {validityText(p.validDays)}
+                      {p.perks ? ` · ${p.perks}` : ''}
+                    </small>
+                  </article>
                 ))}
               </div>
             </div>
-            <div className="fw-form" data-sc-in>
-              {slug ? (
-                <BookingPage slug={slug} embedded />
-              ) : (
-                <div className="fw-call">
-                  <Phone size={26} />
-                  <h3>Đặt chỗ qua hotline</h3>
-                  <p>
-                    Đặt lịch online sẽ mở trong thời gian tới. Hiện tại vui lòng gọi để được giữ
-                    line và xác nhận ngay.
-                  </p>
-                  <a className="fw-btn" href={`tel:${BRAND.hotline}`}>
-                    Gọi {BRAND.hotline}
-                  </a>
-                </div>
-              )}
+          ))}
+        </section>
+
+        <section className="hm-portal" id="cong-khach-hang">
+          <div>
+            <p className="hm-eyebrow">Dành riêng cho khách hàng</p>
+            <h2>Cổng khách hàng</h2>
+            <p>
+              Đăng nhập để theo dõi yêu cầu đặt chỗ, lịch chơi, gói hội viên và lịch sử sử dụng của
+              bạn.
+            </p>
+          </div>
+          <ul>
+            <li>Yêu cầu đặt chỗ và lịch chơi</li>
+            <li>Thẻ, gói và số dư hiện có</li>
+            <li>Thông tin tài khoản và lịch sử</li>
+          </ul>
+          <a className="hm-btn hm-btn-brass" href="/tai-khoan">
+            Vào cổng khách hàng
+          </a>
+        </section>
+
+        <section className="hm-section hm-booking" id="dat-cho">
+          <div>
+            <h2>Đặt chỗ</h2>
+            <p className="hm-note">Gửi yêu cầu, chúng tôi gọi xác nhận. Không cần trả trước.</p>
+            <div className="hm-faq">
+              {faq.map((f) => (
+                <details key={f.q}>
+                  <summary>{f.q}</summary>
+                  <p>{f.a}</p>
+                </details>
+              ))}
             </div>
+          </div>
+          <div className="hm-form">
+            {slug ? (
+              <BookingPage slug={slug} embedded />
+            ) : (
+              <div className="hm-call">
+                <h3>Đặt chỗ qua hotline</h3>
+                <p>Chưa mở đặt online. Vui lòng gọi để giữ line.</p>
+                <a className="hm-btn hm-btn-solid" href={`tel:${BRAND.hotline}`}>
+                  Gọi {BRAND.hotline}
+                </a>
+              </div>
+            )}
           </div>
         </section>
 
-        <section id="lien-he" className="fw-section fw-tight">
-          <div className="fw-contact" data-sc-in data-sc-stagger="70">
+        <section className="hm-dark hm-contact" id="lien-he">
+          <div className="hm-dark-in">
             <div>
-              <h2>Ghé thăm chúng tôi</h2>
+              <h2>Liên hệ</h2>
               <ul>
+                <li>{BRAND.address}</li>
+                <li>Mở cửa mỗi ngày {hours}</li>
                 <li>
-                  <MapPin size={18} /> {BRAND.address}
-                </li>
-                <li>
-                  <Clock size={18} /> Mở cửa mỗi ngày {hours}
-                </li>
-                <li>
-                  <Phone size={18} /> <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>
+                  <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>
                 </li>
               </ul>
+              <div className="hm-hero-cta">
+                <a className="hm-btn hm-btn-brass" href={bookHref}>
+                  {bookLabel}
+                </a>
+                <a className="hm-btn hm-btn-line" href={mapHref} target="_blank" rel="noopener noreferrer">
+                  Chỉ đường
+                </a>
+              </div>
             </div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              className="fw-contact-img"
               src="/img/space-ball.webp"
               alt="Quả bóng golf trên thảm cỏ trong phòng chơi Saigon Golf 3D Club"
-              width={900}
-              height={900}
+              width={1024}
+              height={576}
               loading="lazy"
             />
-            <div className="fw-contact-actions">
-              <a className="fw-btn fw-btn-light" href={bookHref}>
-                {bookLabel} <ArrowUpRight size={16} />
-              </a>
-              <a
-                className="fw-btn fw-btn-ghost"
-                href={mapHref}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Chỉ đường
-              </a>
-            </div>
           </div>
         </section>
       </main>
 
-      <ClubFooter hours={hours} />
-      <LandingFx />
+      <SiteFooter />
     </div>
   );
 }

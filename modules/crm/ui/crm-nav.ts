@@ -2,13 +2,11 @@
 // the page titles and who may see what.
 import {
   BarChart3,
-  Ban,
   CalendarDays,
   CheckSquare,
   Contact,
   Database,
   Eye,
-  GitFork,
   KanbanSquare,
   LifeBuoy,
   LayoutDashboard,
@@ -19,6 +17,7 @@ import {
   Settings,
   Share2,
   Timer,
+  UserCog,
   Users,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,7 +27,6 @@ export const PAGES = [
   'work',
   'pool',
   'leads',
-  'distribute',
   'pipeline',
   'care',
   'appointments',
@@ -40,8 +38,8 @@ export const PAGES = [
   'channels',
   'report',
   'response',
+  'staff',
   'config',
-  'blocked',
   'viewlog',
 ] as const;
 export type PageKey = (typeof PAGES)[number];
@@ -55,9 +53,8 @@ export const CRM_NAV: NavGroup[] = [
     items: [
       { key: 'overview', label: 'Tổng quan', hint: 'Việc, lead mới, phễu và nguồn khách', icon: LayoutDashboard },
       { key: 'work', label: 'Bàn làm việc', hint: 'Khách cần gọi, lịch hẹn và việc hôm nay', icon: ListChecks },
-      { key: 'pool', label: 'Kho số', hint: 'Lead chưa có người phụ trách', icon: Database },
+      { key: 'pool', label: 'Kho số', hint: 'Nhận số, giao tay và thu hồi lead', icon: Database },
       { key: 'leads', label: 'Danh sách lead', hint: 'Tìm, lọc và xử lý lead', icon: Users },
-      { key: 'distribute', label: 'Chia lead', hint: 'Máy chia data theo nguồn và nhân viên', icon: GitFork },
       { key: 'pipeline', label: 'Pipeline', hint: 'Lead theo từng giai đoạn tư vấn', icon: KanbanSquare },
       { key: 'care', label: 'Việc của tôi', hint: 'Nhắc việc tự sinh và việc tạo tay', icon: CheckSquare },
       { key: 'appointments', label: 'Lịch hẹn', hint: 'Buổi trải nghiệm và lịch gặp khách', icon: CalendarDays },
@@ -89,8 +86,8 @@ export const CRM_NAV: NavGroup[] = [
   {
     title: 'Hệ thống',
     items: [
-      { key: 'config', label: 'Cấu hình', hint: 'SLA, chia lead, giờ làm việc, nhân sự', icon: Settings, managerOnly: true },
-      { key: 'blocked', label: 'Số bị chặn', hint: 'Số rác, đối thủ, số thử', icon: Ban, managerOnly: true },
+      { key: 'staff', label: 'Nhân sự', hint: 'Tài khoản, vai trò, nhóm và nhận lead', icon: UserCog, managerOnly: true },
+      { key: 'config', label: 'Cấu hình', hint: 'SLA, chia lead, giờ làm việc, chăm sóc tự động', icon: Settings, managerOnly: true },
       { key: 'viewlog', label: 'Nhật ký xem số', hint: 'Ai đã xem số điện thoại khách', icon: Eye, managerOnly: true },
     ],
   },
@@ -106,7 +103,7 @@ export const groupOf = (key: string) => CRM_NAV.find((g) => g.items.some((i) => 
 
 /** Old tab names (links, tests, bookmarks) -> the page to show. */
 export function pageFor(name: string): PageKey {
-  const map: Record<string, PageKey> = { files: 'customers', tasks: 'work' };
+  const map: Record<string, PageKey> = { files: 'customers', tasks: 'work', distribute: 'pool', blocked: 'marketing' };
   const k = map[name] ?? name;
   return (PAGES as readonly string[]).includes(k) ? (k as PageKey) : 'work';
 }

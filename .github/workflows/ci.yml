@@ -15,15 +15,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
-      - name: Unit tests
-        run: node --experimental-strip-types --test tests/pricing.test.ts tests/pricing-rules.test.ts tests/booking-plan.test.ts tests/finance.test.ts tests/fnb.test.ts tests/stock.test.ts tests/official-pricing.test.ts tests/auth.test.ts tests/member.test.ts tests/online.test.ts tests/bank.test.ts
+      - name: Unit and runtime tests
+        run: pnpm test
       - name: Lint
         run: pnpm lint
-      - name: SQL tests
+      - name: Python SQL and migration tests
         run: |
-          for t in booking finance fnb stock package online coaching bank report split member_account billing crm lead crm_migrate crm_inbound; do python tests/${t}_sql_test.py; done
-          python tests/migration_splitter_test.py
-          python tests/import_backup_test.py
+          for t in tests/*_test.py; do
+            python "$t"
+          done
   e2e:
     runs-on: ubuntu-latest
     steps:

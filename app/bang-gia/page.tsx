@@ -1,25 +1,12 @@
 import type { Metadata } from 'next';
-import {
-  ArrowUpRight,
-  Check,
-  Clock,
-  Crown,
-  Gift,
-  Phone,
-  Receipt,
-  Users,
-  UserRound,
-} from 'lucide-react';
-import '../landing.css';
-import './pricing.css';
+import '../home.css';
+import '../site.css';
 import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
-import { packageBullets, type PackageGroup, type PriceRow } from '../../lib/price-table';
+import { packageBullets, type PackageGroup, type PriceRow, type PriceTable } from '../../lib/price-table';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
-import LandingFx from '../ui/LandingFx';
-import ClubFooter from '../ui/ClubFooter';
-import { PromoCards } from '../ui/PromoCards';
+import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,72 +28,68 @@ const parseOffer = (line: string) => {
   return { title, value, note };
 };
 const price = (v: number | null) => (v == null ? '—' : money(v));
-const pct = (v: number | null) => (v == null ? null : `${v}%`);
+const slot = (r: PriceRow) => `${r.days} · ${r.from}–${r.to}`;
 
-function RateCard({ row, vip }: { row: PriceRow; vip?: PriceRow | null }) {
-  // Tiles: one per price that exists. With a VIP list, hourly prices show both rooms side by side.
-  const tiles: { label: string; value: number | null; unit: string }[] = [];
-  const vipHourly = vip && vip.gdr != null && vip.gdr !== row.gdr;
-  if (row.gdr != null) {
-    if (vipHourly) {
-      tiles.push({ label: 'Phòng tiêu chuẩn', value: row.gdr, unit: 'mỗi giờ' });
-      tiles.push({ label: 'Phòng VIP', value: vip!.gdr, unit: 'mỗi giờ' });
-    } else tiles.push({ label: 'Luyện tập', value: row.gdr, unit: 'mỗi giờ' });
-  }
-  if (row.h9 != null) tiles.push({ label: 'Game 9 hố', value: row.h9, unit: 'mỗi người' });
-  if (row.h18 != null) tiles.push({ label: 'Game 18 hố', value: row.h18, unit: 'mỗi người' });
+function HoleTable({ title, table }: { title?: string; table: PriceTable }) {
+  const g = table.group;
   return (
-    <article className={'pp-rate' + (row.gold ? ' gold' : '')} data-sc-in>
-      <header>
-        <div>
-          <span className="pp-days">{row.days}</span>
-          <strong className="pp-time">
-            {row.from} – {row.to}
-          </strong>
-        </div>
-        {row.gold && (
-          <span className="pp-badge">
-            <Clock size={14} /> Giờ vàng
-          </span>
-        )}
-      </header>
-      <dl style={{ ['--cols' as string]: tiles.length }}>
-        {tiles.map((t) => (
-          <div key={t.label}>
-            <dt>{t.label}</dt>
-            <dd>{price(t.value)}</dd>
-            <small>{t.unit}</small>
-          </div>
-        ))}
-      </dl>
-    </article>
+    <div className="hm-grid">
+      {title && <h3>{title}</h3>}
+      <div className="hm-table">
+        <table>
+          <thead>
+            <tr>
+              <th>Khung giờ</th>
+              <th>Luyện tập / giờ</th>
+              <th>Game 9 hố / người</th>
+              <th>Game 18 hố / người</th>
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((r) => (
+              <tr key={r.key}>
+                <td>
+                  {slot(r)}
+                  {r.gold && <em> Giờ vàng</em>}
+                </td>
+                <td>{price(r.gdr)}</td>
+                <td>{price(r.h9)}</td>
+                <td>{price(r.h18)}</td>
+              </tr>
+            ))}
+            {(g.h9 != null || g.h18 != null) && (
+              <tr>
+                <td>Nhóm 4 người (cả ngày)</td>
+                <td>—</td>
+                <td>{price(g.h9)} / nhóm</td>
+                <td>{price(g.h18)} / nhóm</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
 function Packages({ group }: { group: PackageGroup }) {
   return (
-    <section id={group.id} className="pp-pk-group" data-sc-in data-sc-stagger="60">
-      <h3>
-        {group.vip && <Crown size={20} />}
-        {group.title}
-      </h3>
-      <div className="pp-pk-grid">
+    <div id={group.id} className="hm-pk-group">
+      <h3>{group.title}</h3>
+      <div className="hm-pk-grid">
         {group.items.map((p) => (
-          <article key={p.id} className={'pp-pk' + (group.vip ? ' vip' : '')}>
+          <article key={p.id} className={group.vip ? 'vip' : undefined}>
             <h4>{p.name}</h4>
             <strong>{money(p.price)}</strong>
             <ul>
               {packageBullets(p).map((b) => (
-                <li key={b}>
-                  <Check size={15} />
-                  {b}
-                </li>
+                <li key={b}>{b}</li>
               ))}
             </ul>
           </article>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -117,166 +100,82 @@ export default async function PricingPage() {
   const goldRow = pricing.standard.rows.find((r) => r.gold);
   const hasHoles = pricing.standard.rows.some((r) => r.h9 != null || r.h18 != null);
   const vipByKey = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
-  // Hourly-only lists show both rooms in one card; lists with holes keep a separate VIP table.
   const mergeVip = !hasHoles && !!pricing.vip;
-  const vat = pct(pricing.vat);
-  const fee = pricing.fee ? pct(pricing.fee) : null;
-  const lowest = Math.min(
-    ...pricing.standard.rows.map((r) => r.gdr).filter((v): v is number => v != null),
-  );
-  const nav = [
-    ['#gia-theo-gio', 'Giá theo giờ'],
-    ...(pricing.offers.length || pricing.promotions.length ? [['#uu-dai', 'Khuyến mãi']] : []),
-    ['#goi', 'Gói trả trước'],
-    ['/thanh-vien', 'Thẻ hội viên'],
-    ['#luu-y', 'Lưu ý'],
-  ];
+  const vat = pricing.vat != null ? `${pricing.vat}%` : null;
+  const fee = pricing.fee ? `${pricing.fee}%` : null;
+
   return (
-    <div className="fw pp">
-      {/* eslint-disable-next-line @next/next/no-css-tags */}
-      <link rel="stylesheet" href="/scrollcraft/scrollcraft.css" />
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap"
-      />
-
-      <header className="fw-fixed on" aria-label="Điều hướng">
-        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-        <a className="fw-brand" href="/">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={BRAND.logo} alt="" width={30} height={30} />
-          <span>{BRAND.short}</span>
-        </a>
-        <nav>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a href="/">Trang chủ</a>
-          {nav.map(([href, label]) => (
-            <a key={href} href={href}>
-              {label}
-            </a>
-          ))}
-        </nav>
-        {}
-        <a
-          className="fw-acct"
-          href="/tai-khoan"
-          aria-label="Đăng nhập / Đăng ký hội viên"
-          title="Đăng nhập / Đăng ký"
-        >
-          <UserRound size={18} />
-        </a>
-        <a className="fw-pill-cta" href={bookHref}>
-          {bookLabel} <ArrowUpRight size={16} />
-        </a>
-      </header>
-
+    <div className="hm">
+      <link rel="stylesheet" href={FONT_URL} />
+      <SiteHeader bookHref={bookHref} bookLabel={bookLabel} />
       <main id="top">
-        <section className="pp-hero">
-          <div className="pp-hero-inner" data-sc-in data-sc-stagger="80">
-            <p className="fw-kicker fw-kicker-light">Bảng giá</p>
-            <h1>Giá rõ ràng, chơi thoải mái</h1>
-            <p className="pp-hero-sub">
-              {hasHoles
-                ? 'Giá theo giờ và theo lượt, thẻ giờ và thẻ tháng. '
-                : 'Giá theo giờ cho phòng tiêu chuẩn và phòng VIP, gói trả trước và thẻ hội viên. '}
-              Bảng này luôn khớp với giá đang áp dụng tại quầy.
-            </p>
-            <ul className="pp-chips">
-              <li>
-                <Clock size={15} /> Mở cửa{' '}
-                {pricing.open && pricing.close ? `${pricing.open} – ${pricing.close} ` : ''}mỗi ngày
-              </li>
-              {Number.isFinite(lowest) && (
-                <li>
-                  <Gift size={15} /> Giờ vàng từ {money(lowest)}
-                </li>
-              )}
-              <li>
-                <Receipt size={15} /> {vat ? `Giá chưa gồm VAT ${vat}` : 'Giá chưa gồm VAT'}
-                {fee ? ` và phí dịch vụ ${fee}` : ''}
-              </li>
-            </ul>
-            <div className="pp-hero-actions">
-              <a className="fw-btn fw-btn-light" href={bookHref}>
-                {bookLabel} <ArrowUpRight size={16} />
-              </a>
-              <a className="fw-btn fw-btn-ghost" href={`tel:${BRAND.hotline}`}>
-                <Phone size={16} /> {BRAND.hotline}
-              </a>
-            </div>
-          </div>
+        <section className="hm-page">
+          <h1>Bảng giá</h1>
+          <p>Luôn khớp với giá đang áp dụng tại quầy.</p>
+          <ul className="hm-meta">
+            <li>
+              Mở cửa {pricing.open}–{pricing.close} mỗi ngày
+            </li>
+            <li>
+              Chưa gồm VAT{vat ? ` ${vat}` : ''}
+              {fee ? ` và phí dịch vụ ${fee}` : ''}
+            </li>
+          </ul>
         </section>
 
-        <section id="gia-theo-gio" className="pp-section">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Giá theo giờ và lượt</p>
-            <h2>Chọn khung giờ phù hợp</h2>
-            <p className="fw-sub">
-              {hasHoles
-                ? 'Luyện tập tính theo giờ. Game 9 hố và Game 18 hố tính theo đầu người.'
-                : 'Giá tính theo giờ cho mỗi phòng. Chọn khung giờ bạn muốn chơi.'}
-            </p>
-          </div>
-          <div className="pp-rates">
-            {pricing.standard.rows.map((r) => (
-              <RateCard key={r.key} row={r} vip={mergeVip ? vipByKey.get(r.key) : null} />
-            ))}
-          </div>
-          {(pricing.standard.group.h9 != null || pricing.standard.group.h18 != null) && (
-            <article className="pp-group" data-sc-in>
-              <div className="pp-group-icon">
-                <Users size={22} />
-              </div>
-              <div className="pp-group-text">
-                <h3>Nhóm 4 người</h3>
-                <p>Giá nhóm cố định cho cả buổi, áp dụng cả ngày, mọi khung giờ.</p>
-              </div>
-              <dl>
-                <div>
-                  <dt>9 hố</dt>
-                  <dd>{price(pricing.standard.group.h9)}</dd>
-                  <small>mỗi nhóm</small>
-                </div>
-                <div>
-                  <dt>18 hố</dt>
-                  <dd>{price(pricing.standard.group.h18)}</dd>
-                  <small>mỗi nhóm</small>
-                </div>
-              </dl>
-            </article>
-          )}
-          {pricing.vip && !mergeVip ? (
-            <div className="pp-vip-rates">
-              <div className="fw-head">
-                <p className="fw-kicker">Phòng VIP</p>
-                <h2>Bảng giá phòng VIP</h2>
-              </div>
-              <div className="pp-rates">
-                {pricing.vip.rows.map((r) => (
-                  <RateCard key={'vip' + r.key} row={r} />
-                ))}
-              </div>
-            </div>
+        <section className="hm-section" id="gia-theo-gio">
+          <h2>Giá theo giờ</h2>
+          {hasHoles ? (
+            <>
+              <HoleTable title={pricing.vip ? 'Phòng tiêu chuẩn' : undefined} table={pricing.standard} />
+              {pricing.vip && <HoleTable title="Bảng giá phòng VIP" table={pricing.vip} />}
+            </>
           ) : (
-            !pricing.vip && (
-              <p className="pp-vip-note">
-                <Crown size={16} /> Phòng VIP dùng chung bảng giá trên.
-              </p>
-            )
+            <div className="hm-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Khung giờ</th>
+                    <th>{mergeVip ? 'Phòng tiêu chuẩn / giờ' : 'Giá / giờ'}</th>
+                    {mergeVip && <th>Phòng VIP / giờ</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {pricing.standard.rows.map((r) => (
+                    <tr key={r.key}>
+                      <td>
+                        {slot(r)}
+                        {r.gold && <em> Giờ vàng</em>}
+                      </td>
+                      <td>{price(r.gdr)}</td>
+                      {mergeVip && <td>{price(vipByKey.get(r.key)?.gdr ?? null)}</td>}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {!pricing.vip && (
+            <p className="hm-note" style={{ margin: '1.25rem 0 0' }}>
+              Phòng VIP dùng chung bảng giá trên.
+            </p>
           )}
         </section>
 
         {(pricing.offers.length > 0 || pricing.promotions.length > 0) && (
-          <section id="uu-dai" className="pp-section pp-offers-wrap">
-            <div className="fw-head" data-sc-in data-sc-stagger="70">
-              <p className="fw-kicker">Khuyến mãi</p>
-              <h2>Chương trình khuyến mãi</h2>
-            </div>
-            <PromoCards promotions={pricing.promotions} />
-            <div className="pp-offers" data-sc-in data-sc-stagger="70">
+          <section className="hm-section" id="uu-dai">
+            <h2>Khuyến mãi</h2>
+            <div className="hm-promos">
+              {pricing.promotions.map((p) => (
+                <article key={p.id}>
+                  <h3>{p.name}</h3>
+                  <strong>{p.benefit}</strong>
+                  <p>{p.condition}</p>
+                  {p.description && <p>{p.description}</p>}
+                </article>
+              ))}
               {pricing.offers.map(parseOffer).map((o) => (
                 <article key={o.title + o.value}>
-                  <Gift size={20} />
                   <h3>{o.title}</h3>
                   {o.value && <strong>{o.value}</strong>}
                   {o.note && <p>{o.note}</p>}
@@ -286,15 +185,13 @@ export default async function PricingPage() {
           </section>
         )}
 
-        <section id="goi" className="pp-section pp-tint">
-          <div className="fw-head" data-sc-in data-sc-stagger="70">
-            <p className="fw-kicker">Gói trả trước</p>
-            <h2>Mua trước, chơi nhiều hơn</h2>
-            <p className="fw-sub">
-              Đăng ký tại quầy hoặc gọi {BRAND.hotline} để được tư vấn gói phù hợp.
-            </p>
-          </div>
-          <nav className="pp-tabs" aria-label="Nhóm gói">
+        <section className="hm-section" id="goi">
+          <h2>Gói trả trước</h2>
+          <p className="hm-note">
+            Đăng ký tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>. Xem thêm{' '}
+            <a href="/thanh-vien">thẻ hội viên</a>.
+          </p>
+          <nav className="hm-sub-nav" aria-label="Nhóm gói">
             {pricing.groups.map((g) => (
               <a key={g.id} href={`#${g.id}`}>
                 {g.title}
@@ -306,63 +203,47 @@ export default async function PricingPage() {
           ))}
         </section>
 
-        <section id="luu-y" className="pp-section">
-          <div className="fw-head" data-sc-in>
-            <p className="fw-kicker">Lưu ý</p>
-            <h2>Trước khi bạn đến</h2>
-          </div>
-          <div className="pp-notes" data-sc-in data-sc-stagger="80">
-            <article>
-              <Receipt size={22} />
+        <section className="hm-section" id="luu-y">
+          <h2>Lưu ý</h2>
+          <ul className="hm-list">
+            <li>
               <h3>Thuế và phí</h3>
               <p>
                 Giá niêm yết chưa gồm VAT{vat ? ` ${vat}` : ''}
-                {fee ? ` và phí dịch vụ ${fee}` : ''}; các khoản này được cộng thêm trên hóa đơn khi
-                thanh toán.
+                {fee ? ` và phí dịch vụ ${fee}` : ''}; các khoản này cộng thêm trên hóa đơn.
               </p>
-            </article>
-            <article>
-              <Gift size={22} />
+            </li>
+            <li>
               <h3>Giờ vàng</h3>
               <p>
                 {goldRow
-                  ? `Khung giá ưu đãi: ${goldRow.days}, ${goldRow.from}–${goldRow.to}. Giá trong khung này thấp hơn khung thường.`
-                  : 'Khung giá ưu đãi (nếu có) được ghi ở các thẻ giá phía trên.'}
+                  ? `${goldRow.days}, ${goldRow.from}–${goldRow.to}. Giá thấp hơn khung thường.`
+                  : 'Khung giá ưu đãi (nếu có) ghi ở bảng trên.'}
               </p>
-            </article>
+            </li>
             {hasHoles && (
-              <article>
-                <Check size={22} />
+              <li>
                 <h3>Tích điểm</h3>
-                <p>Mỗi lượt 9 hố hoặc 18 hố được 1 điểm; đủ 10 điểm đổi 1 lượt chơi miễn phí.</p>
-              </article>
+                <p>Mỗi lượt 9 hoặc 18 hố được 1 điểm, đủ 10 điểm đổi 1 lượt chơi miễn phí.</p>
+              </li>
             )}
-          </div>
+          </ul>
         </section>
 
-        <section className="pp-section pp-cta-wrap">
-          <div className="pp-cta" data-sc-in data-sc-stagger="80">
-            <div>
-              <h2>Sẵn sàng ra line?</h2>
-              <p>
-                Gửi yêu cầu đặt chỗ chưa đầy một phút, nhân viên xác nhận ngay. Không cần thanh toán
-                trước.
-              </p>
-            </div>
-            <div className="pp-hero-actions">
-              <a className="fw-btn fw-btn-light" href={bookHref}>
-                {bookLabel} <ArrowUpRight size={16} />
-              </a>
-              <a className="fw-btn fw-btn-ghost" href={`tel:${BRAND.hotline}`}>
-                <Phone size={16} /> {BRAND.hotline}
-              </a>
-            </div>
+        <section className="hm-end">
+          <h2>Đặt chỗ</h2>
+          <p>Gửi yêu cầu, nhân viên xác nhận. Không cần trả trước.</p>
+          <div className="hm-hero-cta">
+            <a className="hm-btn hm-btn-brass" href={bookHref}>
+              {bookLabel}
+            </a>
+            <a className="hm-btn hm-btn-line" href={`tel:${BRAND.hotline}`}>
+              {BRAND.hotline}
+            </a>
           </div>
         </section>
       </main>
-
-      <ClubFooter hours="06:00–23:00" />
-      <LandingFx />
+      <SiteFooter />
     </div>
   );
 }

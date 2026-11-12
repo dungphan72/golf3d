@@ -2,9 +2,9 @@
 import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
 import { useRef, useState } from 'react';
 import { Bell, Play, Pause, Square, Printer, QrCode, CreditCard, Check, X, MessageCircle } from 'lucide-react';
-import { rooms, money, quote, wholeQuote, type Booking, type Segment } from '../../lib/club';
+import { rooms, money, sessionQuote, type Booking, type Segment, type BillPart } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
-import type { Bill } from '../../lib/pricing';
+import type { Bill, Service } from '../../lib/pricing';
 import { labels, time, date } from './shared';
 import { DialogHeading, ModalDialog, StatusBadge, type Tone } from './kit';
 import { useBill, BillAdjustments, DiscountForm, CashPay, RefundForm } from './BillTools';
@@ -61,15 +61,13 @@ export function SessionPanel({
   const snap = JSON.parse(b.price);
   const seg: Segment[] = JSON.parse(b.segments);
   if (b.status === 'playing' && b.started) seg.push({ start: b.started, end: now });
-  let q: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 },
+  let q: Bill & { parts?: BillPart[] } = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 },
     quoteError = '';
   try {
     q =
       b.status === 'booked' && snap.estimated
         ? snap.estimated
-        : b.service === 'gdr'
-          ? quote(seg, snap.config, snap.vip)
-          : wholeQuote(snap.base, snap.config, b.service as '9' | '18');
+        : sessionQuote(b.service as Service, seg, snap);
   } catch (e) {
     quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
   }
@@ -139,18 +137,53 @@ export function SessionPanel({
         </dl>
       </div>
       {operating && (
+        <div
+          role="radiogroup"
+          aria-label="Hình thức chơi"
+          style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '8px 0' }}
+        >
+          <span style={{ fontSize: 12, color: 'var(--ds-muted)' }}>Hình thức:</span>
+          {(
+            [
+              ['gdr', 'Tập theo giờ'],
+              ['9', 'Chơi game 9 hố'],
+              ['18', 'Chơi game 18 hố'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={b.service === value}
+              className={b.service === value ? 'primary' : 'secondary'}
+              disabled={busy || b.service === value}
+              style={{ height: 32, fontSize: 13 }}
+              onClick={() => onAction('switch-service', { service: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {operating && (
         <div className="sp-actions">
           {b.status === 'booked' && (
             <>
-              <button
-                className="primary"
-                disabled={busy}
-                aria-label="Bắt đầu chơi"
-                onClick={() => onAction('start')}
-              >
-                <Play size={17} />
-                Bắt đầu
-              </button>
+              {date(now) !== date(b.start) && now < b.start - 15 * 60000 ? (
+                <div style={{ fontSize: 13, color: 'var(--ds-muted)', padding: '6px 0' }}>
+                  Lịch đặt ngày {date(b.start)} (chỉ bắt đầu trong ngày hẹn)
+                </div>
+              ) : (
+                <button
+                  className="primary"
+                  disabled={busy}
+                  aria-label="Bắt đầu chơi"
+                  onClick={() => onAction('start')}
+                >
+                  <Play size={17} />
+                  Bắt đầu
+                </button>
+              )}
               <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
                 <X size={16} />
                 Hủy lịch
@@ -198,17 +231,33 @@ export function SessionPanel({
             <div key={i}>
               <span>
                 {l.label}
-                <small>
-                  {l.from != null && l.to != null
-                    ? `${date(l.from)} ${time(l.from)}–${time(l.to)} · `
-                    : ''}
-                  {l.minutes.toFixed(2)} phút × {money(l.rate)}/giờ
-                </small>
+                {!l.package && (
+                  <small>
+                    {l.from != null && l.to != null
+                      ? `${date(l.from)} ${time(l.from)}–${time(l.to)} · `
+                      : ''}
+                    {l.minutes.toFixed(2)} phút × {money(l.rate)}/giờ
+                  </small>
+                )}
               </span>
               <strong>{money(Math.round(l.amount))}</strong>
             </div>
           ))}
-          {b.service !== 'gdr' && snap.promo && snap.listBase > snap.base && (
+          {q.parts && q.parts.length > 1 && (
+            <>
+              {q.parts.map((p, i) => (
+                <div key={i} className="bill-part">
+                  <span>
+                    <b>
+                      {p.service === 'gdr' ? 'Tiền tập theo giờ' : `Tiền chơi game ${p.service} hố`}
+                    </b>
+                  </span>
+                  <strong>{money(p.subtotal)}</strong>
+                </div>
+              ))}
+            </>
+          )}
+          {!q.parts && b.service !== 'gdr' && snap.promo && snap.listBase > snap.base && (
             <>
               <div>
                 <span>Trọn lượt {b.service} hố (giá niêm yết)</span>
@@ -221,7 +270,13 @@ export function SessionPanel({
             </>
           )}
           <div>
-            <span>{b.service === 'gdr' ? 'Tiền dịch vụ' : `Trọn lượt ${b.service} hố`}</span>
+            <span>
+              {q.parts
+                ? 'Tổng tiền tập + chơi game'
+                : b.service === 'gdr'
+                  ? 'Tiền dịch vụ'
+                  : `Trọn lượt ${b.service} hố`}
+            </span>
             <strong>{money(q.subtotal)}</strong>
           </div>
           <div>

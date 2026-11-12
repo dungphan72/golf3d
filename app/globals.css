@@ -2315,7 +2315,6 @@ select:focus {
   }
   
   /* Hide footer completely on mobile for clean app experience */
-  footer,
   .fw-luxury-footer,
   .fw-footer,
   .pp-cta-wrap {
@@ -2472,5 +2471,52 @@ select:focus {
     padding: 1px 4px;
     line-height: 1.1;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  }
+}
+
+
+/* Mobile bottom navigation: plain text tabs, one solid action */
+.mnav {
+  display: none;
+}
+@media (max-width: 768px) {
+  .mnav {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    background: #faf8f3;
+    border-top: 1px solid #d9d3c4;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mnav a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 52px;
+    padding: 0 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #5a5f55;
+    text-align: center;
+    text-decoration: none;
+    border-top: 2px solid transparent;
+    margin-top: -1px;
+  }
+  .mnav a.on {
+    color: #10150f;
+    font-weight: 600;
+    border-top-color: #b08a3e;
+  }
+  .mnav a.cta {
+    background: #0f2e1a;
+    color: #fff;
+    font-weight: 600;
+  }
+  .mnav a.cta.on {
+    border-top-color: #b08a3e;
   }
 }

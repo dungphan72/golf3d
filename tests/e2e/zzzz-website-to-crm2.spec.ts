@@ -39,7 +39,7 @@ const newLeads = async () =>
 test.beforeAll(async ({ playwright }) => {
   owner = await playwright.request.newContext({ baseURL: 'http://127.0.0.1:8787' });
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
-  const rotated = await owner.post('/api/crm/channels', {
+  const rotated = await owner.post('/api/crm2/channels', {
     data: { action: 'rotate', kind: 'website' },
   });
   token = ((await rotated.json()) as Json).token;

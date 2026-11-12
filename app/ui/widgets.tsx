@@ -70,7 +70,7 @@ export function RoomGrid({
 
         const { live, due, next, soon, state } = roomInfo(r.id, bookings, now);
         if (!STATE_FILTER[filter].includes(state)) return null;
-        const open = live ?? due ?? next;
+        const open = live ?? due ?? (state === 'soon' ? soon : undefined);
         const chip = live
           ? labels[live.status]
           : due
@@ -86,9 +86,11 @@ export function RoomGrid({
           ? `${live.customer} · ${hm(now - (live.started ?? live.start))}`
           : due
             ? `${due.customer}${due.amount != null ? ' · ' + money(due.amount) : ''}`
-            : next
-              ? `${next.customer} · ${soon ? '' : date(next.start) + ' '}${time(next.start)}`
-              : '';
+            : soon
+              ? `${soon.customer} · ${time(soon.start)}`
+              : next && date(next.start) === date(now)
+                ? `${next.customer} · ${time(next.start)}`
+                : '';
         const canStart = state === 'free' || state === 'soon';
         return (
           <article
@@ -99,7 +101,7 @@ export function RoomGrid({
             <button
               type="button"
               className="room-hit"
-              onClick={() => (open ? onSelect(open) : onBook(r.id))}
+              onClick={() => (open ? onSelect(open) : onWalkIn(r.id))}
             >
               <span className="rc-head">
                 <span className="rc-name-group">

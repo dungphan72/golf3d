@@ -321,7 +321,7 @@ test('nhân sự: Zalo ID và email báo lưu được; nút trực bật tắt 
   await expect(page.getByRole('button', { name: /Đang nghỉ/ })).toBeVisible();
   await page.getByRole('button', { name: /Đang nghỉ/ }).click();
   await expect(page.getByRole('button', { name: /Đang trực/ })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Nhân sự', exact: true }).click();
   await expect(page.getByText('zalo-owner-1')).toBeVisible();
 });
 

@@ -1,6 +1,13 @@
 import type { CrmSettings } from './crm.ts';
 import type { Promotion } from './promotions.ts';
-import { ruleQuote, billTotals, type PriceRule, type Service, type Bill } from './pricing.ts';
+import {
+  ruleQuote,
+  billTotals,
+  type PriceRule,
+  type Service,
+  type Bill,
+  type PriceLine,
+} from './pricing.ts';
 export type Config = {
   priceRules?: PriceRule[];
   holidays?: string[];
@@ -141,6 +148,68 @@ export function quote(segments: Segment[], c: Config, vip = false): Bill {
 }
 export function wholeQuote(base: number, c: Config, service: Service = 'gdr') {
   return { lines: [], ...billTotals(base, c, service) };
+}
+export const serviceName = (s: Service) => (s === 'gdr' ? 'Tập theo giờ' : `Chơi game ${s} hố`);
+/** A finished stretch of a session that changed between hourly practice and a game round. */
+export type PriorPart = { service: Service; subtotal: number; lines: PriceLine[] };
+export type BillPart = { service: Service; label: string; subtotal: number };
+export function packageLine(
+  service: Service,
+  base: number,
+  promo?: { name: string } | null,
+  at?: number,
+): PriceLine {
+  return {
+    date: at != null ? localParts(at).date : '',
+    label: `${serviceName(service)} (trọn lượt)${promo ? ` · KM ${promo.name}` : ''}`,
+    minutes: 0,
+    rate: 0,
+    amount: base,
+    package: true,
+  };
+}
+export function clipSegments(segments: Segment[], from: number): Segment[] {
+  return segments
+    .map((s) => ({ start: Math.max(s.start, from), end: s.end }))
+    .filter((s) => s.end > s.start);
+}
+/**
+ * Bill of a session. Without a switch it is the plain hourly or whole-round quote. After switching
+ * between practice and a game, each finished stretch stays on the bill and the current one adds to it.
+ */
+export function sessionQuote(
+  service: Service,
+  segments: Segment[],
+  snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number },
+): Bill & { parts?: BillPart[] } {
+  const prior = snap.prior ?? [];
+  if (!prior.length)
+    return service === 'gdr'
+      ? quote(segments, snap.config, snap.vip)
+      : wholeQuote(snap.base, snap.config, service);
+  const lines: PriceLine[] = prior.flatMap((p) => p.lines);
+  const parts: BillPart[] = prior.map((p) => ({
+    service: p.service,
+    label: serviceName(p.service),
+    subtotal: p.subtotal,
+  }));
+  let subtotal = prior.reduce((s, p) => s + p.subtotal, 0);
+  if (service === 'gdr') {
+    const cur = quote(clipSegments(segments, snap.phaseFrom ?? 0), snap.config, snap.vip);
+    lines.push(...cur.lines.map((l) => ({ ...l, label: `${serviceName('gdr')} · ${l.label}` })));
+    parts.push({ service, label: serviceName(service), subtotal: cur.subtotal });
+    subtotal += cur.subtotal;
+  } else {
+    lines.push(packageLine(service, snap.base, snap.promo));
+    parts.push({ service, label: serviceName(service), subtotal: snap.base });
+    subtotal += snap.base;
+  }
+  const all = [...prior.map((p) => p.service), service];
+  const feeService =
+    snap.config.feeServices === undefined
+      ? service
+      : (all.find((s) => snap.config.feeServices!.includes(s)) ?? service);
+  return { lines, parts, ...billTotals(subtotal, snap.config, feeService) };
 }
 export function ready(c: Config) {
   return (

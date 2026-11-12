@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Chips, DataTable, Loading } from '../../../app/ui/kit';
+import { Chips, DataTable, FilterBar, KpiTile, Loading } from '../../../app/ui/kit';
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -202,34 +202,22 @@ export function TicketsScreen({ manager }: { manager: boolean }) {
   };
   return (
     <div style={{ display: 'grid', gap: 16 }}>
-      <div className="crm-kpis" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}>
-        <div>
-          <span>Đang mở</span>
-          <strong>{s.open}</strong>
-        </div>
-        <div className={s.overdue > 0 ? 'late' : ''}>
-          <span>Quá hạn SLA</span>
-          <strong>{s.overdue}</strong>
-        </div>
-        <div>
-          <span>Chờ khách</span>
-          <strong>{s.waiting}</strong>
-        </div>
-        <div>
-          <span>Giải quyết 30 ngày</span>
-          <strong>{s.resolvedInPeriod}</strong>
-        </div>
-        <div>
-          <span>Hài lòng TB ({s.rated} lượt chấm)</span>
-          <strong>{s.avgRating == null ? '—' : s.avgRating + '/5'}</strong>
-        </div>
-        <div>
-          <span>Giờ xử lý TB</span>
-          <strong>{s.avgResolveHours == null ? '—' : s.avgResolveHours + ' giờ'}</strong>
-        </div>
-      </div>
+      <section className="ds-tiles" aria-label="Tổng quan ticket">
+        <KpiTile label="Đang mở" value={s.open} />
+        <KpiTile label="Quá hạn SLA" value={s.overdue} />
+        <KpiTile label="Chờ khách" value={s.waiting} />
+        <KpiTile label="Giải quyết 30 ngày" value={s.resolvedInPeriod} />
+        <KpiTile label="Hài lòng TB" value={s.avgRating == null ? '—' : s.avgRating + '/5'} hint={`${s.rated} lượt chấm`} />
+        <KpiTile label="Giờ xử lý TB" value={s.avgResolveHours == null ? '—' : s.avgResolveHours + ' giờ'} />
+      </section>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+      <FilterBar
+        right={
+          <button className="primary" onClick={() => setAdding(!adding)}>
+            + Tạo ticket
+          </button>
+        }
+      >
         <Chips
           value={filter}
           onChange={setFilter}
@@ -241,8 +229,7 @@ export function TicketsScreen({ manager }: { manager: boolean }) {
             { key: 'all', label: 'Tất cả' },
           ]}
         />
-        <button onClick={() => setAdding(!adding)}>+ Tạo ticket</button>
-      </div>
+      </FilterBar>
 
       {adding && (
         <form

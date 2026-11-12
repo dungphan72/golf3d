@@ -27,6 +27,8 @@ export type PriceLine = {
   ruleId?: string;
   /** Promotion that lowered this line's hourly rate, if any. */
   promoId?: string;
+  /** A whole-round (game) charge: shown as one amount, not minutes × rate. */
+  package?: boolean;
 };
 export type Bill = {
   lines: PriceLine[];

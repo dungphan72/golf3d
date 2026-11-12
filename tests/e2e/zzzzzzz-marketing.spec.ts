@@ -31,7 +31,7 @@ async function website(p: string, campaign: string) {
 test.beforeAll(async ({ playwright }) => {
   owner = await playwright.request.newContext({ baseURL: origin });
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
-  const rotated = await owner.post('/api/crm/channels', { data: { action: 'rotate', kind: 'website' } });
+  const rotated = await owner.post('/api/crm2/channels', { data: { action: 'rotate', kind: 'website' } });
   token = ((await rotated.json()) as Json).token;
 });
 test.afterAll(async () => owner.dispose());
@@ -130,8 +130,9 @@ test('giao diện: tab Marketing hiện chỉ số, chiến dịch và thêm đ�
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Marketing', exact: true }).click();
-  await expect(crm.getByText('CPL (chi phí / lead)')).toBeVisible();
+  await expect(crm.getByRole('region', { name: 'Tổng quan marketing' }).getByText('CPL', { exact: true })).toBeVisible();
   await expect(crm.getByRole('region', { name: 'Hiệu quả theo chiến dịch' })).toContainText('Khai trương T11');
+  await crm.getByRole('tab', { name: /Số seeding/ }).click();
   await crm.getByLabel('Số điện thoại').fill('0933 444 555');
   await crm.getByRole('button', { name: 'Thêm số' }).click();
   await expect(crm.getByText('Đã thêm số seeding')).toBeVisible();

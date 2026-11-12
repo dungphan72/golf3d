@@ -1,5 +1,13 @@
 # Tiến độ Golf3D
 
+## Làm mới landing page và lối vào cổng khách hàng (2026-11-12)
+- Thay bố cục trang chủ bằng giao diện biên tập mới, giữ bảng giá, gói, thông tin cơ sở, dữ liệu SEO và luồng đặt lịch hiện có.
+- Bổ sung lối vào **Cổng khách hàng** ở thanh điều hướng, khu vực giới thiệu riêng và chân trang; cập nhật tên trang đăng nhập để phân biệt rõ với cổng nhân viên.
+- Bố trí nút vào cổng luôn thấy được trên màn hình nhỏ; kiểm thử đường dẫn từ landing page tới tài khoản khách hàng.
+- Bỏ phần nhận xét khách hàng và các tiện ích/quảng cáo không có căn cứ xác nhận; sửa thông tin line tiêu chuẩn/VIP theo yêu cầu đã ghi nhận.
+- Xác minh: `pnpm typecheck`, ESLint các tệp TypeScript đã sửa, E2E `a-landing.spec.ts` (2/2) và `pnpm build` đều đạt.
+- Đây vẫn là pilot riêng tư; không thay đổi audience hoặc tuyên bố sẵn sàng production.
+
 ## Tinh gọn giao diện luồng tính tiền & thanh toán POS (2026-11-10)
 - **Sửa lỗi hiển thị form thu tiền mặt & hóa đơn trên màn hình**:
   - Sửa lỗi toàn bộ các thành phần trong hộp thoại thu tiền mặt (`CashPay`) bị co kéo thành một hàng ngang méo mó do thừa kế `display: flex` của `.info-strip`: chuyển thành bố cục dọc chuẩn (`flex-direction: column; width: 100%`) với hàng tiêu đề, ô nhập tiền khách đưa to rõ, các nút chọn nhanh mệnh giá (`100k`, `200k`, `500k`, `Vừa đủ`), hiển thị tiền thừa màu xanh nổi bật và nút xác nhận thu tiền mặt.

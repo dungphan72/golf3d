@@ -47,6 +47,21 @@ export const memberActionInput = z.discriminatedUnion('action', [
     })
     .strict(),
   z.object({ action: z.literal('book-cancel'), id: z.string().min(8).max(64) }).strict(),
+  z.object({ action: z.literal('card-activate'), packageId: z.string().min(8).max(64) }).strict(),
+  z
+    .object({
+      action: z.literal('absence-create'),
+      requestId: z
+        .string()
+        .min(16)
+        .max(100)
+        .regex(/^[A-Za-z0-9_-]+$/),
+      packageId: z.string().min(8).max(64),
+      startDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      endDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    })
+    .strict(),
+  z.object({ action: z.literal('absence-cancel'), id: z.string().min(8).max(64) }).strict(),
 ]);
 export type MemberActionInput = z.infer<typeof memberActionInput>;
 

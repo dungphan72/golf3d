@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
+import { cardState, isPeriodCard, maxAbsences, MIN_ABSENCE_DAYS, clubDay } from '../../lib/card-term';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
 import { tierOf } from '../../lib/member-card';
@@ -44,7 +45,12 @@ type Pack = {
   purchased: number;
   expires: number;
   balances: Balance[];
+  valid_days?: number;
+  activated_at?: number | null;
+  activate_by?: number | null;
+  grants?: string;
 };
+type PortalAbsence = { id: string; package_id: string; start_day: string; end_day: string; days: number; status: string };
 type Overview = {
   profile: { name: string; phone: string; email: string; verified: boolean };
   club?: { name: string; address: string };
@@ -53,6 +59,7 @@ type Overview = {
   points?: number;
   wallet?: number;
   packages?: Pack[];
+  absences?: PortalAbsence[];
   usage?: {
     created: number;
     kind: GrantKind;
@@ -185,9 +192,9 @@ function AuthForms({ onDone, first }: { onDone: () => void; first: 'register' | 
         <div className="mp-auth-head">
           <div className="mp-auth-badge">
             <Sparkles size={14} />
-            <span>Saigon Golf 3D Club · Cổng Hội Viên</span>
+            <span>Saigon Golf 3D Club · Cổng khách hàng</span>
           </div>
-          <h1>{mode === 'login' ? 'Đăng Nhập Hội Viên' : 'Đăng Ký Tài Khoản'}</h1>
+          <h1>{mode === 'login' ? 'Đăng Nhập Khách Hàng' : 'Tạo Tài Khoản Khách Hàng'}</h1>
           <p>
             {mode === 'login'
               ? 'Nhập số điện thoại để quản lý thẻ, số dư giờ chơi và đặt line nhanh.'
@@ -722,6 +729,15 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
     );
   }
 
+  const act = async (task: () => Promise<unknown>, done: string) => {
+    try {
+      await task();
+      window.alert(done);
+      await load();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : 'Không thực hiện được');
+    }
+  };
   const packs = data.packages ?? [];
   const live = packs.filter((p) => p.expires >= now);
   const total = (kind: GrantKind) =>
@@ -1172,13 +1188,22 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
             {packs.length ? (
               <div className="mp-packs">
                 {packs.map((p) => {
-                  const expired = p.expires < now;
+                  const st = cardState({
+                    activatedAt: p.activated_at ?? null,
+                    activateBy: p.activate_by ?? null,
+                    expires: p.expires,
+                    now,
+                  });
+                  const expired = st === 'expired';
+                  const period = !!p.grants && isPeriodCard(JSON.parse(p.grants));
+                  const myAbs = (data.absences ?? []).filter((a) => a.package_id === p.id && a.status === 'active');
+                  const limit = maxAbsences(p.valid_days ?? 30);
                   const empty = p.balances.length > 0 && p.balances.every((b) => b.remaining <= 0);
                   return (
                     <article key={p.id} className={expired || empty ? 'mp-pack off' : 'mp-pack'}>
                       <h3>{p.name}</h3>
                       <span className="mp-chip">
-                        {expired ? 'Hết hạn' : empty ? 'Đã hết giờ' : 'Đang hiệu lực'}
+                        {expired ? 'Hết hạn' : st === 'pending' ? 'Chờ kích hoạt' : empty ? 'Đã hết giờ' : 'Đang hiệu lực'}
                       </span>
                       <ul>
                         {p.balances.map((b) => (
@@ -1188,15 +1213,66 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                         ))}
                         <li>
                           Hạn sử dụng:{' '}
-                          {p.expires - p.purchased >= 3650 * 86_400_000 * 0.99
-                            ? 'Không giới hạn thời gian'
-                            : day(p.expires)}
+                          {st === 'pending' && p.activate_by
+                            ? `Tự kích hoạt ngày ${day(p.activate_by)} (hoặc khi bạn bắt đầu chơi)`
+                            : p.expires - p.purchased >= 3650 * 86_400_000 * 0.99
+                              ? 'Không giới hạn thời gian'
+                              : day(p.expires)}
                         </li>
+                        {myAbs.map((a) => (
+                          <li key={a.id}>
+                            Lịch vắng: {a.start_day.split('-').reverse().join('/')} – {a.end_day.split('-').reverse().join('/')} ({a.days} ngày)
+                            {a.start_day > clubDay(now) && (
+                              <button
+                                type="button"
+                                className="mp-banner-link"
+                                onClick={() =>
+                                  act(() => call({ action: 'absence-cancel', id: a.id }), 'Đã huỷ lịch vắng')
+                                }
+                              >
+                                {' '}Huỷ
+                              </button>
+                            )}
+                          </li>
+                        ))}
                         <li>
                           Phòng áp dụng: {PACKAGE_ROOM_LABELS[p.room as PackageRoom] ?? 'Tất cả phòng'}
                         </li>
                         {p.perks && <li style={{ color: 'var(--gold)' }}>★ Đặc quyền: {p.perks}</li>}
                       </ul>
+                      {(st === 'pending' || (period && st === 'active')) && (
+                        <div className="mp-row" style={{ gap: 8, marginTop: 8 }}>
+                          {st === 'pending' && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                act(() => call({ action: 'card-activate', packageId: p.id }), 'Đã kích hoạt thẻ')
+                              }
+                            >
+                              Kích hoạt ngay
+                            </button>
+                          )}
+                          {period && st === 'active' && (
+                            <button
+                              type="button"
+                              disabled={myAbs.length >= limit}
+                              onClick={() => {
+                                const start = window.prompt('Ngày bắt đầu vắng (YYYY-MM-DD, sau hôm nay)', clubDay(now + 86_400_000));
+                                if (!start) return;
+                                const n = Number(window.prompt(`Số ngày vắng liên tục (tối thiểu ${MIN_ABSENCE_DAYS})`, String(MIN_ABSENCE_DAYS)));
+                                if (!Number.isInteger(n) || n < 1) return;
+                                const end = new Date(Date.parse(start + 'T00:00:00Z') + (n - 1) * 86_400_000).toISOString().slice(0, 10);
+                                act(
+                                  () => call({ action: 'absence-create', packageId: p.id, startDay: start, endDay: end }),
+                                  `Đã báo vắng, hạn thẻ được cộng thêm ${n} ngày`,
+                                );
+                              }}
+                            >
+                              Báo vắng ({myAbs.length}/{limit})
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </article>
                   );
                 })}

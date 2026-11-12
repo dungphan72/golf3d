@@ -1,0 +1,89 @@
+/* Inner pages (bảng giá, thẻ hội viên): builds on home.css, scoped by .hm */
+.hm .hm-page {
+  padding: clamp(2.5rem, 6vw, 5rem) var(--edge) 0;
+}
+.hm .hm-page h1 {
+  font-size: clamp(2.75rem, 1rem + 6vw, 5.5rem);
+  max-width: 16ch;
+}
+.hm .hm-page > p {
+  max-width: 34rem;
+  margin-top: 1.25rem;
+  color: var(--muted);
+  font-size: 1.0625rem;
+}
+.hm .hm-meta {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin-top: 1.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  font-size: 0.9375rem;
+}
+.hm .hm-sub-nav {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin: -1rem 0 2rem;
+  font-size: 0.9375rem;
+}
+.hm .hm-sub-nav a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.hm .hm-pk-grid article ul {
+  list-style: none;
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.5rem;
+  font-size: 0.9375rem;
+}
+.hm .hm-pk-grid article li::before {
+  content: '— ';
+  color: var(--brass-ink);
+}
+.hm .hm-pk-grid article.vip li::before {
+  color: #e3c47a;
+}
+.hm .hm-list {
+  list-style: none;
+  display: grid;
+  border-top: 1px solid var(--ink);
+}
+.hm .hm-list li {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) 2fr;
+  gap: 2rem;
+  padding: 1.1rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+.hm .hm-list h3 {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+}
+.hm .hm-list p {
+  color: var(--muted);
+}
+.hm .hm-end {
+  margin-top: clamp(4rem, 9vw, 7rem);
+  background: var(--forest);
+  color: #e8efe6;
+  padding: clamp(2.5rem, 6vw, 4.5rem) var(--edge);
+}
+.hm .hm-end h2 {
+  color: #fff;
+  margin-bottom: 0.75rem;
+}
+.hm .hm-end p {
+  max-width: 32rem;
+  color: #b9c8b8;
+}
+@media (max-width: 860px) {
+  .hm .hm-list li {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}

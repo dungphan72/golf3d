@@ -283,6 +283,19 @@ export function DialogHeading({
   );
 }
 
+/** TAG-style section card: hairline border, title with an optional muted sub-line. Shared by every CRM screen. */
+export function Card({ title, sub, children }: { title: string; sub?: string; children: ReactNode }) {
+  return (
+    <div className="crm-section-card">
+      <header>
+        <h3>{title}</h3>
+        {sub && <small className="muted">{sub}</small>}
+      </header>
+      {children}
+    </div>
+  );
+}
+
 export type Tone = 'ok' | 'info' | 'warn' | 'late' | 'muted';
 const TONE_MARK: Record<Tone, string> = { ok: '✓', info: '●', warn: '!', late: '⚠', muted: '–' };
 /** Status label whose meaning never depends on colour alone: a mark plus the text. */

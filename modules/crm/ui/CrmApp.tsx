@@ -1,7 +1,6 @@
 'use client';
 import { CareTasksView } from './CareTasks';
 import { ViewLogScreen } from './ViewLogScreen';
-import { BlockedScreen } from './BlockedScreen';
 import { CampaignsScreen } from './CampaignsScreen';
 import { MarketingScreen } from './MarketingScreen';
 import { CrmShell } from './CrmShell';
@@ -11,15 +10,13 @@ import { ReportScreen } from './ReportScreen';
 import { ResponseScreen } from './ResponseScreen';
 import { TicketsScreen } from './TicketsScreen';
 import { CARE_RULES, type CareSettings } from '../core/care';
-import { useCallback, useEffect, useMemo, useState, type ComponentProps, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
-  Users,
   Target,
   GitFork,
   PhoneCall,
   Sparkles,
   Package,
-  Layers,
   Save,
   RotateCcw,
   CheckCircle2,
@@ -30,11 +27,11 @@ import {
 } from 'lucide-react';
 import { Loading } from '../../../app/ui/kit';
 import { money } from '../../../lib/club';
+import { PageTabs } from '../../../app/ui/kit';
 import { call, errText, type Staff } from './api';
 import { ChannelsScreen } from './ChannelsScreen';
 import { LeadDetail } from './LeadDetail';
-import { SalesStaffManager } from './SalesStaffManager';
-import { LeadDistributionScreen } from './LeadDistributionScreen';
+import { StaffScreen } from './StaffScreen';
 import {
   AppointmentsScreen,
   LeadsScreen,
@@ -219,38 +216,14 @@ function renderSampleMessage(tmpl: string) {
   return <span>&ldquo;{sample}&rdquo;</span>;
 }
 
-/** Quản lý đội ngũ Sales: Thêm, sửa, xóa, phân quyền vai trò, định tuyến máy lẻ & nhận lead. */
-function StaffTable({
-  s,
-  setS,
-  data,
-  reload,
-}: {
-  s: Settings;
-  setS: (s: Settings) => void;
-  data: Config;
-  reload: () => Promise<void>;
-}) {
-  type Mgr = ComponentProps<typeof SalesStaffManager>;
-  return (
-    <SalesStaffManager
-      s={s as unknown as Mgr['s']}
-      setS={setS as unknown as Mgr['setS']}
-      data={data as unknown as Mgr['data']}
-      reload={reload}
-    />
-  );
-}
-
 function ConfigScreen() {
-  const { data, error, reload, setError } = useLoad<Config>('/api/crm2/config');
+  const { data, error, setError } = useLoad<Config>('/api/crm2/config');
   const products = useLoad<{ products: Product[] }>('/api/crm2/sales?view=products');
   const [s, setS] = useState<Settings | null>(null);
   const [retry, setRetry] = useState('');
   const [msg, setMsg] = useState('');
   const [saving, setSaving] = useState(false);
-  const [section, setSection] = useState<'all' | 'staff' | 'intake' | 'channels' | 'pipeline' | 'care' | 'products'>('all');
-  const [p, setP] = useState({ code: '', name: '', listPrice: '', limited: false });
+  const [section, setSection] = useState<'intake' | 'channels' | 'pipeline' | 'care' | 'products'>('intake');
   const [initial, setInitial] = useState('');
 
   useEffect(() => {
@@ -328,11 +301,9 @@ function ConfigScreen() {
     );
   if (!s) return <Loading />;
 
-  const show = (sec: string) => section === 'all' || section === sec;
+  const show = (sec: string) => section === sec;
 
   const SECTIONS = [
-    { key: 'all' as const, label: 'Tất cả thiết lập', desc: 'Xem toàn bộ cài đặt', icon: Layers },
-    { key: 'staff' as const, label: 'Đội ngũ sales', desc: 'Nhân sự & kênh liên lạc', icon: Users },
     { key: 'intake' as const, label: 'Tiếp nhận & SLA', desc: 'Chia lead & kho số', icon: Target },
     { key: 'channels' as const, label: 'Định tuyến kênh', desc: 'Website, Zalo, FB, Ads', icon: GitFork },
     { key: 'pipeline' as const, label: 'Bán hàng & Giờ làm', desc: 'Gọi lại, lịch hẹn, giữ chỗ', icon: PhoneCall },
@@ -350,10 +321,7 @@ function ConfigScreen() {
 
       {/* Sticky Header with Action Bar */}
       <div className="crm-settings-header">
-        <div className="crm-settings-title-group">
-          <span className="crm-settings-breadcrumb">Hệ thống / Thiết lập CRM</span>
-          <h3>Thiết lập & Cấu hình CRM</h3>
-        </div>
+        <span className="muted">Thay đổi có hiệu lực sau khi bấm Lưu cấu hình.</span>
         <div className="crm-settings-actions">
           {saving ? (
             <span className="crm-status-pill saving">
@@ -397,58 +365,13 @@ function ConfigScreen() {
       </div>
 
       {/* Main Settings Two-Column Layout */}
-      <div className="crm-settings-layout">
-        {/* Left Navigation Sidebar */}
-        <nav className="crm-settings-nav" aria-label="Danh mục thiết lập">
-          {SECTIONS.map((sec) => {
-            const Icon = sec.icon;
-            const isActive = section === sec.key;
-            return (
-              <button
-                key={sec.key}
-                type="button"
-                className={`crm-nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => setSection(sec.key)}
-              >
-                <div className="crm-nav-icon">
-                  <Icon size={16} />
-                </div>
-                <div className="crm-nav-text">
-                  <span className="crm-nav-label">{sec.label}</span>
-                  <span className="crm-nav-desc">{sec.desc}</span>
-                </div>
-                {sec.key === 'staff' && data?.staff && (
-                  <span className="crm-nav-badge">{data.staff.length}</span>
-                )}
-                {sec.key === 'care' && (
-                  <span className="crm-nav-badge">5</span>
-                )}
-                {sec.key === 'products' && (products.data?.products?.length ?? 0) > 0 && (
-                  <span className="crm-nav-badge">{products.data?.products.length}</span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Right Settings Content */}
+      <PageTabs
+        value={section}
+        onChange={(k) => setSection(k as typeof section)}
+        tabs={SECTIONS.map((x) => ({ key: x.key, label: x.label }))}
+      />
+      <div>
         <div className="crm-settings-content">
-          {/* Section 1: Staff */}
-          {show('staff') && (
-            <section className="crm-settings-card">
-              <div className="crm-settings-card-header">
-                <div className="crm-card-title-group">
-                  <h3>
-                    <Users size={18} style={{ color: 'var(--kv-blue, #1f7a4d)' }} />
-                    Đội ngũ Sales & Phân quyền vai trò
-                  </h3>
-                  <p>Thêm, sửa, xóa, phân quyền vai trò kinh doanh, cấu hình máy lẻ & cơ chế nhận lead tự động.</p>
-                </div>
-              </div>
-              <StaffTable s={s} setS={setS} data={data!} reload={reload} />
-            </section>
-          )}
-
           {/* Section 2: Intake & SLA */}
           {show('intake') && (
             <section className="crm-settings-card">
@@ -943,7 +866,7 @@ function ConfigScreen() {
               <div className="crm-settings-card-header">
                 <div className="crm-card-title-group">
                   <h3>Danh mục dịch vụ và gói</h3>
-                  <p>Bảng sản phẩm CRM phục vụ chốt đơn, giữ chỗ và theo dõi doanh thu.</p>
+                  <p>Lấy từ bảng giá và gói của câu lạc bộ; chỉ xem. Muốn đổi giá hoặc thêm gói, sửa ở phần bảng giá của câu lạc bộ.</p>
                 </div>
               </div>
 
@@ -972,68 +895,6 @@ function ConfigScreen() {
                 </table>
               </div>
 
-              <div className="crm-product-add-bar">
-                <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--kv-text, #24332b)' }}>
-                  + Thêm gói dịch vụ mới:
-                </span>
-                <input
-                  aria-label="Mã dịch vụ"
-                  placeholder="Mã (VD: GOI-9H)"
-                  style={{ height: 34, width: 140, fontSize: 13 }}
-                  value={p.code}
-                  onChange={(e) => setP({ ...p, code: e.target.value })}
-                />
-                <input
-                  aria-label="Tên dịch vụ"
-                  placeholder="Tên dịch vụ"
-                  style={{ height: 34, width: 220, fontSize: 13 }}
-                  value={p.name}
-                  onChange={(e) => setP({ ...p, name: e.target.value })}
-                />
-                <input
-                  aria-label="Giá niêm yết"
-                  inputMode="numeric"
-                  placeholder="Giá niêm yết (đồng)"
-                  style={{ height: 34, width: 160, fontSize: 13 }}
-                  value={p.listPrice}
-                  onChange={(e) => setP({ ...p, listPrice: e.target.value.replace(/\D/g, '') })}
-                />
-                <label className="crm-switch-wrap" title="Chỉ một khách giữ">
-                  <input
-                    type="checkbox"
-                    className="crm-switch-input"
-                    checked={p.limited}
-                    onChange={(e) => setP({ ...p, limited: e.target.checked })}
-                  />
-                  <span className="crm-switch-slider" />
-                </label>
-                <span style={{ fontSize: '12.5px', color: 'var(--kv-muted, #66756c)' }}>Chỉ 1 khách giữ</span>
-                <button
-                  type="button"
-                  className="secondary"
-                  disabled={!p.code || !p.name}
-                  style={{ height: 34, padding: '0 14px', fontSize: '13px' }}
-                  onClick={async () => {
-                    try {
-                      await call('/api/crm2/sales', {
-                        action: 'product',
-                        code: p.code,
-                        name: p.name,
-                        listPrice: Number(p.listPrice) || 0,
-                        limited: p.limited,
-                        active: true,
-                      });
-                      setP({ code: '', name: '', listPrice: '', limited: false });
-                      await products.reload();
-                      await reload();
-                    } catch (e) {
-                      setError(errText(e));
-                    }
-                  }}
-                >
-                  Lưu dịch vụ
-                </button>
-              </div>
             </section>
           )}
         </div>
@@ -1131,7 +992,6 @@ export function CrmModule({
       {current === 'work' && <WorkScreen s={shared} />}
       {current === 'pool' && <PoolScreen s={shared} />}
       {current === 'leads' && <LeadsScreen s={shared} board={false} />}
-      {current === 'distribute' && <LeadDistributionScreen s={shared} />}
       {current === 'pipeline' && <LeadsScreen s={shared} board />}
       {current === 'care' && <CareTasksView s={shared} onOpenCustomer={openCustomer} />}
       {current === 'appointments' && <AppointmentsScreen s={shared} />}
@@ -1146,7 +1006,7 @@ export function CrmModule({
       {current === 'report' && <ReportScreen />}
       {current === 'response' && <ResponseScreen onOpenLead={setLead} />}
       {current === 'config' && <ConfigScreen />}
-      {current === 'blocked' && <BlockedScreen />}
+      {current === 'staff' && <StaffScreen />}
       {current === 'viewlog' && <ViewLogScreen onOpenLead={setLead} />}
     </div>,
   );

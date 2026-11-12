@@ -8,47 +8,13 @@ test('khách đặt chỗ ngay trên trang chủ', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByRole('link', { name: /Đặt chỗ/ }).first()).toBeVisible();
   const form = page.locator('#dat-cho');
-  await expect(form.getByRole('heading', { name: /Chọn giờ, nhân viên xác nhận/ })).toBeVisible();
+  await expect(form.getByRole('heading', { name: 'Đặt chỗ', exact: true })).toBeVisible();
   await form.getByLabel('Dịch vụ').selectOption('9');
   await form.getByLabel(/Ngày, giờ bắt đầu/).fill(`${vnDay(1)}T15:00`);
   await form.getByLabel('Họ và tên').fill('Khách Trang Chủ');
   await form.getByLabel('Số điện thoại').fill('0944555666');
   await form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
   await expect(form.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
-});
-
-test('thanh đặt nhanh điền dịch vụ, phòng và khung giờ vào biểu mẫu', async ({ page }) => {
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.goto('/');
-  const quickBooking = page.locator('.fw-quick-booking');
-  await quickBooking.getByRole('button', { name: 'Ngày mai' }).click();
-  await quickBooking.getByRole('button', { name: 'Tối (18h-22h)' }).click();
-  await quickBooking.getByRole('button', { name: 'Game 18 hố' }).click();
-  await quickBooking.getByRole('button', { name: 'Phòng VIP riêng' }).click();
-  await quickBooking.getByRole('button', { name: 'Điền thông tin đặt lịch' }).click();
-
-  const form = page.locator('#dat-cho');
-  await expect(form.getByLabel('Dịch vụ')).toHaveValue('18');
-  await expect(form.getByLabel('Phòng VIP riêng tư')).toBeChecked();
-  await expect(form.getByLabel('Ngày, giờ bắt đầu (giờ Việt Nam)')).toHaveValue(
-    `${vnDay(1)}T18:00`,
-  );
-  await expect(form.getByLabel('Họ và tên')).toBeEmpty();
-  await expect(form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' })).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
-
-  await quickBooking.getByRole('button', { name: 'Chọn ngày' }).click();
-  await quickBooking.getByRole('button', { name: 'Điền thông tin đặt lịch' }).click();
-  await expect(form.getByLabel('Ngày, giờ bắt đầu (giờ Việt Nam)')).toBeEmpty();
-  await expect(form.getByText('Vui lòng chọn ngày và giờ trong biểu mẫu.')).toBeVisible();
-
-  await quickBooking.getByRole('button', { name: 'Ngày mai' }).click();
-  await quickBooking.getByRole('button', { name: 'Điền thông tin đặt lịch' }).click();
-  await form.getByLabel('Họ và tên').fill('Khách Thanh Đặt Nhanh');
-  await form.getByLabel('Số điện thoại').fill('0944555667');
-  await form.getByRole('button', { name: 'Gửi yêu cầu đặt lịch' }).click();
-  await expect(form.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
-  await expect(form).toContainText('Game 18 hố · phòng VIP');
 });
 
 test('trang đặt lịch riêng nhận thông tin điền sẵn và gửi yêu cầu', async ({ page }) => {

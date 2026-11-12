@@ -14,30 +14,10 @@ export type PackageTemplate = {
 const DAYS = 30;
 /**
  * Prepaid cards from the official "Bảng giá" poster (11/2026), see docs/PRICING.md.
- *  - Hour cards: buy 10 get 2 (12 hours), buy 20 get 5 (25 hours); practice only.
- *    The poster gives no card price: it is set at 150.000đ × purchased hours (the Mon–Fri
- *    standard hourly rate) and awaits owner confirmation.
+ *  - Hour cards were removed: top-up bonuses live in the money wallet (lib/wallet.ts).
  *  - Monthly cards: unlimited playing hours, validity counted from the activation date.
  */
 export const OFFICIAL_PACKAGES: PackageTemplate[] = [
-  {
-    key: 'hour-10',
-    name: 'Thẻ giờ · mua 10 giờ tặng 2 giờ',
-    price: 1_500_000,
-    grants: [{ kind: 'gdr', qty: 12 }],
-    validDays: 3650,
-    perks: 'Tổng 12 giờ · chỉ áp dụng tập luyện',
-    section: 'Thẻ giờ',
-  },
-  {
-    key: 'hour-20',
-    name: 'Thẻ giờ · mua 20 giờ tặng 5 giờ',
-    price: 3_000_000,
-    grants: [{ kind: 'gdr', qty: 25 }],
-    validDays: 3650,
-    perks: 'Tổng 25 giờ · chỉ áp dụng tập luyện',
-    section: 'Thẻ giờ',
-  },
   {
     key: 'month-1',
     name: 'Thẻ tháng · 1 tháng',

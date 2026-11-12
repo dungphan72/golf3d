@@ -11,7 +11,8 @@ import {
   temporaryPassword,
 } from '../auth/password';
 import { normalizePhone, validPhone } from '../member';
-import { CREATE_CUSTOMER_SQL, WALLET_BALANCE_SQL } from '../package-sql';
+import { CREATE_CUSTOMER_SQL, WALLET_BALANCE_SQL, ABSENCES_SQL } from '../package-sql';
+import { activateCard, addAbsence, cancelAbsence } from './card-service';
 import { rooms } from '../club';
 import { submitRequest } from './online-service';
 import { sendWebsiteLead } from './website-lead';
@@ -256,6 +257,11 @@ type PackageRow = {
   room: string;
   purchased: number;
   expires: number;
+  type_id: string | null;
+  valid_days: number;
+  activated_at: number | null;
+  activate_by: number | null;
+  grants: string;
   balances: string | null;
 };
 
@@ -276,10 +282,10 @@ export async function memberOverview(user: MemberUser): Promise<R> {
   if (!user.verified) return reply({ profile });
   const now = Date.now();
   const config = await loadConfig(user.tenant);
-  const [packages, usage, points, bookings, requests, catalog, orders] = await Promise.all([
+  const [packages, usage, points, bookings, requests, catalog, orders, absences] = await Promise.all([
     d
       .prepare(
-        `SELECT cp.id,cp.name,cp.source,cp.perks,cp.room,cp.purchased,cp.expires,
+        `SELECT cp.id,cp.name,cp.source,cp.perks,cp.room,cp.purchased,cp.expires,cp.type_id,cp.valid_days,cp.activated_at,cp.activate_by,cp.grants,
            (SELECT json_group_array(json_object('kind',b.kind,'remaining',b.remaining)) FROM package_balances b WHERE b.tenant=cp.tenant AND b.package_id=cp.id) AS balances
          FROM customer_packages cp WHERE cp.tenant=? AND cp.customer_id=? ORDER BY cp.purchased DESC LIMIT 50`,
       )
@@ -353,6 +359,7 @@ export async function memberOverview(user: MemberUser): Promise<R> {
       )
       .bind(user.tenant, user.customerId)
       .all<{ id: string; name: string; price: number; created: number }>(),
+    d.prepare(ABSENCES_SQL).bind(user.tenant, user.customerId).all(),
   ]);
   const roomName = (id: string | null) => rooms.find((r) => r.id === id)?.name ?? id ?? '';
   const wallet = await d
@@ -378,6 +385,7 @@ export async function memberOverview(user: MemberUser): Promise<R> {
     })),
     catalog: catalog.results,
     orders: orders.results,
+    absences: absences.results,
     booking: {
       enabled: !!config.onlineEnabled && !!config.onlineSlug,
       vip: (config.vipCapacity ?? 0) > 0,
@@ -552,4 +560,20 @@ export async function cancelBooking(user: MemberUser, id: string): Promise<R> {
   return r.meta.changes
     ? reply({ ok: true })
     : error('Yêu cầu đã được xử lý nên không thể hủy tại đây. Vui lòng gọi câu lạc bộ.', 409);
+}
+
+export async function memberCardActivate(user: MemberUser, packageId: string): Promise<R> {
+  if (!user.verified) return reply({ error: 'Tài khoản chưa được xác minh' }, 403);
+  return activateCard(user.tenant, packageId, user.customerId);
+}
+export async function memberAbsenceCreate(
+  user: MemberUser,
+  i: { requestId: string; packageId: string; startDay: string; endDay: string },
+): Promise<R> {
+  if (!user.verified) return reply({ error: 'Tài khoản chưa được xác minh' }, 403);
+  return addAbsence(user.tenant, 'member:' + user.customerId, 'customer', i, user.customerId);
+}
+export async function memberAbsenceCancel(user: MemberUser, id: string): Promise<R> {
+  if (!user.verified) return reply({ error: 'Tài khoản chưa được xác minh' }, 403);
+  return cancelAbsence(user.tenant, id, user.customerId);
 }

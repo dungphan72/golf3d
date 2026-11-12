@@ -1,7 +1,20 @@
 import { z } from 'zod';
-import { quote, wholeQuote, type Config, type Booking, type Segment } from '../club';
+import {
+  quote,
+  wholeQuote,
+  sessionQuote,
+  packageLine,
+  clipSegments,
+  serviceName,
+  type Config,
+  type Booking,
+  type Segment,
+  type PriorPart,
+} from '../club';
+import type { Service } from '../pricing';
 import { configSchema } from '../config';
 import { planBooking, withinOpening } from '../booking';
+import { packagePrice } from '../pricing';
 import { FINISH_SESSION_SQL } from '../fnb-sql';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 
@@ -21,6 +34,7 @@ export const clubInput = z.object({
     'no-show',
     'reschedule',
     'extend',
+    'switch-service',
     'walkin',
     'clean-test-data',
   ]),
@@ -322,12 +336,16 @@ export async function runClubAction(
     amount = b.amount;
   if (input.action === 'start') {
     if (status !== 'booked') return fail('Chỉ bắt đầu lịch đã đặt');
-    if (now < b.start - 15 * 60000) return fail('Chỉ bắt đầu trước lịch hẹn tối đa 15 phút');
+    const today = new Date(now).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    const bookDay = new Date(b.start).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
+    if (now < b.start - 15 * 60000 && today !== bookDay) {
+      return fail(`Lịch đặt này là ngày ${bookDay}, chỉ có thể bắt đầu trong ngày hẹn`);
+    }
     const conflict = await db()
       .prepare(
-        "UPDATE bookings SET status='playing',started=? WHERE tenant=? AND id=? AND status='booked' AND NOT EXISTS(SELECT 1 FROM bookings x WHERE x.tenant=? AND x.room=? AND x.id<>? AND (x.status IN ('playing','paused') OR (x.status IN ('finished','paid') AND x.end>?)))",
+        "UPDATE bookings SET status='playing',started=?,start=MIN(start,?) WHERE tenant=? AND id=? AND status='booked' AND NOT EXISTS(SELECT 1 FROM bookings x WHERE x.tenant=? AND x.room=? AND x.id<>? AND (x.status IN ('playing','paused') OR (x.status IN ('finished','paid') AND x.end>?)))",
       )
-      .bind(now, tenant, b.id, tenant, b.room, b.id, now)
+      .bind(now, now, tenant, b.id, tenant, b.room, b.id, now)
       .run();
     if (!conflict.meta.changes) return fail('Phòng đang được sử dụng hoặc đang dọn', 409);
     await audit(tenant, 'Bắt đầu', b.id);
@@ -345,11 +363,7 @@ export async function runClubAction(
     if (!['playing', 'paused'].includes(status)) return fail('Phiên chưa bắt đầu');
     if (status === 'playing' && started != null) segments.push({ start: started, end: now });
     try {
-      amount = (
-        b.service === 'gdr'
-          ? quote(segments, snap.config, snap.vip)
-          : wholeQuote(snap.base, snap.config, b.service as '9' | '18')
-      ).total;
+      amount = sessionQuote(b.service as Service, segments, snap).total;
     } catch {
       amount = null;
     }
@@ -413,6 +427,88 @@ export async function runClubAction(
     if (!moved.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
     await audit(tenant, 'Gia hạn', `${b.id} +${minutes} phút`);
     return ok({ end: newEnd });
+  } else if (input.action === 'switch-service') {
+    // Staff switch a session between hourly practice and a game round before it is finished.
+    if (!['booked', 'playing', 'paused'].includes(status))
+      return fail('Chỉ đổi hình thức khi phiên chưa kết thúc');
+    const target = input.service;
+    if (!target) return fail('Thiếu hình thức chơi');
+    if (target === b.service) return ok();
+    const vip = !!snap.vip;
+    const clean = (vip ? snap.config.vipClean : snap.config.clean) * 60000;
+    const current = b.service as Service;
+    const next = { ...snap };
+    const setGame = (service: '9' | '18', at: number) => {
+      const price = packagePrice(at, snap.config, service, vip, b.people);
+      next.base = price.base;
+      next.listBase = price.listBase;
+      next.promo = price.promo;
+      next.ruleId = price.ruleId;
+      next.ruleLabel = price.label;
+      return price;
+    };
+    const setPractice = () => {
+      next.base = 0;
+      next.listBase = 0;
+      next.promo = null;
+      next.ruleId = null;
+      next.ruleLabel = null;
+    };
+    try {
+      if (status === 'booked') {
+        // Nothing has been played yet: simply replace the booked service and its estimate.
+        next.prior = undefined;
+        next.phaseFrom = undefined;
+        if (target === 'gdr') {
+          setPractice();
+          next.estimated = quote([{ start: b.start, end: b.end - clean }], snap.config, vip);
+        } else {
+          next.estimated = wholeQuote(setGame(target, b.start).base, snap.config, target);
+        }
+      } else if (current !== 'gdr' && target !== 'gdr') {
+        // 9 ↔ 18 holes is one game round being re-priced, not two charges.
+        setGame(target, snap.phaseFrom ?? b.start);
+      } else {
+        // Hourly practice ↔ game: the finished stretch stays on the bill, the new one adds to it.
+        const live = [...segments];
+        if (status === 'playing' && started != null) live.push({ start: started, end: now });
+        const prior: PriorPart[] = [...(snap.prior ?? [])];
+        if (current === 'gdr') {
+          const q = quote(clipSegments(live, snap.phaseFrom ?? 0), snap.config, vip);
+          if (q.subtotal > 0)
+            prior.push({
+              service: 'gdr',
+              subtotal: q.subtotal,
+              lines: q.lines.map((l) => ({ ...l, label: `${serviceName('gdr')} · ${l.label}` })),
+            });
+          setGame(target as '9' | '18', now);
+        } else {
+          prior.push({
+            service: current,
+            subtotal: snap.base,
+            lines: [packageLine(current, snap.base, snap.promo, now)],
+          });
+          setPractice();
+        }
+        next.prior = prior;
+        next.phaseFrom = now;
+      }
+    } catch (e) {
+      return fail(e instanceof Error ? e.message : 'Chưa tính được giá cho hình thức này');
+    }
+    const switched = await db()
+      .prepare(
+        "UPDATE bookings SET service=?,price=? WHERE tenant=? AND id=? AND service=? AND price=? AND status IN ('booked','playing','paused')",
+      )
+      .bind(target, JSON.stringify(next), tenant, b.id, b.service, b.price)
+      .run();
+    if (!switched.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    await audit(
+      tenant,
+      'Đổi hình thức',
+      `${b.id} ${b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'} → ${target === 'gdr' ? 'Luyện tập' : target + ' hố'}`,
+    );
+    return ok();
   } else if (input.action === 'reschedule') {
     if (status !== 'booked') return fail('Chỉ đổi lịch chưa bắt đầu');
     const clean = (snap.vip ? snap.config.vipClean : snap.config.clean) * 60000;

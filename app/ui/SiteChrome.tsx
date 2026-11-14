@@ -19,9 +19,9 @@ export function SiteHeader({ bookHref, bookLabel }: { bookHref: string; bookLabe
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={BRAND.logo} alt="" width={40} height={40} />
         <b>
-          {BRAND.short}
+          {BRAND.name.slice(0, BRAND.name.lastIndexOf(' '))}
           <br />
-          {BRAND.sub}
+          {BRAND.name.slice(BRAND.name.lastIndexOf(' ') + 1)}
         </b>
       </a>
       <nav aria-label="Điều hướng">
@@ -50,9 +50,7 @@ export function SiteFooter() {
           <p className="sg-foot-brand">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={BRAND.logo} alt="" width={36} height={36} />
-            <b>
-              {BRAND.short} {BRAND.sub}
-            </b>
+            <b>{BRAND.name}</b>
           </p>
           <p>Phòng golf 3D với radar Foresight GC3: 10 line tiêu chuẩn và 2 phòng VIP riêng.</p>
         </div>
@@ -96,4 +94,4 @@ export function SiteFooter() {
 }
 
 export const FONT_URL =
-  'https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,600..800&family=Barlow+Condensed:wght@600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap';
+  'https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap';

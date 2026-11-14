@@ -30,7 +30,7 @@ test.describe('điện thoại', () => {
     expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
     await page.goto('/quan-ly');
     // Earlier specs leave some lines busy, so check whatever actions the line cards offer now.
-    await page.getByRole('button', { name: /^Phòng/ }).last().click();
+    await page.getByRole('button', { name: /^POS/ }).last().click();
     await expect(page.locator('.pos-line button').first()).toBeVisible();
     const targets = [
       ...(await page.locator('.pos-line button:visible').all()),

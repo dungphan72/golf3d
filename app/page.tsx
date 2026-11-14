@@ -9,6 +9,9 @@ import { getPublicLandingConfig } from '../lib/server/landing-service';
 import { bookingSlug } from '../lib/server/online-service';
 import { FONT_URL, SiteFooter, SiteHeader } from './ui/SiteChrome';
 import { Icon, type IconName } from './ui/Icon';
+import QuickBook from './ui/QuickBook';
+import { parseBenefit } from '../lib/member-benefits';
+import { rooms } from '../lib/club';
 import './home2.css';
 
 export const dynamic = 'force-dynamic';
@@ -156,12 +159,22 @@ export default async function LandingPage() {
       },
     ],
   };
-  const facts: [IconName, string, string][] = [
-    ['flag', '10 + 2', '10 line tiêu chuẩn và 2 phòng VIP'],
-    ['schedule', hours, 'Mở cửa mỗi ngày, kể cả cuối tuần'],
-    ['payments', money(lowestGdr), 'Giá thấp nhất mỗi giờ, chưa gồm VAT'],
-    ['speed', 'GC3', 'Đo tốc độ, góc phóng và độ xoáy từng cú'],
+  const standardCount = rooms.filter((r) => !r.vip).length;
+  const vipCount = rooms.filter((r) => r.vip).length;
+  const leftCount = rooms.filter((r) => r.left).length;
+  const strengths: [IconName, string, string][] = [
+    ['flag', `${standardCount} line`, 'Tiêu chuẩn'],
+    ['star', `${vipCount} phòng VIP`, 'Riêng tư'],
+    ...(leftCount ? ([['person', 'Line tay trái', 'Cho golfer thuận tay trái']] as [IconName, string, string][]) : []),
+    ['schedule', hours, 'Mở cửa mỗi ngày'],
+    ['speed', 'Foresight GC3', 'Đo từng cú đánh'],
   ];
+  const services = [
+    { title: 'Đặt line Golf 3D', text: 'Linh hoạt, tiện lợi', href: '#dat-cho', img: '/img/album-bays-panoramic.webp' },
+    { title: 'Phòng VIP riêng tư', text: 'Nhóm bạn, khách mời', href: '#phong', img: '/img/album-vip-lounge.webp' },
+    { title: 'Gói giờ & Hội viên', text: 'Ưu đãi hấp dẫn', href: '/thanh-vien', img: '/img/album-club-lounge.webp' },
+  ];
+  const benefits = pricing.benefits.map(parseBenefit).filter((x) => x.title).slice(0, 4);
   const spaces = [
     {
       img: '/img/album-golfers-playing.webp',
@@ -208,53 +221,81 @@ export default async function LandingPage() {
       <SiteHeader bookHref={bookHref} bookLabel={bookLabel} />
 
       <main id="top">
-        <section className="sg-hero">
-          <div className="sg-hero-copy">
-            <p className="sg-kicker">250 Lương Định Của, Bình Trưng</p>
-            <h1>Golf trong nhà, thấy từng cú đánh</h1>
+        <section className="sg-hero2" style={{ backgroundImage: `url(${heroImage})` }}>
+          <div className="sg-hero2-in">
+            <p className="sg-hero2-kicker">Trải nghiệm</p>
+            <h1>
+              Golf 3D đẳng cấp
+              <span>Công nghệ Foresight GC3</span>
+            </h1>
             <p className="sg-lead">
-              10 line tiêu chuẩn và 2 phòng VIP, đo bằng radar Foresight GC3. Mở cửa {hours} mỗi ngày.
+              Không gian tập luyện hiện đại, tiện nghi tại {BRAND.address.split(',').slice(1).join(',').trim() || 'TP.HCM'}.
+              Mở cửa {hours} mỗi ngày.
             </p>
+            <ul className="sg-hero2-points">
+              <li>
+                <Icon name="speed" size={26} />
+                Phân tích chuẩn xác
+              </li>
+              <li>
+                <Icon name="flag" size={26} />
+                Cải thiện kỹ thuật
+              </li>
+              <li>
+                <Icon name="payments" size={26} />
+                Giá từ {money(lowestGdr)} / giờ
+              </li>
+            </ul>
             <div className="sg-actions">
               <a className="sg-btn" href={bookHref}>
                 <Icon name="event" size={20} />
                 {bookLabel}
               </a>
-              <a className="sg-btn sg-btn--quiet" href="#bang-gia">
+              <a className="sg-btn sg-btn--glass" href="#bang-gia">
                 Xem bảng giá
               </a>
             </div>
-            <p className="sg-assure">Không cần trả trước. Nhân viên gọi lại để xác nhận.</p>
           </div>
-          <figure className="sg-hero-img">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={heroImage}
-              alt="Dãy line GB1 đến GB10 hướng vào màn hình mô phỏng sân"
-              width={1024}
-              height={768}
-              fetchPriority="high"
-            />
-            <figcaption>
-              <span className="sg-plate">
-                <b>GB1–GB10</b>
-                <span>10 line tiêu chuẩn</span>
-              </span>
-            </figcaption>
-          </figure>
         </section>
 
-        <ul className="sg-facts" aria-label="Thông tin nhanh">
-          {facts.map(([icon, big, label]) => (
+        {slug && (
+          <div className="sg-in sg-quick-wrap">
+            <QuickBook open={pricing.open} close={pricing.close} hasVip={rooms.some((r) => r.vip)} />
+          </div>
+        )}
+
+        <ul className="sg-strengths sg-in" aria-label="Điểm nổi bật">
+          {strengths.map(([icon, big, label]) => (
             <li key={label}>
               <i className="sg-chip">
-                <Icon name={icon} size={22} />
+                <Icon name={icon} size={24} />
               </i>
-              <b>{big}</b>
-              <span>{label}</span>
+              <span>
+                <b>{big}</b>
+                {label}
+              </span>
             </li>
           ))}
         </ul>
+
+        <section className="sg-in sg-block sg-block--tight" id="dich-vu">
+          <header className="sg-head sg-head--row">
+            <h2>Dịch vụ nổi bật</h2>
+          </header>
+          <div className="sg-services">
+            {services.map((sv) => (
+              <a key={sv.title} className="sg-service" href={sv.href}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={sv.img} alt="" width={640} height={420} loading="lazy" />
+                <span>
+                  <strong>{sv.title}</strong>
+                  <small>{sv.text}</small>
+                </span>
+                <Icon name="arrow" size={20} />
+              </a>
+            ))}
+          </div>
+        </section>
 
         <section className="sg-in sg-block" id="phong">
           <header className="sg-head">
@@ -439,6 +480,36 @@ export default async function LandingPage() {
                 <a href="/bang-gia">Bảng giá đầy đủ</a> · <a href="/tai-khoan">Tài khoản khách hàng</a>
               </p>
             </aside>
+          </div>
+        </section>
+
+        <section className="sg-in sg-block sg-block--tight" id="hoi-vien">
+          <div className="sg-member">
+            <div>
+              <h2>Hội viên {BRAND.name}</h2>
+              <p>Tập luyện thỏa thích, ưu đãi vượt trội.</p>
+              <ul>
+                {benefits.map((x) => (
+                  <li key={x.title}>
+                    <Icon name="check" size={20} />
+                    <span>
+                      <b>{x.title}</b>
+                      {x.text && <small>{x.text}</small>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <a className="sg-btn" href="/thanh-vien">
+                Xem thẻ hội viên
+                <Icon name="arrow" size={18} />
+              </a>
+            </div>
+            <div className="sg-card-art" aria-hidden="true">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={BRAND.logo} alt="" width={64} height={64} />
+              <b>Thẻ hội viên</b>
+              <small>{BRAND.name}</small>
+            </div>
           </div>
         </section>
 

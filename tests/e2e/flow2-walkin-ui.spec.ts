@@ -12,12 +12,11 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:
   // green when free, yellow when a booking is due within 2 hours.
-  const free = page.locator('.pos-line:has(button.walkin)').first();
+  const free = page.locator('.pos-line.free').first();
   await expect(free).toBeVisible();
 
   // The walk-in dialog opens with the line already chosen.
-  await expect(free.getByRole('button', { name: /Đặt trước/ })).toBeVisible();
-  await free.getByRole('button', { name: /Vào chơi/ }).click();
+  await free.getByRole('button', { name: /Vào chơi/ }).click(); // a free line has no extra buttons: one tap starts a walk-in
   const dialog = page.getByRole('dialog', { name: 'Vào chơi ngay' });
   await expect(dialog).toBeVisible();
   const start = dialog.getByRole('button', { name: 'Bắt đầu chơi và tính tiền ngay' });

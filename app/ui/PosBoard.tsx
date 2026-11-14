@@ -14,8 +14,6 @@ import {
   List,
   Monitor,
   PhoneCall,
-  Play,
-  Plus,
   Users,
   Wallet,
 } from 'lucide-react';
@@ -303,38 +301,18 @@ export function PosBoard({
                   key={room.id}
                   className={`pos-line ${state}${room.vip ? ' vip' : ''}${selected ? ' selected' : ''}`}
                 >
-                  {session ? (
-                    <button
-                      type="button"
-                      className="pos-line-main"
-                      aria-label={`${room.name}: ${label}. POS tính tiền`}
-                      onClick={() => onSelect(session)}
-                    >
-                      {body}
-                    </button>
-                  ) : (
-                    <>
-                      <div className="pos-line-main static">{body}</div>
-                      <div className="pos-line-acts">
-                        <button
-                          type="button"
-                          className="walkin"
-                          aria-label={`${room.name}: Vào chơi ngay`}
-                          onClick={() => onWalkIn(room.id)}
-                        >
-                          <Play size={14} /> Vào chơi
-                        </button>
-                        <button
-                          type="button"
-                          className="book"
-                          aria-label={`${room.name}: Đặt trước`}
-                          onClick={() => onBook(room.id)}
-                        >
-                          <Plus size={14} /> Đặt trước
-                        </button>
-                      </div>
-                    </>
-                  )}
+                  <button
+                    type="button"
+                    className="pos-line-main"
+                    aria-label={
+                      session
+                        ? `${room.name}: ${label}. POS tính tiền`
+                        : `${room.name}: Trống. Vào chơi ngay`
+                    }
+                    onClick={() => (session ? onSelect(session) : onWalkIn(room.id))}
+                  >
+                    {body}
+                  </button>
                 </div>
               );
             })}

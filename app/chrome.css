@@ -14,9 +14,9 @@
   --sg-gold: #f5af05;
   --sg-line: #d8ded6;
   --sg-edge: max(20px, calc((100% - 76rem) / 2));
-  --sg-display: 'Archivo', 'Be Vietnam Pro', system-ui, sans-serif;
+  --sg-display: 'Be Vietnam Pro', system-ui, sans-serif;
   --sg-body: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --sg-plate-font: 'Barlow Condensed', 'Archivo', system-ui, sans-serif;
+  --sg-plate-font: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 .sg-bar,
@@ -111,7 +111,6 @@
 .sg-brand b {
   display: block;
   font: 800 1rem/1.15 var(--sg-display);
-  font-stretch: 88%;
   letter-spacing: 0.02em;
 }
 .sg-bar nav {
@@ -193,10 +192,8 @@ footer.sg-foot {
 }
 .sg-foot h4 {
   margin: 0 0 0.8rem;
-  font: 600 0.75rem/1 var(--sg-body);
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
+  font: 700 0.9rem/1 var(--sg-body);
+  color: rgba(255, 255, 255, 0.72);
 }
 .sg-foot-brand {
   display: flex;
@@ -212,7 +209,6 @@ footer.sg-foot {
 }
 .sg-foot-brand b {
   font: 800 1rem/1 var(--sg-display);
-  font-stretch: 88%;
   letter-spacing: 0.02em;
 }
 .sg-foot-in > div > a:not(.sg-btn) {

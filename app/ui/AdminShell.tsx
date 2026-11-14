@@ -614,9 +614,9 @@ export function BottomBar({
 }) {
   const main: NavItem[] = [
     { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-    { key: 'rooms', label: 'Phòng', icon: Grid2X2 },
-    { key: 'bookings', label: 'Lịch đặt', icon: CalendarDays },
-    { key: 'support', label: 'Chuông', icon: BellRing },
+    { key: 'bookings', label: 'Đặt line', icon: CalendarDays },
+    { key: 'rooms', label: 'POS', icon: Grid2X2 },
+    { key: 'reports', label: 'Báo cáo', icon: ChartColumn },
   ];
   const inMain = main.some((m) => m.key === view);
   // Entries only reachable through "Menu" (like Thu tiền) still show their count on it.

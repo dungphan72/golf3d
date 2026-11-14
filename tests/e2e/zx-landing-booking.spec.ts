@@ -6,9 +6,9 @@ const vnDay = (offset: number) =>
 
 test('khách đặt chỗ ngay trên trang chủ', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: /Đặt chỗ/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /Đặt line/ }).first()).toBeVisible();
   const form = page.locator('#dat-cho');
-  await expect(form.getByRole('heading', { name: 'Đặt chỗ', exact: true })).toBeVisible();
+  await expect(form.getByRole('heading', { name: 'Giữ line cho buổi chơi của bạn' })).toBeVisible();
   await form.getByLabel('Dịch vụ').selectOption('9');
   await form.getByLabel(/Ngày, giờ bắt đầu/).fill(`${vnDay(1)}T15:00`);
   await form.getByLabel('Họ và tên').fill('Khách Trang Chủ');

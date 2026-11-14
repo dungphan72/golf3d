@@ -93,6 +93,13 @@ export const configSchema = z
     // Stored by the CRM screen; kept here so saving the settings form never drops it.
     crm: crmSettingsSchema.partial().optional(),
     memberBenefits: z.array(z.string().trim().min(1).max(300)).max(12).optional(),
+    tierThresholds: z
+      .object({
+        gold: z.number().int().min(1).max(100_000_000_000),
+        platinum: z.number().int().min(1).max(100_000_000_000),
+        diamond: z.number().int().min(1).max(100_000_000_000),
+      })
+      .optional(),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),
   })
@@ -109,6 +116,15 @@ export const configSchema = z
         path: ['fee'],
         message: 'Phí phần trăm không vượt 100%',
       });
+    if (c.tierThresholds) {
+      const { gold, platinum, diamond } = c.tierThresholds;
+      if (!(gold < platinum && platinum < diamond))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['tierThresholds'],
+          message: 'Mốc hạng phải tăng dần: Gold < Platinum < Diamond',
+        });
+    }
     if (new Set(c.holidays).size !== c.holidays.length)
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

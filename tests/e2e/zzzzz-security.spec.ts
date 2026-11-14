@@ -23,7 +23,7 @@ test('mọi API quản lý từ chối người chưa đăng nhập, kể cả k
     'crm2/leads',
     'crm2/overview',
     'crm2/blocked',
-    'crm/channels',
+    'crm2/channels',
     'coaching',
     'online',
     'bank',

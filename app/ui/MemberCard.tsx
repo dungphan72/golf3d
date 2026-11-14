@@ -5,7 +5,7 @@ import { Check, Copy, Crown, Gem, Star, UserRound, QrCode, X, Sparkles, ShieldCh
 import { BRAND } from '../../lib/brand';
 import { TIER_LABEL, type Tier } from '../../lib/member-card';
 
-const ICON = { diamond: Gem, platinum: Crown, member: Star, guest: UserRound } as const;
+const ICON = { diamond: Gem, platinum: Crown, gold: Crown, member: Star, guest: UserRound } as const;
 
 const day = (ms: number) =>
   new Date(ms).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });

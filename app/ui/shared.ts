@@ -9,6 +9,7 @@ export type RequestRow = {
 export type Data = {
   activeShift: { id: string; name: string; opened_at: number } | null;
   todayReceipts: number;
+  maintenance?: { room: string; since: number; reason: string }[];
   config: Config;
   bookings: Booking[];
   requests: RequestRow[];

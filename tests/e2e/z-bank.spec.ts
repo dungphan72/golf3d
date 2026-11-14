@@ -111,9 +111,11 @@ test('chuyển khoản SePay: webhook ghi nhận, nhân viên xác nhận, khôn
   await page.goto('/quan-ly');
   await page
     .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Booking/ })
+    .getByRole('button', { name: /Đặt line/ })
     .click();
   await page.getByText('Khách QR').first().click();
+  // The POS panel shows the QR once the staff member picks the transfer method.
+  await page.getByRole('dialog', { name: 'Chi tiết phiên chơi' }).getByRole('button', { name: 'Chuyển khoản', exact: true }).click();
   await expect(page.getByRole('img', { name: 'Mã QR chuyển khoản' })).toBeVisible();
   await expect(page.getByText(/Chuyển khoản .* nội dung: SGG/)).toBeVisible();
 });

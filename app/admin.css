@@ -4708,6 +4708,9 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .profile-avatar.tier-platinum {
   background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
 }
+.ds-root .profile-avatar.tier-gold {
+  background: linear-gradient(135deg, #d99700 0%, #b57d00 100%);
+}
 .ds-root .profile-avatar.tier-member {
   background: linear-gradient(135deg, #1f7a4d 0%, #15803d 100%);
 }
@@ -4730,6 +4733,10 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .tier-badge.tier-platinum {
   background: #f3e8ff;
   color: #6b21a8;
+}
+.ds-root .tier-badge.tier-gold {
+  background: #fff3cf;
+  color: #8a5b00;
 }
 .ds-root .tier-badge.tier-member {
   background: #dcfce7;

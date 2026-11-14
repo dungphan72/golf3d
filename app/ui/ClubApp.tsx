@@ -26,6 +26,7 @@ import { CrmModule } from '../../modules/crm/ui/CrmApp';
 
 import { WalkInDialog } from './WalkInDialog';
 import LandingCmsPanel from './LandingCmsPanel';
+import { ContentPanel } from './ContentPanel';
 import { useBellSound } from './BellAlerts';
 export default function ClubApp() {
   const [data, setData] = useState<Data | null>(null),
@@ -163,6 +164,7 @@ export default function ClubApp() {
     finance: 'finance.view',
     reports: 'finance.view',
     landing: 'settings.manage',
+    content: 'settings.manage',
     settings: 'settings.manage',
     staff: 'staff.manage',
     audit: 'staff.manage',
@@ -327,6 +329,9 @@ export default function ClubApp() {
                       onBook={bookRoom}
                       onWalkIn={setWalkInRoom}
                       onGo={go}
+                      onMaintenance={(room, on, reason) =>
+                        mutate({ action: 'maintenance', room, value: { on, reason } })
+                      }
                     />
                   )}
                   {HUB_VIEWS.includes(view as (typeof HUB_VIEWS)[number]) && data && (
@@ -346,6 +351,7 @@ export default function ClubApp() {
                   {view === 'fnb' && <FnbPanel onChanged={load} />}
                   {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
                   {view === 'landing' && allowed('landing') && <LandingCmsPanel />}
+                  {view === 'content' && allowed('content') && <ContentPanel />}
                   {view === 'settings' && allowed('settings') && (
                     <>
                       <PageTabs

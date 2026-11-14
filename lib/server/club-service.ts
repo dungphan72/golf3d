@@ -17,6 +17,9 @@ import { planBooking, withinOpening } from '../booking';
 import { packagePrice } from '../pricing';
 import { FINISH_SESSION_SQL } from '../fnb-sql';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
+import { rooms } from '../club';
+
+const ROOM_IDS = rooms.map((r) => r.id);
 
 export const MAX_BODY = 100000;
 export const clubInput = z.object({
@@ -36,6 +39,7 @@ export const clubInput = z.object({
     'extend',
     'switch-service',
     'walkin',
+    'maintenance',
     'clean-test-data',
   ]),
   value: z.record(z.string(), z.unknown()).optional(),
@@ -58,7 +62,7 @@ export type ClubInput = z.infer<typeof clubInput>;
 export async function loadDashboard(tenant: string, displayName: string) {
   const day = 86400000,
     dayStart = Math.floor((Date.now() + 7 * 3600000) / day) * day - 7 * 3600000;
-  const [c, b, r, a, activeShift, receipts] = await Promise.all([
+  const [c, b, r, a, activeShift, receipts, maintenance] = await Promise.all([
     loadConfig(tenant),
     db()
       .prepare('SELECT * FROM bookings WHERE tenant=? ORDER BY start DESC LIMIT 200')
@@ -82,6 +86,10 @@ export async function loadDashboard(tenant: string, displayName: string) {
       )
       .bind(tenant, dayStart, dayStart + day)
       .first<{ total: number }>(),
+    db()
+      .prepare('SELECT room,since,reason FROM room_maintenance WHERE tenant=? ORDER BY since')
+      .bind(tenant)
+      .all(),
   ]);
   return {
     config: c,
@@ -90,6 +98,7 @@ export async function loadDashboard(tenant: string, displayName: string) {
     audit: a.results,
     activeShift,
     todayReceipts: receipts?.total ?? 0,
+    maintenance: maintenance.results,
     onlinePending: await pendingCount(tenant),
     user: displayName,
     auth: 'Sites owner-private',
@@ -159,6 +168,38 @@ export async function runClubAction(
     if (!saved.meta.changes) return fail('Cấu hình vừa thay đổi; hãy tải lại trước khi lưu.', 409);
     await audit(tenant, 'Cấu hình', 'Cập nhật thiết lập cơ sở');
     return ok();
+  }
+  if (input.action === 'maintenance') {
+    const roomId = input.room ?? '';
+    if (!ROOM_IDS.includes(roomId)) return fail('Không tìm thấy line hoặc phòng');
+    const on = input.value?.on === true;
+    if (on) {
+      const busyNow = await db()
+        .prepare("SELECT 1 AS x FROM bookings WHERE tenant=? AND room=? AND status IN ('playing','paused','finished') LIMIT 1")
+        .bind(tenant, roomId)
+        .first();
+      if (busyNow) return fail('Line đang có khách hoặc chờ thu tiền. Hoàn tất phiên trước khi chuyển sang bảo trì.', 409);
+      const reason = String(input.value?.reason ?? '').trim().slice(0, 200);
+      await db()
+        .prepare(
+          'INSERT INTO room_maintenance(tenant,room,since,reason,actor) VALUES (?,?,?,?,?) ON CONFLICT(tenant,room) DO UPDATE SET reason=excluded.reason',
+        )
+        .bind(tenant, roomId, now, reason, 'staff')
+        .run();
+      await audit(tenant, 'Bảo trì line', `${roomId}: bắt đầu bảo trì${reason ? ' · ' + reason : ''}`);
+    } else {
+      await db().prepare('DELETE FROM room_maintenance WHERE tenant=? AND room=?').bind(tenant, roomId).run();
+      await audit(tenant, 'Bảo trì line', `${roomId}: hoạt động trở lại`);
+    }
+    return ok();
+  }
+  if (input.action === 'book' || input.action === 'walkin') {
+    const under = await db()
+      .prepare('SELECT reason FROM room_maintenance WHERE tenant=? AND room=?')
+      .bind(tenant, input.room ?? '')
+      .first<{ reason: string }>();
+    if (under)
+      return fail('Line này đang bảo trì' + (under.reason ? ': ' + under.reason : '') + '. Hãy chọn line khác.', 409);
   }
   if (input.action === 'book') {
     if (input.expectedRevision !== c.pricingRevision)

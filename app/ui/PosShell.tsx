@@ -211,8 +211,8 @@ export function PosTopbar({
         <button
           type="button"
           className="pos-iconbtn pos-apps"
-          aria-label="Tất cả màn hình"
-          title="Tất cả màn hình"
+          aria-label="Menu ứng dụng"
+          title="Menu ứng dụng"
           onClick={onMenu}
         >
           <LayoutGrid size={23} />

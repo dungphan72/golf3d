@@ -5,8 +5,11 @@ import { money } from '../../lib/club';
 import { cardState, isPeriodCard, maxAbsences, MIN_ABSENCE_DAYS, clubDay } from '../../lib/card-term';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
-import { tierOf } from '../../lib/member-card';
+import { type Rank, TIER_LABEL } from '../../lib/member-card';
 import { MemberCard } from './MemberCard';
+import { MemberShell, type MemberTab, type Reminder } from './MemberShell';
+import { MemberHome } from './MemberHome';
+import { SiteFooter, SiteHeader } from './SiteChrome';
 import {
   Phone,
   Lock,
@@ -51,10 +54,14 @@ type Pack = {
   grants?: string;
 };
 type PortalAbsence = { id: string; package_id: string; start_day: string; end_day: string; days: number; status: string };
-type Overview = {
+export type Overview = {
   profile: { name: string; phone: string; email: string; verified: boolean };
   club?: { name: string; address: string };
   code?: string;
+  rank?: Rank;
+  activity?: { at: number; kind: 'wallet' | 'package' | 'points'; title: string; money?: number; paid?: number; points?: number }[];
+  benefits?: string[];
+  promotions?: { id: string; name: string; description: string; benefit: string; condition: string; auto: boolean }[];
   since?: number | null;
   points?: number;
   wallet?: number;
@@ -666,7 +673,7 @@ function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
 export default function MemberPortal({ registerFirst = false }: { registerFirst?: boolean }) {
   const [data, setData] = useState<Overview | null>(null);
   const [state, setState] = useState<'loading' | 'out' | 'in'>('loading');
-  const [activeTab, setActiveTab] = useState<'overview' | 'booking' | 'packages' | 'history' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<MemberTab>('overview');
   const [now, setNow] = useState(() => Date.now());
   const [copiedCode, setCopiedCode] = useState(false);
   const [bookingExpanded, setBookingExpanded] = useState(false);
@@ -723,9 +730,13 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
 
   if (state === 'out' || !data) {
     return (
-      <div className="mp-wrap">
-        <AuthForms onDone={load} first={registerFirst ? 'register' : 'login'} />
-      </div>
+      <>
+        <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
+        <div className="mp-wrap">
+          <AuthForms onDone={load} first={registerFirst ? 'register' : 'login'} />
+        </div>
+        <SiteFooter />
+      </>
     );
   }
 
@@ -755,7 +766,7 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
   };
 
   const initialLetter = data.profile.name.charAt(data.profile.name.lastIndexOf(' ') + 1) || 'G';
-  const tier = tierOf(packs, now);
+  const tier = data.rank?.tier ?? (packs.some((p) => p.expires >= now) ? 'member' : 'guest');
 
   // Until staff confirm the phone number belongs to this person, show no card, code, packages or history.
   if (!data.profile.verified) {
@@ -796,260 +807,52 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
     );
   }
 
+  // Reminders in the bell: bookings in the next day, cards about to expire, orders waiting for the club.
+  const reminders: Reminder[] = [
+    ...(data.bookings ?? [])
+      .filter((b) => b.status === 'booked' && b.start > now && b.start < now + 24 * 3_600_000)
+      .map((b) => ({ id: 'b' + b.id, text: `Bạn có lịch chơi lúc ${new Date(b.start).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} hôm nay hoặc ngày mai`, tab: 'booking' as const })),
+    ...live
+      .filter((p) => p.expires < now + 14 * 86_400_000)
+      .map((p) => ({ id: 'e' + p.id, text: `${p.name} sắp hết hạn`, tab: 'packages' as const })),
+    ...(data.orders ?? []).map((o) => ({ id: 'o' + o.id, text: `Đơn ${o.name} đang chờ câu lạc bộ xác nhận`, tab: 'packages' as const })),
+  ];
+
   return (
-    <div className="mp-wrap">
-      {/* 1. Executive Top Bar */}
-      <header className="mp-pro-head">
-        <div className="mp-golfer-badge">
-          <div className="mp-golfer-avatar">
-            <span>{initialLetter}</span>
-            <div className="mp-avatar-glow"></div>
-          </div>
-          <div className="mp-golfer-details">
-            <div className="mp-status-pill">
-              <span className="mp-beacon-dot"></span>
-              <span>Hội Viên Đang Hoạt Động</span>
-            </div>
-            <h1>
-              <span>Golfer {data.profile.name}</span>
-              <span title="Tài khoản hội viên chính thức"><CheckCircle2 size={18} className="text-emerald" /></span>
-            </h1>
-            <div className="mp-phone-chip">
-              <Phone size={13} />
-              <span>{data.profile.phone}</span>
-              {data.code && (
-                <button
-                  type="button"
-                  className="mp-code-tag"
-                  onClick={() => copyCode(data.code!)}
-                  title="Bấm để sao chép mã số hội viên"
-                >
-                  <span>Mã: {data.code}</span>
-                  {copiedCode ? <Check size={13} /> : <Copy size={13} />}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+    <MemberShell
+      tab={activeTab}
+      onTab={setActiveTab}
+      name={data.profile.name}
+      tier={tier}
+      reminders={reminders}
+      onLogout={logout}
+      onBook={() => {
+        setActiveTab('booking');
+        setBookingExpanded(true);
+      }}
+    >
+      {activeTab === 'overview' && <MemberHome data={data} now={now} tier={tier} onTab={setActiveTab} />}
 
-        <div className="mp-head-actions">
-          {data.booking?.enabled && (
-            <button
-              type="button"
-              className="mp-btn-action primary"
-              onClick={() => {
-                setActiveTab('booking');
-                setBookingExpanded(true);
-              }}
-            >
-              <Calendar size={15} />
-              <span>Đặt Line Nhanh</span>
-            </button>
-          )}
-          <button type="button" className="mp-btn-action ghost" onClick={logout} title="Đăng xuất khỏi thiết bị này">
-            <LogOut size={15} />
-            <span>Đăng Xuất</span>
-          </button>
-        </div>
-      </header>
-
-      {/* 2. Executive Segmented Tab Navigation */}
-      <nav className="mp-tabs-bar" aria-label="Bảng điều khiển hội viên">
-        <button
-          type="button"
-          className={`mp-tab-item ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          <LayoutDashboard size={16} />
-          <span>Tổng Quan & Thẻ</span>
-        </button>
-
-        <button
-          type="button"
-          className={`mp-tab-item ${activeTab === 'booking' ? 'active' : ''}`}
-          onClick={() => setActiveTab('booking')}
-        >
-          <Calendar size={16} />
-          <span>Lịch Chơi & Đặt Sân</span>
-          {(upcoming.length > 0 || (data.requests?.length ?? 0) > 0) && (
-            <span className="mp-tab-badge">{upcoming.length + (data.requests?.length ?? 0)}</span>
-          )}
-        </button>
-
-        <button
-          type="button"
-          className={`mp-tab-item ${activeTab === 'packages' ? 'active' : ''}`}
-          onClick={() => setActiveTab('packages')}
-        >
-          <CreditCard size={16} />
-          <span>Thẻ & Gói Cước</span>
-          {live.length > 0 && <span className="mp-tab-badge">{live.length}</span>}
-        </button>
-
-        <button
-          type="button"
-          className={`mp-tab-item ${activeTab === 'history' ? 'active' : ''}`}
-          onClick={() => setActiveTab('history')}
-        >
-          <Receipt size={16} />
-          <span>Lịch Sử Hoạt Động</span>
-        </button>
-
-        <button
-          type="button"
-          className={`mp-tab-item ${activeTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-        >
-          <ShieldCheck size={16} />
-          <span>Cài Đặt & Bảo Mật</span>
-        </button>
-      </nav>
-
-      {/* TAB CONTENT: OVERVIEW */}
-      {activeTab === 'overview' && (
+      {activeTab === 'offers' && (
         <div className="mp-tab-view">
-          {/* Hero Row: Digital Member Card + Quick Upcoming Status */}
-          <div className="mp-overview-grid">
-            <div className="mp-card-container">
-              <MemberCard
-                name={data.profile.name}
-                code={data.code ?? 'HV-GOLF3D'}
-                tier={tier}
-                since={data.since ?? null}
-                points={data.points ?? 0}
-                expires={live.length ? Math.max(...live.map((p) => p.expires)) : null}
-                club={data.club?.name ?? BRAND.name}
-              />
-            </div>
-
-            {/* Quick Next Session or Call to Action Banner */}
-            <div className="mp-hero-banner">
-              <div className="mp-banner-head">
-                <div className="mp-banner-badge">
-                  <Flame size={14} className="text-gold" />
-                  <span>Lịch Trình Golf 3D</span>
-                </div>
-                {nextSession && <span className="mp-chip-live">Sắp Diễn Ra</span>}
-              </div>
-
-              {nextSession ? (
-                <div className="mp-banner-session">
-                  <h3>
-                    {'service' in nextSession ? SERVICE[nextSession.service] : 'Lượt Chơi 3D'}
-                  </h3>
-                  <div className="mp-banner-time">
-                    <Clock size={16} className="text-gold" />
-                    <strong>{when(nextSession.start)}</strong>
-                  </div>
-                  <p>
-                    {'room' in nextSession && nextSession.room ? `Phòng: ${nextSession.room} · ` : ''}
-                    {'guests' in nextSession && nextSession.guests ? `${nextSession.guests} Golfer · ` : ''}
-                    {'status' in nextSession ? REQUEST_STATUS[nextSession.status] || BOOKING_STATUS[nextSession.status] || nextSession.status : ''}
-                  </p>
-                  <button
-                    type="button"
-                    className="mp-btn-action primary"
-                    onClick={() => setActiveTab('booking')}
-                  >
-                    <span>Xem Chi Tiết Lịch Chơi</span>
-                    <ArrowRight size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div className="mp-banner-empty">
-                  <h3>Sẵn sàng cho buổi tập tiếp theo?</h3>
-                  <p>
-                    Trải nghiệm công nghệ Foresight Sports GC3 USA đỉnh cao tại 250 Lương Định Của.
-                  </p>
-                  <button
-                    type="button"
-                    className="mp-btn-action primary"
-                    onClick={() => {
-                      setActiveTab('booking');
-                      setBookingExpanded(true);
-                    }}
-                  >
-                    <PlusCircle size={15} />
-                    <span>Đặt Line Ngay Hôm Nay</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Fast action links at bottom of banner */}
-              <div className="mp-banner-links">
-                <button type="button" onClick={() => setActiveTab('packages')} className="mp-banner-link">
-                  <CreditCard size={14} />
-                  <span>Mua gói ưu đãi hội viên</span>
-                </button>
-                <a
-                  href={BRAND.zalo || `https://zalo.me/${BRAND.hotline}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mp-banner-link"
-                >
-                  <MessageCircle size={14} />
-                  <span>Hỗ trợ Zalo 24/7</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. Executive Stat Metrics (4 Cards) */}
-          <div className="mp-pro-tiles">
-            <div className="mp-pro-tile" onClick={() => setActiveTab('packages')}>
-              <div className="mp-tile-head">
-                <span>Giờ Tập GDR Còn Lại</span>
-                <Clock size={16} />
-              </div>
-              <strong>{hours >= UNLIMITED ? 'Không giới hạn' : `${hours}h`}</strong>
-              <div className="mp-tile-bar">
-                <div className="mp-bar-fill" style={{ width: hours > 0 ? '75%' : '0%' }}></div>
-              </div>
-            </div>
-
-            <div className="mp-pro-tile" onClick={() => setActiveTab('packages')}>
-              <div className="mp-tile-head">
-                <span>Lượt Chơi 9 / 18 Hố 3D</span>
-                <Crown size={16} />
-              </div>
-              <strong>
-                {holes9Count} <small style={{ fontSize: '0.9rem', color: '#94a3b8' }}>/ 9h</small> · {holes18Count} <small style={{ fontSize: '0.9rem', color: '#94a3b8' }}>/ 18h</small>
-              </strong>
-              <div className="mp-tile-bar">
-                <div className="mp-bar-fill gold" style={{ width: holes9Count + holes18Count > 0 ? '80%' : '0%' }}></div>
-              </div>
-            </div>
-
-            <div className="mp-pro-tile">
-              <div className="mp-tile-head">
-                <span>Số dư ví</span>
-                <CreditCard size={16} />
-              </div>
-              <strong>{(data.wallet ?? 0).toLocaleString('vi-VN')} <small style={{ fontSize: '0.9rem', color: 'var(--gold)' }}>đ</small></strong>
-            </div>
-
-            <div className="mp-pro-tile">
-              <div className="mp-tile-head">
-                <span>Điểm Thưởng Tích Lũy</span>
-                <Sparkles size={16} />
-              </div>
-              <strong>{data.points ?? 0} <small style={{ fontSize: '0.9rem', color: 'var(--gold)' }}>pts</small></strong>
-              <div className="mp-tile-bar">
-                <div className="mp-bar-fill emerald" style={{ width: Math.min(100, (data.points ?? 0) * 10) + '%' }}></div>
-              </div>
-            </div>
-
-            <div className="mp-pro-tile" onClick={() => setActiveTab('packages')}>
-              <div className="mp-tile-head">
-                <span>Gói Cước Đang Dùng</span>
-                <CreditCard size={16} />
-              </div>
-              <strong>{live.length} <small style={{ fontSize: '0.9rem', color: '#94a3b8' }}>gói</small></strong>
-              <div className="mp-tile-bar">
-                <div className="mp-bar-fill" style={{ width: live.length > 0 ? '100%' : '0%' }}></div>
-              </div>
-            </div>
-          </div>
+          <section className="mp-card">
+            <h2>Ưu đãi của tôi</h2>
+            {data.promotions?.length ? (
+              <ul className="mps-offers">
+                {data.promotions.map((o) => (
+                  <li key={o.id}>
+                    <h3>{o.name}</h3>
+                    <strong>{o.benefit}</strong>
+                    <p>{o.condition}</p>
+                    {o.description && <p>{o.description}</p>}
+                    <small>{o.auto ? 'Tự động áp dụng khi tính tiền' : 'Áp dụng tại quầy, nhân viên xác nhận'}</small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>Hiện chưa có chương trình ưu đãi. Mời bạn quay lại sau.</p>
+            )}
+          </section>
         </div>
       )}
 
@@ -1447,6 +1250,6 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
           <Settings data={data} onSaved={load} />
         </div>
       )}
-    </div>
+    </MemberShell>
   );
 }

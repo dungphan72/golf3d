@@ -64,17 +64,18 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
 
   // The member now sees the package.
   await me.reload();
-  await expect(me.getByText('HỘI VIÊN ĐANG HOẠT ĐỘNG', { exact: false })).toBeVisible();
-  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await expect(me.getByRole('heading', { level: 1, name: 'Chào Online!' })).toBeVisible();
+  const menu = me.locator('.mps-side');
+  await menu.getByRole('button', { name: 'Gói giờ & Hội viên' }).click();
   await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
-  await me.getByRole('button', { name: /Tổng Quan & Thẻ/ }).click();
+  await menu.getByRole('button', { name: 'Trang chủ' }).click();
 
   // The card: tier, member code and a QR; staff find the same member by that code.
   const code = 'HV-' + customer.id.replaceAll('-', '').slice(0, 8).toUpperCase();
   const card = me.getByRole('region', { name: 'Thẻ hội viên điện tử' });
   await expect(card).toContainText('Hội Viên Online');
-  await expect(card.getByRole('button', { name: new RegExp(code) })).toBeVisible();
-  await expect(card.getByRole('button', { name: /Mã QR của thẻ hội viên/ })).toBeVisible();
+  await expect(card).toContainText(code);
+  await expect(card.getByRole('img', { name: /Mã QR của thẻ/ })).toBeVisible();
   await expect(card).toContainText(/Hội viên|Platinum|Diamond/);
   const byCode = await (await owner.get('/api/members?q=' + code.toLowerCase())).json();
   expect(byCode.customers.map((c: { id: string }) => c.id)).toEqual([customer.id]);
@@ -84,7 +85,7 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   expect((await (await guest.request.get('/api/member')).json()).code).toBe(code);
 
   // Sign out and back in; a wrong password is refused.
-  await me.getByRole('button', { name: 'Đăng xuất' }).click();
+  await menu.getByRole('button', { name: 'Đăng xuất' }).click();
   await me.getByRole('tab', { name: 'Đăng Nhập' }).click();
   await me.getByLabel('Số điện thoại').fill(PHONE);
   await me.getByLabel('Mật khẩu', { exact: true }).fill('sai-mat-khau-roi');
@@ -92,12 +93,12 @@ test('hội viên đăng ký online, chờ xác nhận, rồi tự xem thẻ và
   await expect(me.getByRole('alert')).toContainText('không đúng');
   await me.getByLabel('Mật khẩu', { exact: true }).fill('matkhau-an-toan-1');
   await me.getByRole('button', { name: 'Đăng Nhập Tài Khoản' }).click();
-  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await me.locator('.mps-side').getByRole('button', { name: 'Gói giờ & Hội viên' }).click();
   await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
 
   // The member asks to buy a package from the page; staff see it, sell it, and it becomes theirs.
   await me.reload();
-  await me.getByRole('button', { name: /Thẻ & Gói Cước/ }).click();
+  await me.locator('.mps-side').getByRole('button', { name: 'Gói giờ & Hội viên' }).click();
   await expect(me.getByRole('heading', { name: type.name, level: 3 })).toBeVisible();
   const ordered = await guest.request.post('/api/member', {
     data: { action: 'order', typeId: type.id },

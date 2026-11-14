@@ -12,7 +12,7 @@ test('Lịch đặt: bộ lọc trạng thái, tìm kiếm, tab Đặt online, m
   // One menu entry holds the booking list and online requests as tabs; the bell has its own entry.
   await expect(nav(/Đặt online/)).toHaveCount(0);
   await expect(nav(/Trợ giúp/)).toBeVisible();
-  await nav(/Booking/).click();
+  await nav(/Đặt line/).click();
   await expect(page.getByRole('tab', { name: /Đặt online/ })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Yêu cầu hỗ trợ/ })).toHaveCount(0);
 
@@ -64,11 +64,11 @@ test('Cài đặt cơ sở chia tab; Báo cáo, Nhân viên, Nhật ký dùng b�
   await expect(page.getByLabel(/Chọn Ngân hàng thụ hưởng/)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Nhận báo có ngân hàng tự động' })).toBeVisible();
 
-  await nav(/Báo cáo/).click();
+  await nav(/Doanh thu & báo cáo/).click();
   await page.getByRole('button', { name: '7 ngày' }).click();
   await expect(page.locator('.ds-tile-main').getByText('Tổng thu')).toBeVisible();
 
-  await admin(/Nhân viên/);
+  await admin(/Nhân sự/);
   await expect(page.getByRole('columnheader', { name: 'Vai trò' })).toBeVisible();
   await admin(/Nhật ký/);
   await expect(page.getByRole('columnheader', { name: 'Hành động' })).toBeVisible();

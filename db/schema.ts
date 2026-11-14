@@ -1009,3 +1009,55 @@ export const pushKeys = sqliteTable('push_keys', {
   privateJwk: text('private_jwk').notNull(),
   created: integer('created').notNull(),
 });
+
+/** A line or room taken out of service. Rows exist only while it is under maintenance. */
+export const roomMaintenance = sqliteTable(
+  'room_maintenance',
+  {
+    tenant: text('tenant').notNull(),
+    room: text('room').notNull(),
+    since: integer('since').notNull(),
+    reason: text('reason').notNull().default(''),
+    actor: text('actor').notNull(),
+  },
+  (t) => [uniqueIndex('room_maintenance_pk').on(t.tenant, t.room)],
+);
+
+/** News articles and events (tournaments) shown on the public site once published. */
+export const posts = sqliteTable(
+  'posts',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    kind: text('kind').notNull(),
+    title: text('title').notNull(),
+    summary: text('summary').notNull().default(''),
+    body: text('body').notNull().default(''),
+    image: text('image').notNull().default(''),
+    eventAt: integer('event_at'),
+    place: text('place').notNull().default(''),
+    status: text('status').notNull().default('draft'),
+    created: integer('created').notNull(),
+    updated: integer('updated').notNull(),
+    actor: text('actor').notNull(),
+  },
+  (t) => [index('posts_public').on(t.tenant, t.status, t.kind, t.created)],
+);
+
+/** People who signed up for an event (tournament) from the public page. One row per phone number per event. */
+export const eventSignups = sqliteTable(
+  'event_signups',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    postId: text('post_id').notNull(),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    note: text('note').notNull().default(''),
+    created: integer('created').notNull(),
+  },
+  (t) => [
+    uniqueIndex('event_signup_once').on(t.tenant, t.postId, t.phone),
+    index('event_signup_list').on(t.tenant, t.postId, t.created),
+  ],
+);

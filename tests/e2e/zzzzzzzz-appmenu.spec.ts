@@ -26,8 +26,8 @@ test('điện thoại: thanh dưới một hàng, Menu mở lưới biểu tư�
   await page.keyboard.press('Escape');
   await expect(sheet).toHaveCount(0);
   await bar.getByRole('button', { name: /Menu/ }).click();
-  await sheet.getByRole('button', { name: 'Báo cáo' }).click();
+  await sheet.getByRole('button', { name: 'Khách hàng' }).click();
   await expect(sheet).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Báo cáo', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Khách hàng', level: 1 })).toBeVisible();
   await expect(bar.getByRole('button', { name: /Menu/ })).toHaveAttribute('class', /active/);
 });

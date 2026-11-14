@@ -17,7 +17,7 @@ test('trang bảng giá hiện giá từ admin và đổi ngay khi admin sửa',
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
 
   await page.goto('/bang-gia');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Bảng giá');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Giá theo giờ, theo lượt và theo gói');
   await expect(page.getByText('Giờ vàng').first()).toBeVisible();
   await expect(page.getByText('Thẻ tháng · 6 tháng')).toBeAttached();
   // The test club has all-day rules: GDR 100.000, 9 holes 300.000, 18 holes 400.000.
@@ -89,7 +89,7 @@ test('trang bảng giá hiện giá từ admin và đổi ngay khi admin sửa',
   await expect(page.getByText('123.000 ₫').first()).toBeAttached();
   // The VIP room now has its own (unchanged) prices, so a separate VIP list appears.
   await page.goto('/bang-gia');
-  await expect(page.getByRole('heading', { name: 'Bảng giá phòng VIP' })).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'Phòng VIP' })).toBeAttached();
 
   // restore
   const fresh = (await (await owner.get('/api/club')).json()).config;

@@ -5,9 +5,9 @@ import { Icon, type IconName } from './Icon';
 
 const TABS: { href: string; label: string; icon: IconName; match: (p: string) => boolean; cta?: boolean }[] = [
   { href: '/', label: 'Trang chủ', icon: 'home', match: (p: string) => p === '/' || p === '' },
-  { href: '/bang-gia', label: 'Bảng giá', icon: 'offer', match: (p: string) => p.startsWith('/bang-gia') },
-  { href: '/#dat-cho', label: 'Đặt chỗ', icon: 'event', match: (p: string) => p.startsWith('/book'), cta: true },
-  { href: '/thanh-vien', label: 'Gói thẻ', icon: 'card', match: (p: string) => p.startsWith('/thanh-vien') },
+  { href: '/#dat-cho', label: 'Đặt line', icon: 'event', match: (p: string) => p.startsWith('/book'), cta: true },
+  { href: '/tin-tuc', label: 'Giải đấu', icon: 'trophy', match: (p: string) => p.startsWith('/tin-tuc') },
+  { href: '/thanh-vien', label: 'Hội viên', icon: 'crown', match: (p: string) => p.startsWith('/thanh-vien') },
   { href: '/tai-khoan', label: 'Tài khoản', icon: 'person', match: (p: string) => p.startsWith('/tai-khoan') },
 ];
 

@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Plus, X, UtensilsCrossed, RefreshCw } from 'lucide-react';
+import { Minus, Plus, Search, X, UtensilsCrossed, RefreshCw } from 'lucide-react';
 import { money, type Booking } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import {
@@ -109,7 +109,8 @@ export function SessionOrdering({
   onRefresh: () => Promise<unknown>;
 }) {
   const [cart, setCart] = useState<{ item: MenuItem; qty: number }[]>([]),
-    [choice, setChoice] = useState(''),
+    [cat, setCat] = useState<'all' | 'drink' | 'food' | 'other'>('all'),
+    [search, setSearch] = useState(''),
     [note, setNote] = useState(''),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
@@ -166,16 +167,27 @@ export function SessionOrdering({
       setBusy(false);
     }
   }
-  function add() {
-    const item = data.menu.find((m) => m.id === choice && m.active);
-    if (!item) return;
+  function addItem(item: MenuItem) {
+    if (!item.active) return;
     const existing = cart.find((l) => l.item.id === item.id);
     if (existing)
-      setCart(
-        cart.map((l) => (l.item.id === item.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l)),
-      );
+      setCart(cart.map((l) => (l.item.id === item.id ? { ...l, qty: Math.min(99, l.qty + 1) } : l)));
     else if (cart.length < 10) setCart([...cart, { item, qty: 1 }]);
   }
+  const step = (id: string, by: number) =>
+    setCart(
+      cart.flatMap((l) => {
+        if (l.item.id !== id) return [l];
+        const qty = Math.min(99, l.qty + by);
+        return qty < 1 ? [] : [{ ...l, qty }];
+      }),
+    );
+  const shown = data.menu.filter(
+    (m) =>
+      m.active &&
+      (cat === 'all' || m.category === cat) &&
+      m.name.toLowerCase().includes(search.trim().toLowerCase()),
+  );
   return (
     <section className="session-food">
       <div className="section-heading">
@@ -192,36 +204,59 @@ export function SessionOrdering({
       )}
       {['playing', 'paused'].includes(booking.status) && (
         <>
-          <div className="food-picker">
-            <label>
-              Chọn món
-              <select value={choice} disabled={busy} onChange={(e) => setChoice(e.target.value)}>
-                <option value="">Chọn từ thực đơn</option>
-                {data.menu
-                  .filter((m) => m.active)
-                  .map((m) => (
-                    <option
-                      value={m.id}
-                      key={m.id}
-                      disabled={!!m.stock_enabled && (m.available ?? 0) < 1}
-                    >
-                      {m.name}
-                      {m.stock_enabled ? ` · Còn ${m.available} ${m.unit}` : ''} · {money(m.price)}{' '}
-                      / {m.unit} (chưa thuế/phí)
-                    </option>
-                  ))}
-              </select>
+          <div className="pos-prod-tools">
+            <div className="pos-tabs" role="tablist" aria-label="Nhóm sản phẩm">
+              {(
+                [
+                  ['all', 'Tất cả'],
+                  ['drink', 'Đồ uống'],
+                  ['food', 'Đồ ăn'],
+                  ['other', 'Khác'],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={cat === key}
+                  className={cat === key ? 'on' : ''}
+                  onClick={() => setCat(key)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <label className="pos-prod-search">
+              <Search size={18} />
+              <input
+                aria-label="Tìm sản phẩm"
+                placeholder="Tìm sản phẩm…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </label>
-            <button
-              className="secondary"
-              disabled={
-                !choice || busy || (cart.length >= 10 && !cart.some((l) => l.item.id === choice))
-              }
-              onClick={add}
-            >
-              <Plus size={16} />
-              Thêm
-            </button>
+          </div>
+          <div className="pos-prod-grid" role="list" aria-label="Sản phẩm">
+            {shown.map((m) => {
+              const out = !!m.stock_enabled && (m.available ?? 0) < 1;
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="listitem"
+                  className="pos-prod"
+                  disabled={busy || out || (cart.length >= 10 && !cart.some((l) => l.item.id === m.id))}
+                  onClick={() => addItem(m)}
+                >
+                  <strong>{m.name}</strong>
+                  <span>{money(m.price)} / {m.unit}</span>
+                  {m.stock_enabled ? <small>{out ? 'Hết hàng' : `Còn ${m.available} ${m.unit}`}</small> : null}
+                </button>
+              );
+            })}
+            {data.menu.some((m) => m.active) && !shown.length && (
+              <p className="form-note">Không có sản phẩm khớp.</p>
+            )}
           </div>
           {!data.menu.some((m) => m.active) && (
             <p className="form-note">
@@ -237,27 +272,15 @@ export function SessionOrdering({
                   phí/VAT
                 </small>
               </span>
-              <input
-                type="number"
-                aria-label={'Số lượng ' + l.item.name}
-                min="1"
-                max="99"
-                step="1"
-                value={l.qty}
-                disabled={busy}
-                onChange={(e) =>
-                  setCart(
-                    cart.map((row) =>
-                      row.item.id === l.item.id
-                        ? {
-                            ...row,
-                            qty: Math.max(1, Math.min(99, Math.floor(Number(e.target.value) || 1))),
-                          }
-                        : row,
-                    ),
-                  )
-                }
-              />
+              <span className="pos-step">
+                <button type="button" disabled={busy} aria-label={'Giảm ' + l.item.name} onClick={() => step(l.item.id, -1)}>
+                  <Minus size={16} />
+                </button>
+                <b aria-label={'Số lượng ' + l.item.name}>{l.qty}</b>
+                <button type="button" disabled={busy} aria-label={'Tăng ' + l.item.name} onClick={() => step(l.item.id, 1)}>
+                  <Plus size={16} />
+                </button>
+              </span>
               <button
                 className="icon-btn"
                 disabled={busy}

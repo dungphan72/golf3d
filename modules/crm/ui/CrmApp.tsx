@@ -4,6 +4,7 @@ import { ViewLogScreen } from './ViewLogScreen';
 import { CampaignsScreen } from './CampaignsScreen';
 import { MarketingScreen } from './MarketingScreen';
 import { CrmShell } from './CrmShell';
+import { CrmHome } from './CrmHome';
 import { findItem, pageFor, type PageKey } from './crm-nav';
 import { CareCustomersView } from './CareCustomers';
 import { ReportScreen } from './ReportScreen';
@@ -988,7 +989,15 @@ export function CrmModule({
     );
   return shell(
     <div key={current + bump}>
-      {current === 'overview' && <OverviewScreen cron={cfg.data.cron} manager={manager} />}
+      {current === 'overview' && (
+        <>
+          <CrmHome onLead={setLead} onPage={(p) => setPage(p)} />
+          <details className="crm-home-more">
+            <summary>Phễu, nguồn khách và xếp hạng nhân viên</summary>
+            <OverviewScreen cron={cfg.data.cron} manager={manager} />
+          </details>
+        </>
+      )}
       {current === 'work' && <WorkScreen s={shared} />}
       {current === 'pool' && <PoolScreen s={shared} />}
       {current === 'leads' && <LeadsScreen s={shared} board={false} />}

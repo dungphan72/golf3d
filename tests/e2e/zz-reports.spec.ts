@@ -27,7 +27,7 @@ test('báo cáo doanh thu: cần đăng nhập, kiểm tra khoảng ngày, có s
   await page.goto('/quan-ly');
   await page
     .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Báo cáo/ })
+    .getByRole('button', { name: /Doanh thu & báo cáo/ })
     .click();
   await expect(page.getByText('Doanh thu theo ngày')).toBeVisible();
   await expect(page.locator('.ds-tile-main').getByText('Tổng thu')).toBeVisible();

@@ -1,5 +1,6 @@
 'use client';
 
+import { DEFAULT_TIER_THRESHOLDS } from '../../lib/member-card';
 import { useEffect, useState } from 'react';
 
 import { Flag, Check, ArrowRight, Save, Crown, Clock, Users, Calendar, Award, Building2, Printer, QrCode, Smartphone, Sparkles, X, Trash2 } from 'lucide-react';
@@ -1136,6 +1137,38 @@ export function SettingsForm({
               onChange={(promotions) => setC({ ...c, promotions })}
 
             />
+
+            <fieldset className="tier-settings">
+              <legend>Hạng hội viên theo tổng chi tiêu (đồng)</legend>
+              <p className="form-note">
+                Hạng tính trên tổng khách đã chi: mua gói, nạp ví và thanh toán trực tiếp, trừ tiền hoàn.
+                Đạt mốc nào thì lên hạng đó.
+              </p>
+              <div className="form-grid">
+                {(
+                  [
+                    ['gold', 'Gold từ'],
+                    ['platinum', 'Platinum từ'],
+                    ['diamond', 'Diamond từ'],
+                  ] as const
+                ).map(([key, label]) => (
+                  <label key={key}>
+                    {label}
+                    <input
+                      inputMode="numeric"
+                      value={String((c.tierThresholds ?? DEFAULT_TIER_THRESHOLDS)[key])}
+                      onChange={(e) => {
+                        const n = Number(e.target.value.replace(/\D/g, '')) || 0;
+                        setC({
+                          ...c,
+                          tierThresholds: { ...(c.tierThresholds ?? DEFAULT_TIER_THRESHOLDS), [key]: n },
+                        });
+                      }}
+                    />
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <OffersField
 

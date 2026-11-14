@@ -52,6 +52,8 @@ export type Config = {
   crm?: Partial<CrmSettings>;
   /** Perks on the membership page, one per line: Tiêu đề | Mô tả. Unset = the standard list. */
   memberBenefits?: string[];
+  /** Spending (đồng) that earns Gold / Platinum / Diamond. Unset = 50 / 80 / 100 million. */
+  tierThresholds?: { gold: number; platinum: number; diamond: number };
 };
 export const defaults: Config = {
   name: 'SaiGon Indoor Golf Club',

@@ -1425,6 +1425,12 @@
   pointer-events: none;
 }
 
+.mc-gold {
+  --mc-a: #0d3516;
+  --mc-b: #051208;
+  border-color: rgba(252, 176, 0, 0.45);
+}
+
 .mc-platinum {
   --mc-a: #122b16;
   --mc-b: #061108;

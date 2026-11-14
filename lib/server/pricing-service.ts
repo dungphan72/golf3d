@@ -23,7 +23,7 @@ export type PublicPromotion = {
 };
 
 /** Promotions the site shows: enabled and not past their end date. */
-function livePromotions(list: Promotion[] | undefined, now = Date.now()): PublicPromotion[] {
+export function livePromotions(list: Promotion[] | undefined, now = Date.now()): PublicPromotion[] {
   const today = vnParts(now).date;
   return (list ?? [])
     .filter((p) => p.enabled && (!p.endDate || p.endDate >= today))

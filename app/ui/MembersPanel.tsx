@@ -11,7 +11,7 @@ import {
   MIN_ABSENCE_DAYS,
   clubDay,
 } from '../../lib/card-term';
-import { memberCode, tierOf, TIER_LABEL, type Tier } from '../../lib/member-card';
+import { memberCode, TIER_LABEL, type Rank, type Tier } from '../../lib/member-card';
 import { PackageEditor } from './PackageEditor';
 import { MemberCard } from './MemberCard';
 import { WalletPanel, type WalletEntry } from './WalletPanel';
@@ -97,6 +97,7 @@ type Overview = {
     orders?: { id: string; type_id: string; name: string; price: number; created: number }[];
     wallet?: { balance: number; history: WalletEntry[] };
     absences?: Absence[];
+    rank?: Rank;
   } | null;
 };
 
@@ -238,9 +239,9 @@ export function MembersPanel({
 
   // eslint-disable-next-line react-hooks/preserve-manual-memoization -- memo deps are intentional
   const currentTier: Tier = useMemo(() => {
-    if (!data?.detail?.packages) return 'guest';
-    return tierOf(data.detail.packages, now);
-  }, [data?.detail?.packages, now]);
+    if (!data?.detail) return 'guest';
+    return data.detail.rank?.tier ?? 'guest';
+  }, [data?.detail]);
 
   const initials = (current?.name || 'KH')
     .split(' ')

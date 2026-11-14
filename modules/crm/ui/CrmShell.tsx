@@ -311,9 +311,18 @@ export function CrmShell({
       )}
       <main className="crm-ws-main">
         <header className="crm-ws-head">
-          <small>{groupOf(page)}</small>
-          <h2>{item?.label}</h2>
-          {item?.hint && <p>{item.hint}</p>}
+          {page === 'overview' ? (
+            <>
+              <h2>Xin chào, {name.split(/\s+/).slice(-1)[0] || 'bạn'}</h2>
+              <p>Cùng theo dõi hoạt động kinh doanh và chăm sóc khách hàng hôm nay.</p>
+            </>
+          ) : (
+            <>
+              <small>{groupOf(page)}</small>
+              <h2>{item?.label}</h2>
+              {item?.hint && <p>{item.hint}</p>}
+            </>
+          )}
         </header>
         <div className="crm-ws-body">{children}</div>
       </main>

@@ -139,9 +139,11 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
   await page.goto('/quan-ly');
   await page
     .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Booking/ })
+    .getByRole('button', { name: /Đặt line/ })
     .click();
   await page.getByText('Khách chia UI').first().click();
+  // Split payment lives under the "Khác" tab of the POS panel.
+  await page.getByRole('dialog', { name: 'Chi tiết phiên chơi' }).getByRole('tab', { name: 'Khác' }).click();
   await page.getByRole('button', { name: 'Chia nhiều hình thức thanh toán' }).click();
   await expect(page.getByText('Chia thanh toán')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Xác nhận đã nhận đủ tiền' })).toBeDisabled();

@@ -14,7 +14,7 @@ import {
   Zap,
   Crown,
 } from 'lucide-react';
-import { memberCode, tierOf, TIER_LABEL, type Tier } from '../../lib/member-card';
+import { memberCode, TIER_LABEL, type Tier } from '../../lib/member-card';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 
 type Customer = {
@@ -51,6 +51,7 @@ export function MemberSelector({
   const [searching, setSearching] = useState(false);
   const [open, setOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<Customer | null>(null);
+  const [memberRank, setMemberRank] = useState<Tier>('guest');
   const [memberPackages, setMemberPackages] = useState<OwnedPackage[]>([]);
   const [mode, setMode] = useState<'search' | 'manual'>('search');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -103,8 +104,9 @@ export function MemberSelector({
     try {
       const res = await fetch(`/api/members?customer=${c.id}`, { cache: 'no-store' });
       if (res.ok) {
-        const data = (await res.json()) as { detail?: { packages: OwnedPackage[] } };
+        const data = (await res.json()) as { detail?: { packages: OwnedPackage[]; rank?: { tier: Tier } } };
         setMemberPackages(data.detail?.packages || []);
+        setMemberRank(data.detail?.rank?.tier ?? 'guest');
       }
     } catch {
       /* ignore */
@@ -124,12 +126,7 @@ export function MemberSelector({
     setOpen(false);
   }
 
-  const memberTier: Tier = selectedMember
-    ? tierOf(
-        memberPackages.map((p) => ({ name: p.name, expires: p.expires })),
-        Date.now(),
-      )
-    : 'guest';
+  const memberTier: Tier = selectedMember ? memberRank : 'guest';
 
   return (
     <div className="member-selector-widget" ref={dropdownRef}>

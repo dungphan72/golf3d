@@ -1,0 +1,15 @@
+THU MUC HINH ANH MAU
+====================
+Bo anh vao dung thu muc con, toi se xu ly (nen, doi sang WebP, cat khung) roi dua vao website.
+Thu muc nay nam ngoai public/ nen chua hien tren website cho den khi duoc xu ly.
+
+  hero/               Anh dau trang chu (nen ngang, sang, ro dai line)
+  line-tieu-chuan/    Anh cac line GB1-GB10
+  phong-vip/          Anh phong VIP
+  thiet-bi-gc3/       Anh radar Foresight GC3, man hinh, thao tac danh
+  khong-gian/         Quay bar, khu nghi, anh toan canh, anh nhom choi
+
+Goi y:
+  - Anh ngang, tu 1600px chieu rong tro len; JPG, PNG hoac WebP deu duoc.
+  - Dat ten khong dau, vi du: line-gb9-ban-ngay.jpg
+  - Neu anh co nguoi, nho co su dong y cua ho khi dang len website.

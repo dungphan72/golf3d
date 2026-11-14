@@ -120,7 +120,7 @@ test('chuông gọi phục vụ: khách gọi từ line, nhân viên nhận và 
   await page.goto('/quan-ly');
   // The menu entry is on the bar and flags a waiting guest.
   const bellNav = page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /Trợ giúp/ });
-  await expect(bellNav.locator('.ds-count')).toHaveText('1');
+  await expect(bellNav.locator('.pos-count')).toHaveText('1');
   await bellNav.click();
   await expect(page.locator('.bell-summary')).toContainText('1 yêu cầu đang chờ');
   await post(owner, '/api/club', { action: 'request-update', id: ring.id, status: 'done' });

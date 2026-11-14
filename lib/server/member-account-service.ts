@@ -1,4 +1,8 @@
 import { memberCode } from '../member-card';
+import { tierInfo } from './tier-service';
+import { memberActivity } from './member-activity';
+import { livePromotions } from './pricing-service';
+import { DEFAULT_BENEFITS } from '../member-benefits';
 import { db, loadConfig, type ServiceResult } from './common';
 import {
   hashPassword,
@@ -370,6 +374,10 @@ export async function memberOverview(user: MemberUser): Promise<R> {
     profile,
     club: { name: config.name, address: config.address },
     code: memberCode(user.customerId),
+    rank: await tierInfo(user.tenant, user.customerId),
+    activity: await memberActivity(user.tenant, user.customerId),
+    benefits: config.memberBenefits ?? DEFAULT_BENEFITS,
+    promotions: livePromotions(config.promotions),
     since: customer?.created ?? null,
     points: points?.points ?? 0,
     wallet: wallet?.balance ?? 0,

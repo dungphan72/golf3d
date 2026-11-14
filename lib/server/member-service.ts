@@ -1,3 +1,4 @@
+import { tierInfo } from './tier-service';
 import { db, type ServiceResult } from './common';
 import {
   memberInput,
@@ -134,7 +135,7 @@ export async function loadMembers(tenant: string, query: string, customerId: str
         history: (await db().prepare(WALLET_HISTORY_SQL).bind(tenant, customerId).all()).results,
       };
       const absences = (await db().prepare(ABSENCES_SQL).bind(tenant, customerId).all()).results;
-      detail = { customerId, packages, orders, wallet, absences };
+      detail = { customerId, packages, orders, wallet, absences, rank: await tierInfo(tenant, customerId) };
     }
     return reply({ customers, types, detail });
   } catch (e) {

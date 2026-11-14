@@ -16,17 +16,20 @@ import {
   PhoneCall,
   Users,
   Wallet,
+  Wrench,
 } from 'lucide-react';
 import { rooms, money, type Booking, type Segment } from '../../lib/club';
 import { time, type Data } from './shared';
 import { roomInfo } from './widgets';
 import { BayTimeline } from './BayTimeline';
+import { DialogHeading, ModalDialog } from './kit';
 
 const SOON = 60 * 60_000; // a booking due within the hour needs the front desk's attention
 const DAY = 86_400_000;
 const VN = 7 * 3_600_000;
 
 type Tab = 'all' | 'standard' | 'vip' | 'left';
+type LineState = ReturnType<typeof roomInfo>['state'] | 'maintenance';
 
 /** Ticks every second so running timers move; the data itself reloads every 15 s. */
 function useTick(ms = 1000) {
@@ -76,6 +79,7 @@ export function PosBoard({
   onBook,
   onWalkIn,
   onGo,
+  onMaintenance,
 }: {
   data: Data;
   now: number;
@@ -87,15 +91,31 @@ export function PosBoard({
   onBook: (room: string) => void;
   onWalkIn: (room: string) => void;
   onGo: (view: string) => void;
+  /** Puts a line under maintenance (on) or back in service (off). Resolves true when saved. */
+  onMaintenance: (room: string, on: boolean, reason: string) => Promise<boolean>;
 }) {
   const tick = useTick();
+  const [maintOpen, setMaintOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('all');
   const [mode, setMode] = useState<'grid' | 'timeline'>('grid');
   const b = data.bookings;
   const name = (data.user.split('@')[0] || 'bạn').trim();
   const roomName = (id: string) => rooms.find((r) => r.id === id)?.name ?? id;
 
-  const bays = useMemo(() => rooms.map((r) => ({ room: r, info: roomInfo(r.id, b, now) })), [b, now]);
+  const under = useMemo(
+    () => new Map((data.maintenance ?? []).map((m) => [m.room, m])),
+    [data.maintenance],
+  );
+  const bays = useMemo(
+    () =>
+      rooms.map((r) => {
+        const info = roomInfo(r.id, b, now);
+        // A line with a guest or an unpaid bill keeps showing that; otherwise maintenance wins.
+        const state: LineState = under.has(r.id) && !info.live && !info.due ? 'maintenance' : info.state;
+        return { room: r, info, state };
+      }),
+    [b, now, under],
+  );
   const dayStart = Math.floor((now + VN) / DAY) * DAY - VN;
   const today = new Date(now + VN);
   const todayLabel = `${String(today.getUTCDate()).padStart(2, '0')}/${String(today.getUTCMonth() + 1).padStart(2, '0')}/${today.getUTCFullYear()}`;
@@ -106,7 +126,7 @@ export function PosBoard({
       (x.started ?? x.start) >= dayStart &&
       (x.started ?? x.start) < dayStart + DAY,
   ).length;
-  const inUse = bays.filter(({ info }) => info.state === 'occupied').length;
+  const inUse = bays.filter(({ state }) => state === 'occupied').length;
   const fill = rooms.length ? Math.round((inUse / rooms.length) * 100) : 0;
 
   const tabs: { key: Tab; label: string; n: number }[] = [
@@ -240,6 +260,9 @@ export function PosBoard({
               </button>
             ))}
           </div>
+          <button type="button" className="pos-maint-btn" onClick={() => setMaintOpen(true)}>
+            <Wrench size={18} /> Bảo trì line
+          </button>
           <div className="pos-mode" role="group" aria-label="Chế độ hiển thị">
             <button
               type="button"
@@ -264,8 +287,7 @@ export function PosBoard({
 
         {mode === 'grid' ? (
           <div className="pos-lines">
-            {ordered.map(({ room, info }) => {
-              const { state } = info;
+            {ordered.map(({ room, info, state }) => {
               const session = info.live ?? info.due ?? info.soon;
               const selected = selectedRoom === room.id;
               const label =
@@ -277,7 +299,9 @@ export function PosBoard({
                       ? 'Đặt trước'
                       : state === 'clean'
                         ? 'Vừa thanh toán'
-                        : 'Trống';
+                        : state === 'maintenance'
+                          ? 'Bảo trì'
+                          : 'Trống';
               const body = (
                 <>
                   {room.vip ? <Crown className="pos-crown" size={22} /> : <Flag className="pos-flag" size={30} strokeWidth={1.7} />}
@@ -289,6 +313,9 @@ export function PosBoard({
                   {session && <small className="pos-who">{session.customer}</small>}
                   {state === 'occupied' && info.live && (
                     <em className="pos-timer">{clock(playedMs(info.live, tick))}</em>
+                  )}
+                  {state === 'maintenance' && under.get(room.id)?.reason && (
+                    <small className="pos-who">{under.get(room.id)!.reason}</small>
                   )}
                   {state === 'soon' && info.soon && <em className="pos-timer soft">{time(info.soon.start)}</em>}
                   {state === 'due' && info.due?.amount != null && canSeeMoney && (
@@ -305,11 +332,19 @@ export function PosBoard({
                     type="button"
                     className="pos-line-main"
                     aria-label={
-                      session
-                        ? `${room.name}: ${label}. POS tính tiền`
-                        : `${room.name}: Trống. Vào chơi ngay`
+                      state === 'maintenance'
+                        ? `${room.name}: Bảo trì. Quản lý bảo trì`
+                        : session
+                          ? `${room.name}: ${label}. POS tính tiền`
+                          : `${room.name}: Trống. Vào chơi ngay`
                     }
-                    onClick={() => (session ? onSelect(session) : onWalkIn(room.id))}
+                    onClick={() =>
+                      state === 'maintenance'
+                        ? setMaintOpen(true)
+                        : session
+                          ? onSelect(session)
+                          : onWalkIn(room.id)
+                    }
                   >
                     {body}
                   </button>
@@ -345,6 +380,10 @@ export function PosBoard({
           <li>
             <i className="due" />
             Chờ thu tiền
+          </li>
+          <li>
+            <i className="maint" />
+            Bảo trì
           </li>
         </ul>
       </section>
@@ -404,6 +443,78 @@ export function PosBoard({
           </button>
         </section>
       </section>
+      {maintOpen && (
+        <MaintenanceDialog data={data} onClose={() => setMaintOpen(false)} onToggle={onMaintenance} />
+      )}
     </div>
+  );
+}
+
+/** Take lines out of service or bring them back. A line with a guest or an unpaid bill cannot be taken out. */
+function MaintenanceDialog({
+  data,
+  onClose,
+  onToggle,
+}: {
+  data: Data;
+  onClose: () => void;
+  onToggle: (room: string, on: boolean, reason: string) => Promise<boolean>;
+}) {
+  const [reasons, setReasons] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState('');
+  const under = new Map((data.maintenance ?? []).map((m) => [m.room, m]));
+  return (
+    <ModalDialog label="Bảo trì line" onClose={onClose} locked={!!busy} className="pos-maint">
+      <DialogHeading onClose={onClose}>Bảo trì line</DialogHeading>
+      <p className="form-note">
+        Line đang bảo trì không nhận khách vào chơi hay đặt trước. Bật lại khi sửa xong.
+      </p>
+      <ul className="pos-maint-list">
+        {rooms.map((r) => {
+          const row = under.get(r.id);
+          const occupied = data.bookings.some(
+            (x) => x.room === r.id && ['playing', 'paused', 'finished'].includes(x.status),
+          );
+          return (
+            <li key={r.id} className={row ? 'on' : ''}>
+              <div>
+                <strong>{r.name}</strong>
+                <small>
+                  {row
+                    ? `Đang bảo trì từ ${time(row.since)}${row.reason ? ' · ' + row.reason : ''}`
+                    : occupied
+                      ? 'Đang có khách hoặc chờ thu tiền'
+                      : 'Đang hoạt động'}
+                </small>
+              </div>
+              {!row ? (
+                <input
+                  aria-label={`Lý do bảo trì ${r.name}`}
+                  placeholder="Lý do (không bắt buộc)"
+                  value={reasons[r.id] ?? ''}
+                  maxLength={200}
+                  disabled={occupied}
+                  onChange={(e) => setReasons({ ...reasons, [r.id]: e.target.value })}
+                />
+              ) : (
+                <span />
+              )}
+              <button
+                type="button"
+                className={row ? 'secondary' : 'primary'}
+                disabled={!!busy || (!row && occupied)}
+                onClick={async () => {
+                  setBusy(r.id);
+                  await onToggle(r.id, !row, reasons[r.id] ?? '');
+                  setBusy('');
+                }}
+              >
+                {row ? 'Hoạt động trở lại' : 'Chuyển sang bảo trì'}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </ModalDialog>
   );
 }

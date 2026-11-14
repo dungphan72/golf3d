@@ -25,6 +25,7 @@ const ACTION_PERMISSION: Record<string, Permission> = {
   extend: 'session.operate',
   'switch-service': 'session.operate',
   walkin: 'session.operate',
+  maintenance: 'session.operate',
   'request-update': 'support.handle',
   'clean-test-data': 'settings.manage',
 };

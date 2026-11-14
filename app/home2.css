@@ -1209,3 +1209,257 @@ html:has(.sg-page) {
     flex: 1 1 100%;
   }
 }
+
+
+/* ── News and events ─────────────────────────────────────────────────────────────────────── */
+.sg-head--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  max-width: none;
+}
+.sg-news-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+.sg-event {
+  min-height: 300px;
+  overflow: hidden;
+  border-radius: 18px;
+  background: var(--sg-turf-deep) center / cover no-repeat;
+  color: #fff;
+}
+.sg-event-in {
+  display: grid;
+  align-content: end;
+  gap: 0.7rem;
+  min-height: 300px;
+  padding: 1.6rem;
+  background: linear-gradient(0deg, rgba(4, 40, 18, 0.92), rgba(4, 40, 18, 0.45));
+}
+.sg-event-tag {
+  justify-self: start;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  background: var(--sg-cta);
+  color: #1b1500;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.sg-event h3 {
+  font-size: clamp(1.4rem, 1.1rem + 1.2vw, 2rem);
+  color: #fff;
+}
+.sg-event p {
+  color: rgba(255, 255, 255, 0.88);
+}
+.sg-event ul {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.92rem;
+}
+.sg-event li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sg-event .sg-btn {
+  justify-self: start;
+}
+.sg-news {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sg-news a {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.6rem;
+  border: 1px solid var(--sg-line);
+  border-radius: 14px;
+  background: #fff;
+}
+.sg-news a:hover {
+  box-shadow: 0 8px 22px rgba(6, 51, 26, 0.1);
+}
+.sg-news img,
+.sg-news-ph {
+  flex: none;
+  width: 104px;
+  height: 70px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: #dcebde;
+}
+.sg-news strong {
+  display: block;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+.sg-news small {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+  color: var(--sg-ink-2);
+}
+.sg-posts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sg-posts a {
+  display: grid;
+  gap: 0.2rem;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--sg-line);
+  border-radius: 14px;
+  background: #fff;
+}
+.sg-posts a:hover {
+  box-shadow: 0 8px 22px rgba(6, 51, 26, 0.1);
+}
+.sg-posts small {
+  color: var(--sg-turf);
+  font-weight: 600;
+}
+.sg-posts span {
+  color: var(--sg-ink-2);
+}
+.sg-article {
+  max-width: 48rem;
+  margin-inline: auto;
+}
+.sg-article h1 {
+  margin-top: 1rem;
+  font-size: clamp(1.9rem, 1.2rem + 2.6vw, 3rem);
+}
+.sg-article-meta {
+  margin: 0.6rem 0 1.4rem;
+  color: var(--sg-turf);
+  font-weight: 600;
+}
+.sg-article img {
+  width: 100%;
+  height: auto;
+  margin-bottom: 1.4rem;
+  border-radius: 14px;
+}
+.sg-article p {
+  margin-bottom: 1rem;
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+@media (max-width: 960px) {
+  .sg-news-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ── Event sign-up ───────────────────────────────────────────────────────────────────────── */
+.sg-signup {
+  position: relative;
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--sg-line);
+  border-radius: 16px;
+  background: #fff;
+}
+.sg-signup h2 {
+  font-size: 1.4rem;
+}
+.sg-signup label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.sg-signup input {
+  min-height: 48px;
+  padding: 0 0.8rem;
+  border: 1px solid #b8c2ba;
+  border-radius: 10px;
+  font: 400 1rem var(--sg-body);
+}
+.sg-signup input:focus-visible {
+  outline: 3px solid var(--sg-ink);
+  outline-offset: 1px;
+}
+.sg-signup .sg-btn {
+  justify-self: start;
+}
+.sg-signup-error {
+  margin: 0;
+  color: #b3261e;
+  font-weight: 600;
+}
+.sg-signup--ok {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  border-color: #b9d6bf;
+  background: #eef7ef;
+  color: var(--sg-turf-deep);
+}
+.sg-signup--ok p {
+  margin: 0.2rem 0 0;
+}
+
+
+/* ── Phone: app-style shortcut tiles under the hero ─────────────────────────────────────── */
+.sg-apptiles {
+  display: none;
+}
+@media (max-width: 768px) {
+  .sg-apptiles {
+    position: relative;
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: -2.2rem;
+    padding-block: 0.4rem 0.2rem;
+  }
+  .sg-apptiles a {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 6px;
+    min-height: 92px;
+    padding: 8px 4px;
+    border: 1px solid var(--sg-line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 6px 18px rgba(6, 51, 26, 0.1);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: center;
+  }
+  .sg-apptiles svg {
+    color: var(--sg-turf);
+  }
+  .sg-apptiles a:first-child {
+    background: var(--sg-turf);
+    color: #fff;
+  }
+  .sg-apptiles a:first-child svg {
+    color: var(--sg-cta);
+  }
+  .sg-quick-wrap {
+    margin-top: 1rem;
+  }
+}

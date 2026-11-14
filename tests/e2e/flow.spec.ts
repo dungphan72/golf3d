@@ -174,7 +174,7 @@ test('bán gói vào sổ ca rồi trả phiên 18 hố bằng lượt gói', as
   await nav(page, /Khách hàng/).click();
   await page.getByRole('button', { name: /Khách Gói/ }).click();
   await expect(page.getByText('Điểm tích lũy:')).toBeVisible();
-  await expect(page.getByText(/10 Lượt 18 hố/)).toBeVisible();
+  await expect(page.getByText(/9 Lượt 18 hố/)).toBeVisible();
 });
 
 test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách thấy kết quả', async ({
@@ -193,7 +193,7 @@ test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách th�
   await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 
   await page.goto('/quan-ly');
-  await nav(page, /Booking/).click();
+  await nav(page, /Đặt line/).click();
   await page.getByRole('tab', { name: /Đặt online/ }).click();
   const row = page.getByRole('row', { name: /Khách Online/ });
   await expect(row).toBeVisible();

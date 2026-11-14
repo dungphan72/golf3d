@@ -10,6 +10,9 @@ import { bookingSlug } from '../lib/server/online-service';
 import { FONT_URL, SiteFooter, SiteHeader } from './ui/SiteChrome';
 import { Icon, type IconName } from './ui/Icon';
 import QuickBook from './ui/QuickBook';
+import { EventsNews } from './ui/NewsEvents';
+import { publicContent } from '../lib/server/content-service';
+import { publicTenant } from '../lib/server/member-account-service';
 import { parseBenefit } from '../lib/member-benefits';
 import { rooms } from '../lib/club';
 import './home2.css';
@@ -105,11 +108,13 @@ function RateGrid({ title, table }: { title: string; table: PriceTable }) {
 }
 
 export default async function LandingPage() {
-  const [slug, pricing, landing] = await Promise.all([
+  const [slug, pricing, landing, tenant] = await Promise.all([
     bookingSlug(),
     publicPricing(),
     getPublicLandingConfig(),
+    publicTenant(),
   ]);
+  const content = tenant ? await publicContent(tenant) : { news: [], upcoming: [], past: [] };
   const rows = pricing.standard.rows;
   const group = pricing.standard.group;
   const gold = rows.find((r) => r.gold) ?? rows[0];
@@ -257,6 +262,26 @@ export default async function LandingPage() {
             </div>
           </div>
         </section>
+
+        <nav className="sg-apptiles sg-in" aria-label="Lối tắt">
+          {(
+            [
+              ['event', 'Đặt line', bookHref],
+              ['layers', 'Mua gói giờ', '/thanh-vien'],
+              ['crown', 'Hội viên', '/tai-khoan'],
+              ['trophy', 'Giải đấu', '/tin-tuc'],
+              ['offer', 'Bảng giá', '#bang-gia'],
+              ['phone', 'Gọi hotline', `tel:${BRAND.hotline}`],
+              ['chat', 'Nhắn Zalo', BRAND.zalo],
+              ['directions', 'Chỉ đường', mapHref],
+            ] as [IconName, string, string][]
+          ).map(([icon, label, href]) => (
+            <a key={label} href={href} {...(href.startsWith('http') ? { target: '_blank', rel: 'noopener noreferrer' } : {})}>
+              <Icon name={icon} size={28} />
+              {label}
+            </a>
+          ))}
+        </nav>
 
         {slug && (
           <div className="sg-in sg-quick-wrap">
@@ -512,6 +537,8 @@ export default async function LandingPage() {
             </div>
           </div>
         </section>
+
+        <EventsNews upcoming={content.upcoming} news={content.news} contact={`tel:${BRAND.hotline}`} />
 
         {pricing.promotions.length > 0 && (
           <section className="sg-in sg-block" id="khuyen-mai" style={{ paddingTop: 0 }}>

@@ -42,6 +42,7 @@ test('giao diện: ẩn thẻ Phễu, lưu, tải lại vẫn ẩn; về mặc �
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   const crm = page.getByRole('region', { name: 'CRM' });
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Tổng quan', exact: true }).click();
+  await page.getByText('Phễu, nguồn khách và xếp hạng nhân viên').click();
   await expect(crm.getByRole('heading', { name: /^Phễu [0-9]+ ngày$/ })).toBeVisible();
 
   await crm.getByRole('button', { name: 'Tùy biến' }).click();
@@ -52,6 +53,7 @@ test('giao diện: ẩn thẻ Phễu, lưu, tải lại vẫn ẩn; về mặc �
   await page.reload();
   await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Tổng quan', exact: true }).click();
+  await page.getByText('Phễu, nguồn khách và xếp hạng nhân viên').click();
   await expect(crm.getByRole('heading', { name: 'Nguồn khách' })).toBeVisible();
   await expect(crm.getByRole('heading', { name: /^Phễu [0-9]+ ngày$/ })).toHaveCount(0);
 

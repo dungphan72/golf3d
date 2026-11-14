@@ -758,3 +758,13 @@
   .crm-kpi:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .crm-recent th:nth-child(2), .crm-recent td:nth-child(2), .crm-recent th:nth-child(5), .crm-recent td:nth-child(5) { display: none; }
 }
+
+.crm-bars { position: relative; }
+.crm-line { position: absolute; inset: 8px 0 0; width: 100%; height: calc(100% - 8px); pointer-events: none; overflow: visible; }
+.crm-line polyline { fill: none; stroke: var(--crm-gold); stroke-width: 2.5; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.crm-legend { display: flex; gap: 14px; margin: 0; font-size: 12px; color: #55605a; align-items: center; }
+.crm-legend i { display: inline-block; vertical-align: middle; margin-right: 4px; }
+.crm-legend .bar { width: 12px; height: 10px; border-radius: 2px; background: var(--crm-green-2); }
+.crm-legend .ln { width: 14px; height: 3px; border-radius: 2px; background: var(--crm-gold); }
+.crm-recent td:first-child { display: flex; align-items: center; gap: 10px; }
+.crm-av { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: #e3f5e8; color: var(--crm-green); font-size: 12px; font-weight: 700; }

@@ -24,7 +24,7 @@ export async function crmHome(c: Ctx): Promise<Result> {
   const prevMonth = monthStart - 30 * DAY;
   const weekStart = monthStart;
 
-  const [custs, custPrev, leadsNow, leadsPrev, open, pipe, revenue, weeks, acts, recent, tasks, apptToday] = await Promise.all([
+  const [custs, custPrev, leadsNow, leadsPrev, open, pipe, revenue, weeks, acts, recent, tasks, apptToday, dealWeeks] = await Promise.all([
     d.prepare('SELECT COUNT(*) AS n FROM customers WHERE tenant=?').bind(c.tenant).first<{ n: number }>(),
     d.prepare('SELECT COUNT(*) AS n FROM customers WHERE tenant=? AND created<?').bind(c.tenant, monthStart).first<{ n: number }>(),
     d.prepare(`SELECT COUNT(*) AS n FROM crm2_leads WHERE tenant=? AND created>=?${scope}`).bind(...sargs(c.tenant, monthStart)).first<{ n: number }>(),
@@ -41,6 +41,7 @@ export async function crmHome(c: Ctx): Promise<Result> {
     d.prepare(`SELECT l.id,l.full_name,l.phone,l.email,l.stage,l.expected_value,l.target_service,u.name AS owner_name,l.updated FROM crm2_leads l LEFT JOIN users u ON u.id=l.owner WHERE l.tenant=?${mgr ? '' : ' AND (l.owner=? OR l.owner IS NULL)'} ORDER BY l.updated DESC LIMIT 8`).bind(...sargs(c.tenant)).all<LeadRow>(),
     d.prepare(`SELECT id,title,due_at,done_at FROM crm2_tasks WHERE tenant=? AND (?=1 OR assignee=?) AND ((done_at IS NULL AND due_at<?) OR (due_at>=? AND due_at<?)) ORDER BY due_at LIMIT 8`).bind(c.tenant, mgr ? 1 : 0, c.userId, today + DAY, today, today + DAY).all<{ id: string; title: string; due_at: number | null; done_at: number | null }>(),
     d.prepare("SELECT COUNT(*) AS n FROM crm2_appointments WHERE tenant=? AND at>=? AND at<? AND status IN ('PENDING','CONFIRMED') AND (?=1 OR owner=?)").bind(c.tenant, today, today + DAY, mgr ? 1 : 0, c.userId).first<{ n: number }>(),
+    d.prepare(`SELECT CAST((created-?)/(7*86400000) AS INTEGER) AS w,COUNT(*) AS n FROM crm2_leads WHERE tenant=? AND created>=?${scope} GROUP BY w`).bind(...sargs(weekStart, c.tenant, weekStart)).all<{ w: number; n: number }>(),
   ]);
 
   const byStage = new Map(pipe.results.map((r) => [r.stage, r]));
@@ -66,6 +67,7 @@ export async function crmHome(c: Ctx): Promise<Result> {
   const weekly = Array.from({ length: 4 }, (_, i) => ({
     label: `Tuần ${i + 1}`,
     revenue: weeks.results.find((w) => w.w === i)?.v ?? 0,
+    deals: dealWeeks.results.find((w) => w.w === i)?.n ?? 0,
   }));
 
   return reply({

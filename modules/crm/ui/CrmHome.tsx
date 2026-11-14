@@ -18,7 +18,7 @@ type Home = {
     apptToday: number;
   };
   columns: { key: string; label: string; count: number; value: number; cards: { id: string; name: string; note: string; value: number }[] }[];
-  weekly: { label: string; revenue: number }[];
+  weekly: { label: string; revenue: number; deals: number }[];
   activity: { id: string; type: string; text: string; lead: string; at: number }[];
   recent: { id: string; name: string; phone: string; email: string; stage: string; value: number; owner: string; updated: number }[];
   tasks: { id: string; title: string; due: number | null; done: boolean }[];
@@ -36,6 +36,8 @@ const delta = (v: number | null) =>
   v === null ? <small className="muted">Chưa có số liệu kỳ trước</small> : <small className={v >= 0 ? 'up' : 'down'}>{v >= 0 ? '▲' : '▼'} {Math.abs(v)}% so với tháng trước</small>;
 
 /** Dashboard of the CRM home screen: KPIs, pipeline in 5 columns, weekly revenue, activity, recent leads and today's tasks. */
+const initials = (n: string) => n.trim().split(/\s+/).map((w) => w[0]).join('').slice(-2).toUpperCase() || '?';
+
 export function CrmHome({ onLead, onPage }: { onLead: (id: string) => void; onPage: (p: 'leads' | 'pipeline' | 'care' | 'appointments' | 'customers') => void }) {
   const { data, error } = useLoad<Home & { now?: number }>('/api/crm2/home', 60_000);
   if (error && !data) return <p className="crm-home-err">{error}</p>;
@@ -45,6 +47,8 @@ export function CrmHome({ onLead, onPage }: { onLead: (id: string) => void; onPa
   const dealsTotal = data.columns.reduce((s, c) => s + c.count, 0);
   const dealsValue = data.columns.reduce((s, c) => s + c.value, 0);
   const max = Math.max(1, ...data.weekly.map((w) => w.revenue));
+  const maxDeals = Math.max(1, ...data.weekly.map((w) => w.deals));
+  const line = data.weekly.map((w, i) => `${((i + 0.5) / data.weekly.length) * 100},${100 - (w.deals / maxDeals) * 90 - 5}`).join(' ');
 
   const kpis = [
     { icon: Users, tone: 'blue', label: 'Khách hàng', value: k.customers.toLocaleString('vi-VN'), foot: delta(k.customersDelta) },
@@ -101,7 +105,10 @@ export function CrmHome({ onLead, onPage }: { onLead: (id: string) => void; onPa
           {k.revenueMonth === null ? (
             <p className="crm-pipe-empty">Chỉ quản lý xem được doanh thu.</p>
           ) : (
-            <div className="crm-bars" role="img" aria-label="Doanh thu theo tuần">
+            <div className="crm-bars" role="img" aria-label="Doanh thu theo tuần và số cơ hội mới">
+              <svg className="crm-line" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points={line} />
+              </svg>
               {data.weekly.map((w) => (
                 <div key={w.label}>
                   <i style={{ height: `${Math.max(3, (w.revenue / max) * 100)}%` }} title={money(w.revenue)} />
@@ -110,6 +117,7 @@ export function CrmHome({ onLead, onPage }: { onLead: (id: string) => void; onPa
               ))}
             </div>
           )}
+          <p className="crm-legend"><i className="bar" /> Doanh thu <i className="ln" /> Cơ hội mới</p>
         </section>
 
         <section className="crm-card crm-recent">
@@ -125,7 +133,7 @@ export function CrmHome({ onLead, onPage }: { onLead: (id: string) => void; onPa
               <tbody>
                 {data.recent.map((r) => (
                   <tr key={r.id} onClick={() => onLead(r.id)}>
-                    <td><b>{r.name}</b><small>{r.email}</small></td>
+                    <td><span className="crm-av">{initials(r.name)}</span><span><b>{r.name}</b><small>{r.email}</small></span></td>
                     <td><Phone size={13} /> {r.phone}</td>
                     <td><span className={'crm-pill ' + r.stage.toLowerCase()}>{STAGE_LABELS[r.stage as Stage] ?? r.stage}</span></td>
                     <td className="num">{money(r.value)}</td>

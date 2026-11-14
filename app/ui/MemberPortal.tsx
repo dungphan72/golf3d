@@ -192,7 +192,7 @@ function AuthForms({ onDone, first }: { onDone: () => void; first: 'register' | 
         <div className="mp-auth-head">
           <div className="mp-auth-badge">
             <Sparkles size={14} />
-            <span>Saigon Golf 3D Club · Cổng khách hàng</span>
+            <span>SaiGon Indoor Golf Club · Cổng khách hàng</span>
           </div>
           <h1>{mode === 'login' ? 'Đăng Nhập Khách Hàng' : 'Tạo Tài Khoản Khách Hàng'}</h1>
           <p>
@@ -263,7 +263,7 @@ function AuthForms({ onDone, first }: { onDone: () => void; first: 'register' | 
               <input
                 id="mp-auth-phone"
                 type="tel"
-                placeholder="Ví dụ: 0902 030 185"
+                placeholder="Ví dụ: 0877 834 888"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 autoComplete="tel"
@@ -959,7 +959,7 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                 <div className="mp-banner-empty">
                   <h3>Sẵn sàng cho buổi tập tiếp theo?</h3>
                   <p>
-                    Trải nghiệm công nghệ Foresight Sports GC3 USA đỉnh cao tại 250 Lương Đình Của.
+                    Trải nghiệm công nghệ Foresight Sports GC3 USA đỉnh cao tại 250 Lương Định Của.
                   </p>
                   <button
                     type="button"

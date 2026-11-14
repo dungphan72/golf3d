@@ -9,9 +9,9 @@ import { SettingsForm, type SettingsTab } from './Forms';
 import { PageTabs } from './kit';
 import { type Data } from './shared';
 import { BookingsHub, HUB_VIEWS, InvoiceList, SupportList } from './BookingsHub';
-import { HomeBoard } from './HomeBoard';
-import { DashboardView } from './DashboardView';
-import { BottomBar, AppHeader, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
+import { PosBoard } from './PosBoard';
+import { PosSidebar, PosTopbar } from './PosShell';
+import { BottomBar, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
 import { CustomerHome } from './CustomerHome';
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
@@ -223,7 +223,7 @@ export default function ClubApp() {
     }
   };
   return (
-    <div className="app-shell ds-root">
+    <div className={'app-shell ds-root pos-root' + (chosen ? ' pos-docked' : '')}>
       <Sidebar
         open={mobile}
         view={view}
@@ -242,19 +242,25 @@ export default function ClubApp() {
         }}
         onLogout={signOut}
       />
-      <div className="ds-body">
+      <PosSidebar
+        view={view}
+        visible={visibleNav}
+        badges={badges}
+        onGo={(key) => {
+          setMode('staff');
+          go(key);
+        }}
+      />
+      <div className="ds-body pos-body">
         <a className="ds-skip" href="#noi-dung">
           Bỏ qua đến nội dung
         </a>
-        <AppHeader
+        <PosTopbar
           title={
             mode === 'customer'
               ? 'Xem như khách hàng'
               : (NAV_LABEL[NAV_PARENT[view] ?? view] ?? NAV_LABEL.account)
           }
-          view={view}
-          visible={visibleNav}
-          badges={badges}
           user={data?.user ?? ''}
           role={data?.role ?? ''}
           connection={error ? 'Mất kết nối' : data ? 'Trực tuyến' : 'Đang kết nối…'}
@@ -309,26 +315,14 @@ export default function ClubApp() {
                 </>
               ) : (
                 <>
-                  {view === 'dashboard' && data && (
-                    <DashboardView
+                  {(view === 'dashboard' || view === 'rooms') && data && (
+                    <PosBoard
                       data={data}
                       now={now}
                       canSeeMoney={allowed('finance')}
                       leads={leads}
                       crm2={crm2}
-                      onSelect={setSelected}
-                      onBook={bookRoom}
-                      onWalkIn={setWalkInRoom}
-                      onGo={go}
-                    />
-                  )}
-                  {view === 'rooms' && data && (
-                    <HomeBoard
-                      data={data}
-                      now={now}
-                      canSeeMoney={allowed('finance')}
-                      leads={leads}
-                      crm2={crm2}
+                      selectedRoom={chosen?.room}
                       onSelect={setSelected}
                       onBook={bookRoom}
                       onWalkIn={setWalkInRoom}
@@ -450,6 +444,7 @@ export default function ClubApp() {
       )}
       {chosen && (
         <SessionPanel
+          key={chosen.id}
           permissions={data?.permissions ?? []}
           onRefresh={load}
           bank={{ bin: c.bankBin ?? '', account: c.bankAccount ?? '', holder: c.bankHolder ?? '' }}

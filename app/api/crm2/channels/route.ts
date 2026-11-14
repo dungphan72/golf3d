@@ -70,8 +70,8 @@ const route = crmRoute({ read: 'crm.manage', write: 'crm.manage' }, async (c, re
       try {
         await sendEmail(
           to,
-          '[Saigon Golf 3D] Kiểm tra kết nối Email CRM',
-          `Xin chào,\n\nĐây là email kiểm tra kết nối từ hệ thống CRM Saigon Golf 3D lúc ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.\nKết nối gửi tin đang hoạt động tốt.`,
+          '[SaiGon Indoor Golf] Kiểm tra kết nối Email CRM',
+          `Xin chào,\n\nĐây là email kiểm tra kết nối từ hệ thống CRM SaiGon Indoor Golf lúc ${new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}.\nKết nối gửi tin đang hoạt động tốt.`,
         );
         return reply({ ok: true, message: `Đã gửi thành công email thử nghiệm tới ${to}` });
       } catch (err) {
@@ -90,7 +90,7 @@ const route = crmRoute({ read: 'crm.manage', write: 'crm.manage' }, async (c, re
       try {
         await sendZalo(
           userId,
-          `[Saigon Golf 3D] Tin nhắn thử nghiệm kết nối Zalo OA lúc ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}. Kết nối hoạt động tốt!`,
+          `[SaiGon Indoor Golf] Tin nhắn thử nghiệm kết nối Zalo OA lúc ${new Date().toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}. Kết nối hoạt động tốt!`,
         );
         return reply({ ok: true, message: `Đã gửi tin nhắn Zalo OA thử nghiệm thành công tới ${userId}` });
       } catch (err) {

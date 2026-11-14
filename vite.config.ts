@@ -50,7 +50,11 @@ export default defineConfig(async ({ command }) => {
         : {}),
       ...(isCodexSeatbeltSandbox
         ? { watch: { useFsEvents: false, usePolling: true } }
-        : {}),
+        : {
+            // Reference images and browser downloads land in these folders; a half-written file
+            // must not crash the dev server's file watcher (EBUSY).
+            watch: { ignored: ["**/hinh-anh/**", "**/*.crdownload", "**/*.png"] },
+          }),
     },
     plugins: [
       vinext(),

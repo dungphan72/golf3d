@@ -15,7 +15,7 @@ export function CustomerHome({
     <>
       <div className="customer-hero">
         <div>
-          <span className="eyebrow">SAIGON GOLF 3D CLUB</span>
+          <span className="eyebrow">SAIGON INDOOR GOLF CLUB</span>
           <h1>
             Sân chơi của bạn.
             <br />

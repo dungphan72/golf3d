@@ -1,13 +1,14 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { Icon, type IconName } from './Icon';
 
-const TABS = [
-  { href: '/', label: 'Trang chủ', match: (p: string) => p === '/' || p === '' },
-  { href: '/bang-gia', label: 'Bảng giá', match: (p: string) => p.startsWith('/bang-gia') },
-  { href: '/#dat-cho', label: 'Đặt chỗ', match: (p: string) => p.startsWith('/book'), cta: true },
-  { href: '/thanh-vien', label: 'Gói thẻ', match: (p: string) => p.startsWith('/thanh-vien') },
-  { href: '/tai-khoan', label: 'Khách hàng', match: (p: string) => p.startsWith('/tai-khoan') },
+const TABS: { href: string; label: string; icon: IconName; match: (p: string) => boolean; cta?: boolean }[] = [
+  { href: '/', label: 'Trang chủ', icon: 'home', match: (p: string) => p === '/' || p === '' },
+  { href: '/bang-gia', label: 'Bảng giá', icon: 'offer', match: (p: string) => p.startsWith('/bang-gia') },
+  { href: '/#dat-cho', label: 'Đặt chỗ', icon: 'event', match: (p: string) => p.startsWith('/book'), cta: true },
+  { href: '/thanh-vien', label: 'Gói thẻ', icon: 'card', match: (p: string) => p.startsWith('/thanh-vien') },
+  { href: '/tai-khoan', label: 'Tài khoản', icon: 'person', match: (p: string) => p.startsWith('/tai-khoan') },
 ];
 
 export default function MobileAppNavBar() {
@@ -35,6 +36,9 @@ export default function MobileAppNavBar() {
             }
           }}
         >
+          <span className="mnav-ic">
+            <Icon name={t.icon} size={22} />
+          </span>
           {t.label}
         </Link>
       ))}

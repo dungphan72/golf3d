@@ -1,0 +1,1507 @@
+/* Staff POS workspace: top bar, side menu, line board and the docked POS panel.
+   Everything is scoped under .pos-root so the older staff screens keep their own look. */
+.pos-root {
+  --pos-green: #0a5c1e;
+  --pos-green-2: #0f7a2c;
+  --pos-soft: #e8f3ea;
+  --pos-soft-2: #f1f7f2;
+  --pos-line: #e1e8e2;
+  --pos-bg: #f5f8f5;
+  --pos-ink: #12231a;
+  --pos-muted: #5b6d62;
+  --pos-gold: #fcb000;
+  --pos-gold-press: #d99700;
+  --pos-amber-soft: #fff6dc;
+  --pos-orange: #e8741a;
+  --pos-orange-soft: #fff0e3;
+  --pos-red: #e5484d;
+  --pos-top: 78px;
+  --pos-dock: 440px;
+}
+.app-shell.ds-root.pos-root {
+  display: grid !important; /* beats the legacy desktop flex rule */
+  grid-template-columns: 272px minmax(0, 1fr);
+  grid-template-rows: var(--pos-top) minmax(0, 1fr);
+  min-height: 100vh;
+  background: var(--pos-bg);
+  color: var(--pos-ink);
+  font-family: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 15px;
+}
+.pos-root .ds-side {
+  display: none !important;
+}
+.pos-root .pos-body {
+  display: contents;
+}
+.pos-root button {
+  font-family: inherit;
+}
+.pos-root :is(button, a, input, select, summary):focus-visible {
+  outline: 3px solid var(--pos-green);
+  outline-offset: 2px;
+}
+
+/* ── Top bar ───────────────────────────────────────────────────────── */
+.pos-top {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid var(--pos-line);
+}
+.pos-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.pos-brand img {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+}
+.pos-brand b {
+  display: block;
+  font: 800 1.5rem/1.1 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 90%;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+.pos-brand small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.9rem;
+  color: var(--pos-muted);
+  white-space: nowrap;
+}
+.pos-search {
+  flex: 1 1 320px;
+  max-width: 600px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 999px;
+  background: #eef2ef;
+}
+.pos-search-field {
+  flex: 1;
+  min-width: 0;
+}
+.pos-search .ds-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.pos-search .ds-search input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 1rem;
+  box-shadow: none;
+}
+.pos-search .ds-search svg {
+  color: #4a5d51;
+}
+.pos-search .ds-search-results {
+  top: calc(100% + 12px);
+  left: -18px;
+  right: -60px;
+}
+.pos-search kbd {
+  font: 500 0.95rem 'Be Vietnam Pro', sans-serif;
+  color: var(--pos-muted);
+  white-space: nowrap;
+}
+.pos-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+.pos-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--pos-gold);
+  color: #1b1500;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pos-new:hover {
+  background: var(--pos-gold-press);
+}
+.pos-conn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  color: var(--pos-muted);
+  white-space: nowrap;
+}
+.pos-conn i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--pos-red);
+}
+.pos-conn.on i {
+  background: #25b24a;
+}
+.pos-iconbtn {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: #1c2e24;
+  cursor: pointer;
+}
+.pos-iconbtn:hover {
+  background: var(--pos-soft);
+}
+.pos-burger {
+  display: none;
+}
+.pos-bell b {
+  position: absolute;
+  top: 6px;
+  right: 4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--pos-red);
+  color: #fff;
+  font-size: 0.7rem;
+  line-height: 18px;
+  text-align: center;
+}
+.pos-user {
+  position: relative;
+}
+.pos-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px 2px 2px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  color: #1c2e24;
+}
+.pos-user-btn:hover {
+  background: var(--pos-soft);
+}
+.pos-avatar {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--pos-green);
+  color: #fff;
+  font-size: 1.35rem;
+  font-weight: 600;
+}
+.pos-user-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 230px;
+  padding: 6px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 40px rgba(14, 40, 24, 0.18);
+}
+.pos-user-head {
+  display: grid;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--pos-line);
+}
+.pos-user-head small {
+  color: var(--pos-muted);
+}
+.pos-user-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  text-align: left;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+.pos-user-menu button:hover {
+  background: var(--pos-soft);
+}
+.pos-user-menu .danger {
+  color: #c4282d;
+  font-weight: 600;
+}
+
+.pos-top .ds-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── Side menu ─────────────────────────────────────────────────────── */
+.pos-side {
+  grid-column: 1;
+  grid-row: 2;
+  position: sticky;
+  top: var(--pos-top);
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: calc(100vh - var(--pos-top));
+  padding: 18px 16px 20px;
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid var(--pos-line);
+  scrollbar-width: thin;
+}
+.pos-nav {
+  display: grid;
+  gap: 14px;
+}
+.pos-nav-group {
+  display: grid;
+  gap: 4px;
+}
+.pos-nav-label {
+  margin: 4px 14px 2px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #7a8b80;
+}
+.pos-nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 52px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: #1c2e24;
+  font-size: 1.02rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.pos-nav-item:hover {
+  background: var(--pos-soft-2);
+}
+.pos-nav-item.on {
+  background: var(--pos-green);
+  color: #fff;
+  font-weight: 600;
+}
+.pos-nav-item svg {
+  flex: none;
+}
+.pos-count {
+  margin-left: auto;
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 11px;
+  background: var(--pos-red);
+  color: #fff;
+  font-size: 0.75rem;
+  text-align: center;
+}
+.pos-club-card {
+  margin-top: auto;
+  overflow: hidden;
+  border: 1px solid var(--pos-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(14, 40, 24, 0.06);
+}
+.pos-club-card svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: linear-gradient(#f3f9f4, #fff);
+}
+.pos-club-card ul {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px 18px;
+  list-style: none;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+.pos-club-card li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.pos-club-card li svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  background: none;
+  color: var(--pos-green);
+}
+.pos-club-card a {
+  color: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+}
+
+/* ── Main column ───────────────────────────────────────────────────── */
+.pos-root .ds-skip {
+  grid-column: 1 / -1;
+  grid-row: 1;
+}
+.app-shell.pos-root .ds-main {
+  grid-column: 2;
+  grid-row: 2;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 22px 24px 40px;
+  transition: margin-right 0.2s ease;
+}
+.pos-board {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.pos-greet {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pos-greet h1 {
+  margin: 0;
+  font: 800 2rem/1.15 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 92%;
+  letter-spacing: -0.015em;
+  color: var(--pos-ink);
+}
+.pos-greet p {
+  margin: 4px 0 0;
+  font-size: 1.1rem;
+  color: var(--pos-muted);
+}
+.pos-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  height: 52px;
+  padding: 0 22px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.pos-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: 14px;
+}
+.pos-kpi {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--pos-line);
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(14, 40, 24, 0.05);
+}
+.pos-kpi-ic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: var(--pos-soft);
+  color: var(--pos-green);
+}
+.pos-kpi-ic.warn {
+  background: var(--pos-amber-soft);
+  color: #c98a00;
+}
+.pos-kpi span {
+  display: block;
+  font-size: 0.92rem;
+  color: #2b3d33;
+}
+.pos-kpi b {
+  display: block;
+  margin: 2px 0;
+  font: 800 1.55rem/1.15 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 92%;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pos-kpi small {
+  font-size: 0.82rem;
+  color: var(--pos-muted);
+}
+
+/* ── Line map ──────────────────────────────────────────────────────── */
+.pos-map {
+  padding: 20px;
+  border: 1px solid var(--pos-line);
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(14, 40, 24, 0.05);
+}
+.pos-map-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.pos-map-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font: 800 1.45rem/1.2 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 92%;
+  color: var(--pos-ink);
+}
+.pos-map-head h2 svg {
+  color: var(--pos-green);
+}
+.pos-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--pos-line);
+  border-radius: 999px;
+  background: #fff;
+}
+.pos-tabs button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: #1c2e24;
+  font-size: 0.92rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pos-tabs button:hover {
+  background: var(--pos-soft-2);
+}
+.pos-tabs button.on {
+  background: var(--pos-green);
+  color: #fff;
+  font-weight: 600;
+}
+.pos-mode {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.pos-mode button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--pos-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--pos-muted);
+  cursor: pointer;
+}
+.pos-mode button.on {
+  border-color: var(--pos-green);
+  background: var(--pos-green);
+  color: #fff;
+}
+.pos-lines {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 14px;
+}
+.pos-line {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 156px;
+  overflow: hidden;
+  border: 1px solid var(--pos-line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 3px 10px rgba(14, 40, 24, 0.05);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+.pos-line:hover {
+  box-shadow: 0 8px 22px rgba(14, 40, 24, 0.12);
+}
+.pos-line-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 16px 8px 12px;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+.pos-line-main.static {
+  cursor: default;
+}
+.pos-line-main strong {
+  font: 700 1.2rem/1.2 'Be Vietnam Pro', sans-serif;
+}
+.pos-flag {
+  color: var(--pos-green);
+}
+.pos-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--pos-soft-2);
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pos-state i {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #25b24a;
+}
+.pos-who {
+  max-width: 100%;
+  padding: 0 6px;
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--pos-muted);
+}
+.pos-line.vip .pos-who {
+  color: #f1e6cf;
+}
+.pos-timer {
+  font: 600 0.95rem/1 'Be Vietnam Pro', sans-serif;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+}
+.pos-timer.soft {
+  color: var(--pos-muted);
+  font-weight: 500;
+}
+.pos-line-acts {
+  display: grid;
+  gap: 6px;
+  padding: 0 10px 10px;
+}
+.pos-line-acts button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 1px solid var(--pos-line);
+  border-radius: 10px;
+  background: #fff;
+  color: #1c2e24;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.pos-line-acts .walkin {
+  border-color: var(--pos-green);
+  background: var(--pos-green);
+  color: #fff;
+}
+.pos-line-acts button:hover {
+  filter: brightness(0.96);
+}
+.pos-line.occupied {
+  border: 2px solid var(--pos-green);
+  background: #f1faf3;
+}
+.pos-line.occupied .pos-state {
+  background: var(--pos-green);
+  color: #fff;
+}
+.pos-line.occupied .pos-state i {
+  background: #fff;
+}
+.pos-line.soon {
+  border-color: #f2c553;
+  background: #fffaf0;
+}
+.pos-line.soon .pos-state i {
+  background: var(--pos-gold);
+}
+.pos-line.due {
+  border-color: #f2a35a;
+  background: var(--pos-orange-soft);
+}
+.pos-line.due .pos-state {
+  background: #fff;
+}
+.pos-line.due .pos-state i {
+  background: var(--pos-orange);
+}
+.pos-line.clean .pos-state i {
+  background: #9aa8a0;
+}
+.pos-line.selected {
+  border: 2px solid var(--pos-green);
+  box-shadow: 0 0 0 4px rgba(10, 92, 30, 0.18);
+}
+.pos-line.vip {
+  border: 2px solid #e5a11c;
+  color: #fff;
+  background:
+    linear-gradient(rgba(22, 14, 4, 0.5), rgba(22, 14, 4, 0.82)),
+    url('/img/album-vip-bay.webp') center / cover;
+}
+.pos-line.vip .pos-crown {
+  color: var(--pos-gold);
+}
+.pos-line.vip .pos-state {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--pos-ink);
+}
+.pos-line.vip .pos-timer.soft {
+  color: #f1e6cf;
+}
+.pos-line.vip.occupied .pos-state {
+  background: var(--pos-green);
+  color: #fff;
+}
+.pos-line.vip .pos-line-acts button {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--pos-ink);
+}
+.pos-line.vip .pos-line-acts .walkin {
+  background: var(--pos-gold);
+  border-color: var(--pos-gold);
+  color: #1b1500;
+}
+.pos-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  margin: 18px 0 0;
+  padding: 14px 22px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+  list-style: none;
+  width: fit-content;
+  max-width: 100%;
+}
+.pos-legend li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+}
+.pos-legend i {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #25b24a;
+}
+.pos-legend i.occupied {
+  background: var(--pos-green);
+}
+.pos-legend i.soon {
+  background: var(--pos-gold);
+}
+.pos-legend i.due {
+  background: var(--pos-orange);
+}
+
+.pos-lower {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+.pos-card {
+  padding: 20px;
+  border: 1px solid var(--pos-line);
+  border-radius: 18px;
+  background: #fff;
+}
+.pos-card h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 12px;
+  font: 800 1.2rem/1.2 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 92%;
+}
+.pos-badge {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: 12px;
+  background: var(--pos-red);
+  color: #fff;
+  font: 700 0.8rem/1.5 'Be Vietnam Pro', sans-serif;
+  text-align: center;
+}
+.pos-tasks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pos-tasks button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+.pos-tasks button:hover {
+  background: var(--pos-soft-2);
+}
+.pos-tasks span {
+  flex: 1;
+  min-width: 0;
+}
+.pos-tasks strong,
+.pos-tasks small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pos-tasks small {
+  color: var(--pos-muted);
+}
+.pos-task-ic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 6px;
+  border-radius: 12px;
+  background: var(--pos-soft);
+  color: var(--pos-green);
+  font-style: normal;
+}
+.pos-task-ic.pay {
+  background: var(--pos-orange-soft);
+  color: var(--pos-orange);
+}
+.pos-task-ic.soon {
+  background: var(--pos-amber-soft);
+  color: #b57d00;
+}
+.pos-task-ic.help {
+  background: #fdecec;
+  color: #c4282d;
+}
+.pos-task-ic.pos-time {
+  font: 700 0.85rem 'Be Vietnam Pro', sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.pos-empty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--pos-muted);
+}
+.pos-empty svg {
+  color: var(--pos-green);
+}
+.pos-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--pos-green);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── POS panel (docked on the right) ───────────────────────────────── */
+.pos-dock {
+  position: fixed;
+  top: var(--pos-top);
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  width: var(--pos-dock);
+  max-width: 100vw;
+  overflow: hidden;
+  border-left: 1px solid var(--pos-line);
+  border-top-left-radius: 20px;
+  background: #fff;
+  box-shadow: -10px 0 40px rgba(14, 40, 24, 0.12);
+  font-size: 0.95rem;
+  outline: none;
+}
+.pos-dock-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 18px;
+  min-height: 66px;
+  background: var(--pos-green);
+  color: #fff;
+}
+.pos-dock-head h2 {
+  flex: 1;
+  margin: 0;
+  font: 700 1.45rem/1.2 'Be Vietnam Pro', sans-serif;
+  color: #fff;
+}
+.pos-dock-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  cursor: pointer;
+}
+.pos-dock-close:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+.pos-dock-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.pos-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--pos-soft-2);
+  font-size: 0.9rem;
+}
+.pos-status > span:nth-child(2) {
+  margin-left: auto;
+}
+.pos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #d9efdd;
+  color: #07471a;
+  font-weight: 600;
+}
+.pos-chip i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #1fa646;
+}
+.pos-chip.warn {
+  background: var(--pos-orange-soft);
+  color: #8a4300;
+}
+.pos-chip.warn i {
+  background: var(--pos-orange);
+}
+.pos-chip.idle {
+  background: #e9eeea;
+  color: #34463b;
+}
+.pos-chip.idle i {
+  background: #8c9a92;
+}
+.pos-clock {
+  font-variant-numeric: tabular-nums;
+  font-size: 1rem;
+}
+.pos-customer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+}
+.pos-cust-ic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--pos-soft);
+  color: var(--pos-green);
+}
+.pos-customer strong {
+  display: block;
+  font-size: 1.1rem;
+}
+.pos-customer small {
+  color: var(--pos-muted);
+}
+.pos-service {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.pos-service button {
+  min-height: 40px;
+  border: 1px solid var(--pos-line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pos-service button.on {
+  border-color: var(--pos-green);
+  background: var(--pos-soft);
+  color: var(--pos-green);
+  font-weight: 700;
+}
+.pos-service button.on:disabled {
+  opacity: 1;
+  color: var(--pos-green);
+}
+.pos-service button:disabled:not(.on) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.pos-dock-tabs {
+  border-radius: 14px;
+  width: 100%;
+  background: var(--pos-soft-2);
+  border: 0;
+}
+.pos-dock-tabs button {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 0.86rem;
+  white-space: normal;
+}
+.pos-items {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.pos-items th {
+  padding: 4px 6px 8px;
+  border-bottom: 1px solid var(--pos-line);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--pos-muted);
+  text-align: right;
+  white-space: nowrap;
+}
+.pos-items th:first-child,
+.pos-items td:first-child {
+  text-align: left;
+}
+.pos-items td {
+  padding: 10px 6px;
+  border-bottom: 1px solid #eef2ef;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  vertical-align: middle;
+}
+.pos-items td:first-child {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+.pos-items td small {
+  display: block;
+  color: var(--pos-muted);
+  font-weight: 400;
+}
+.pos-item-ic {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--pos-soft);
+  color: var(--pos-green);
+}
+.pos-item-ic.food {
+  background: var(--pos-amber-soft);
+  color: #b57d00;
+}
+.pos-items-empty {
+  color: var(--pos-muted);
+  text-align: center !important;
+}
+.pos-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--pos-line);
+  border-radius: 12px;
+  background: var(--pos-soft-2);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pos-add:hover {
+  background: var(--pos-soft);
+}
+.pos-order {
+  margin-top: 10px;
+}
+.pos-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--pos-soft-2);
+  font-size: 0.88rem;
+}
+.pos-note.warn {
+  background: var(--pos-orange-soft);
+}
+.pos-note button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--pos-line);
+  border-radius: 9px;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-totals {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0 4px;
+}
+.pos-totals div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pos-totals dt {
+  color: #33463b;
+}
+.pos-totals dt small {
+  display: block;
+  color: var(--pos-muted);
+}
+.pos-totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.pos-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #e4f4e7;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.pos-total strong {
+  font: 800 1.7rem/1 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 92%;
+  font-variant-numeric: tabular-nums;
+}
+.pos-methods {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.pos-methods button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 78px;
+  border: 1px solid var(--pos-line);
+  border-radius: 14px;
+  background: #fff;
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.pos-methods button.on {
+  border: 2px solid var(--pos-green);
+  background: var(--pos-soft);
+  color: var(--pos-green);
+  font-weight: 700;
+}
+.pos-cash {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--pos-soft-2);
+}
+.pos-cash label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--pos-muted);
+}
+.pos-cash input {
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid #b9c6bd;
+  border-radius: 10px;
+  background: #fff;
+  font: 700 1.1rem 'Be Vietnam Pro', sans-serif;
+  color: var(--pos-ink);
+}
+.pos-quick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pos-quick button {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--pos-line);
+  border-radius: 10px;
+  background: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-cash p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.pos-cash p.ok {
+  color: var(--pos-green);
+}
+.pos-cash p.short {
+  color: #c4282d;
+}
+.pos-paid {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: #e4f4e7;
+  color: #07471a;
+}
+.pos-paid small {
+  display: block;
+}
+.pos-other {
+  display: grid;
+  gap: 10px;
+}
+.pos-support h3 {
+  margin: 4px 0 8px;
+  font-size: 0.95rem;
+}
+.pos-support div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pos-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 16px;
+  border: 1px solid #b9d6bf;
+  border-radius: 12px;
+  background: var(--pos-soft-2);
+  color: #0b3d1b;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pos-ghost:hover:not(:disabled) {
+  background: var(--pos-soft);
+}
+.pos-dock-foot {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--pos-line);
+  background: #fff;
+}
+.pos-dock-foot > * {
+  flex: 1;
+}
+.pos-main-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--pos-green);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pos-main-btn:hover:not(:disabled) {
+  background: #084a18;
+}
+.pos-dock button:disabled:not(.on) {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.pos-foot-note {
+  align-self: center;
+  font-size: 0.85rem;
+  color: var(--pos-muted);
+}
+
+/* The older components inside the panel (ordering, discount, split pay, transfer) keep working. */
+.pos-dock .info-strip,
+.pos-dock .session-food,
+.pos-dock .transfer-panel {
+  border: 1px solid var(--pos-line);
+  border-radius: 12px;
+  background: var(--pos-soft-2);
+  box-shadow: none;
+}
+.pos-dock .session-food {
+  padding: 12px;
+}
+.pos-dock .primary {
+  min-height: 44px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--pos-green);
+  color: #fff;
+  font-weight: 700;
+}
+.pos-dock .secondary {
+  min-height: 40px;
+  border-radius: 10px;
+}
+.pos-dock input,
+.pos-dock select {
+  max-width: 100%;
+}
+
+/* ── Docked layout: the main column makes room for the panel ───────── */
+@media (min-width: 1181px) {
+  .app-shell.pos-docked .ds-main {
+    margin-right: var(--pos-dock);
+  }
+}
+
+/* ── Tablet and phone ──────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .pos-root {
+    --pos-dock: 420px;
+  }
+  .pos-brand small {
+    display: none;
+  }
+}
+@media (max-width: 1024px) {
+  .app-shell.ds-root.pos-root {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    --pos-top: 64px;
+  }
+  .pos-side {
+    display: none;
+  }
+  .app-shell.pos-root .ds-main {
+    grid-column: 1;
+    padding: 16px 14px 96px;
+  }
+  .pos-top {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    min-height: var(--pos-top);
+    padding: 8px 14px;
+  }
+  .pos-burger {
+    display: inline-grid;
+    order: -1;
+  }
+  .pos-brand {
+    flex: 1;
+  }
+  .pos-actions {
+    margin-left: 0;
+  }
+  .pos-brand b {
+    font-size: 1.15rem;
+  }
+  .pos-brand img {
+    width: 40px;
+    height: 40px;
+  }
+  .pos-search {
+    order: 5;
+    flex: 1 1 100%;
+    max-width: none;
+    height: 46px;
+  }
+  .pos-search kbd,
+  .pos-conn span,
+  .pos-help,
+  .pos-apps,
+  .pos-new span {
+    display: none;
+  }
+  .pos-new {
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+  .pos-greet h1 {
+    font-size: 1.6rem;
+  }
+  /* The POS becomes a full-screen sheet. */
+  .pos-dock {
+    top: 0;
+    width: 100vw;
+    border-radius: 0;
+    z-index: 70;
+  }
+}
+@media (max-width: 560px) {
+  .pos-brand span,
+  .pos-conn {
+    display: none;
+  }
+  .pos-top {
+    gap: 8px;
+  }
+}
+@media (max-width: 640px) {
+  .pos-lines {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pos-map {
+    padding: 14px;
+  }
+  .pos-mode {
+    margin-left: 0;
+  }
+  .pos-methods {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .pos-tabs button {
+    padding: 0 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pos-line,
+  .app-shell.pos-root .ds-main {
+    transition: none;
+  }
+}

@@ -1,6 +1,6 @@
 /**
  * Landing Page Configuration Data & Type Definitions
- * Saigon Golf 3D Club (Foresight Sports GC3 USA)
+ * SaiGon Indoor Golf Club (Foresight Sports GC3 USA)
  */
 
 export interface GalleryPhoto {
@@ -80,12 +80,12 @@ export interface LandingConfig {
 }
 
 export const DEFAULT_LANDING_CONFIG: LandingConfig = {
-  brandName: 'Saigon Golf 3D Club',
-  brandShort: 'SAIGON GOLF',
+  brandName: 'SaiGon Indoor Golf Club',
+  brandShort: 'SAIGON INDOOR GOLF',
   brandSub: '3D CLUB',
-  hotline: '0902030185',
-  zalo: 'https://zalo.me/0902030185',
-  address: '250 Lương Đình Của, Phường An Phú, TP. Thủ Đức (Bình Trưng), TP.HCM',
+  hotline: '0877834888',
+  zalo: 'https://zalo.me/0877834888',
+  address: '250 Lương Định Của, Phường An Phú, TP. Thủ Đức (Bình Trưng), TP.HCM',
   hours: '06:00 – 23:00 mỗi ngày',
   goldTimeText: 'T2–T6 06:00 – 11:00 (Giờ vàng)',
   mapUrl: 'https://maps.google.com/?q=250+Lương+Đình+Của+Bình+Trưng+Hồ+Chí+Minh',
@@ -232,7 +232,7 @@ export const DEFAULT_LANDING_CONFIG: LandingConfig = {
       icon: 'car',
       badge: 'Tiện Lợi',
       title: 'Bãi Đậu Xe Ô Tô Rộng Rãi',
-      desc: 'Vị trí đắc địa tại 250 Lương Đình Của (Bình Trưng, TP.HCM), bãi đỗ xe ô tô và xe máy an ninh, bảo vệ hỗ trợ tận tình suốt buổi chơi.',
+      desc: 'Vị trí đắc địa tại 250 Lương Định Của (Bình Trưng, TP.HCM), bãi đỗ xe ô tô và xe máy an ninh, bảo vệ hỗ trợ tận tình suốt buổi chơi.',
     },
     {
       id: 'comfort',
@@ -274,5 +274,5 @@ export const DEFAULT_LANDING_CONFIG: LandingConfig = {
   ],
 
   hideFooterOnMobile: true,
-  copyrightText: '© 2026 Saigon Golf 3D Club. Bảo lưu mọi quyền.',
+  copyrightText: '© 2026 SaiGon Indoor Golf Club. Bảo lưu mọi quyền.',
 };

@@ -1,15 +1,15 @@
 import type { Metadata } from 'next';
-import '../landing.css';
-import '../home.css';
-import '../site.css';
+import '../home2.css';
+import '../sub.css';
 import './portal.css';
+import './portal-theme.css';
 import MemberPortal from '../ui/MemberPortal';
 import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
 
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Cổng khách hàng — Saigon Golf 3D Club',
+  title: 'Tài khoản khách hàng — SaiGon Indoor Golf Club',
   robots: { index: false },
 };
 
@@ -20,10 +20,10 @@ export default async function AccountPage({
 }) {
   const sp = await searchParams;
   return (
-    <div className="hm">
+    <div className="sg-page">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt chỗ" />
-      <div className="fw mp">
+      <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
+      <div className="mp">
         <main>
           <MemberPortal registerFirst={sp['dang-ky'] !== undefined} />
         </main>

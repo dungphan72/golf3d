@@ -4,7 +4,7 @@ import LandingCmsPanel from '../../ui/LandingCmsPanel';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Quản trị Landing Page — Saigon Golf 3D Club',
+  title: 'Quản trị Landing Page — SaiGon Indoor Golf Club',
   robots: { index: false },
 };
 

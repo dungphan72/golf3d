@@ -3,7 +3,7 @@
  * Staff workspace theme inspired by KiotViet: blue top navigation bar, flat white panels on a
  * light grey canvas, dense tables with tinted headers, compact square-ish controls.
  * Loaded after globals.css; scoped to .app-shell so the public booking page and login keep the
- * Saigon Golf 3D Club brand look.
+ * SaiGon Indoor Golf Club brand look.
  */
 .app-shell {
   --kv-blue: #1f7a4d;

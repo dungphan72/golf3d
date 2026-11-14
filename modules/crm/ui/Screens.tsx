@@ -337,25 +337,25 @@ export const TELESALES_SCRIPTS = [
     id: 'intro',
     title: '1. Chào mừng & Mời trải nghiệm 99k',
     template: (name: string, sale: string) =>
-      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên Saigon Golf 3D Club. Em thấy anh/chị có quan tâm đến trải nghiệm phòng tập Golf 3D tại CLB. Em xin phép gửi anh/chị ưu đãi trải nghiệm 60 phút chỉ 99k/người cùng chuyên viên hướng dẫn sensor cảm biến đo swing. Không biết hôm nay hoặc ngày mai anh/chị tiện giờ nào ghé trải nghiệm thử ạ?',
+      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên SaiGon Indoor Golf Club. Em thấy anh/chị có quan tâm đến trải nghiệm phòng tập Golf 3D tại CLB. Em xin phép gửi anh/chị ưu đãi trải nghiệm 60 phút chỉ 99k/người cùng chuyên viên hướng dẫn sensor cảm biến đo swing. Không biết hôm nay hoặc ngày mai anh/chị tiện giờ nào ghé trải nghiệm thử ạ?',
   },
   {
     id: 'quote',
     title: '2. Báo giá thẻ hội viên & Gói GDR',
     template: (name: string, sale: string) =>
-      'Dạ anh/chị ' + name + ' ơi, em ' + sale + ' gửi anh/chị bảng giá gói hội viên ưu đãi tháng này tại Saigon Golf 3D:\n- Gói Tập Không Giới Hạn: 3.500.000đ/tháng\n- Gói 30 giờ GDR linh hoạt: 4.800.000đ (hạn 3 tháng)\n- Gói 18 Hố 3D màn hình cong VIP: 350.000đ/giờ\nAnh/chị đăng ký trong tuần này được tặng thêm 2 buổi chỉnh swing cùng HLV nữa ạ!',
+      'Dạ anh/chị ' + name + ' ơi, em ' + sale + ' gửi anh/chị bảng giá gói hội viên ưu đãi tháng này tại SaiGon Indoor Golf:\n- Gói Tập Không Giới Hạn: 3.500.000đ/tháng\n- Gói 30 giờ GDR linh hoạt: 4.800.000đ (hạn 3 tháng)\n- Gói 18 Hố 3D màn hình cong VIP: 350.000đ/giờ\nAnh/chị đăng ký trong tuần này được tặng thêm 2 buổi chỉnh swing cùng HLV nữa ạ!',
   },
   {
     id: 'appointment',
     title: '3. Xác nhận lịch hẹn trải nghiệm',
     template: (name: string, sale: string) =>
-      'Saigon Golf 3D xin chào anh/chị ' + name + '. CLB đã giữ chỗ phòng tập trải nghiệm cho anh/chị tại số 18 Tôn Dực, Q.7. Khi đến nơi anh/chị chỉ cần đọc tên và SĐT tại quầy lễ tân là được hỗ trợ ngay ạ. Em ' + sale + ' chúc anh/chị có buổi tập thật sảng khoái!',
+      'SaiGon Indoor Golf xin chào anh/chị ' + name + '. CLB đã giữ chỗ phòng tập trải nghiệm cho anh/chị tại số 18 Tôn Dực, Q.7. Khi đến nơi anh/chị chỉ cần đọc tên và SĐT tại quầy lễ tân là được hỗ trợ ngay ạ. Em ' + sale + ' chúc anh/chị có buổi tập thật sảng khoái!',
   },
   {
     id: 'after',
     title: '4. Thăm hỏi sau buổi tập & Khảo sát',
     template: (name: string, sale: string) =>
-      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên Saigon Golf 3D. Buổi tập hôm trước của anh/chị tại phòng 3D thế nào ạ? Thiết bị và cảm biến đo bóng có ưng ý anh/chị không ạ? Nếu anh/chị cần hỗ trợ thêm thông tin gói tập dài hạn thì nhắn em nhé!',
+      'Dạ em chào anh/chị ' + name + ', em là ' + sale + ' bên SaiGon Indoor Golf. Buổi tập hôm trước của anh/chị tại phòng 3D thế nào ạ? Thiết bị và cảm biến đo bóng có ưng ý anh/chị không ạ? Nếu anh/chị cần hỗ trợ thêm thông tin gói tập dài hạn thì nhắn em nhé!',
   },
 ];
 

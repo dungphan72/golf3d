@@ -8,11 +8,11 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   await page.goto('/quan-ly');
   await page
     .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /POS tính tiền/ })
+    .getByRole('button', { name: /Bán hàng \(POS\)/ })
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:
   // green when free, yellow when a booking is due within 2 hours.
-  const free = page.locator('.gcd-bay-item-card:has(.bay-btn.walkin)').first();
+  const free = page.locator('.pos-line:has(button.walkin)').first();
   await expect(free).toBeVisible();
 
   // The walk-in dialog opens with the line already chosen.

@@ -20,7 +20,7 @@ export default function HomeGallery({ photos }: { photos: Photo[] }) {
 
   return (
     <>
-      <div className="hm-gallery">
+      <div className="sg-gallery">
         {photos.map((p, i) => (
           <button key={p.id} type="button" onClick={() => setOpen(i)} aria-label={`Xem ảnh: ${p.title}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -30,7 +30,7 @@ export default function HomeGallery({ photos }: { photos: Photo[] }) {
       </div>
       <dialog
         ref={dialog}
-        className="hm-lightbox"
+        className="sg-lightbox"
         onClose={() => setOpen(null)}
         onClick={(e) => e.target === dialog.current && setOpen(null)}
         onKeyDown={(e) => {
@@ -48,7 +48,7 @@ export default function HomeGallery({ photos }: { photos: Photo[] }) {
             </figcaption>
           </figure>
         )}
-        <div className="hm-lightbox-nav">
+        <div className="sg-lightbox-nav">
           <button type="button" onClick={() => step(-1)}>
             Trước
           </button>

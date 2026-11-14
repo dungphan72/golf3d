@@ -31,9 +31,9 @@ test.describe('điện thoại', () => {
     await page.goto('/quan-ly');
     // Earlier specs leave some lines busy, so check whatever actions the line cards offer now.
     await page.getByRole('button', { name: /^Phòng/ }).last().click();
-    await expect(page.locator('.gcd-bay-item-card button').first()).toBeVisible();
+    await expect(page.locator('.pos-line button').first()).toBeVisible();
     const targets = [
-      ...(await page.locator('.gcd-bay-item-card button:visible').all()),
+      ...(await page.locator('.pos-line button:visible').all()),
       page.getByRole('button', { name: 'Đặt lịch', exact: true }),
       page.getByRole('button', { name: 'Tải lại' }),
       page.getByRole('button', { name: 'Mở menu' }),

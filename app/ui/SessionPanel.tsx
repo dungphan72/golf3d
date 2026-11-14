@@ -1,27 +1,49 @@
 'use client';
-import { useFood, FoodReceipt, SessionOrdering } from './SessionFood';
-import { useRef, useState } from 'react';
-import { Bell, Play, Pause, Square, Printer, QrCode, CreditCard, Check, X, MessageCircle } from 'lucide-react';
+import { useFood, SessionOrdering } from './SessionFood';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Banknote,
+  Bell,
+  Check,
+  CreditCard,
+  Crown,
+  Flag,
+  MessageCircle,
+  Monitor,
+  Pause,
+  Play,
+  Plus,
+  Printer,
+  QrCode,
+  Square,
+  User,
+  X,
+} from 'lucide-react';
 import { rooms, money, sessionQuote, type Booking, type Segment, type BillPart } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
+import { changeDue } from '../../lib/billing';
 import type { Bill, Service } from '../../lib/pricing';
+import type { FoodLine } from '../../lib/fnb';
 import { labels, time, date } from './shared';
-import { DialogHeading, ModalDialog, StatusBadge, type Tone } from './kit';
-import { useBill, BillAdjustments, DiscountForm, CashPay, RefundForm } from './BillTools';
+import { useBill, DiscountForm, RefundForm } from './BillTools';
 import { PackageRedeem } from './session/PackageRedeem';
 import { type Bank, TransferPanel } from './session/TransferPanel';
 import { SplitPay } from './session/SplitPay';
+import { clock, playedMs } from './PosBoard';
 import { generateK80Html, printK80Receipt, formatBillZaloText, sendBillToZalo } from '../../lib/thermal-receipt';
 
-const STATUS_TONE: Record<string, Tone> = {
-  booked: 'info',
-  playing: 'ok',
-  paused: 'warn',
-  finished: 'warn',
-  paid: 'ok',
-  cancelled: 'muted',
+const SERVICE_LABEL: Record<string, string> = { gdr: 'Luyện tập theo giờ', '9': 'Game 9 hố', '18': 'Game 18 hố' };
+const PAY_LABEL: Record<string, string> = {
+  cash: 'Tiền mặt',
+  transfer: 'Chuyển khoản',
+  card: 'Quẹt thẻ',
+  wallet: 'Ví hội viên',
+  package: 'Gói hội viên',
 };
+type Method = 'cash' | 'transfer' | 'card';
+type Tab = 'items' | 'package' | 'other';
 
+/** The POS panel: docked on the right of the board, one session at a time. */
 export function SessionPanel({
   booking: b,
   now,
@@ -48,9 +70,8 @@ export function SessionPanel({
   const food = useFood(b.id);
   const pendingFood =
     food.data?.orders.filter((o) => ['new', 'preparing', 'ready'].includes(o.status)).length ?? 0;
-  const servedFood =
-    food.data?.orders.filter((o) => o.status === 'served').reduce((sum, o) => sum + o.total, 0) ??
-    0;
+  const servedOrders = food.data?.orders.filter((o) => o.status === 'served') ?? [];
+  const servedFood = servedOrders.reduce((sum, o) => sum + o.total, 0);
   const foodVerified = !!food.data && !food.error && servedFood === (b.food_total ?? 0);
   const paymentKey = useRef(operationKey());
   const { bill, reload: reloadBill } = useBill(b.id, b.status);
@@ -58,6 +79,48 @@ export function SessionPanel({
     await onRefresh();
     await reloadBill();
   };
+  const [tab, setTab] = useState<Tab>('items');
+  const [method, setMethod] = useState<Method>('cash');
+  const [adding, setAdding] = useState(false);
+  const [tendered, setTendered] = useState('');
+  const [due, setDue] = useState<number | null>(null);
+  const [zaloNotice, setZaloNotice] = useState('');
+  const [tick, setTick] = useState(() => Date.now());
+  const asideRef = useRef<HTMLElement>(null);
+
+  // Running timer, and Escape closes the panel unless a dialog above it is open.
+  useEffect(() => {
+    const id = setInterval(() => setTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || busy) return;
+      if (document.querySelector('dialog[open]')) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('input, textarea, select')) return;
+      onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [busy, onClose]);
+  useEffect(() => {
+    asideRef.current?.focus();
+  }, []);
+
+  const finished = b.status === 'finished';
+  const isCash = finished && canPay && method === 'cash';
+  useEffect(() => {
+    if (!isCash) return;
+    let live = true;
+    fetch('/api/bank?booking=' + encodeURIComponent(b.id), { cache: 'no-store' })
+      .then((r) => (r.ok ? (r.json() as Promise<{ due: number | null }>) : null))
+      .then((v) => live && setDue(v?.due ?? null));
+    return () => {
+      live = false;
+    };
+  }, [isCash, b.id, b.amount]);
+
   const snap = JSON.parse(b.price);
   const seg: Segment[] = JSON.parse(b.segments);
   if (b.status === 'playing' && b.started) seg.push({ start: b.started, end: now });
@@ -71,34 +134,17 @@ export function SessionPanel({
   } catch (e) {
     quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
   }
-  const minutes = seg.reduce((s, x) => s + (x.end - x.start) / 60000, 0);
   const cannotPay = busy || b.amount == null || !!quoteError || !foodVerified || pendingFood > 0;
-  const payAs = (method: string) =>
-    onAction('pay', { method, requestId: paymentKey.current, expectedAmount: b.amount! });
+  const payAs = (m: string) =>
+    onAction('pay', { method: m, requestId: paymentKey.current, expectedAmount: b.amount! });
   const operating = ['booked', 'playing', 'paused'].includes(b.status);
+  const room = rooms.find((r) => r.id === b.room);
+  const roomName = room?.name ?? b.room;
 
-  const [zaloNotice, setZaloNotice] = useState('');
-  const roomName = rooms.find((r) => r.id === b.room)?.name ?? b.room;
-
-  const handlePrint = () => {
-    const html = generateK80Html({
-      booking: b,
-      quote: q,
-      bill,
-      roomName,
-      food: food.data,
-    });
-    printK80Receipt(html);
-  };
-
+  const handlePrint = () =>
+    printK80Receipt(generateK80Html({ booking: b, quote: q, bill, roomName, food: food.data }));
   const handleZalo = async () => {
-    const text = formatBillZaloText({
-      booking: b,
-      quote: q,
-      bill,
-      roomName,
-      food: food.data,
-    });
+    const text = formatBillZaloText({ booking: b, quote: q, bill, roomName, food: food.data });
     await sendBillToZalo({
       phone: b.phone,
       billText: text,
@@ -108,405 +154,560 @@ export function SessionPanel({
       },
     });
   };
+
+  // Items: the session itself, then every served food/drink line.
+  const foodLines = servedOrders.flatMap((o) =>
+    (JSON.parse(o.items) as FoodLine[]).map((l, i) => ({ key: o.id + '-' + i, line: l })),
+  );
+  const foodSum = servedOrders.reduce(
+    (s, o) => ({ subtotal: s.subtotal + o.subtotal, fee: s.fee + o.fee, vat: s.vat + o.vat }),
+    { subtotal: 0, fee: 0, vat: 0 },
+  );
+  const subtotal = q.subtotal + foodSum.subtotal;
+  const fee = q.fee + foodSum.fee;
+  const vat = q.vat + foodSum.vat;
+  const total = b.amount ?? q.total + (b.food_total ?? 0);
+  const hours = (min: number) => `${+(min / 60).toFixed(2)} giờ`.replace('.', ',');
+
+  const given = tendered === '' ? (due ?? 0) : Number(tendered);
+  const enough = due != null && given >= due;
+  const canConfirm =
+    finished &&
+    canPay &&
+    !cannotPay &&
+    (method === 'cash' ? enough : true);
+  const confirmPay = () => {
+    if (!canConfirm) return;
+    return payAs(method);
+  };
+
+  const statusLabel = labels[b.status] ?? b.status;
+  const stateTone =
+    b.status === 'playing' ? 'on' : b.status === 'paused' || finished ? 'warn' : b.status === 'paid' ? 'on' : 'idle';
+  const played = playedMs(b, tick);
+  const startedAt = b.started ?? b.start;
+
   return (
-    <ModalDialog label="Chi tiết phiên chơi" onClose={onClose} className="session">
-      <DialogHeading onClose={onClose}>
-        {rooms.find((r) => r.id === b.room)?.name}{' '}
-        <StatusBadge tone={STATUS_TONE[b.status] ?? 'muted'}>{labels[b.status]}</StatusBadge>
-      </DialogHeading>
-      <div className="sp-summary">
-        <span className="avatar">{b.customer[0]}</span>
-        <div className="sp-who">
-          <h3>{b.customer}</h3>
-          <p>
-            {b.phone ? b.phone + ' · ' : ''}
-            {b.people} người · {b.service === 'gdr' ? 'Luyện tập' : b.service + ' hố'}
-          </p>
+    <aside
+      ref={asideRef}
+      tabIndex={-1}
+      className="pos-dock"
+      role="dialog"
+      aria-modal="false"
+      aria-label="Chi tiết phiên chơi"
+    >
+      <header className="pos-dock-head">
+        <Monitor size={26} strokeWidth={1.8} />
+        <h2>POS – {roomName}</h2>
+        <button type="button" className="pos-dock-close" aria-label="Đóng" onClick={onClose}>
+          <X size={22} />
+        </button>
+      </header>
+
+      <div className="pos-dock-body">
+        <div className="pos-status">
+          <span className={'pos-chip ' + stateTone}>
+            <i />
+            {b.status === 'playing' ? 'Đang sử dụng' : statusLabel}
+          </span>
+          <span>
+            {b.started ? 'Bắt đầu' : 'Lịch hẹn'}: <b>{time(startedAt)}</b>
+            {b.started ? '' : ` · ${date(b.start)}`}
+          </span>
+          {b.started ? (
+            <span>
+              Thời gian: <b className="pos-clock">{clock(played)}</b>
+            </span>
+          ) : null}
         </div>
-        <dl className="sp-times">
+
+        <div className="pos-customer">
+          <span className="pos-cust-ic">{room?.vip ? <Crown size={22} /> : <User size={22} />}</span>
           <div>
-            <dt>Lịch hẹn</dt>
-            <dd>
-              {date(b.start)} · {time(b.start)}
-            </dd>
+            <strong>{b.customer}</strong>
+            <small>
+              {b.phone ? b.phone + ' | ' : ''}
+              {b.people} người · {SERVICE_LABEL[b.service] ?? b.service}
+            </small>
           </div>
-          <div>
-            <dt>Đã chơi</dt>
-            <dd>{Math.round(minutes)} phút</dd>
+        </div>
+
+        {operating && (
+          <div className="pos-service" role="radiogroup" aria-label="Hình thức chơi">
+            {(
+              [
+                ['gdr', 'Tập theo giờ'],
+                ['9', 'Game 9 hố'],
+                ['18', 'Game 18 hố'],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="radio"
+                aria-checked={b.service === value}
+                className={b.service === value ? 'on' : ''}
+                disabled={busy || b.service === value}
+                onClick={() => onAction('switch-service', { service: value })}
+              >
+                {label}
+              </button>
+            ))}
           </div>
-        </dl>
-      </div>
-      {operating && (
-        <div
-          role="radiogroup"
-          aria-label="Hình thức chơi"
-          style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', margin: '8px 0' }}
-        >
-          <span style={{ fontSize: 12, color: 'var(--ds-muted)' }}>Hình thức:</span>
+        )}
+
+        <div className="pos-tabs pos-dock-tabs" role="tablist" aria-label="Nhóm thao tác">
           {(
             [
-              ['gdr', 'Tập theo giờ'],
-              ['9', 'Chơi game 9 hố'],
-              ['18', 'Chơi game 18 hố'],
+              ['items', 'Dịch vụ / Sản phẩm'],
+              ['package', 'Gói giờ & thẻ'],
+              ['other', 'Khác'],
             ] as const
-          ).map(([value, label]) => (
+          ).map(([key, label]) => (
             <button
-              key={value}
+              key={key}
               type="button"
-              role="radio"
-              aria-checked={b.service === value}
-              className={b.service === value ? 'primary' : 'secondary'}
-              disabled={busy || b.service === value}
-              style={{ height: 32, fontSize: 13 }}
-              onClick={() => onAction('switch-service', { service: value })}
+              role="tab"
+              aria-selected={tab === key}
+              className={tab === key ? 'on' : ''}
+              onClick={() => setTab(key)}
             >
               {label}
             </button>
           ))}
         </div>
-      )}
-      {operating && (
-        <div className="sp-actions">
-          {b.status === 'booked' && (
-            <>
-              {date(now) !== date(b.start) && now < b.start - 15 * 60000 ? (
-                <div style={{ fontSize: 13, color: 'var(--ds-muted)', padding: '6px 0' }}>
-                  Lịch đặt ngày {date(b.start)} (chỉ bắt đầu trong ngày hẹn)
-                </div>
-              ) : (
-                <button
-                  className="primary"
-                  disabled={busy}
-                  aria-label="Bắt đầu chơi"
-                  onClick={() => onAction('start')}
-                >
-                  <Play size={17} />
-                  Bắt đầu
+
+        {tab === 'items' && (
+          <section aria-label="Hàng hóa và dịch vụ">
+            {quoteError ? (
+              <div className="pos-note warn" role="alert">
+                {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến khi giá được xử lý.
+              </div>
+            ) : (
+              <table className="pos-items">
+                <thead>
+                  <tr>
+                    <th>Tên hàng / Dịch vụ</th>
+                    <th>SL</th>
+                    <th>Đơn giá</th>
+                    <th>Thành tiền</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {q.lines.map((l, i) => (
+                    <tr key={'g' + i}>
+                      <td>
+                        <span className="pos-item-ic">
+                          <Flag size={18} />
+                        </span>
+                        <span>
+                          {l.label}
+                          {!l.package && l.from != null && l.to != null && (
+                            <small>
+                              {time(l.from)} – {time(l.to)}
+                            </small>
+                          )}
+                        </span>
+                      </td>
+                      <td>{l.package ? '1' : hours(l.minutes)}</td>
+                      <td>{l.package ? '—' : money(l.rate)}</td>
+                      <td>{money(Math.round(l.amount))}</td>
+                    </tr>
+                  ))}
+                  {foodLines.map(({ key, line: l }) => (
+                    <tr key={key}>
+                      <td>
+                        <span className="pos-item-ic food">
+                          <Bell size={18} />
+                        </span>
+                        <span>{l.name}</span>
+                      </td>
+                      <td>
+                        {l.qty} {l.unit}
+                      </td>
+                      <td>{money(l.price)}</td>
+                      <td>{money(l.total)}</td>
+                    </tr>
+                  ))}
+                  {!q.lines.length && q.subtotal > 0 && (
+                    <tr>
+                      <td>
+                        <span className="pos-item-ic">
+                          <Flag size={18} />
+                        </span>
+                        <span>{b.service === 'gdr' ? 'Tiền dịch vụ' : `Trọn lượt ${b.service} hố`}</span>
+                      </td>
+                      <td>1</td>
+                      <td>{money(q.subtotal)}</td>
+                      <td>{money(q.subtotal)}</td>
+                    </tr>
+                  )}
+                  {!q.lines.length && q.subtotal === 0 && !foodLines.length && (
+                    <tr>
+                      <td colSpan={4} className="pos-items-empty">
+                        Chưa có khoản nào trên phiếu.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            )}
+            {food.error && (
+              <div className="pos-note warn" role="alert">
+                {food.error}
+              </div>
+            )}
+            {!foodVerified && !food.error && (
+              <div className="pos-note">
+                Đang kiểm tra đơn món…
+                <button type="button" onClick={food.reload}>
+                  Tải lại
                 </button>
-              )}
-              <button className="secondary" disabled={busy} onClick={() => onAction('cancel')}>
-                <X size={16} />
-                Hủy lịch
+              </div>
+            )}
+            {pendingFood > 0 && <div className="pos-note">Còn {pendingFood} món chưa phục vụ, chưa tính vào phiếu.</div>}
+            {food.data && (
+              <>
+                <button
+                  type="button"
+                  className="pos-add"
+                  aria-expanded={adding}
+                  onClick={() => setAdding(!adding)}
+                >
+                  <Plus size={20} /> Thêm sản phẩm / dịch vụ
+                </button>
+                {adding && (
+                  <div className="pos-order">
+                    <SessionOrdering
+                      booking={b}
+                      data={food.data}
+                      onRefresh={async () => {
+                        await food.reload();
+                        await onRefresh();
+                      }}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
+
+        {tab === 'package' && (
+          <section aria-label="Gói giờ và thẻ hội viên">
+            {finished && canPay ? (
+              <PackageRedeem booking={b} money={money} onChanged={refreshAll} />
+            ) : (
+              <p className="pos-note">
+                {finished
+                  ? 'Cần mở ca trước khi dùng gói hoặc ví hội viên.'
+                  : 'Gói giờ và ví hội viên dùng được khi phiên đã kết thúc và chờ thanh toán.'}
+              </p>
+            )}
+          </section>
+        )}
+
+        {tab === 'other' && (
+          <section aria-label="Tác vụ khác" className="pos-other">
+            {finished &&
+              canPay &&
+              permissions.includes('billing.discount') &&
+              bill &&
+              !bill.discount &&
+              !bill.payments.length &&
+              b.amount != null &&
+              !quoteError && <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />}
+            {finished && canPay && <SplitPay booking={b} onChanged={refreshAll} disabled={cannotPay} />}
+            {(finished || b.status === 'paid') && (
+              <button type="button" className="pos-ghost" aria-label="Gửi Zalo" disabled={!!quoteError} onClick={handleZalo}>
+                <MessageCircle size={17} /> Gửi Zalo
               </button>
-            </>
-          )}
-          {b.status === 'paused' && (
-            <button className="secondary" disabled={busy} onClick={() => onAction('resume')}>
-              <Play size={16} />
-              Tiếp tục
+            )}
+            {['playing', 'paused'].includes(b.status) && (
+              <div className="pos-support">
+                <h3>Hỗ trợ tại phòng</h3>
+                <div>
+                  {[
+                    ['Nhân viên hỗ trợ', 'Gọi nhân viên'],
+                    ['Hỗ trợ thiết bị', 'Thiết bị'],
+                    ['Yêu cầu khác', 'Khác'],
+                  ].map(([kind, shortLabel]) => (
+                    <button
+                      key={kind}
+                      type="button"
+                      className="pos-ghost"
+                      disabled={busy}
+                      aria-label={kind}
+                      onClick={() => onAction('support', { kind })}
+                    >
+                      <Bell size={16} />
+                      {shortLabel}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {b.status === 'paid' && b.payment === 'package' && permissions.includes('billing.refund') && (
+              <p className="pos-note">
+                Phiếu thanh toán bằng gói. Để hoàn giờ cho khách, vào mục Khách hàng để điều chỉnh gói.
+              </p>
+            )}
+            {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
+              <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
+            )}
+            {!finished && b.status !== 'paid' && !['playing', 'paused'].includes(b.status) && (
+              <p className="pos-note">Chưa có thao tác khác cho phiên này.</p>
+            )}
+          </section>
+        )}
+
+        {/* Totals */}
+        {!quoteError && (
+          <dl className="pos-totals">
+            <div>
+              <dt>Tạm tính</dt>
+              <dd>{money(subtotal)}</dd>
+            </div>
+            {fee > 0 && (
+              <div>
+                <dt>
+                  Phí dịch vụ (
+                  {snap.config?.feeMode === 'fixed' ? money(snap.config.fee ?? 0) : `${snap.config?.fee ?? 0}%`})
+                </dt>
+                <dd>{money(fee)}</dd>
+              </div>
+            )}
+            {vat > 0 && (
+              <div>
+                <dt>Thuế VAT ({snap.config?.vat ?? 0}%)</dt>
+                <dd>{money(vat)}</dd>
+              </div>
+            )}
+            {bill?.discount && (
+              <div>
+                <dt>
+                  Giảm giá <small>{bill.discount.reason}</small>
+                </dt>
+                <dd>−{money(bill.discount.amount)}</dd>
+              </div>
+            )}
+            {bill?.refunds.map((r) => (
+              <div key={r.id}>
+                <dt>
+                  Đã hoàn ({PAY_LABEL[r.method] ?? r.method}) <small>{r.note}</small>
+                </dt>
+                <dd>−{money(r.amount)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        <div className="pos-total" aria-live="polite">
+          <span>Tổng thanh toán</span>
+          <strong>{money(total)}</strong>
+        </div>
+
+        {/* Payment */}
+        {finished && (
+          <section className="pos-pay" aria-label="Thu tiền">
+            {!canPay ? (
+              <div className="pos-note warn">
+                Cần mở ca trước khi thu tiền.
+                <button type="button" onClick={onOpenShift}>
+                  Mở ca
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="pos-methods" role="group" aria-label="Hình thức thanh toán">
+                  {(
+                    [
+                      ['cash', 'Tiền mặt', Banknote],
+                      ['card', 'Quẹt thẻ', CreditCard],
+                      ['transfer', 'Chuyển khoản', QrCode],
+                    ] as const
+                  ).map(([key, label, Icon]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={method === key}
+                      className={method === key ? 'on' : ''}
+                      onClick={() => setMethod(key)}
+                    >
+                      <Icon size={24} strokeWidth={1.8} />
+                      {label}
+                    </button>
+                  ))}
+                  <button type="button" className={tab === 'other' ? 'on' : ''} onClick={() => setTab('other')}>
+                    <Plus size={24} strokeWidth={1.8} />
+                    Khác
+                  </button>
+                </div>
+                {method === 'cash' && (
+                  <div className="pos-cash">
+                    <label>
+                      <span>Khách đưa (đồng)</span>
+                      <input
+                        inputMode="numeric"
+                        placeholder={due != null ? String(due) : ''}
+                        value={tendered}
+                        onChange={(e) => setTendered(e.target.value.replace(/\D/g, ''))}
+                      />
+                    </label>
+                    <div className="pos-quick">
+                      {[100_000, 200_000, 500_000].map((n) => (
+                        <button key={n} type="button" onClick={() => setTendered(String(n))}>
+                          {n / 1000}k
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => setTendered(due != null ? String(due) : '')}>
+                        Vừa đủ
+                      </button>
+                    </div>
+                    {due != null && (
+                      <p role="status" className={enough ? 'ok' : 'short'}>
+                        {enough ? (
+                          <>
+                            Tiền thối: <strong>{money(changeDue(given, due))}</strong>
+                          </>
+                        ) : (
+                          <>
+                            Còn thiếu: <strong>{money(due - given)}</strong>
+                          </>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {method === 'transfer' && (
+                  <TransferPanel
+                    booking={b}
+                    bank={bank}
+                    busy={busy}
+                    onUse={(txId) =>
+                      onAction('pay', {
+                        method: 'transfer',
+                        requestId: paymentKey.current,
+                        expectedAmount: b.amount!,
+                        bankTxId: txId,
+                      })
+                    }
+                  />
+                )}
+                {method === 'card' && <p className="pos-note">Quẹt thẻ ở máy POS, rồi bấm Thanh toán để ghi nhận.</p>}
+              </>
+            )}
+          </section>
+        )}
+
+        {b.status === 'paid' && (
+          <div className="pos-paid" role="status">
+            <Check size={22} />
+            <div>
+              <strong>Đã thanh toán</strong>
+              <small>{b.payment ? `Hình thức: ${PAY_LABEL[b.payment] ?? b.payment}` : 'Đã hoàn tất'}</small>
+            </div>
+          </div>
+        )}
+        {zaloNotice && (
+          <div className="pos-note" role="status">
+            <Check size={16} /> {zaloNotice}
+          </div>
+        )}
+      </div>
+
+      <div className="pos-dock-foot" role="group" aria-label="Thao tác chính">
+        {b.status === 'booked' && (
+          <>
+            <button type="button" className="pos-ghost" disabled={busy} onClick={() => onAction('cancel')}>
+              <X size={18} /> Hủy lịch
             </button>
-          )}
-          {['playing', 'paused'].includes(b.status) && (
+            {date(now) !== date(b.start) && now < b.start - 15 * 60000 ? (
+              <span className="pos-foot-note">Lịch đặt ngày {date(b.start)} (chỉ bắt đầu trong ngày hẹn)</span>
+            ) : (
+              <button
+                type="button"
+                className="pos-main-btn"
+                disabled={busy}
+                aria-label="Bắt đầu chơi"
+                onClick={() => onAction('start')}
+              >
+                <Play size={20} /> Bắt đầu
+              </button>
+            )}
+          </>
+        )}
+        {b.status === 'playing' && (
+          <>
             <button
-              className="primary"
-              disabled={busy}
-              aria-label="Kết thúc chơi"
-              onClick={() => onAction('finish')}
-            >
-              <Square size={17} />
-              Kết thúc
-            </button>
-          )}
-          {b.status === 'playing' && (
-            <button
+              type="button"
+              className="pos-ghost"
               aria-label="Tạm dừng do sự cố"
-              className="secondary"
               disabled={busy}
               onClick={() => onAction('pause')}
             >
-              <Pause size={16} />
-              Tạm dừng
+              <Pause size={18} /> Tạm dừng
             </button>
-          )}
-        </div>
-      )}
-      {quoteError ? (
-        <div className="info-strip" role="alert">
-          {quoteError}. Có thể kết thúc phiên để ghi nhận thời gian; chưa thể thanh toán cho đến khi giá được xử lý.
-        </div>
-      ) : (
-        <div className="bill">
-          <h3 className="bill-screen-title">{b.status === 'paid' ? 'Phiếu thanh toán' : 'Tạm tính'}</h3>
-          {q.lines.map((l, i) => (
-            <div key={i}>
-              <span>
-                {l.label}
-                {!l.package && (
-                  <small>
-                    {l.from != null && l.to != null
-                      ? `${date(l.from)} ${time(l.from)}–${time(l.to)} · `
-                      : ''}
-                    {l.minutes.toFixed(2)} phút × {money(l.rate)}/giờ
-                  </small>
-                )}
-              </span>
-              <strong>{money(Math.round(l.amount))}</strong>
-            </div>
-          ))}
-          {q.parts && q.parts.length > 1 && (
-            <>
-              {q.parts.map((p, i) => (
-                <div key={i} className="bill-part">
-                  <span>
-                    <b>
-                      {p.service === 'gdr' ? 'Tiền tập theo giờ' : `Tiền chơi game ${p.service} hố`}
-                    </b>
-                  </span>
-                  <strong>{money(p.subtotal)}</strong>
-                </div>
-              ))}
-            </>
-          )}
-          {!q.parts && b.service !== 'gdr' && snap.promo && snap.listBase > snap.base && (
-            <>
-              <div>
-                <span>Trọn lượt {b.service} hố (giá niêm yết)</span>
-                <strong>{money(snap.listBase)}</strong>
-              </div>
-              <div>
-                <span>Khuyến mãi: {snap.promo.name}</span>
-                <strong>−{money(snap.listBase - snap.base)}</strong>
-              </div>
-            </>
-          )}
-          <div>
-            <span>
-              {q.parts
-                ? 'Tổng tiền tập + chơi game'
-                : b.service === 'gdr'
-                  ? 'Tiền dịch vụ'
-                  : `Trọn lượt ${b.service} hố`}
-            </span>
-            <strong>{money(q.subtotal)}</strong>
-          </div>
-          <div>
-            <span>
-              Phí dịch vụ (
-              {snap.config.feeMode === 'fixed'
-                ? money(snap.config.fee ?? 0)
-                : `${snap.config.fee ?? 0}%`}
-              )
-            </span>
-            <strong>{money(q.fee)}</strong>
-          </div>
-          <div>
-            <span>VAT ({snap.config.vat}%)</span>
-            <strong>{money(q.vat)}</strong>
-          </div>
-          <BillAdjustments bill={bill} />
-          {food.data && <FoodReceipt data={food.data} />}
-          <div className="bill-total">
-            <span>Tổng cộng</span>
-            <strong>{money(b.amount ?? q.total + (b.food_total ?? 0))}</strong>
-          </div>
-        </div>
-      )}
-      {food.error && (
-        <div className="info-strip" role="alert">
-          {food.error}
-        </div>
-      )}
-      {!foodVerified && (
-        <div className="info-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span>Đang kiểm tra đơn món...</span>
-          <button className="secondary" onClick={food.reload} style={{ height: 30, fontSize: 12 }}>
-            Tải lại
-          </button>
-        </div>
-      )}
-      {food.data && (
-        <SessionOrdering
-          booking={b}
-          data={food.data}
-          onRefresh={async () => {
-            await food.reload();
-            await onRefresh();
-          }}
-        />
-      )}
-      {pendingFood > 0 && (
-        <div className="info-strip">
-          Còn {pendingFood} món chưa phục vụ.
-        </div>
-      )}
-      {b.status === 'finished' && (
-        <section className="sp-pay" aria-label="Thu tiền">
-          <div className="sp-pay-head">
-            <div>
-              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Thu tiền</h3>
-              <span style={{ fontSize: 12, color: 'var(--ds-muted)' }}>{rooms.find((r) => r.id === b.room)?.name}</span>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <small style={{ display: 'block', fontSize: 11, color: 'var(--ds-muted)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 600 }}>Cần thu</small>
-              <strong>{b.amount == null ? '—' : money(b.amount)}</strong>
-            </div>
-          </div>
-          {!canPay ? (
-            <div className="info-strip" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Cần mở ca trước khi thu tiền.</span>
-              <button className="secondary" onClick={onOpenShift} style={{ height: 32, fontSize: 13 }}>
-                Mở ca
-              </button>
-            </div>
-          ) : (
-            <>
-              <PackageRedeem booking={b} money={money} onChanged={refreshAll} />
-              <TransferPanel
-                booking={b}
-                bank={bank}
-                busy={busy}
-                onUse={(txId) =>
-                  onAction('pay', {
-                    method: 'transfer',
-                    requestId: paymentKey.current,
-                    expectedAmount: b.amount!,
-                    bankTxId: txId,
-                  })
-                }
-              />
-              <div className="pay-methods">
-                <CashPay bookingId={b.id} disabled={cannotPay} onPay={() => payAs('cash')} />
-                <button
-                  className="primary"
-                  disabled={cannotPay}
-                  onClick={() => payAs('transfer')}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <QrCode size={18} />
-                  Chuyển khoản
-                </button>
-                <button
-                  className="primary"
-                  disabled={cannotPay}
-                  onClick={() => payAs('card')}
-                  style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
-                >
-                  <CreditCard size={18} />
-                  Quẹt thẻ
-                </button>
-              </div>
-              <div className="pay-extras">
-                {permissions.includes('billing.discount') &&
-                  bill &&
-                  !bill.discount &&
-                  !bill.payments.length &&
-                  b.amount != null &&
-                  !quoteError && (
-                    <DiscountForm bookingId={b.id} amount={b.amount} onDone={refreshAll} />
-                  )}
-                <SplitPay booking={b} onChanged={refreshAll} disabled={cannotPay} />
-                <button
-                  type="button"
-                  aria-label="In phiếu"
-                  className="secondary"
-                  disabled={!!quoteError || !foodVerified}
-                  onClick={handlePrint}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
-                >
-                  <Printer size={15} /> In phiếu
-                </button>
-                <button
-                  type="button"
-                  aria-label="Gửi Zalo"
-                  className="secondary"
-                  disabled={!!quoteError}
-                  onClick={handleZalo}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, height: 36, fontSize: 13 }}
-                >
-                  <MessageCircle size={15} /> Gửi Zalo
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-      )}
-      {b.status === 'paid' && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '12px 16px', borderRadius: 8, margin: '12px 0', flexWrap: 'wrap', gap: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Check size={18} color="#059669" />
-            <div>
-              <strong style={{ color: '#065f46', fontSize: 14 }}>Đã thanh toán</strong>
-              <div style={{ fontSize: 12, color: '#047857' }}>
-                {b.payment
-                  ? `Hình thức: ${b.payment === 'cash' ? 'Tiền mặt' : b.payment === 'transfer' ? 'Chuyển khoản' : b.payment === 'card' ? 'Quẹt thẻ' : b.payment === 'wallet' ? 'Ví hội viên' : 'Gói hội viên'}`
-                  : 'Đã hoàn tất'}
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button
               type="button"
-              className="secondary"
-              aria-label="Gửi Zalo"
-              onClick={handleZalo}
-              style={{ height: 32, fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
+              className="pos-main-btn"
+              aria-label="Kết thúc chơi"
+              disabled={busy}
+              onClick={() => onAction('finish')}
             >
-              <MessageCircle size={14} /> Gửi Zalo
+              <Square size={18} /> Kết thúc &amp; tính tiền
+            </button>
+          </>
+        )}
+        {b.status === 'paused' && (
+          <>
+            <button type="button" className="pos-ghost" disabled={busy} onClick={() => onAction('resume')}>
+              <Play size={18} /> Tiếp tục
             </button>
             <button
               type="button"
-              className="secondary"
+              className="pos-main-btn"
+              aria-label="Kết thúc chơi"
+              disabled={busy}
+              onClick={() => onAction('finish')}
+            >
+              <Square size={18} /> Kết thúc &amp; tính tiền
+            </button>
+          </>
+        )}
+        {finished && (
+          <>
+            <button
+              type="button"
+              className="pos-ghost"
               aria-label="In phiếu"
+              disabled={!!quoteError || !foodVerified}
               onClick={handlePrint}
-              style={{ height: 32, fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 4 }}
             >
-              <Printer size={14} /> In phiếu
+              <Printer size={20} /> In tạm tính
             </button>
-          </div>
-        </div>
-      )}
-      {zaloNotice && (
-        <div
-          role="status"
-          style={{
-            background: '#eff6ff',
-            border: '1px solid #bfdbfe',
-            color: '#1e40af',
-            padding: '10px 14px',
-            borderRadius: 8,
-            fontSize: 13,
-            margin: '8px 0',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <Check size={16} color="#2563eb" />
-          <span>{zaloNotice}</span>
-        </div>
-      )}
-      {b.status === 'paid' && b.payment === 'package' && permissions.includes('billing.refund') && (
-        <div className="info-strip" style={{ fontSize: 12.5 }}>
-          Phiếu thanh toán bằng gói. Để hoàn giờ cho khách, vào mục Hội viên để điều chỉnh gói.
-        </div>
-      )}
-      {b.status === 'paid' && bill && permissions.includes('billing.refund') && (
-        <RefundForm bookingId={b.id} bill={bill} onDone={refreshAll} />
-      )}
-      {['playing', 'paused'].includes(b.status) && (
-        <div className="support-actions">
-          <h3>Hỗ trợ tại phòng</h3>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {[
-              ['Nhân viên hỗ trợ', 'Gọi nhân viên'],
-              ['Hỗ trợ thiết bị', 'Thiết bị'],
-              ['Yêu cầu khác', 'Khác'],
-            ].map(([kind, shortLabel]) => (
+            {canPay ? (
               <button
-                disabled={busy}
-                className="secondary"
-                key={kind}
-                aria-label={kind}
-                onClick={() => onAction('support', { kind })}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                type="button"
+                className="pos-main-btn"
+                aria-label={method === 'cash' ? 'Đã nhận đủ tiền mặt' : 'Thanh toán'}
+                disabled={!canConfirm}
+                onClick={confirmPay}
               >
-                <Bell size={15} />
-                {shortLabel}
+                <Check size={22} /> Thanh toán
               </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </ModalDialog>
+            ) : (
+              <button type="button" className="pos-main-btn" onClick={onOpenShift}>
+                Mở ca để thu tiền
+              </button>
+            )}
+          </>
+        )}
+        {b.status === 'paid' && (
+          <button type="button" className="pos-main-btn" aria-label="In phiếu" onClick={handlePrint}>
+            <Printer size={20} /> In phiếu
+          </button>
+        )}
+      </div>
+    </aside>
   );
 }

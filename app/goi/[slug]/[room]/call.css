@@ -8,19 +8,22 @@
   gap: 16px;
   font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 16px;
-  color: #1f3326;
-  background: #f3f6f2;
+  color: #0d1b12;
+  background: #f4f6f2;
 }
 .call header {
   text-align: center;
   display: grid;
   gap: 8px;
   justify-items: center;
-  color: #165a3c;
+  color: #0a5c1e;
 }
 .call h1 {
-  font-size: 28px;
-  font-weight: 700;
+  font-family: 'Archivo', 'Be Vietnam Pro', sans-serif;
+  font-stretch: 88%;
+  font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -0.015em;
 }
 .call header p {
   font-size: 16px;
@@ -33,10 +36,10 @@
 }
 .call-grid button {
   min-height: 120px;
-  border-radius: 16px;
-  border: 1px solid #cfdcc8;
+  border-radius: 10px;
+  border: 1px solid #d8ded6;
   background: #fff;
-  color: #165a3c;
+  color: #0a5c1e;
   font: inherit;
   font-weight: 600;
   display: flex;

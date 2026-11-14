@@ -1,0 +1,80 @@
+/* Re-skins the customer portal (portal.css) to the shared site look: flat deep-green surfaces,
+   no glass blur or glow, logo gold for actions. Loaded after portal.css. */
+.sg-page .mp {
+  min-height: 60vh;
+  background: var(--sg-turf-deep);
+  background-image: none;
+  color: #e6eee8;
+  font-family: var(--sg-body);
+}
+.sg-page .mp .mp-wrap {
+  padding: clamp(1.5rem, 4vw, 3rem) 1.5rem clamp(2.5rem, 5vw, 4rem);
+}
+.sg-page .mp :is(h1, h2, h3, h4) {
+  font-family: var(--sg-display);
+  font-stretch: 88%;
+  letter-spacing: -0.01em;
+}
+.sg-page .mp [class*='mp-'] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.sg-page .mp :is(.mp-auth-card, .mp-pro-head, .mp-card, .mp-pro-tile, .mp-support-box, .mp-pack) {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+.sg-page .mp .mp-auth-badge {
+  border-radius: 999px;
+}
+.sg-page .mp :is(.mp-auth-tabs, .mp-auth-tabs button, .mp-input-box input, .mp-auth-submit, .mp-btn-action, .mp-btn-save) {
+  border-radius: 8px;
+}
+.sg-page .mp :is(
+    .mp-auth-submit,
+    .mp-auth-tabs button.active,
+    .mp-btn-action.primary,
+    .mp-btn-save,
+    .mp-catalog-btn,
+    .mp-tab-item.active,
+    .mp-tag-btn.active
+  ) {
+  background: var(--sg-cta);
+  color: #0d1b12;
+  box-shadow: none;
+}
+.sg-page .mp :is(.mp-auth-submit, .mp-btn-action.primary, .mp-btn-save, .mp-catalog-btn):hover:not(:disabled) {
+  background: var(--sg-cta-press);
+  transform: none;
+  box-shadow: none;
+}
+.sg-page .mp .mp-input-box input:focus {
+  box-shadow: none;
+  outline: 3px solid var(--sg-cta);
+  outline-offset: 1px;
+}
+.sg-page .mp :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid var(--sg-cta);
+  outline-offset: 2px;
+}
+.sg-page .mp .mp-avatar-glow {
+  display: none;
+}
+.sg-page .mp .mp-golfer-avatar {
+  background: var(--sg-turf);
+  box-shadow: none;
+}
+.sg-page .mp .mp-bar-fill,
+.sg-page .mp .mp-bar-fill.gold {
+  background: var(--sg-cta);
+  box-shadow: none;
+}
+.sg-page .mp .mp-bar-fill.emerald {
+  background: #4ade80;
+}
+@media (max-width: 768px) {
+  .sg-page .mp .mp-wrap {
+    padding: 1.25rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}

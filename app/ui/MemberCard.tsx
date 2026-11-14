@@ -170,7 +170,7 @@ export function MemberCard({
                 <span>Check-in Lễ Tân</span>
               </div>
               <h3>Mã QR Check-in Quầy</h3>
-              <p>Đưa mã này vào máy quét tại quầy lễ tân Saigon Golf 3D Club</p>
+              <p>Đưa mã này vào máy quét tại quầy lễ tân SaiGon Indoor Golf Club</p>
             </div>
 
             <div

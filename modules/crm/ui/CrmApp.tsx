@@ -206,7 +206,7 @@ function renderSampleMessage(tmpl: string) {
   if (!tmpl) return <span className="muted">Chưa có nội dung tin nhắn mẫu.</span>;
   const sample = tmpl
     .replace(/\{ten\}/g, 'anh Nam')
-    .replace(/\{cs\}/g, 'Saigon Golf 3D')
+    .replace(/\{cs\}/g, 'SaiGon Indoor Golf')
     .replace(/\{goi\}/g, 'Gói Hội viên 18 hố')
     .replace(/\{han\}/g, '20/11/2026')
     .replace(/\{con\}/g, '5 buổi')

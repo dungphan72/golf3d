@@ -1460,7 +1460,7 @@ export function SettingsForm({
 
                   value={c.bankHolder ?? ''}
 
-                  placeholder="VD: SAIGON GOLF 3D hoặc NGUYEN VAN A"
+                  placeholder="VD: SAIGON INDOOR GOLF hoặc NGUYEN VAN A"
 
                   maxLength={60}
 
@@ -1636,7 +1636,7 @@ export function SettingsForm({
 
                   const qrUrl = c.bankBin && c.bankAccount
 
-                    ? `https://img.vietqr.io/image/${encodeURIComponent(c.bankBin)}-${encodeURIComponent(c.bankAccount)}-compact2.png?amount=570000&addInfo=TEST%20K80&accountName=${encodeURIComponent(c.bankHolder || 'SAIGON GOLF 3D')}`
+                    ? `https://img.vietqr.io/image/${encodeURIComponent(c.bankBin)}-${encodeURIComponent(c.bankAccount)}-compact2.png?amount=570000&addInfo=TEST%20K80&accountName=${encodeURIComponent(c.bankHolder || 'SAIGON INDOOR GOLF')}`
 
                     : '';
 
@@ -1650,7 +1650,7 @@ export function SettingsForm({
 
                       <meta charset="utf-8">
 
-                      <title>Phiếu in thử K80 · Saigon Golf 3D</title>
+                      <title>Phiếu in thử K80 · SaiGon Indoor Golf</title>
 
                       <style>
 
@@ -1684,9 +1684,9 @@ export function SettingsForm({
 
                     <body>
 
-                      <div class="center title">SAIGON GOLF 3D CLUB</div>
+                      <div class="center title">SAIGON INDOOR GOLF CLUB</div>
 
-                      <div class="center sub">250 Lương Định Của, P. An Phú, TP. Thủ Đức<br>Hotline: 0902.030.185</div>
+                      <div class="center sub">250 Lương Định Của, P. An Phú, TP. Thủ Đức<br>Hotline: 0877.834.888</div>
 
                       <div class="center bold" style="font-size: 13px; margin: 6px 0;">PHIẾU THANH TOÁN (MẪU TEST K80)</div>
 
@@ -1714,7 +1714,7 @@ export function SettingsForm({
 
                       <div class="divider"></div>
 
-                      <div class="footer">Cảm ơn Quý khách & Hẹn gặp lại!<br>Saigon Golf 3D Club · Foresight GC3</div>
+                      <div class="footer">Cảm ơn Quý khách & Hẹn gặp lại!<br>SaiGon Indoor Golf Club · Foresight GC3</div>
 
                       <script>
 

@@ -1,0 +1,251 @@
+/* Inner public pages (price list, membership, customer area, booking, 404).
+   Same tokens and components as the home page (chrome.css + home2.css). */
+.sg-pagehead {
+  padding: clamp(2.5rem, 6vw, 4.5rem) var(--sg-edge) clamp(2rem, 4vw, 3rem);
+  background: var(--sg-white);
+  border-bottom: 1px solid var(--sg-line);
+}
+.sg-pagehead h1 {
+  max-width: 18ch;
+  font-size: clamp(2.2rem, 1.2rem + 3.6vw, 3.8rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+}
+.sg-pagehead .sg-lead {
+  margin-top: 1rem;
+}
+.sg-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.5rem;
+  list-style: none;
+}
+.sg-meta li {
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  background: #dcebde;
+  color: var(--sg-turf-deep);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+.sg-pagehead .sg-actions {
+  margin-top: 1.75rem;
+}
+.sg-link {
+  font-weight: 600;
+  color: var(--sg-turf);
+  border-bottom: 2px solid var(--sg-cta);
+  padding-bottom: 1px;
+}
+.sg-link:hover {
+  color: var(--sg-ink);
+}
+.sg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.sg-chips a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 1rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--sg-line);
+  background: var(--sg-white);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.sg-chips a:hover {
+  box-shadow: inset 0 0 0 1.5px var(--sg-turf);
+  color: var(--sg-turf);
+}
+.sg-stack {
+  display: grid;
+  gap: 1.5rem;
+}
+.sg-note {
+  margin: -1rem 0 1.5rem;
+  max-width: 44rem;
+  color: var(--sg-ink-2);
+}
+.sg-note a {
+  font-weight: 600;
+  border-bottom: 1px solid currentColor;
+}
+
+/* Packages and cards */
+.sg-pkgroup + .sg-pkgroup {
+  margin-top: 2.5rem;
+}
+.sg-pkgroup > h3 {
+  margin-bottom: 1rem;
+  font-size: 1.35rem;
+}
+.sg-pkgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5rem, 1fr));
+  gap: 1rem;
+}
+.sg-pkgrid article {
+  display: flex;
+  flex-direction: column;
+  padding: 1.4rem;
+  border: 1px solid var(--sg-line);
+  border-radius: 10px;
+  background: var(--sg-white);
+}
+.sg-pkgrid h4 {
+  margin: 0;
+  font: 600 0.98rem/1.35 var(--sg-body);
+}
+.sg-pkgrid strong {
+  display: block;
+  margin: 0.6rem 0 1rem;
+  font: 700 2rem/1 var(--sg-plate-font);
+  letter-spacing: 0.02em;
+  color: var(--sg-turf);
+}
+.sg-pkgrid ul {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--sg-line);
+  list-style: none;
+  font-size: 0.9rem;
+  color: var(--sg-ink-2);
+}
+.sg-pkgrid li {
+  position: relative;
+  padding-left: 1.1rem;
+}
+.sg-pkgrid li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sg-cta);
+}
+.sg-pkgrid article.vip {
+  border-color: var(--sg-turf-deep);
+  background: var(--sg-turf-deep);
+  color: var(--sg-white);
+}
+.sg-pkgrid article.vip strong {
+  color: var(--sg-cta);
+}
+.sg-pkgrid article.vip ul {
+  border-top-color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Plain information list (benefits, notes) */
+.sg-facts-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 0;
+  list-style: none;
+  border-top: 2px solid var(--sg-ink);
+}
+.sg-facts-list li {
+  padding: 1.2rem 1.5rem 1.4rem 0;
+  border-bottom: 1px solid var(--sg-line);
+}
+.sg-facts-list h3 {
+  font-size: 1.1rem;
+}
+.sg-facts-list p {
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  color: var(--sg-ink-2);
+}
+
+/* Closing call to action */
+.sg-end {
+  padding: clamp(3rem, 6vw, 4.5rem) var(--sg-edge);
+  background: var(--sg-turf-deep);
+  color: var(--sg-white);
+}
+.sg-end h2 {
+  font-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.8rem);
+}
+.sg-end p {
+  margin-top: 0.8rem;
+  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+.sg-end .sg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.75rem;
+}
+.sg-end .sg-btn--quiet {
+  color: var(--sg-white);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+}
+.sg-end .sg-btn--quiet:hover {
+  background: var(--sg-white);
+  color: var(--sg-turf-deep);
+}
+
+/* Booking page on its own (/book/...) */
+.sg-solo {
+  display: grid;
+  justify-items: center;
+  padding: clamp(2rem, 5vw, 4rem) 20px clamp(3rem, 6vw, 5rem);
+}
+.sg-solo .sg-form {
+  width: min(560px, 100%);
+}
+.sg-solo .sg-form form.auth-card > h1 {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 1.5rem;
+}
+.sg-solo .sg-form form.auth-card > h1 + p {
+  display: block;
+  color: var(--sg-ink-2);
+  font-size: 0.92rem;
+}
+.sg-solo .banner-card {
+  display: none;
+}
+
+/* 404 */
+.sg-lost {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  padding: clamp(3rem, 8vw, 7rem) var(--sg-edge);
+}
+.sg-lost > p {
+  max-width: 34rem;
+}
+.sg-lost .sg-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+}
+.sg-lost .sg-plate b {
+  font-size: 3.2rem;
+}
+.sg-lost h1 {
+  font-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.8rem);
+}
+.sg-lost p {
+  color: var(--sg-ink-2);
+}
+
+@media (max-width: 560px) {
+  .sg-pagehead .sg-actions .sg-btn,
+  .sg-end .sg-actions .sg-btn {
+    flex: 1 1 100%;
+  }
+}

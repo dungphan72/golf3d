@@ -1,8 +1,22 @@
+import '../../home2.css';
+import '../../sub.css';
 import BookingPage from '../../ui/BookingPage';
+import { FONT_URL, SiteFooter, SiteHeader } from '../../ui/SiteChrome';
 
-export const metadata = { title: 'Đặt lịch — Golf3D', robots: { index: false } };
+export const metadata = { title: 'Đặt line — SaiGon Indoor Golf Club', robots: { index: false } };
 
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  return <BookingPage slug={slug} />;
+  return (
+    <div className="sg-page">
+      <link rel="stylesheet" href={FONT_URL} />
+      <SiteHeader bookHref="#dat-cho" bookLabel="Đặt line" />
+      <main className="sg-solo" id="dat-cho">
+        <div className="sg-form">
+          <BookingPage slug={slug} />
+        </div>
+      </main>
+      <SiteFooter />
+    </div>
+  );
 }

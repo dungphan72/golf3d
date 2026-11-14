@@ -14,10 +14,10 @@ test('trang giới thiệu công khai: giá, gói, liên hệ và lối vào qu�
   // Prices come from the official list (the price rail is wider than the viewport, so check the DOM).
   await expect(page.getByText('450.000đ / VND').first()).toBeAttached();
   await expect(page.getByText('Thẻ tháng · 6 tháng')).toBeAttached();
-  await expect(page.getByText('250 Lương Đình Của').first()).toBeAttached();
+  await expect(page.getByText('250 Lương Định Của').first()).toBeAttached();
   await expect(page.getByText('Đặt chỗ qua hotline')).toBeAttached(); // online booking not enabled yet
   // Before online booking is enabled the call-to-action falls back to the hotline.
-  await expect(page.getByRole('link', { name: /0902030185/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /0877834888/ }).first()).toBeVisible();
   // Structured data for search engines.
   const ld = await page.locator('script[type="application/ld+json"]').textContent();
   expect(JSON.parse(ld!)['@type']).toBe('SportsActivityLocation');

@@ -1,4 +1,4 @@
-# Bảng giá chính thức — Saigon Golf 3D Club (250 Lương Định Của)
+# Bảng giá chính thức — SaiGon Indoor Golf Club (250 Lương Định Của)
 
 Bảng giá mới nhất (11/2026) thay thế toàn bộ bảng giá cũ. Giờ hoạt động 06:00–23:00.
 
@@ -25,7 +25,7 @@ Theo giờ: đ/line/giờ · 9 và 18 hố: đ/người.
 ## Thẻ tháng — không giới hạn giờ chơi
 1 tháng 5.000.000đ · 3 tháng 14.000.000đ · 6 tháng 25.000.000đ. Thời hạn tính từ ngày kích hoạt thẻ.
 
-Đặt lịch: golfhub.cloud · Hotline 0902 030 185.
+Đặt lịch: golfhub.cloud · Hotline 0877 834 888.
 
 ## Cách map vào hệ thống
 - `lib/official-pricing.ts`: quy tắc giá (mặc định cho cơ sở mới và bảng giá công khai khi chưa lưu gì).

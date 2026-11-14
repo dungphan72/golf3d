@@ -41,7 +41,7 @@ export function FinanceDialog({
     );
   return (
     <ModalDialog label="Sổ ca" onClose={onClose} locked={busy}>
-      <DialogHeading onClose={onClose} locked={busy} eyebrow="SAIGON GOLF / CASH DESK">
+      <DialogHeading onClose={onClose} locked={busy} eyebrow="SAIGON INDOOR GOLF / CASH DESK">
         {kind === 'open'
           ? 'Mở ca mới'
           : kind === 'cash'

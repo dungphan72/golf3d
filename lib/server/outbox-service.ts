@@ -107,7 +107,7 @@ export async function dispatchDue(tenant: string, now = Date.now(), limit = 25) 
     if (!claim.meta.changes) continue; // another run took it
     try {
       if (m.channel === 'email')
-        await sendEmail(m.recipient, m.subject || 'Saigon Golf 3D Club', m.body);
+        await sendEmail(m.recipient, m.subject || 'SaiGon Indoor Golf Club', m.body);
       else await sendZalo(m.recipient, m.body);
       await d
         .prepare(

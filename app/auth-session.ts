@@ -96,6 +96,8 @@ export function sameOrigin(request: Request) {
     // Known domain whitelist
     const originHostname = new URL(origin).hostname;
     const allowed = [
+      'sigolf.vn',
+      'www.sigolf.vn',
       'golfhub.cloud',
       'www.golfhub.cloud',
       '3dgolf.vn',

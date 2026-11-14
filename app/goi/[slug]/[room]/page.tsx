@@ -3,7 +3,7 @@ import './call.css';
 import { CallPanel } from './CallPanel';
 
 export const metadata: Metadata = {
-  title: 'Gọi phục vụ — Saigon Golf 3D Club',
+  title: 'Gọi phục vụ — SaiGon Indoor Golf Club',
   robots: { index: false, follow: false },
 };
 

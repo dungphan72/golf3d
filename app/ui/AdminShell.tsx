@@ -44,14 +44,14 @@ export const NAV_GROUPS: NavGroup[] = [
     label: 'QUẢN LÝ',
     items: [
       { key: 'dashboard', label: 'Tổng quan', icon: LayoutDashboard },
-      { key: 'bookings', label: 'Booking', icon: CalendarDays },
-      { key: 'rooms', label: 'POS tính tiền', icon: Grid2X2 },
+      { key: 'bookings', label: 'Đặt line', icon: CalendarDays },
+      { key: 'rooms', label: 'Bán hàng (POS)', icon: Grid2X2 },
       { key: 'invoices', label: 'Hóa đơn', icon: ReceiptText },
       { key: 'members', label: 'Khách hàng', icon: Users },
       { key: 'crmx', label: 'CRM', icon: Megaphone },
       { key: 'fnb', label: 'Thực đơn & kho', icon: UtensilsCrossed },
       { key: 'coaching', label: 'Huấn luyện', icon: GraduationCap },
-      { key: 'reports', label: 'Báo cáo', icon: ChartColumn },
+      { key: 'reports', label: 'Doanh thu & báo cáo', icon: ChartColumn },
     ],
   },
   {
@@ -59,7 +59,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { key: 'settings', label: 'Cài đặt', icon: Settings },
       { key: 'support', label: 'Trợ giúp', icon: HelpCircle },
-      { key: 'staff', label: 'Nhân viên', icon: Users },
+      { key: 'staff', label: 'Nhân sự', icon: Users },
       { key: 'finance', label: 'Ca & sổ tiền', icon: Wallet },
       { key: 'landing', label: 'Landing Page', icon: Globe },
       { key: 'audit', label: 'Nhật ký', icon: ScrollText },
@@ -281,7 +281,7 @@ export function GlobalSearch({
       <Search size={18} />
       <input
         aria-label="Tìm khách hoặc phiếu"
-        placeholder="Tìm khách hàng, booking..."
+        placeholder="Tìm khách hàng, mã đặt line, hóa đơn…"
         value={q}
         onChange={(e) => {
           setQ(e.target.value);

@@ -222,7 +222,7 @@ export function CrmShell({
         <span>CRM</span>
         {wide && (
           <div>
-            <strong>CRM Saigon Golf 3D</strong>
+            <strong>CRM SaiGon Indoor Golf</strong>
             <small>Quản lý kinh doanh</small>
           </div>
         )}

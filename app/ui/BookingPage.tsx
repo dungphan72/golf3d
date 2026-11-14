@@ -316,8 +316,8 @@ export default function BookingPage({
                 : ' · vui lòng chọn ngày và giờ mong muốn'}
             </p>
             <label>
+              <span>Dịch vụ</span>
               <select
-                aria-label="Dịch vụ"
                 value={form.service}
                 onChange={(e) => setForm({ ...form, service: e.target.value })}
               >
@@ -335,9 +335,8 @@ export default function BookingPage({
               </select>
             </label>
             <label>
+              <span>Ngày, giờ bắt đầu (giờ Việt Nam)</span>
               <input
-                aria-label="Ngày, giờ bắt đầu (giờ Việt Nam)"
-                title="Ngày, giờ bắt đầu (giờ Việt Nam)"
                 type="datetime-local"
                 step={900}
                 value={form.start}
@@ -354,9 +353,9 @@ export default function BookingPage({
               </p>
             )}
             <label>
+              <span>Số người (nhóm hoặc giải đấu: nhập tổng số)</span>
               <input
-                aria-label="Số người"
-                placeholder="Số người (nhóm, giải đấu: nhập tổng số)"
+                placeholder="Ví dụ: 4"
                 type="number"
                 inputMode="numeric"
                 min={1}
@@ -376,9 +375,9 @@ export default function BookingPage({
               </label>
             )}
             <label>
+              <span>Họ và tên</span>
               <input
-                aria-label="Họ và tên"
-                placeholder="Họ và tên"
+                autoComplete="name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 minLength={2}
@@ -387,9 +386,9 @@ export default function BookingPage({
               />
             </label>
             <label>
+              <span>Số điện thoại</span>
               <input
-                aria-label="Số điện thoại"
-                placeholder="Số điện thoại"
+                autoComplete="tel"
                 type="tel"
                 value={form.phone}
                 onChange={(e) => setForm({ ...form, phone: e.target.value })}
@@ -397,9 +396,8 @@ export default function BookingPage({
               />
             </label>
             <label>
+              <span>Ghi chú (không bắt buộc)</span>
               <input
-                aria-label="Ghi chú (không bắt buộc)"
-                placeholder="Ghi chú (không bắt buộc)"
                 value={form.note}
                 maxLength={300}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
@@ -435,11 +433,16 @@ export default function BookingPage({
               </div>
             )}
             <p className="form-note">
-              Mỗi line tối đa 4 người; nhóm đông được xếp nhiều line và tính tiền theo từng line.
-              Đây là yêu cầu đặt lịch; chỉ có hiệu lực khi nhân viên kiểm tra và xác nhận. Chọn giờ
-              bắt đầu theo mốc 15 phút. Nếu cơ sở chưa cấu hình đủ giờ hoạt động hoặc giá, nhân viên
-              sẽ liên hệ để xác nhận và báo giá.
+              Đây là yêu cầu đặt lịch, chỉ có hiệu lực khi nhân viên kiểm tra và xác nhận.
             </p>
+            <details className="form-terms">
+              <summary>Điều kiện đặt lịch</summary>
+              <p className="form-note">
+                Mỗi line tối đa 4 người; nhóm đông được xếp nhiều line và tính tiền theo từng line.
+                Chọn giờ bắt đầu theo mốc 15 phút. Nếu cơ sở chưa cấu hình đủ giờ hoạt động hoặc
+                giá, nhân viên sẽ liên hệ để xác nhận và báo giá.
+              </p>
+            </details>
             <button className="primary" disabled={busy || (!!info.captchaSiteKey && !captcha)}>
               {busy ? 'Đang gửi…' : 'Gửi yêu cầu đặt lịch'}
             </button>

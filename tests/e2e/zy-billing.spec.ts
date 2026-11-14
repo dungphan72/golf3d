@@ -154,7 +154,7 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   const total = await amountOf(owner, id);
   await page.goto('/quan-ly');
   // The home board lists the unpaid session under "Việc cần làm ngay"; the top search finds it too.
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /POS tính tiền/ }).click();
+  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /Bán hàng \(POS\)/ }).click();
   const tasks = page.getByRole('region', { name: 'Việc cần làm ngay' });
   await expect(tasks.getByText('Thu tiền · Khách Giao Diện')).toBeVisible();
   await page.getByLabel('Tìm khách hoặc phiếu').fill('Giao Diện');
@@ -163,15 +163,16 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   // A finished session waits for payment on its room card: one click opens the bill.
   await page
     .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /POS tính tiền/ })
+    .getByRole('button', { name: /Bán hàng \(POS\)/ })
     .click();
-  const card = page.locator('.gcd-bay-item-card', { hasText: 'Khách Giao Diện' });
+  const card = page.locator('.pos-line', { hasText: 'Khách Giao Diện' });
   await expect(card.getByText('Chờ thu tiền')).toBeVisible();
   await card.getByRole('button', { name: /POS tính tiền/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Chi tiết phiên chơi' });
   await expect(dialog).toBeVisible();
 
-  // Discount 10% with a reason.
+  // Discount 10% with a reason (it lives under the "Khác" tab of the POS panel).
+  await dialog.getByRole('tab', { name: 'Khác' }).click();
   await dialog.getByRole('button', { name: 'Giảm giá', exact: true }).click();
   await dialog.getByRole('button', { name: '10%' }).click();
   await dialog.getByLabel('Lý do (bắt buộc)').fill('Khách thân thiết');
@@ -191,6 +192,7 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
     .fill(String(Math.ceil(due / 100_000) * 100_000 + 100_000));
   await expect(dialog.getByText(/Tiền thối:/)).toBeVisible();
   await dialog.getByRole('button', { name: 'Đã nhận đủ tiền mặt' }).click();
+  await dialog.getByRole('tab', { name: 'Khác' }).click();
   await expect(dialog.getByRole('button', { name: 'Hoàn tiền', exact: true })).toBeVisible();
 
   // Refund part of it through the form.

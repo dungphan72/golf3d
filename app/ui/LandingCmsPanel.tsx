@@ -192,7 +192,7 @@ export default function LandingCmsPanel() {
           <h1>Landing Page Manager</h1>
           <p>
             Tùy biến hình ảnh Hero, thông tin thương hiệu, bảng giá, thư viện 9 ảnh thực tế và các
-            khối tiện ích trên trang chủ Saigon Golf 3D Club.
+            khối tiện ích trên trang chủ SaiGon Indoor Golf Club.
           </p>
         </div>
 

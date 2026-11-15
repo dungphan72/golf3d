@@ -7,6 +7,8 @@ export type RequestRow = {
   created: number;
 };
 export type Data = {
+  summary?: { customers: number; members: number; bookings: number };
+  dashboardDays?: { day: string; bookings: number; members: number }[];
   activeShift: { id: string; name: string; opened_at: number } | null;
   todayReceipts: number;
   maintenance?: { room: string; since: number; reason: string }[];

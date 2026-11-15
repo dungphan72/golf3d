@@ -219,11 +219,11 @@ export function CrmShell({
   const nav = (wide: boolean) => (
     <div className="crm-ws-nav">
       <div className={'crm-ws-brand' + (wide ? '' : ' icon')}>
-        <span>CRM</span>
+        <span>SG</span>
         {wide && (
           <div>
-            <strong>CRM SaiGon Indoor Golf</strong>
-            <small>Quản lý kinh doanh</small>
+            <strong>Saigon Indoor</strong>
+            <small>Golf Club</small>
           </div>
         )}
       </div>
@@ -310,7 +310,7 @@ export function CrmShell({
         </div>
       )}
       <main className="crm-ws-main">
-        <header className="crm-ws-head">
+        <header className={page === 'overview' ? 'crm-ws-head crm-ws-head-hidden' : 'crm-ws-head'}>
           {page === 'overview' ? (
             <>
               <h2>Xin chào, {name.split(/\s+/).slice(-1)[0] || 'bạn'}</h2>

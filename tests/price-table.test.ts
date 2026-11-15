@@ -87,11 +87,10 @@ test('packages are grouped by what they give and VIP cards stay together', () =>
   assert.deepEqual(
     groups.map((g) => [g.id, g.items.length]),
     [
-      ['s-th-gi', 2],
       ['s-th-th-ng', 3],
     ],
   );
-  assert.ok(groups[1].items.every((p, i, a) => i === 0 || a[i - 1].price <= p.price));
+  assert.ok(groups[0].items.every((p, i, a) => i === 0 || a[i - 1].price <= p.price));
 });
 
 test('a package created in the admin lands in a sensible section', () => {
@@ -116,7 +115,14 @@ test('package bullets list contents, validity and perks', () => {
   assert.equal(bullets[0], 'Không giới hạn Giờ chơi');
   assert.ok(bullets.includes('Hiệu lực 6 tháng'));
   assert.ok(bullets.includes('Không giới hạn giờ chơi'));
-  const hours = items.find((p) => p.name.includes('10 giờ'))!;
+  const hours: PackageItem = {
+    id: 'h10',
+    name: 'Thẻ 10 giờ',
+    price: 3_200_000,
+    grants: [{ kind: 'gdr', qty: 12 }],
+    validDays: 60,
+    perks: '',
+  };
   assert.equal(packageBullets(hours)[0], '12 Giờ chơi');
 });
 

@@ -1,79 +1,122 @@
 'use client';
-import { useEffect, useState } from 'react';
+/* eslint-disable @next/next/no-img-element */
+import { useEffect, useRef } from 'react';
 import qrcode from 'qrcode-generator';
 import {
+  ArrowRight,
   CalendarDays,
+  CalendarCheck,
   Check,
-  ChevronRight,
-  Clock,
+  Clock3,
+  Coins,
+  CreditCard,
   Crown,
-  Gem,
+  Flag,
   Gift,
+  History,
   Layers,
+  MoreHorizontal,
   Star,
+  Tag,
   Trophy,
-  Wallet,
+  UsersRound,
 } from 'lucide-react';
-import { rooms, money } from '../../lib/club';
+import { BRAND } from '../../lib/brand';
+import { money, rooms } from '../../lib/club';
 import { parseBenefit } from '../../lib/member-benefits';
 import { TIER_LABEL, type Tier } from '../../lib/member-card';
-import { BRAND } from '../../lib/brand';
 import type { Overview } from './MemberPortal';
 import type { MemberTab } from './MemberShell';
-
-const TIER_ICON: Record<Tier, typeof Crown> = { diamond: Gem, platinum: Crown, gold: Crown, member: Star, guest: Star };
-
-const vn = (ms: number, opts: Intl.DateTimeFormatOptions) =>
-  new Date(ms).toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', ...opts });
-const day = (ms: number) => vn(ms, { day: '2-digit', month: '2-digit', year: 'numeric' });
-const hm = (ms: number) => vn(ms, { hour: '2-digit', minute: '2-digit' });
-const weekday = (ms: number) => vn(ms, { weekday: 'long' });
-const dm = (ms: number) => vn(ms, { day: '2-digit', month: '2-digit' });
-
+import '../member-reference.css';
+const date = (n: number) =>
+  new Date(n).toLocaleDateString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+const time = (n: number) =>
+  new Date(n).toLocaleTimeString('vi-VN', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 const STATUS: Record<string, string> = {
   booked: 'Đã xác nhận',
+  confirmed: 'Đã xác nhận',
+  pending: 'Chờ xác nhận',
   playing: 'Đang chơi',
   paused: 'Tạm nghỉ',
-  finished: 'Chờ thanh toán',
-  paid: 'Đã thanh toán',
-  pending: 'Chờ xác nhận',
-  confirmed: 'Đã xác nhận',
 };
-
-function PortalCard({ name, code, tier, expires }: { name: string; code: string; tier: Tier; expires: number | null }) {
-  const [svg, setSvg] = useState('');
+function Card({ data, tier }: { data: Overview; tier: Tier }) {
+  const qrRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (!data.code) return;
     const q = qrcode(0, 'M');
-    // Same payload as the counter scanner expects: the member code opens this member in the staff area.
-    q.addData(`${window.location.origin}/quan-ly?hv=${code}`);
+    q.addData(`${window.location.origin}/quan-ly?hv=${data.code}`);
     q.make();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value (origin) computed once per code
-    setSvg(q.createSvgTag({ cellSize: 4, margin: 0, scalable: true }));
-  }, [code]);
-  const Icon = TIER_ICON[tier];
+    if (qrRef.current)
+      qrRef.current.innerHTML = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }, [data.code]);
   return (
-    <section className={'mps-card mps-card--' + tier} aria-label="Thẻ hội viên điện tử">
-      <div className="mps-card-top">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={BRAND.logo} alt="" width={64} height={64} />
-        <span className="mps-card-title">
-          <Icon size={22} /> {tier === 'guest' ? 'Thành viên' : tier === 'member' ? 'Hội viên' : `Hội viên ${TIER_LABEL[tier]}`}
+    <section className={`mr-card mr-card-${tier}`} aria-label="Thẻ hội viên điện tử">
+      <div className="mr-card-wave" />
+      <div className="mr-card-title">
+        <img src={BRAND.logo} alt="" />
+        <span>
+          <Crown />
+          Hội viên <b>{tier === 'guest' ? '' : TIER_LABEL[tier]}</b>
         </span>
-        {(tier === 'gold' || tier === 'platinum' || tier === 'diamond') && <b className="mps-card-pill">{TIER_LABEL[tier]}</b>}
+        <strong className="mr-tier-pill">
+          {data.profile.verified ? TIER_LABEL[tier] : 'Đăng nhập'}
+        </strong>
       </div>
-      <div className="mps-card-main">
-        <div>
-          <h2>{name}</h2>
-          <p>Mã hội viên: {code}</p>
-          {expires && <small>Gói còn hạn đến {day(expires)}</small>}
-        </div>
-        <div className="mps-qr" role="img" aria-label={`Mã QR của thẻ ${code}`} dangerouslySetInnerHTML={{ __html: svg }} />
+      <div className="mr-card-name">
+        <h2>
+          {data.profile.verified ? (
+            data.profile.name
+          ) : (
+            <a href="/tai-khoan">Đăng nhập để xem thẻ</a>
+          )}
+        </h2>
+        <p>
+          {data.profile.verified
+            ? `Mã hội viên: ${data.code || 'Chưa cấp'}`
+            : 'Quản lý thẻ, số dư và lịch tập của bạn'}
+        </p>
       </div>
+      {data.code && (
+        <div ref={qrRef} className="mr-qr" role="img" aria-label={`Mã QR hội viên ${data.code}`} />
+      )}
     </section>
   );
 }
-
-/** The member's home: card, shortcuts, upcoming bookings, activity, package, points and perks. */
+function Heading({
+  icon: I,
+  title,
+  more,
+  onClick,
+}: {
+  icon: typeof Crown;
+  title: string;
+  more?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <header className="mr-heading">
+      <h2>
+        <I />
+        {title}
+      </h2>
+      {more && (
+        <button type="button" onClick={onClick}>
+          {more}
+          <ArrowRight />
+        </button>
+      )}
+    </header>
+  );
+}
 export function MemberHome({
   data,
   now,
@@ -85,320 +128,356 @@ export function MemberHome({
   tier: Tier;
   onTab: (t: MemberTab) => void;
 }) {
-  const packs = data.packages ?? [];
-  const live = packs.filter((p) => p.expires >= now);
-  const hoursLeft = live.reduce((n, p) => n + (p.balances.find((b) => b.kind === 'gdr')?.remaining ?? 0), 0);
-  const hourPack = live
-    .filter((p) => p.balances.some((b) => b.kind === 'gdr'))
-    .sort((a, b) => (b.balances.find((x) => x.kind === 'gdr')?.remaining ?? 0) - (a.balances.find((x) => x.kind === 'gdr')?.remaining ?? 0))[0];
-  let hourTotal = 0;
+  const live = (data.packages ?? []).filter((p) => p.expires >= now);
+  const pack = live.find((p) => p.balances.some((b) => b.kind === 'gdr'));
+  const hours = live.reduce(
+    (n, p) => n + (p.balances.find((b) => b.kind === 'gdr')?.remaining ?? 0),
+    0,
+  );
+  const left = pack?.balances.find((b) => b.kind === 'gdr')?.remaining ?? 0;
+  let total = 0;
   try {
-    hourTotal = (JSON.parse(hourPack?.grants ?? '[]') as { kind: string; qty: number }[])
+    total = (JSON.parse(pack?.grants || '[]') as { kind: string; qty: number }[])
       .filter((g) => g.kind === 'gdr')
       .reduce((n, g) => n + g.qty, 0);
   } catch {
-    hourTotal = 0;
+    total = 0;
   }
-  const hourLeft = hourPack?.balances.find((b) => b.kind === 'gdr')?.remaining ?? 0;
-  const unlimited = hourLeft >= 99999;
-  const used = Math.max(0, hourTotal - hourLeft);
-  const pct = unlimited || !hourTotal ? 0 : Math.min(100, Math.round((used / hourTotal) * 100));
-
+  const unlimited = left >= 99999,
+    used = Math.max(0, total - left),
+    percent = total ? Math.min(100, (used / total) * 100) : 0;
+  const name = data.profile.name.trim().split(/\s+/).at(-1) || 'bạn';
+  const tierTitle =
+    tier === 'guest' || tier === 'member' ? 'hội viên' : `hội viên ${TIER_LABEL[tier]}`;
+  const benefits = (data.benefits ?? []).map(parseBenefit).filter((b) => b.title);
   const upcoming = [
-    ...(data.bookings ?? []).filter((b) => b.start >= now - 3_600_000 && ['booked', 'playing', 'paused'].includes(b.status)).map((b) => ({
-      id: b.id,
-      start: b.start,
-      end: b.end,
-      place: rooms.find((r) => r.id === b.room)?.name ?? b.room,
-      vip: b.room.startsWith('vip'),
-      status: STATUS[b.status] ?? b.status,
-    })),
-    ...(data.requests ?? []).map((r) => ({
-      id: r.id,
-      start: r.start,
-      end: 0,
-      place: r.vip ? 'Phòng VIP' : 'Line tiêu chuẩn',
-      vip: !!r.vip,
-      status: STATUS[r.status] ?? r.status,
-    })),
+    ...(data.bookings ?? [])
+      .filter((b) => b.start >= now - 3600000 && ['booked', 'playing', 'paused'].includes(b.status))
+      .map((b) => ({
+        ...b,
+        place: rooms.find((r) => r.id === b.room)?.name ?? b.room,
+        vip: b.room.startsWith('vip'),
+      })),
+    ...(data.requests ?? [])
+      .filter((b) => b.start >= now && ['pending', 'confirmed'].includes(b.status))
+      .map((b) => ({ ...b, end: 0, place: b.vip ? 'Phòng VIP' : 'Line tiêu chuẩn', vip: !!b.vip })),
   ]
     .sort((a, b) => a.start - b.start)
-    .slice(0, 4);
-
-  const benefits = (data.benefits ?? []).map(parseBenefit).filter((b) => b.title).slice(0, 5);
+    .slice(0, 2);
   const promo = data.promotions?.[0];
-  const rank = data.rank;
-  const first = (data.profile.name.trim().split(/\s+/).slice(-1)[0] || 'bạn');
-  const rankName = TIER_LABEL[tier];
-  const bookable = !!data.booking?.enabled;
-
+  const shortcuts = [
+    { icon: CalendarCheck, label: 'Đặt sân ngay', tab: 'booking' },
+    { icon: CreditCard, label: 'Mua gói giờ', tab: 'packages' },
+    { icon: Crown, label: 'Nâng hạng Hội viên', tab: 'packages' },
+    { icon: Trophy, label: 'Đăng ký giải đấu', href: '/tin-tuc' },
+    { icon: UsersRound, label: 'Tìm bạn chơi', tab: 'community' },
+  ] as const;
   return (
-    <div className="mph">
-      <div className="mph-greet">
-        <h1>Chào {first}!</h1>
-        <p>Chúc bạn có buổi tập luyện hiệu quả tại {data.club?.name ?? BRAND.name}.</p>
+    <div className="mr-home">
+      <div className="mr-greeting">
+        <h1>{data.profile.verified ? `Chào ${name}!` : 'Chào mừng bạn!'}</h1>
+        <p>Chúc bạn có buổi tập luyện hiệu quả tại {data.club?.name || BRAND.name}.</p>
       </div>
-
-      <div className="mph-grid">
-        <div className="mph-col">
-          <PortalCard
-            name={data.profile.name}
-            code={data.code ?? ''}
-            tier={tier}
-            expires={live.length ? Math.max(...live.map((p) => p.expires)) : null}
-          />
-          {rank?.next && (
-            <p className="mph-next">
-              Chi tiêu thêm <b>{money(rank.next.need)}</b> để lên hạng <b>{TIER_LABEL[rank.next.tier]}</b>. Đã chi: {money(rank.spent)}.
-            </p>
-          )}
-
-          <ul className="mph-stats" aria-label="Số dư của bạn">
-            <li>
-              <Wallet size={22} />
-              <span>
-                Số dư ví
-                <b>{money(data.wallet ?? 0)}</b>
-              </span>
-            </li>
-            <li>
-              <Clock size={22} />
-              <span>
-                Giờ còn lại
-                <b>{hoursLeft >= 99999 ? 'Không giới hạn' : `${hoursLeft} giờ`}</b>
-              </span>
-            </li>
-            <li>
-              <Star size={22} />
-              <span>
-                Điểm thưởng
-                <b>{(data.points ?? 0).toLocaleString('vi-VN')} điểm</b>
-              </span>
-            </li>
-          </ul>
-
-          <div className="mph-shortcuts" role="group" aria-label="Lối tắt">
-            <button type="button" className="on" onClick={() => onTab('booking')} disabled={!bookable} title={bookable ? undefined : 'Chưa mở đặt line online'}>
-              <CalendarDays size={26} />
-              Đặt line ngay
-            </button>
-            <button type="button" onClick={() => onTab('packages')}>
-              <Layers size={26} />
-              Mua gói giờ
-            </button>
-            <button type="button" onClick={() => onTab('packages')}>
-              <Crown size={26} />
-              Nâng hạng hội viên
-            </button>
-            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-            <a href="/tin-tuc">
-              <Trophy size={26} />
-              Giải đấu
-            </a>
-          </div>
-
-          <section className="mph-panel" aria-label="Lịch đặt line sắp tới">
-            <header>
-              <h2>
-                <CalendarDays size={22} /> Lịch đặt line sắp tới
-              </h2>
-              <button type="button" onClick={() => onTab('booking')}>
-                Xem tất cả <ChevronRight size={16} />
+      <div className="mr-columns">
+        <div className="mr-left">
+          <Card data={data} tier={tier} />
+          <div className="mr-stats">
+            {[
+              {
+                icon: Coins,
+                label: 'Số dư ví',
+                value: data.profile.verified ? money(data.wallet ?? 0) : 'Đăng nhập',
+                tab: 'packages',
+              },
+              {
+                icon: Clock3,
+                label: 'Giờ còn lại',
+                value: !data.profile.verified
+                  ? 'Đăng nhập'
+                  : hours >= 99999
+                    ? 'Không giới hạn'
+                    : `${hours} giờ`,
+                tab: 'packages',
+              },
+              {
+                icon: Star,
+                label: 'Điểm thưởng',
+                value: data.profile.verified
+                  ? (data.points ?? 0).toLocaleString('vi-VN') + ' điểm'
+                  : 'Đăng nhập',
+                tab: 'history',
+              },
+            ].map(({ icon: I, label, value, tab }) => (
+              <button
+                key={label}
+                onClick={() => onTab(data.profile.verified ? (tab as MemberTab) : 'settings')}
+              >
+                <I />
+                <span>
+                  {label}
+                  <b>
+                    {value}
+                    <ArrowRight />
+                  </b>
+                </span>
               </button>
-            </header>
+            ))}
+          </div>
+          <div className="mr-shortcuts">
+            {shortcuts.map(({ icon: I, label, ...item }, i) =>
+              'href' in item ? (
+                <a key={label} href={item.href}>
+                  <I />
+                  {label}
+                </a>
+              ) : (
+                <button
+                  key={label}
+                  className={i === 0 ? 'primary' : ''}
+                  onClick={() => onTab(item.tab)}
+                  disabled={i === 0 && !data.booking?.enabled}
+                >
+                  <I />
+                  {label}
+                </button>
+              ),
+            )}
+          </div>
+          <section className="mr-panel mr-bookings">
+            <Heading
+              icon={CalendarDays}
+              title="Lịch đặt sân sắp tới"
+              more="Xem tất cả"
+              onClick={() => onTab('booking')}
+            />
             {upcoming.length ? (
-              <ul className="mph-bookings">
+              <div>
                 {upcoming.map((b) => (
-                  <li key={b.id}>
-                    <span className="mph-date">
-                      <small>{weekday(b.start)}</small>
-                      <b>{dm(b.start)}</b>
+                  <button className="mr-booking-row" key={b.id} onClick={() => onTab('booking')}>
+                    <span className="mr-date">
+                      <small>
+                        {new Date(b.start).toLocaleDateString('vi-VN', {
+                          weekday: 'long',
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                        })}
+                      </small>
+                      <b>{date(b.start).slice(0, 5)}</b>
                     </span>
-                    <span className="mph-time">
-                      <Clock size={17} />
-                      {hm(b.start)}
-                      {b.end ? ` – ${hm(b.end)}` : ''}
+                    <span>
+                      <Clock3 />
+                      {time(b.start)}
+                      {b.end ? ' – ' + time(b.end) : ''}
                     </span>
-                    <span className="mph-place">
-                      {b.vip ? <Crown size={17} /> : <Star size={17} />}
+                    <span>
+                      {b.vip ? <Crown /> : <Flag />}
                       {b.place}
                     </span>
-                    <span className="mph-status">
-                      <Check size={15} /> {b.status}
+                    <span className={'mr-status ' + (b.status === 'pending' ? 'pending' : '')}>
+                      <Check />
+                      {STATUS[b.status] || b.status}
                     </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mph-empty">
-                Bạn chưa có lịch sắp tới.{' '}
-                {bookable && (
-                  <button type="button" onClick={() => onTab('booking')}>
-                    Đặt line ngay
+                    <MoreHorizontal />
                   </button>
-                )}
+                ))}
+              </div>
+            ) : (
+              <p className="mr-empty">
+                {data.profile.verified
+                  ? 'Bạn chưa có lịch đặt sân sắp tới.'
+                  : 'Đăng nhập để xem lịch đặt sân của bạn.'}
               </p>
             )}
           </section>
-
-          <section className="mph-panel" aria-label="Hoạt động gần đây">
-            <header>
-              <h2>
-                <Clock size={22} /> Hoạt động gần đây
-              </h2>
-              <button type="button" onClick={() => onTab('history')}>
-                Xem chi tiết <ChevronRight size={16} />
-              </button>
-            </header>
+          <section className="mr-panel mr-activity">
+            <Heading
+              icon={History}
+              title="Hoạt động gần đây"
+              more="Xem chi tiết"
+              onClick={() => onTab('history')}
+            />
             {data.activity?.length ? (
-              <table className="mph-activity">
-                <tbody>
-                  {data.activity.slice(0, 5).map((a, i) => (
-                    <tr key={i}>
-                      <td>{day(a.at)}</td>
-                      <td>{a.title}</td>
-                      <td className={(a.money ?? a.points ?? 0) < 0 ? 'neg' : (a.money ?? a.points ?? 0) > 0 ? 'pos' : ''}>
-                        {a.money != null
-                          ? `${a.money > 0 ? '+' : '−'}${money(Math.abs(a.money))}`
-                          : a.points != null
-                            ? `${a.points > 0 ? '+' : '−'}${Math.abs(a.points).toLocaleString('vi-VN')} điểm`
-                            : a.paid != null
-                              ? money(a.paid)
-                              : ''}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div>
+                {data.activity.slice(0, 3).map((a, i) => (
+                  <button className="mr-activity-row" key={i} onClick={() => onTab('history')}>
+                    <span className="mr-activity-icon">
+                      {a.kind === 'points' ? (
+                        <Star />
+                      ) : a.kind === 'wallet' ? (
+                        <Coins />
+                      ) : (
+                        <CalendarDays />
+                      )}
+                    </span>
+                    <time>{date(a.at)}</time>
+                    <strong>{a.title}</strong>
+                    <b className={(a.money ?? a.points ?? 0) < 0 ? 'negative' : 'positive'}>
+                      {a.money != null
+                        ? `${a.money > 0 ? '+' : '−'}${money(Math.abs(a.money))}`
+                        : a.points != null
+                          ? `${a.points > 0 ? '+' : '−'}${Math.abs(a.points).toLocaleString('vi-VN')} điểm`
+                          : a.paid != null
+                            ? money(a.paid)
+                            : ''}
+                    </b>
+                  </button>
+                ))}
+              </div>
             ) : (
-              <p className="mph-empty">Chưa có hoạt động nào.</p>
+              <p className="mr-empty">
+                {data.profile.verified
+                  ? 'Chưa có giao dịch. Các hoạt động của bạn sẽ hiển thị tại đây.'
+                  : 'Đăng nhập để xem hoạt động và lịch sử giao dịch.'}
+              </p>
             )}
           </section>
         </div>
-
-        <div className="mph-col">
-          <section className="mph-hero" aria-label="Foresight GC3">
-            <h2>
-              Tập luyện Golf 3D
-              <span>Công nghệ Foresight GC3</span>
-            </h2>
-            <ul>
-              <li>Phân tích chuẩn xác</li>
-              <li>Cải thiện kỹ thuật</li>
-              <li>Nâng cao thành tích</li>
-            </ul>
+        <div className="mr-right">
+          <section className="mr-hero">
+            <img
+              src="/img/member/hero.webp"
+              alt="Tập luyện Golf 3D — Công nghệ Foresight GC3. Phân tích chuẩn xác, cải thiện kỹ thuật, nâng cao thành tích"
+            />
           </section>
-
-          <div className="mph-two">
-            <section className="mph-panel" aria-label="Thông tin gói giờ">
-              <header>
-                <h2>
-                  <Layers size={22} /> Thông tin gói giờ
-                </h2>
-              </header>
-              {hourPack ? (
+          <div className="mr-info">
+            <section className="mr-panel mr-package">
+              <Heading icon={Layers} title="Thông tin gói giờ" />
+              {pack ? (
                 <>
-                  <div className="mph-pack">
+                  <div className="mr-pack-details">
                     <div>
-                      <strong>{hourPack.name}</strong>
-                      <p>{unlimited ? 'Không giới hạn giờ' : `Còn lại: ${hourLeft} giờ`}</p>
+                      <h3>{pack.name}</h3>
+                      <p>
+                        Còn lại: <b>{unlimited ? 'Không giới hạn' : left + ' giờ'}</b>
+                      </p>
                     </div>
                     <small>
                       Hết hạn:
                       <br />
-                      {day(hourPack.expires)}
+                      {date(pack.expires)}
                     </small>
                   </div>
-                  {!unlimited && hourTotal > 0 && (
+                  {!unlimited && total > 0 && (
                     <>
-                      <div className="mph-bar" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Giờ đã dùng">
-                        <i style={{ width: `${pct}%` }} />
+                      <div
+                        className="mr-progress"
+                        role="progressbar"
+                        aria-label="Giờ đã sử dụng"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={percent}
+                      >
+                        <i style={{ width: `${percent}%` }} />
                       </div>
-                      <p className="mph-fine">
-                        Đã sử dụng: {used} giờ / {hourTotal} giờ
+                      <p className="mr-used">
+                        Đã sử dụng: {used} giờ / {total} giờ
                       </p>
                     </>
                   )}
                 </>
               ) : (
-                <p className="mph-empty">
-                  Bạn chưa có gói giờ còn hạn.{' '}
-                  <button type="button" onClick={() => onTab('packages')}>
-                    Mua gói giờ
+                <p className="mr-empty">
+                  {data.profile.verified
+                    ? 'Bạn chưa có gói giờ còn hạn.'
+                    : 'Đăng nhập để xem các gói giờ của bạn.'}{' '}
+                  <button onClick={() => onTab('packages')}>
+                    Mua gói giờ <ArrowRight />
                   </button>
                 </p>
               )}
             </section>
-
-            <section className="mph-panel" aria-label="Quyền lợi hội viên">
-              <header>
-                <h2>
-                  <Crown size={22} /> Quyền lợi {tier === 'guest' || tier === 'member' ? 'hội viên' : `hội viên ${rankName}`}
-                </h2>
-              </header>
+            <section className="mr-panel mr-benefits">
+              <Heading
+                icon={Crown}
+                title={`Quyền lợi ${tierTitle}`}
+                more="Xem chi tiết"
+                onClick={() => onTab('offers')}
+              />
               {benefits.length ? (
-                <ul className="mph-perks">
-                  {benefits.map((b) => (
-                    <li key={b.title}>
-                      <Check size={18} />
-                      {b.title}
-                    </li>
-                  ))}
+                <ul>
+                  {benefits.slice(0, 5).map((b, i) => {
+                    const I = [Tag, CalendarDays, Coins, Gift, Star][i];
+                    return (
+                      <li key={b.title}>
+                        <I className="mr-benefit-icon" />
+                        <Check className="mr-benefit-check" />
+                        <span>{b.title}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : (
-                <p className="mph-empty">Câu lạc bộ chưa đăng quyền lợi.</p>
+                <p className="mr-empty">Quyền lợi hội viên sẽ được câu lạc bộ cập nhật tại đây.</p>
               )}
             </section>
-          </div>
-
-          <section className="mph-panel mph-points" aria-label="Điểm thưởng">
-            <header>
-              <h2>
-                <Gift size={22} /> Điểm thưởng
-              </h2>
-            </header>
-            <p className="mph-big">
-              {(data.points ?? 0).toLocaleString('vi-VN')} <small>điểm</small>
-            </p>
-            <p className="mph-fine">10 điểm đổi 1 lượt chơi miễn phí. Đổi tại quầy khi bạn đến chơi.</p>
-          </section>
-
-          {promo && (
-            <section className="mph-offer" aria-label="Ưu đãi">
-              <h2>{promo.name}</h2>
-              <p>{promo.benefit}</p>
-              <button type="button" onClick={() => onTab('offers')}>
-                Xem ngay <ChevronRight size={16} />
-              </button>
+            <section className="mr-panel mr-points">
+              <Heading icon={Gift} title="Điểm thưởng" />
+              <div>
+                <strong>
+                  {data.profile.verified ? (data.points ?? 0).toLocaleString('vi-VN') : '—'}{' '}
+                  <small>điểm</small>
+                </strong>
+                <button onClick={() => onTab('offers')}>
+                  Đổi ưu đãi <ArrowRight />
+                </button>
+              </div>
             </section>
-          )}
+          </div>
+          <button className="mr-offer" onClick={() => onTab('offers')}>
+            <span>
+              <strong>
+                {promo?.name || 'Ưu đãi dành riêng'}
+                <br />
+                {!promo && (
+                  <>
+                    cho <em>{tierTitle}</em>
+                  </>
+                )}
+              </strong>
+              <small>
+                Xem ngay <ArrowRight />
+              </small>
+            </span>
+          </button>
         </div>
       </div>
-
-      <section className="mph-ranks" aria-label="Các hạng hội viên">
-        <header>
-          <h2>
-            <Crown size={22} /> Hạng hội viên
-          </h2>
-        </header>
-        <div className="mph-rank-row">
-          {(['gold', 'platinum', 'diamond'] as const).map((t) => {
-            const at = rank?.thresholds?.[t] ?? 0;
-            const reached = rank ? rank.spent >= at : false;
-            const Icon = TIER_ICON[t];
-            return (
-              <article key={t} className={'mph-rank' + (tier === t ? ' now' : '')}>
+      <section className="mr-catalog">
+        <Heading
+          icon={CalendarCheck}
+          title="Gói hội viên & Gói giờ"
+          more="Xem tất cả"
+          onClick={() => onTab('packages')}
+        />
+        <div className="mr-catalog-scroll">
+          {data.catalog?.length ? (
+            data.catalog.map((p, i) => (
+              <article key={p.id} className={i === 0 ? 'featured' : ''}>
                 <h3>
-                  <Icon size={22} /> {TIER_LABEL[t]}
-                  {tier === t && <b>Hạng của bạn</b>}
+                  <Crown />
+                  {p.name}
                 </h3>
-                <p>
-                  Chi tiêu từ <strong>{money(at)}</strong>
-                </p>
-                <small>{reached ? 'Đã đạt mốc này' : rank ? `Còn ${money(Math.max(0, at - rank.spent))}` : ''}</small>
+                <strong>{money(p.price)}</strong>
+                <ul>
+                  <li>
+                    <Check />
+                    {p.room === 'vip' ? 'Sử dụng phòng VIP' : 'Line tiêu chuẩn'}
+                  </li>
+                  {p.valid_days && (
+                    <li>
+                      <Check />
+                      Thời hạn {p.valid_days} ngày
+                    </li>
+                  )}
+                  <li>
+                    <Check />
+                    Quản lý trực tuyến
+                  </li>
+                </ul>
+                <button onClick={() => onTab('packages')}>Đăng ký ngay</button>
               </article>
-            );
-          })}
+            ))
+          ) : (
+            <p className="mr-empty">Chưa có gói đang mở bán.</p>
+          )}
         </div>
       </section>
     </div>

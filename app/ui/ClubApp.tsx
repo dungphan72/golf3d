@@ -2,33 +2,32 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Check, X } from 'lucide-react';
 import { defaults, type Booking } from '../../lib/club';
-import FinancePanel from './FinancePanel';
 import FnbPanel from './FnbPanel';
 import { BookingForm } from './Forms';
 import { SettingsForm, type SettingsTab } from './Forms';
+import { SystemSettingsHub } from './SystemSettingsHub';
+import { ModernPosFlow } from './ModernPosFlow';
 import { PageTabs } from './kit';
 import { type Data } from './shared';
-import { BookingsHub, HUB_VIEWS, InvoiceList, SupportList } from './BookingsHub';
+import { BookingsHub, HUB_VIEWS } from './BookingsHub';
 import { PosBoard } from './PosBoard';
-import { PosSidebar, PosTopbar } from './PosShell';
-import { BottomBar, NAV_LABEL, NAV_PARENT, Sidebar } from './AdminShell';
-import { CustomerHome } from './CustomerHome';
+import { AdminReferenceShell, ADMIN_VIEWS } from './AdminReferenceShell';
+import { AdminOverview } from './AdminOverview';
+
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
 import { AccountPanel } from './AccountPanel';
-import { StaffPanel } from './StaffPanel';
-import { AuditPanel } from './AuditPanel';
 import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
-import { CoachingPanel } from './CoachingPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmModule } from '../../modules/crm/ui/CrmApp';
 
 import { WalkInDialog } from './WalkInDialog';
-import LandingCmsPanel from './LandingCmsPanel';
 import { ContentPanel } from './ContentPanel';
 import { useBellSound } from './BellAlerts';
+import { FinanceDialog } from './finance/FinanceDialog';
 export default function ClubApp() {
+  const [openingShift, setOpeningShift] = useState(false);
   const [data, setData] = useState<Data | null>(null),
     // A link from a lead notification (/quan-ly?view=crm&customer=ID) opens the customer's file;
     // a scanned member card (/quan-ly?hv=HV-XXXXXXXX) opens the members screen on that card.
@@ -36,13 +35,12 @@ export default function ClubApp() {
       if (typeof location === 'undefined')
         return { view: 'dashboard', customer: null as string | null };
       const q = new URLSearchParams(location.search);
-      const requestedView = q.get('view');
-      const view = q.get('hv') ? 'members' : (requestedView || 'dashboard');
+      const requestedView = q.get('view') === 'crm' ? 'crmx' : q.get('view');
+      const view = q.get('hv') ? 'members' : requestedView || 'dashboard';
       return { view, customer: q.get('customer') };
     }),
     deepCustomer = deepLink.customer,
-    [view, setView] = useState(deepLink.view),
-    [mode, setMode] = useState('staff'),
+    [view, setView] = useState(ADMIN_VIEWS.has(deepLink.view) ? deepLink.view : 'dashboard'),
     [modal, setModal] = useState(false),
     [bookingRoom, setBookingRoom] = useState('line-1'),
     [bookingCustomer, setBookingCustomer] = useState<{ name?: string; phone?: string } | null>(
@@ -55,12 +53,10 @@ export default function ClubApp() {
     [toast, setToast] = useState(''),
     [busy, setBusy] = useState(false),
     [now, setNow] = useState(() => Date.now()),
-    [leads] = useState<
-      { overdue: number; waiting: number; queued: number } | undefined
-    >(),
+    [leads] = useState<{ overdue: number; waiting: number; queued: number } | undefined>(),
     [crm2, setCrm2] = useState<{ newUnhandled: number; overdueTasks: number } | undefined>(),
-    [mobile, setMobile] = useState(false),
-    [settingsTab, setSettingsTab] = useState<SettingsTab>('facility');
+    [settingsTab, setSettingsTab] = useState<SettingsTab>('facility'),
+    [settingsSub, setSettingsSub] = useState<string>('all');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
@@ -152,8 +148,7 @@ export default function ClubApp() {
     }
   }
   const c = data?.config ?? defaults,
-    b = data?.bookings ?? [],
-    pending = data?.requests.filter((x) => x.status !== 'done') ?? [];
+    b = data?.bookings ?? [];
   const ringing = data ? data.requests.filter((x) => x.status === 'new').length : null;
   const onRing = useCallback(
     (n: number) => setToast(n > 1 ? `${n} khách đang gọi phục vụ` : 'Có khách gọi phục vụ'),
@@ -163,16 +158,13 @@ export default function ClubApp() {
   const needs: Record<string, string> = {
     finance: 'finance.view',
     reports: 'finance.view',
-    landing: 'settings.manage',
     content: 'settings.manage',
     settings: 'settings.manage',
-    staff: 'staff.manage',
-    audit: 'staff.manage',
     members: 'member.view',
     crm: 'crm.view',
     crmx: 'crm.view',
     online: 'booking.create',
-    coaching: 'coach.view',
+    marketing: 'crm.view',
   };
   const allowed = (key: string) =>
     !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
@@ -182,13 +174,8 @@ export default function ClubApp() {
     setAuthState('login');
   }
   function go(v: string) {
-    setView(v);
-    setMobile(false);
+    setView(ADMIN_VIEWS.has(v) && allowed(v) ? v : 'dashboard');
   }
-  const openBooking = () => {
-    setBookingRoom('line-1');
-    setModal(true);
-  };
   const chosen = selected ? (b.find((x) => x.id === selected.id) ?? selected) : null;
   if (authState === 'login') return <LoginScreen onDone={load} />;
   if (authState === 'change')
@@ -197,11 +184,6 @@ export default function ClubApp() {
         <AccountPanel forced onChanged={load} onLogout={signOut} />
       </div>
     );
-  const badges: Record<string, number> = {
-    bookings: data?.onlinePending ?? 0,
-    support: pending.length,
-    invoices: b.filter((x) => x.status === 'finished').length,
-  };
   const visibleNav = (key: string) => allowed(key);
   const bookRoom = (r: string) => {
     setBookingRoom(r);
@@ -211,7 +193,6 @@ export default function ClubApp() {
     targetView: string,
     extra?: { customerId?: string; phone?: string; name?: string; room?: string },
   ) => {
-    setMode('staff');
     if (targetView === 'members') {
       setMemberTarget({ id: extra?.customerId, phone: extra?.phone });
       go('members');
@@ -225,66 +206,22 @@ export default function ClubApp() {
     }
   };
   return (
-    <div className={'app-shell ds-root pos-root' + (chosen ? ' pos-docked' : '')}>
-      <Sidebar
-        open={mobile}
+    <div className="ar-app">
+      <AdminReferenceShell
         view={view}
+        data={data}
+        error={error}
         visible={visibleNav}
-        badges={badges}
-        user={data?.user ?? ''}
-        role={data?.role ?? ''}
-        onGo={(key) => {
-          setMode('staff');
-          go(key);
+        settingsSub={settingsSub}
+        onSelectSettingsSub={(sub) => {
+          setSettingsSub(sub);
+          go('settings');
         }}
-        onClose={() => setMobile(false)}
-        onCustomerView={() => {
-          setMode('customer');
-          setMobile(false);
-        }}
+        onGo={go}
+        onSelect={setSelected}
         onLogout={signOut}
-      />
-      <PosSidebar
-        view={view}
-        visible={visibleNav}
-        badges={badges}
-        onGo={(key) => {
-          setMode('staff');
-          go(key);
-        }}
-      />
-      <div className="ds-body pos-body">
-        <a className="ds-skip" href="#noi-dung">
-          Bỏ qua đến nội dung
-        </a>
-        <PosTopbar
-          title={
-            mode === 'customer'
-              ? 'Xem như khách hàng'
-              : (NAV_LABEL[NAV_PARENT[view] ?? view] ?? NAV_LABEL.account)
-          }
-          user={data?.user ?? ''}
-          role={data?.role ?? ''}
-          connection={error ? 'Mất kết nối' : data ? 'Trực tuyến' : 'Đang kết nối…'}
-          online={!error && !!data}
-          bookings={b}
-          pending={pending.length}
-          onGo={(key) => {
-            setMode('staff');
-            go(key);
-          }}
-          onMenu={() => setMobile(true)}
-          onBook={openBooking}
-          onRefresh={load}
-          onSupport={() => {
-            setMode('staff');
-            go('support');
-          }}
-          onPick={setSelected}
-          onCustomerView={() => setMode('customer')}
-          onLogout={signOut}
-        />
-        <main className="ds-main" id="noi-dung" tabIndex={-1}>
+      >
+        <div className={view === 'dashboard' ? 'ar-content' : (view === 'settings' ? 'ar-settings-wrap' : (view === 'rooms' ? 'ar-pos-wrap' : 'ds-root ar-legacy-content'))}>
           {error && (
             <div className="error-box" role="alert">
               {error}
@@ -300,183 +237,171 @@ export default function ClubApp() {
             <div className="loading">Đang tải dữ liệu…</div>
           ) : (
             <>
-              {mode === 'customer' ? (
-                <>
-                  <div className="ds-banner">
-                    <span>Bạn đang xem giao diện của khách hàng.</span>
-                    <button onClick={() => setMode('staff')}>Về trang quản lý</button>
-                  </div>
-                  <CustomerHome
-                    onBook={openBooking}
-                    onSession={() => {
-                      setMode('staff');
-                      go('rooms');
-                    }}
-                    config={c}
-                  />
-                </>
-              ) : (
-                <>
-                  {(view === 'dashboard' || view === 'rooms') && data && (
-                    <PosBoard
-                      data={data}
-                      now={now}
-                      canSeeMoney={allowed('finance')}
-                      leads={leads}
-                      crm2={crm2}
-                      selectedRoom={chosen?.room}
-                      onSelect={setSelected}
-                      onBook={bookRoom}
-                      onWalkIn={setWalkInRoom}
-                      onGo={go}
-                      onMaintenance={(room, on, reason) =>
-                        mutate({ action: 'maintenance', room, value: { on, reason } })
-                      }
-                    />
-                  )}
-                  {HUB_VIEWS.includes(view as (typeof HUB_VIEWS)[number]) && data && (
-                    <BookingsHub
-                      view={view}
-                      onView={go}
-                      data={data}
-                      canOnline={allowed('online')}
-                      onSelect={setSelected}
-                      onChanged={load}
-                    />
-                  )}
-                  {view === 'support' && data && (
-                    <SupportList data={data} busy={busy} onMutate={mutate} />
-                  )}
-                  {view === 'invoices' && <InvoiceList bookings={b} onSelect={setSelected} />}
-                  {view === 'fnb' && <FnbPanel onChanged={load} />}
-                  {view === 'finance' && allowed('finance') && <FinancePanel onChanged={load} />}
-                  {view === 'landing' && allowed('landing') && <LandingCmsPanel />}
-                  {view === 'content' && allowed('content') && <ContentPanel />}
-                  {view === 'settings' && allowed('settings') && (
-                    <>
-                      <PageTabs
-                        value={settingsTab}
-                        onChange={(k) => setSettingsTab(k as SettingsTab)}
-                        tabs={[
-                          { key: 'facility', label: 'Cơ sở' },
-                          { key: 'price', label: 'Giá' },
-                          { key: 'promo', label: 'Khuyến mãi' },
-                          { key: 'booking', label: 'Đặt lịch' },
-                          { key: 'payment', label: 'Thanh toán' },
-                        ]}
-                      />
-                      <SettingsForm
-                        config={c}
-                        busy={busy}
-                        tab={settingsTab}
-                        onSave={(v) => mutate({ action: 'settings', value: v })}
-                      />
-                      {settingsTab === 'payment' && <SepaySettings />}
-                    </>
-                  )}
-                  {view === 'reports' && allowed('reports') && <ReportsPanel />}
-                  {view === 'coaching' && allowed('coaching') && (
-                    <CoachingPanel permissions={data?.permissions ?? []} />
-                  )}
-                  {view === 'members' && allowed('members') && (
-                    <MembersPanel
-                      permissions={data?.permissions ?? []}
-                      initialCustomer={memberTarget?.id}
-                      initialPhone={memberTarget?.phone}
-                      onStartSession={(cust) => {
-                        setBookingCustomer({ name: cust.name, phone: cust.phone });
-                        setBookingRoom('line-1');
-                        setModal(true);
-                        go('rooms');
-                      }}
-                    />
-                  )}
-                  {(view === 'crmx' || view === 'crm') && allowed('crmx') && (
-                    <CrmModule
-                      key={view}
-                      permissions={data?.permissions ?? []}
-                      initialTab={deepCustomer ? 'files' : 'overview'}
-                      onNavigate={handleCrmNavigate}
-                    />
-                  )}
-                  {view === 'staff' && allowed('staff') && (
-                    <StaffPanel actorRole={data?.role ?? ''} />
-                  )}
-                  {view === 'audit' && allowed('audit') && <AuditPanel />}
-                  {view === 'account' && <AccountPanel onChanged={load} onLogout={signOut} />}
-                </>
+              {view === 'dashboard' && data && (
+                <AdminOverview
+                  data={data}
+                  now={now}
+                  canSeeMoney={allowed('finance')}
+                  onGo={go}
+                  onBook={bookRoom}
+                  onSelect={setSelected}
+                />
+              )}
+              {view === 'rooms' && data && (
+                <ModernPosFlow
+                  data={data}
+                  now={now}
+                  canSeeMoney={allowed('finance')}
+                  onGo={go}
+                  onMutate={mutate}
+                  onRefresh={load}
+                />
+              )}
+              {HUB_VIEWS.includes(view as (typeof HUB_VIEWS)[number]) && data && (
+                <BookingsHub
+                  view={view}
+                  onView={go}
+                  data={data}
+                  canOnline={allowed('online')}
+                  onSelect={setSelected}
+                  onChanged={load}
+                />
+              )}
+              {view === 'fnb' && <FnbPanel onChanged={load} />}
+              {view === 'content' && allowed('content') && <ContentPanel />}
+              {view === 'settings' && allowed('settings') && (
+                <SystemSettingsHub
+                  config={c}
+                  busy={busy}
+                  data={data}
+                  activeSub={settingsSub}
+                  onSelectSub={setSettingsSub}
+                  onSave={(v) => mutate({ action: 'settings', value: v })}
+                  onGo={go}
+                  onChanged={load}
+                />
+              )}
+              {view === 'reports' && allowed('reports') && <ReportsPanel />}
+              {view === 'members' && allowed('members') && (
+                <MembersPanel
+                  permissions={data?.permissions ?? []}
+                  initialCustomer={memberTarget?.id}
+                  initialPhone={memberTarget?.phone}
+                  onStartSession={(cust) => {
+                    setBookingCustomer({ name: cust.name, phone: cust.phone });
+                    setBookingRoom('line-1');
+                    setModal(true);
+                    go('rooms');
+                  }}
+                />
+              )}
+              {(view === 'crmx' || view === 'marketing') && allowed('crmx') && (
+                <CrmModule
+                  key={view}
+                  permissions={data?.permissions ?? []}
+                  initialTab={
+                    view === 'marketing' ? 'marketing' : deepCustomer ? 'files' : 'overview'
+                  }
+                  onNavigate={handleCrmNavigate}
+                />
               )}
             </>
           )}
-        </main>
-        <BottomBar
-          view={NAV_PARENT[view] ?? view}
-          badges={badges}
-          onGo={(key) => {
-            setMode('staff');
-            go(key);
-          }}
-          onMore={() => setMobile(true)}
-        />
-      </div>
-      {modal && (
-        <BookingForm
-          initialRoom={bookingRoom}
-          initialCustomer={bookingCustomer?.name}
-          initialPhone={bookingCustomer?.phone}
-          config={c}
-          busy={busy}
-          onClose={() => {
-            setModal(false);
-            setBookingCustomer(null);
-          }}
-          onSave={async (v) => {
-            if (await mutate({ action: 'book', ...v })) {
+        </div>
+      </AdminReferenceShell>
+      <div className="ds-root ar-dialog-root">
+        {openingShift && (
+          <FinanceDialog
+            kind="open"
+            busy={busy}
+            notice=""
+            onClose={() => setOpeningShift(false)}
+            onSave={async (value) => {
+              setBusy(true);
+              try {
+                const response = await fetch('/api/finance', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(value),
+                });
+                const result = (await response.json()) as { error?: string };
+                if (!response.ok) throw new Error(result.error || 'Chưa mở được ca');
+                await load();
+                setOpeningShift(false);
+                setToast('Đã mở ca bán hàng');
+                return true;
+              } catch (error) {
+                setToast(error instanceof Error ? error.message : 'Chưa mở được ca');
+                return false;
+              } finally {
+                setBusy(false);
+              }
+            }}
+          />
+        )}
+        {modal && (
+          <BookingForm
+            initialRoom={bookingRoom}
+            initialCustomer={bookingCustomer?.name}
+            initialPhone={bookingCustomer?.phone}
+            config={c}
+            busy={busy}
+            onClose={() => {
               setModal(false);
               setBookingCustomer(null);
-            }
-          }}
-        />
-      )}
-      {walkInRoom && (
-        <WalkInDialog
-          room={walkInRoom}
-          busy={busy}
-          onClose={() => setWalkInRoom(null)}
-          onStart={async (v) => {
-            if (await mutate({ action: 'walkin', ...v })) setWalkInRoom(null);
-          }}
-        />
-      )}
-      {chosen && (
-        <SessionPanel
-          key={chosen.id}
-          permissions={data?.permissions ?? []}
-          onRefresh={load}
-          bank={{ bin: c.bankBin ?? '', account: c.bankAccount ?? '', holder: c.bankHolder ?? '' }}
-          canPay={!!data?.activeShift}
-          onOpenShift={() => {
-            setSelected(null);
-            go('finance');
-          }}
-          booking={chosen}
-          now={now}
-          busy={busy}
-          onClose={() => setSelected(null)}
-          onAction={async (action, extra = {}) => {
-            await mutate({ action, id: chosen.id, ...extra });
-          }}
-        />
-      )}
-      {toast && (
-        <div className="toast" role="status">
-          <Check size={18} />
-          {toast}
-          <button onClick={() => setToast('')} aria-label="Đóng thông báo">
-            <X size={16} />
-          </button>
-        </div>
-      )}
+            }}
+            onSave={async (v) => {
+              if (await mutate({ action: 'book', ...v })) {
+                setModal(false);
+                setBookingCustomer(null);
+              }
+            }}
+          />
+        )}
+        {walkInRoom && (
+          <WalkInDialog
+            room={walkInRoom}
+            busy={busy}
+            onClose={() => setWalkInRoom(null)}
+            onStart={async (v) => {
+              if (await mutate({ action: 'walkin', ...v })) setWalkInRoom(null);
+            }}
+          />
+        )}
+        {chosen && (
+          <SessionPanel
+            key={chosen.id}
+            permissions={data?.permissions ?? []}
+            onRefresh={load}
+            bank={{
+              bin: c.bankBin ?? '',
+              account: c.bankAccount ?? '',
+              holder: c.bankHolder ?? '',
+            }}
+            canPay={!!data?.activeShift}
+            onOpenShift={() => {
+              setSelected(null);
+              setOpeningShift(true);
+            }}
+            booking={chosen}
+            now={now}
+            busy={busy}
+            onClose={() => setSelected(null)}
+            onAction={async (action, extra = {}) => {
+              await mutate({ action, id: chosen.id, ...extra });
+            }}
+          />
+        )}
+        {toast && (
+          <div className="toast" role="status">
+            <Check size={18} />
+            {toast}
+            <button onClick={() => setToast('')} aria-label="Đóng thông báo">
+              <X size={16} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

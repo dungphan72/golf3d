@@ -62,37 +62,66 @@ export type ClubInput = z.infer<typeof clubInput>;
 export async function loadDashboard(tenant: string, displayName: string) {
   const day = 86400000,
     dayStart = Math.floor((Date.now() + 7 * 3600000) / day) * day - 7 * 3600000;
-  const [c, b, r, a, activeShift, receipts, maintenance] = await Promise.all([
-    loadConfig(tenant),
-    db()
-      .prepare('SELECT * FROM bookings WHERE tenant=? ORDER BY start DESC LIMIT 200')
-      .bind(tenant)
-      .all(),
-    db()
-      .prepare('SELECT * FROM requests WHERE tenant=? ORDER BY created DESC LIMIT 100')
-      .bind(tenant)
-      .all(),
-    db()
-      .prepare('SELECT * FROM audit WHERE tenant=? ORDER BY created DESC LIMIT 30')
-      .bind(tenant)
-      .all(),
-    db()
-      .prepare("SELECT id,name,opened_at FROM shifts WHERE tenant=? AND status='open'")
-      .bind(tenant)
-      .first(),
-    db()
-      .prepare(
-        "SELECT COALESCE(SUM(CASE WHEN kind='refund' THEN -amount ELSE amount END),0) AS total FROM finance_entries WHERE tenant=? AND kind IN ('payment','refund') AND created>=? AND created<?",
-      )
-      .bind(tenant, dayStart, dayStart + day)
-      .first<{ total: number }>(),
-    db()
-      .prepare('SELECT room,since,reason FROM room_maintenance WHERE tenant=? ORDER BY since')
-      .bind(tenant)
-      .all(),
-  ]);
+  const [c, b, summary, dashboardDays, r, a, activeShift, receipts, maintenance] =
+    await Promise.all([
+      loadConfig(tenant),
+      db()
+        .prepare('SELECT * FROM bookings WHERE tenant=? ORDER BY start DESC LIMIT 200')
+        .bind(tenant)
+        .all(),
+      db()
+        .prepare(
+          `SELECT
+      (SELECT COUNT(*) FROM customers WHERE tenant=?) AS customers,
+      (SELECT COUNT(DISTINCT customer_id) FROM customer_packages WHERE tenant=? AND expires>=?) AS members,
+      (SELECT COUNT(*) FROM bookings WHERE tenant=? AND status!='cancelled' AND start>=? AND start<?) AS bookings`,
+        )
+        .bind(tenant, tenant, Date.now(), tenant, dayStart, dayStart + day)
+        .first<{ customers: number; members: number; bookings: number }>(),
+      db()
+        .prepare(
+          `SELECT day, SUM(bookings) AS bookings, SUM(members) AS members FROM (
+      SELECT date(start/1000+25200,'unixepoch') AS day, COUNT(*) AS bookings, 0 AS members FROM bookings WHERE tenant=? AND status!='cancelled' AND start>=? AND start<? GROUP BY day
+      UNION ALL
+      SELECT date(purchased/1000+25200,'unixepoch') AS day, 0 AS bookings, COUNT(DISTINCT customer_id) AS members FROM customer_packages WHERE tenant=? AND purchased>=? AND purchased<? GROUP BY day
+      ) GROUP BY day ORDER BY day`,
+        )
+        .bind(
+          tenant,
+          dayStart - 6 * day,
+          dayStart + day,
+          tenant,
+          dayStart - 6 * day,
+          dayStart + day,
+        )
+        .all<{ day: string; bookings: number; members: number }>(),
+      db()
+        .prepare('SELECT * FROM requests WHERE tenant=? ORDER BY created DESC LIMIT 100')
+        .bind(tenant)
+        .all(),
+      db()
+        .prepare('SELECT * FROM audit WHERE tenant=? ORDER BY created DESC LIMIT 30')
+        .bind(tenant)
+        .all(),
+      db()
+        .prepare("SELECT id,name,opened_at FROM shifts WHERE tenant=? AND status='open'")
+        .bind(tenant)
+        .first(),
+      db()
+        .prepare(
+          "SELECT COALESCE(SUM(CASE WHEN kind='refund' THEN -amount ELSE amount END),0) AS total FROM finance_entries WHERE tenant=? AND kind IN ('payment','refund') AND created>=? AND created<?",
+        )
+        .bind(tenant, dayStart, dayStart + day)
+        .first<{ total: number }>(),
+      db()
+        .prepare('SELECT room,since,reason FROM room_maintenance WHERE tenant=? ORDER BY since')
+        .bind(tenant)
+        .all(),
+    ]);
   return {
     config: c,
+    summary,
+    dashboardDays: dashboardDays.results,
     bookings: b.results,
     requests: r.results,
     audit: a.results,
@@ -156,7 +185,11 @@ export async function runClubAction(
     } catch {
       landing = undefined;
     }
-    const v: Config & { landing?: unknown } = { ...parsed.data, pricingRevision: crypto.randomUUID(), published: false };
+    const v: Config & { landing?: unknown } = {
+      ...parsed.data,
+      pricingRevision: crypto.randomUUID(),
+      published: false,
+    };
     v.published = false;
     if (landing !== undefined) v.landing = landing;
     const saved = await db()
@@ -175,20 +208,35 @@ export async function runClubAction(
     const on = input.value?.on === true;
     if (on) {
       const busyNow = await db()
-        .prepare("SELECT 1 AS x FROM bookings WHERE tenant=? AND room=? AND status IN ('playing','paused','finished') LIMIT 1")
+        .prepare(
+          "SELECT 1 AS x FROM bookings WHERE tenant=? AND room=? AND status IN ('playing','paused','finished') LIMIT 1",
+        )
         .bind(tenant, roomId)
         .first();
-      if (busyNow) return fail('Line đang có khách hoặc chờ thu tiền. Hoàn tất phiên trước khi chuyển sang bảo trì.', 409);
-      const reason = String(input.value?.reason ?? '').trim().slice(0, 200);
+      if (busyNow)
+        return fail(
+          'Line đang có khách hoặc chờ thu tiền. Hoàn tất phiên trước khi chuyển sang bảo trì.',
+          409,
+        );
+      const reason = String(input.value?.reason ?? '')
+        .trim()
+        .slice(0, 200);
       await db()
         .prepare(
           'INSERT INTO room_maintenance(tenant,room,since,reason,actor) VALUES (?,?,?,?,?) ON CONFLICT(tenant,room) DO UPDATE SET reason=excluded.reason',
         )
         .bind(tenant, roomId, now, reason, 'staff')
         .run();
-      await audit(tenant, 'Bảo trì line', `${roomId}: bắt đầu bảo trì${reason ? ' · ' + reason : ''}`);
+      await audit(
+        tenant,
+        'Bảo trì line',
+        `${roomId}: bắt đầu bảo trì${reason ? ' · ' + reason : ''}`,
+      );
     } else {
-      await db().prepare('DELETE FROM room_maintenance WHERE tenant=? AND room=?').bind(tenant, roomId).run();
+      await db()
+        .prepare('DELETE FROM room_maintenance WHERE tenant=? AND room=?')
+        .bind(tenant, roomId)
+        .run();
       await audit(tenant, 'Bảo trì line', `${roomId}: hoạt động trở lại`);
     }
     return ok();
@@ -199,7 +247,12 @@ export async function runClubAction(
       .bind(tenant, input.room ?? '')
       .first<{ reason: string }>();
     if (under)
-      return fail('Line này đang bảo trì' + (under.reason ? ': ' + under.reason : '') + '. Hãy chọn line khác.', 409);
+      return fail(
+        'Line này đang bảo trì' +
+          (under.reason ? ': ' + under.reason : '') +
+          '. Hãy chọn line khác.',
+        409,
+      );
   }
   if (input.action === 'book') {
     if (input.expectedRevision !== c.pricingRevision)
@@ -543,7 +596,8 @@ export async function runClubAction(
       )
       .bind(target, JSON.stringify(next), tenant, b.id, b.service, b.price)
       .run();
-    if (!switched.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    if (!switched.meta.changes)
+      return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
     await audit(
       tenant,
       'Đổi hình thức',

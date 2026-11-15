@@ -1,21 +1,26 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
-import { cardState, isPeriodCard, maxAbsences, MIN_ABSENCE_DAYS, clubDay } from '../../lib/card-term';
+import {
+  cardState,
+  isPeriodCard,
+  maxAbsences,
+  MIN_ABSENCE_DAYS,
+  clubDay,
+} from '../../lib/card-term';
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
 import { type Rank, TIER_LABEL } from '../../lib/member-card';
 import { MemberCard } from './MemberCard';
 import { MemberShell, type MemberTab, type Reminder } from './MemberShell';
 import { MemberHome } from './MemberHome';
-import { SiteFooter, SiteHeader } from './SiteChrome';
+import MemberAuth from './MemberAuth';
 import {
   Phone,
   Lock,
   User,
-  Eye,
-  EyeOff,
   Sparkles,
   Calendar,
   Clock,
@@ -53,15 +58,36 @@ type Pack = {
   activate_by?: number | null;
   grants?: string;
 };
-type PortalAbsence = { id: string; package_id: string; start_day: string; end_day: string; days: number; status: string };
+type PortalAbsence = {
+  id: string;
+  package_id: string;
+  start_day: string;
+  end_day: string;
+  days: number;
+  status: string;
+};
 export type Overview = {
   profile: { name: string; phone: string; email: string; verified: boolean };
   club?: { name: string; address: string };
   code?: string;
   rank?: Rank;
-  activity?: { at: number; kind: 'wallet' | 'package' | 'points'; title: string; money?: number; paid?: number; points?: number }[];
+  activity?: {
+    at: number;
+    kind: 'wallet' | 'package' | 'points';
+    title: string;
+    money?: number;
+    paid?: number;
+    points?: number;
+  }[];
   benefits?: string[];
-  promotions?: { id: string; name: string; description: string; benefit: string; condition: string; auto: boolean }[];
+  promotions?: {
+    id: string;
+    name: string;
+    description: string;
+    benefit: string;
+    condition: string;
+    auto: boolean;
+  }[];
   since?: number | null;
   points?: number;
   wallet?: number;
@@ -94,7 +120,14 @@ export type Overview = {
     start: number;
     status: string;
   }[];
-  catalog?: { id: string; name: string; price: number; room: string; section: string; valid_days?: number }[];
+  catalog?: {
+    id: string;
+    name: string;
+    price: number;
+    room: string;
+    section: string;
+    valid_days?: number;
+  }[];
   orders?: { id: string; name: string; price: number; created: number }[];
   booking?: { enabled: boolean; vip: boolean; services: string[]; days: number };
 };
@@ -145,225 +178,6 @@ async function call(body: Record<string, unknown>) {
   const v = (await r.json()) as { error?: string };
   if (!r.ok) throw new Error(v.error ?? 'Thao tác chưa thành công. Vui lòng thử lại.');
   return v;
-}
-
-/** 1. Authentication Screens (Phone-only Sign Up / Sign In) */
-function AuthForms({ onDone, first }: { onDone: () => void; first: 'register' | 'login' }) {
-  const [mode, setMode] = useState<'login' | 'register'>(first);
-  const [phone, setPhone] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [website, setWebsite] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
-    const cleanPhone = phone.replace(/[\s.-]/g, '');
-    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
-      setError('Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam.');
-      return;
-    }
-    if (mode === 'register' && password.length < 8) {
-      setError('Mật khẩu cần tối thiểu 8 ký tự để bảo vệ tài khoản.');
-      return;
-    }
-
-    setBusy(true);
-    try {
-      await call(
-        mode === 'login'
-          ? { action: 'login', phone: cleanPhone, password }
-          : {
-              action: 'register',
-              name: name.trim() || `Golfer ${cleanPhone.slice(-4)}`,
-              phone: cleanPhone,
-              email: '',
-              password,
-              website,
-            },
-      );
-      onDone();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="mp-auth-wrapper">
-      <div className="mp-auth-card">
-        <div className="mp-auth-head">
-          <div className="mp-auth-badge">
-            <Sparkles size={14} />
-            <span>SaiGon Indoor Golf Club · Cổng khách hàng</span>
-          </div>
-          <h1>{mode === 'login' ? 'Đăng Nhập Khách Hàng' : 'Tạo Tài Khoản Khách Hàng'}</h1>
-          <p>
-            {mode === 'login'
-              ? 'Nhập số điện thoại để quản lý thẻ, số dư giờ chơi và đặt line nhanh.'
-              : 'Đăng ký nhanh chóng bằng số điện thoại — không cần email phiền hà.'}
-          </p>
-        </div>
-
-        {/* Tab switch */}
-        <div className="mp-auth-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'login'}
-            className={mode === 'login' ? 'active' : ''}
-            onClick={() => {
-              setMode('login');
-              setError('');
-            }}
-          >
-            Đăng Nhập
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === 'register'}
-            className={mode === 'register' ? 'active' : ''}
-            onClick={() => {
-              setMode('register');
-              setError('');
-            }}
-          >
-            Đăng Ký Bằng SĐT
-          </button>
-        </div>
-
-        <form className="mp-auth-form" onSubmit={submit}>
-          {mode === 'register' && (
-            <div className="mp-field-group">
-              <label className="mp-field-label" htmlFor="mp-auth-name">
-                <User size={15} />
-                <span>Họ và tên Golfer</span>
-              </label>
-              <div className="mp-input-box">
-                <User size={16} className="mp-input-icon" />
-                <input
-                  id="mp-auth-name"
-                  type="text"
-                  placeholder="Ví dụ: Nguyễn Văn Tuấn"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  minLength={2}
-                  maxLength={100}
-                  required
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="mp-field-group">
-            <label className="mp-field-label" htmlFor="mp-auth-phone">
-              <Phone size={15} />
-              <span>Số điện thoại</span>
-            </label>
-            <div className="mp-input-box">
-              <Phone size={16} className="mp-input-icon" />
-              <input
-                id="mp-auth-phone"
-                type="tel"
-                placeholder="Ví dụ: 0877 834 888"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="tel"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="mp-field-group">
-            <label className="mp-field-label" htmlFor="mp-auth-password">
-              <Lock size={15} />
-              <span>Mật khẩu</span>
-            </label>
-            <div className="mp-input-box">
-              <Lock size={16} className="mp-input-icon" />
-              <input
-                id="mp-auth-password"
-                type={showPassword ? 'text' : 'password'}
-                placeholder={mode === 'register' ? 'Tối thiểu 8 ký tự' : 'Nhập mật khẩu'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
-                required
-              />
-              <button
-                type="button"
-                className="mp-input-toggle"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
-
-          {/* Honeypot field */}
-          <input
-            tabIndex={-1}
-            autoComplete="off"
-            aria-hidden="true"
-            style={{ position: 'absolute', left: '-9999px' }}
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-          />
-
-          {error && (
-            <div className="mp-error" role="alert" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <AlertCircle size={16} style={{ flexShrink: 0 }} />
-              <span>{error}</span>
-            </div>
-          )}
-
-          {mode === 'register' && (
-            <div className="mp-auth-note highlight">
-              ✓ <strong>Đăng ký 100% bằng Số điện thoại</strong>: Số điện thoại là mã định danh để nhân viên tích điểm, trừ giờ chơi tại quầy và nhận xác nhận giữ line.
-            </div>
-          )}
-
-          <button className="mp-auth-submit" disabled={busy}>
-            <span>{busy ? 'Đang xử lý…' : mode === 'login' ? 'Đăng Nhập Tài Khoản' : 'Hoàn Tất Đăng Ký'}</span>
-            <ChevronRight size={18} />
-          </button>
-
-          <div className="mp-auth-support">
-            {mode === 'login' ? (
-              <>
-                <span>Quên mật khẩu?</span>
-                <a href={`tel:${BRAND.hotline}`}>Gọi {BRAND.hotline}</a>
-                <span>hoặc</span>
-                <a href={BRAND.zalo || `https://zalo.me/${BRAND.hotline}`} target="_blank" rel="noopener noreferrer">
-                  Chat Zalo hỗ trợ
-                </a>
-              </>
-            ) : (
-              <>
-                <span>Đã có tài khoản?</span>
-                <a
-                  href="#dang-nhap"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setMode('login');
-                  }}
-                >
-                  Đăng nhập ngay
-                </a>
-              </>
-            )}
-          </div>
-        </form>
-      </div>
-    </div>
-  );
 }
 
 /** 2. Fast Booking Form inside Member Portal */
@@ -517,7 +331,9 @@ function BookForm({
       {sent && (
         <div className="mp-success" role="status">
           <CheckCircle2 size={16} />
-          <span>Đã gửi yêu cầu giữ line thành công! Lễ tân CLB sẽ gọi điện xác nhận trong 5 phút.</span>
+          <span>
+            Đã gửi yêu cầu giữ line thành công! Lễ tân CLB sẽ gọi điện xác nhận trong 5 phút.
+          </span>
         </div>
       )}
 
@@ -579,7 +395,10 @@ function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
           className="mp-settings-col"
           onSubmit={(e) => {
             e.preventDefault();
-            run(() => call({ action: 'profile', name, email: '' }), 'Đã cập nhật họ và tên thành công');
+            run(
+              () => call({ action: 'profile', name, email: '' }),
+              'Đã cập nhật họ và tên thành công',
+            );
           }}
         >
           <h3>
@@ -592,7 +411,11 @@ function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
           </label>
           <label>
             <span>Số điện thoại (Mã định danh duy nhất)</span>
-            <input value={data.profile.phone} disabled title="Số điện thoại tài khoản không thể tự đổi trên web" />
+            <input
+              value={data.profile.phone}
+              disabled
+              title="Số điện thoại tài khoản không thể tự đổi trên web"
+            />
           </label>
           <button className="mp-btn-save" type="submit">
             Lưu Thay Đổi
@@ -670,7 +493,14 @@ function Settings({ data, onSaved }: { data: Overview; onSaved: () => void }) {
 }
 
 /** 4. Main Executive Member Portal Dashboard */
-export default function MemberPortal({ registerFirst = false }: { registerFirst?: boolean }) {
+export default function MemberPortal({
+  registerFirst = false,
+  publicOverview,
+}: {
+  registerFirst?: boolean;
+  publicOverview?: Overview;
+}) {
+  const router = useRouter();
   const [data, setData] = useState<Overview | null>(null);
   const [state, setState] = useState<'loading' | 'out' | 'in'>('loading');
   const [activeTab, setActiveTab] = useState<MemberTab>('overview');
@@ -722,22 +552,41 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
     return (
       <div className="mp-wrap" style={{ textAlign: 'center', padding: '10rem 1rem' }}>
         <Sparkles size={36} className="mp-spinner text-gold" style={{ margin: '0 auto 1.2rem' }} />
-        <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 600 }}>Đang tải bảng điều khiển hội viên…</h2>
-        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.5rem' }}>Đồng bộ dữ liệu thẻ, gói cước và lịch chơi</p>
+        <h2 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 600 }}>
+          Đang tải bảng điều khiển hội viên…
+        </h2>
+        <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '0.5rem' }}>
+          Đồng bộ dữ liệu thẻ, gói cước và lịch chơi
+        </p>
       </div>
     );
   }
 
   if (state === 'out' || !data) {
-    return (
-      <>
-        <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
-        <div className="mp-wrap">
-          <AuthForms onDone={load} first={registerFirst ? 'register' : 'login'} />
-        </div>
-        <SiteFooter />
-      </>
-    );
+    if (publicOverview) {
+      const navigate = (tab: MemberTab) => {
+        if (tab === 'overview' || tab === 'packages') setActiveTab(tab);
+        else if (tab === 'booking') router.push('/#dat-cho');
+        else router.push('/tai-khoan');
+      };
+      return (
+        <MemberShell
+          tab={activeTab}
+          onTab={navigate}
+          name="Khách"
+          signedOut
+          tier="guest"
+          reminders={[]}
+          onBook={() => navigate('booking')}
+          onLogout={() => router.push('/tai-khoan')}
+        >
+          <div className={activeTab === 'packages' ? 'mr-guest-packages' : ''}>
+            <MemberHome data={publicOverview} now={now} tier="guest" onTab={navigate} />
+          </div>
+        </MemberShell>
+      );
+    }
+    return <MemberAuth onDone={load} first={registerFirst ? 'register' : 'login'} />;
   }
 
   const act = async (task: () => Promise<unknown>, done: string) => {
@@ -797,10 +646,10 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
         <section className="mp-card" role="status" style={{ padding: '1.25rem' }}>
           <h2>Đang chờ câu lạc bộ xác nhận</h2>
           <p>
-            Tài khoản đã tạo. Để bảo vệ thẻ và giờ chơi của bạn, nhân viên cần xác nhận số điện thoại{' '}
-            <strong>{data.profile.phone}</strong> thuộc về bạn. Hãy ghé câu lạc bộ hoặc gọi{' '}
-            <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>; ngay khi được xác nhận, thẻ, giờ chơi
-            và lịch sử sẽ hiện tại đây.
+            Tài khoản đã tạo. Để bảo vệ thẻ và giờ chơi của bạn, nhân viên cần xác nhận số điện
+            thoại <strong>{data.profile.phone}</strong> thuộc về bạn. Hãy ghé câu lạc bộ hoặc gọi{' '}
+            <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>; ngay khi được xác nhận, thẻ, giờ
+            chơi và lịch sử sẽ hiện tại đây.
           </p>
         </section>
       </div>
@@ -811,11 +660,19 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
   const reminders: Reminder[] = [
     ...(data.bookings ?? [])
       .filter((b) => b.status === 'booked' && b.start > now && b.start < now + 24 * 3_600_000)
-      .map((b) => ({ id: 'b' + b.id, text: `Bạn có lịch chơi lúc ${new Date(b.start).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} hôm nay hoặc ngày mai`, tab: 'booking' as const })),
+      .map((b) => ({
+        id: 'b' + b.id,
+        text: `Bạn có lịch chơi lúc ${new Date(b.start).toLocaleTimeString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh', hour: '2-digit', minute: '2-digit' })} hôm nay hoặc ngày mai`,
+        tab: 'booking' as const,
+      })),
     ...live
       .filter((p) => p.expires < now + 14 * 86_400_000)
       .map((p) => ({ id: 'e' + p.id, text: `${p.name} sắp hết hạn`, tab: 'packages' as const })),
-    ...(data.orders ?? []).map((o) => ({ id: 'o' + o.id, text: `Đơn ${o.name} đang chờ câu lạc bộ xác nhận`, tab: 'packages' as const })),
+    ...(data.orders ?? []).map((o) => ({
+      id: 'o' + o.id,
+      text: `Đơn ${o.name} đang chờ câu lạc bộ xác nhận`,
+      tab: 'packages' as const,
+    })),
   ];
 
   return (
@@ -831,7 +688,20 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
         setBookingExpanded(true);
       }}
     >
-      {activeTab === 'overview' && <MemberHome data={data} now={now} tier={tier} onTab={setActiveTab} />}
+      {activeTab === 'overview' && (
+        <MemberHome data={data} now={now} tier={tier} onTab={setActiveTab} />
+      )}
+      {activeTab === 'community' && (
+        <section className="mp-card">
+          <h2>Tìm bạn chơi</h2>
+          <p>
+            Liên hệ câu lạc bộ để kết nối với golfer cùng lịch tập và tham gia các buổi giao lưu.
+          </p>
+          <a href={BRAND.zalo} target="_blank" rel="noopener noreferrer">
+            Kết nối qua Zalo
+          </a>
+        </section>
+      )}
 
       {activeTab === 'offers' && (
         <div className="mp-tab-view">
@@ -845,7 +715,11 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                     <strong>{o.benefit}</strong>
                     <p>{o.condition}</p>
                     {o.description && <p>{o.description}</p>}
-                    <small>{o.auto ? 'Tự động áp dụng khi tính tiền' : 'Áp dụng tại quầy, nhân viên xác nhận'}</small>
+                    <small>
+                      {o.auto
+                        ? 'Tự động áp dụng khi tính tiền'
+                        : 'Áp dụng tại quầy, nhân viên xác nhận'}
+                    </small>
                   </li>
                 ))}
               </ul>
@@ -884,14 +758,15 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
             </div>
 
             {/* Quick Booking Form */}
-            {(bookingExpanded || (!upcoming.length && !(data.requests?.length ?? 0))) && data.booking && (
-              <BookForm
-                info={data.booking}
-                onDone={() => {
-                  load();
-                }}
-              />
-            )}
+            {(bookingExpanded || (!upcoming.length && !(data.requests?.length ?? 0))) &&
+              data.booking && (
+                <BookForm
+                  info={data.booking}
+                  onDone={() => {
+                    load();
+                  }}
+                />
+              )}
 
             {/* Pending Requests */}
             {!!(data.requests ?? []).length && (
@@ -914,12 +789,19 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                         </div>
                       </div>
                       <div className="mp-item-right">
-                        <span className="mp-badge-pending">{REQUEST_STATUS[r.status] || r.status}</span>
+                        <span className="mp-badge-pending">
+                          {REQUEST_STATUS[r.status] || r.status}
+                        </span>
                         {r.status === 'pending' && (
                           <button
                             className="mp-link"
                             onClick={async () => {
-                              if (!window.confirm('Bạn có chắc chắn muốn hủy yêu cầu đặt lịch này không?')) return;
+                              if (
+                                !window.confirm(
+                                  'Bạn có chắc chắn muốn hủy yêu cầu đặt lịch này không?',
+                                )
+                              )
+                                return;
                               try {
                                 await call({ action: 'book-cancel', id: r.id });
                               } catch (e) {
@@ -957,12 +839,15 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                         <span className="text-emerald">Giờ chơi: {when(b.start)}</span>
                       </div>
                     </div>
-                    <span className="mp-badge-confirmed">{BOOKING_STATUS[b.status] ?? b.status}</span>
+                    <span className="mp-badge-confirmed">
+                      {BOOKING_STATUS[b.status] ?? b.status}
+                    </span>
                   </li>
                 ))}
                 {!upcoming.length && (
                   <li className="mp-list-empty">
-                    Hiện chưa có buổi chơi nào được xác nhận. Hãy bấm &ldquo;Đặt Line Mới&rdquo; ở trên để lễ tân chuẩn bị phòng cho bạn.
+                    Hiện chưa có buổi chơi nào được xác nhận. Hãy bấm &ldquo;Đặt Line Mới&rdquo; ở
+                    trên để lễ tân chuẩn bị phòng cho bạn.
                   </li>
                 )}
               </ul>
@@ -999,14 +884,22 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                   });
                   const expired = st === 'expired';
                   const period = !!p.grants && isPeriodCard(JSON.parse(p.grants));
-                  const myAbs = (data.absences ?? []).filter((a) => a.package_id === p.id && a.status === 'active');
+                  const myAbs = (data.absences ?? []).filter(
+                    (a) => a.package_id === p.id && a.status === 'active',
+                  );
                   const limit = maxAbsences(p.valid_days ?? 30);
                   const empty = p.balances.length > 0 && p.balances.every((b) => b.remaining <= 0);
                   return (
                     <article key={p.id} className={expired || empty ? 'mp-pack off' : 'mp-pack'}>
                       <h3>{p.name}</h3>
                       <span className="mp-chip">
-                        {expired ? 'Hết hạn' : st === 'pending' ? 'Chờ kích hoạt' : empty ? 'Đã hết giờ' : 'Đang hiệu lực'}
+                        {expired
+                          ? 'Hết hạn'
+                          : st === 'pending'
+                            ? 'Chờ kích hoạt'
+                            : empty
+                              ? 'Đã hết giờ'
+                              : 'Đang hiệu lực'}
                       </span>
                       <ul>
                         {p.balances.map((b) => (
@@ -1024,24 +917,32 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                         </li>
                         {myAbs.map((a) => (
                           <li key={a.id}>
-                            Lịch vắng: {a.start_day.split('-').reverse().join('/')} – {a.end_day.split('-').reverse().join('/')} ({a.days} ngày)
+                            Lịch vắng: {a.start_day.split('-').reverse().join('/')} –{' '}
+                            {a.end_day.split('-').reverse().join('/')} ({a.days} ngày)
                             {a.start_day > clubDay(now) && (
                               <button
                                 type="button"
                                 className="mp-banner-link"
                                 onClick={() =>
-                                  act(() => call({ action: 'absence-cancel', id: a.id }), 'Đã huỷ lịch vắng')
+                                  act(
+                                    () => call({ action: 'absence-cancel', id: a.id }),
+                                    'Đã huỷ lịch vắng',
+                                  )
                                 }
                               >
-                                {' '}Huỷ
+                                {' '}
+                                Huỷ
                               </button>
                             )}
                           </li>
                         ))}
                         <li>
-                          Phòng áp dụng: {PACKAGE_ROOM_LABELS[p.room as PackageRoom] ?? 'Tất cả phòng'}
+                          Phòng áp dụng:{' '}
+                          {PACKAGE_ROOM_LABELS[p.room as PackageRoom] ?? 'Tất cả phòng'}
                         </li>
-                        {p.perks && <li style={{ color: 'var(--gold)' }}>★ Đặc quyền: {p.perks}</li>}
+                        {p.perks && (
+                          <li style={{ color: 'var(--gold)' }}>★ Đặc quyền: {p.perks}</li>
+                        )}
                       </ul>
                       {(st === 'pending' || (period && st === 'active')) && (
                         <div className="mp-row" style={{ gap: 8, marginTop: 8 }}>
@@ -1049,7 +950,10 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                             <button
                               type="button"
                               onClick={() =>
-                                act(() => call({ action: 'card-activate', packageId: p.id }), 'Đã kích hoạt thẻ')
+                                act(
+                                  () => call({ action: 'card-activate', packageId: p.id }),
+                                  'Đã kích hoạt thẻ',
+                                )
                               }
                             >
                               Kích hoạt ngay
@@ -1060,13 +964,31 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                               type="button"
                               disabled={myAbs.length >= limit}
                               onClick={() => {
-                                const start = window.prompt('Ngày bắt đầu vắng (YYYY-MM-DD, sau hôm nay)', clubDay(now + 86_400_000));
+                                const start = window.prompt(
+                                  'Ngày bắt đầu vắng (YYYY-MM-DD, sau hôm nay)',
+                                  clubDay(now + 86_400_000),
+                                );
                                 if (!start) return;
-                                const n = Number(window.prompt(`Số ngày vắng liên tục (tối thiểu ${MIN_ABSENCE_DAYS})`, String(MIN_ABSENCE_DAYS)));
+                                const n = Number(
+                                  window.prompt(
+                                    `Số ngày vắng liên tục (tối thiểu ${MIN_ABSENCE_DAYS})`,
+                                    String(MIN_ABSENCE_DAYS),
+                                  ),
+                                );
                                 if (!Number.isInteger(n) || n < 1) return;
-                                const end = new Date(Date.parse(start + 'T00:00:00Z') + (n - 1) * 86_400_000).toISOString().slice(0, 10);
+                                const end = new Date(
+                                  Date.parse(start + 'T00:00:00Z') + (n - 1) * 86_400_000,
+                                )
+                                  .toISOString()
+                                  .slice(0, 10);
                                 act(
-                                  () => call({ action: 'absence-create', packageId: p.id, startDay: start, endDay: end }),
+                                  () =>
+                                    call({
+                                      action: 'absence-create',
+                                      packageId: p.id,
+                                      startDay: start,
+                                      endDay: end,
+                                    }),
                                   `Đã báo vắng, hạn thẻ được cộng thêm ${n} ngày`,
                                 );
                               }}
@@ -1082,9 +1004,16 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
               </div>
             ) : (
               <div className="mp-empty-card">
-                <CreditCard size={40} className="text-gold" style={{ margin: '0 auto 1rem', opacity: 0.7 }} />
+                <CreditCard
+                  size={40}
+                  className="text-gold"
+                  style={{ margin: '0 auto 1rem', opacity: 0.7 }}
+                />
                 <h3>Bạn chưa kích hoạt gói cước nào</h3>
-                <p>Khám phá danh mục gói giờ chơi ưu đãi bên dưới hoặc liên hệ quầy thu ngân để nạp giờ chơi với chiết khấu tốt nhất.</p>
+                <p>
+                  Khám phá danh mục gói giờ chơi ưu đãi bên dưới hoặc liên hệ quầy thu ngân để nạp
+                  giờ chơi với chiết khấu tốt nhất.
+                </p>
               </div>
             )}
           </section>
@@ -1099,7 +1028,8 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                     <span>Mua Thêm Gói Giờ Chơi Ưu Đãi Hội Viên</span>
                   </h2>
                   <p className="mp-card-desc">
-                    Đăng ký gói online để nhận thêm quà tặng giờ chơi và điểm thưởng. Thu ngân CLB sẽ kích hoạt ngay cho bạn.
+                    Đăng ký gói online để nhận thêm quà tặng giờ chơi và điểm thưởng. Thu ngân CLB
+                    sẽ kích hoạt ngay cho bạn.
                   </p>
                 </div>
               </div>
@@ -1148,7 +1078,8 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                     <div className="mp-catalog-badge">Ưu đãi hội viên</div>
                     <h4>{t.name}</h4>
                     <span className="mp-catalog-room">
-                      {PACKAGE_ROOM_LABELS[t.room as PackageRoom] ?? 'Tất cả phòng tiêu chuẩn & VIP'}
+                      {PACKAGE_ROOM_LABELS[t.room as PackageRoom] ??
+                        'Tất cả phòng tiêu chuẩn & VIP'}
                     </span>
                     <div className="mp-catalog-price">{money(t.price)}</div>
                     <button
@@ -1157,7 +1088,9 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                       onClick={async () => {
                         try {
                           await call({ action: 'order', typeId: t.id });
-                          window.alert(`Đã gửi yêu cầu đăng ký gói "${t.name}". Lễ tân sẽ liên hệ hỗ trợ thanh toán & nạp giờ!`);
+                          window.alert(
+                            `Đã gửi yêu cầu đăng ký gói "${t.name}". Lễ tân sẽ liên hệ hỗ trợ thanh toán & nạp giờ!`,
+                          );
                         } catch (e) {
                           window.alert(e instanceof Error ? e.message : String(e));
                         }
@@ -1235,9 +1168,7 @@ export default function MemberPortal({ registerFirst = false }: { registerFirst?
                 </li>
               ))}
               {!past.length && (
-                <li className="mp-list-empty">
-                  Chưa có lịch sử các buổi chơi trước đây.
-                </li>
+                <li className="mp-list-empty">Chưa có lịch sử các buổi chơi trước đây.</li>
               )}
             </ul>
           </section>

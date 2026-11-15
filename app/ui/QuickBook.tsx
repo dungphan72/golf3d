@@ -45,6 +45,10 @@ export default function QuickBook({
       notice: `Đã chọn ${day.split('-').reverse().join('/')} lúc ${time || slots[0]}. Kiểm tra rồi gửi yêu cầu.`,
     };
     window.dispatchEvent(new CustomEvent(QUICK_BOOKING_EVENT, { detail }));
+    // The reference home opens the embedded form only when it is requested.
+    if (document.getElementById('dat-cho')?.classList.contains('ref-book-section')) {
+      window.location.hash = 'dat-cho';
+    }
     document.getElementById('dat-cho')?.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -52,12 +56,19 @@ export default function QuickBook({
     <form className="sg-quick" onSubmit={go} aria-label="Đặt line nhanh">
       <h2>
         <CalendarDays size={26} strokeWidth={1.8} />
-        Đặt line nhanh
+        Đặt sân nhanh
       </h2>
       <label>
         <CalendarDays size={20} />
         <span className="sg-sr">Ngày chơi</span>
-        <input type="date" value={day} min={today} suppressHydrationWarning onChange={(e) => setDay(e.target.value || today)} required />
+        <input
+          type="date"
+          value={day}
+          min={today}
+          suppressHydrationWarning
+          onChange={(e) => setDay(e.target.value || today)}
+          required
+        />
       </label>
       <label>
         <Clock size={20} />
@@ -74,13 +85,17 @@ export default function QuickBook({
       <label>
         <Flag size={20} />
         <span className="sg-sr">Loại chỗ</span>
-        <select value={kind} onChange={(e) => setKind(e.target.value as 'standard' | 'vip')} aria-label="Loại chỗ">
+        <select
+          value={kind}
+          onChange={(e) => setKind(e.target.value as 'standard' | 'vip')}
+          aria-label="Loại chỗ"
+        >
           <option value="standard">Line tiêu chuẩn</option>
           {hasVip && <option value="vip">Phòng VIP</option>}
         </select>
       </label>
       <button type="submit" className="sg-btn">
-        Đặt line ngay
+        Đặt sân ngay
       </button>
     </form>
   );

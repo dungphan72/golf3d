@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
+  ArrowLeft,
   Bell,
   CalendarDays,
   Crown,
@@ -8,24 +9,28 @@ import {
   History,
   Home,
   LogOut,
+  LogIn,
   Menu,
   Search,
   Settings,
   Tag,
   Trophy,
   User,
+  UsersRound,
   X,
 } from 'lucide-react';
 import { BRAND } from '../../lib/brand';
 import { TIER_LABEL, type Tier } from '../../lib/member-card';
 
-export type MemberTab = 'overview' | 'booking' | 'packages' | 'history' | 'offers' | 'settings';
+export type MemberTab =
+  'overview' | 'booking' | 'packages' | 'history' | 'offers' | 'settings' | 'community';
 
 const NAV: { key: MemberTab | 'events'; label: string; icon: typeof Home }[] = [
   { key: 'overview', label: 'Trang chủ', icon: Home },
-  { key: 'booking', label: 'Đặt line', icon: CalendarDays },
+  { key: 'booking', label: 'Đặt sân', icon: CalendarDays },
   { key: 'packages', label: 'Gói giờ & Hội viên', icon: Crown },
   { key: 'events', label: 'Giải đấu', icon: Trophy },
+  { key: 'community', label: 'Tìm bạn chơi', icon: UsersRound },
   { key: 'history', label: 'Lịch sử & Hóa đơn', icon: History },
   { key: 'offers', label: 'Ưu đãi của tôi', icon: Tag },
   { key: 'settings', label: 'Thông tin tài khoản', icon: Settings },
@@ -33,10 +38,11 @@ const NAV: { key: MemberTab | 'events'; label: string; icon: typeof Home }[] = [
 
 /** Keywords a member can type in the top search box to jump to a screen. */
 const SEARCH: [RegExp, MemberTab | 'events'][] = [
+  [/lịch sử|hóa đơn|giao dịch|điểm/i, 'history'],
+  [/bạn chơi|cộng đồng/i, 'community'],
   [/đặt|line|phòng|lịch/i, 'booking'],
   [/gói|giờ|hội viên|thẻ|ví/i, 'packages'],
   [/giải|sự kiện|đấu/i, 'events'],
-  [/lịch sử|hóa đơn|giao dịch|điểm/i, 'history'],
   [/ưu đãi|khuyến mãi/i, 'offers'],
   [/tài khoản|mật khẩu|thông tin/i, 'settings'],
 ];
@@ -53,6 +59,7 @@ export function MemberShell({
   onBook,
   onLogout,
   children,
+  signedOut = false,
 }: {
   tab: MemberTab;
   onTab: (t: MemberTab) => void;
@@ -62,10 +69,12 @@ export function MemberShell({
   onBook: () => void;
   onLogout: () => void;
   children: ReactNode;
+  signedOut?: boolean;
 }) {
   const [bell, setBell] = useState(false);
   const [query, setQuery] = useState('');
   const box = useRef<HTMLDivElement>(null);
+  useEffect(() => () => document.body.classList.remove('mps-menu-open'), []);
   useEffect(() => {
     if (!bell) return;
     const away = (e: MouseEvent) => {
@@ -90,16 +99,27 @@ export function MemberShell({
   return (
     <div className="mps">
       <header className="mps-top">
-        <button type="button" className="mps-burger" aria-label="Mở menu" onClick={() => document.body.classList.toggle('mps-menu-open')}>
+        <button
+          type="button"
+          className="mps-burger"
+          aria-label="Mở menu"
+          onClick={() => document.body.classList.toggle('mps-menu-open')}
+        >
           <Menu size={24} />
         </button>
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a className="mps-back" href="/" aria-label="Về trang chủ">
+          <ArrowLeft size={24} />
+        </a>
         {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
         <a className="mps-brand" href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={BRAND.logo} alt="" width={50} height={50} />
           <span>
             <b>{BRAND.name}</b>
-            <small>Hội viên · Đặt line · Quản lý gói · Ưu đãi</small>
+            <small>
+              Hội viên<span className="desktop-sub"> · Đặt sân · Quản lý gói · Ưu đãi</span>
+            </small>
           </span>
         </a>
         <form
@@ -113,14 +133,20 @@ export function MemberShell({
         >
           <Search size={20} />
           <input
-            aria-label="Tìm dịch vụ, đặt line, giải đấu"
-            placeholder="Tìm dịch vụ, đặt line, giải đấu…"
+            aria-label="Tìm dịch vụ, đặt sân, giải đấu"
+            placeholder="Tìm dịch vụ, đặt sân, giải đấu…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </form>
         <div className="mps-actions" ref={box}>
-          <button type="button" className="mps-icon mps-bell" aria-label="Thông báo" aria-expanded={bell} onClick={() => setBell(!bell)}>
+          <button
+            type="button"
+            className="mps-icon mps-bell"
+            aria-label="Thông báo"
+            aria-expanded={bell}
+            onClick={() => setBell(!bell)}
+          >
             <Bell size={23} />
             {reminders.length > 0 && <b>{reminders.length}</b>}
           </button>
@@ -148,14 +174,30 @@ export function MemberShell({
               )}
             </div>
           )}
-          <a className="mps-icon mps-help" href={`tel:${BRAND.hotline}`} aria-label={`Gọi hỗ trợ ${BRAND.hotline}`} title={`Gọi ${BRAND.hotline}`}>
+          <a
+            className="mps-icon mps-help"
+            href={`tel:${BRAND.hotline}`}
+            aria-label={`Gọi hỗ trợ ${BRAND.hotline}`}
+            title={`Gọi ${BRAND.hotline}`}
+          >
             <HelpCircle size={23} />
           </a>
-          <button type="button" className="mps-user" onClick={() => onTab('settings')} aria-label="Thông tin tài khoản">
+          <button
+            type="button"
+            className="mps-user"
+            onClick={() => onTab('settings')}
+            aria-label="Thông tin tài khoản"
+          >
             <span className="mps-avatar">{(first[0] ?? 'H').toUpperCase()}</span>
             <span className="mps-user-text">
               <b>{name}</b>
-              <small>{TIER_LABEL[tier]}</small>
+              <small>
+                {signedOut
+                  ? 'Chưa đăng nhập'
+                  : ['gold', 'platinum', 'diamond'].includes(tier)
+                    ? `Hội viên ${TIER_LABEL[tier]}`
+                    : TIER_LABEL[tier]}
+              </small>
             </span>
           </button>
         </div>
@@ -181,8 +223,12 @@ export function MemberShell({
             ))}
           </nav>
           <button type="button" className="mps-nav mps-logout" onClick={onLogout}>
-            <LogOut size={21} strokeWidth={1.8} />
-            Đăng xuất
+            {signedOut ? (
+              <LogIn size={21} strokeWidth={1.8} />
+            ) : (
+              <LogOut size={21} strokeWidth={1.8} />
+            )}
+            {signedOut ? 'Đăng nhập' : 'Đăng xuất'}
           </button>
           <button type="button" className="mps-promo" onClick={onBook}>
             <span>
@@ -201,7 +247,7 @@ export function MemberShell({
         {(
           [
             ['overview', 'Trang chủ', Home],
-            ['booking', 'Đặt line', CalendarDays],
+            ['booking', 'Đặt sân', CalendarDays],
             ['events', 'Giải đấu', Trophy],
             ['packages', 'Hội viên', Crown],
             ['settings', 'Tài khoản', User],
@@ -221,7 +267,12 @@ export function MemberShell({
           </button>
         ))}
       </nav>
-      <button type="button" className="mps-scrim" aria-label="Đóng menu" onClick={() => document.body.classList.remove('mps-menu-open')}>
+      <button
+        type="button"
+        className="mps-scrim"
+        aria-label="Đóng menu"
+        onClick={() => document.body.classList.remove('mps-menu-open')}
+      >
         <X size={20} />
       </button>
     </div>

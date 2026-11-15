@@ -34,6 +34,8 @@ import {
   Tag,
   Banknote,
   Percent,
+  Tv,
+  Utensils,
 } from 'lucide-react';
 import { rooms, money, sessionQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
@@ -47,8 +49,12 @@ import { playedMs, clock } from './PosBoard';
 import { useFood } from './SessionFood';
 import { useBill } from './BillTools';
 import { TransferPanel } from './session/TransferPanel';
+import { paymentCode, vietQrUrl } from '../../lib/bank';
 import {
   generateK80Html,
+  generateKitchenTicketHtml,
+  generateShiftZReportHtml,
+  kickCashDrawer,
   printK80Receipt,
   formatBillZaloText,
   sendBillToZalo,
@@ -67,35 +73,36 @@ interface CatalogItem {
   category: CatalogCategory;
   price: number;
   emoji: string;
+  sku: string;
 }
 
 const CATALOG_ITEMS: CatalogItem[] = [
   // F&B
-  { id: 'fnb-water', name: 'Nước suối', category: 'fnb', price: 20000, emoji: '💧' },
-  { id: 'fnb-coffee', name: 'Cà phê', category: 'fnb', price: 45000, emoji: '☕' },
-  { id: 'fnb-juice', name: 'Nước ép', category: 'fnb', price: 55000, emoji: '🍹' },
-  { id: 'fnb-sandwich', name: 'Bánh sandwich', category: 'fnb', price: 60000, emoji: '🥪' },
-  { id: 'fnb-noodle', name: 'Mì ly', category: 'fnb', price: 40000, emoji: '🍜' },
-  { id: 'fnb-cake', name: 'Bánh ngọt', category: 'fnb', price: 45000, emoji: '🍰' },
-  { id: 'fnb-fruit', name: 'Trái cây', category: 'fnb', price: 50000, emoji: '🍉' },
-  { id: 'fnb-towel', name: 'Khăn lạnh', category: 'fnb', price: 5000, emoji: '🧊' },
+  { id: 'fnb-water', name: 'Nước suối', category: 'fnb', price: 20000, emoji: '💧', sku: '89345601' },
+  { id: 'fnb-coffee', name: 'Cà phê', category: 'fnb', price: 45000, emoji: '☕', sku: '89345602' },
+  { id: 'fnb-juice', name: 'Nước ép', category: 'fnb', price: 55000, emoji: '🍹', sku: '89345603' },
+  { id: 'fnb-sandwich', name: 'Bánh sandwich', category: 'fnb', price: 60000, emoji: '🥪', sku: '89345604' },
+  { id: 'fnb-noodle', name: 'Mì ly', category: 'fnb', price: 40000, emoji: '🍜', sku: '89345605' },
+  { id: 'fnb-cake', name: 'Bánh ngọt', category: 'fnb', price: 45000, emoji: '🍰', sku: '89345606' },
+  { id: 'fnb-fruit', name: 'Trái cây', category: 'fnb', price: 50000, emoji: '🍉', sku: '89345607' },
+  { id: 'fnb-towel', name: 'Khăn lạnh', category: 'fnb', price: 5000, emoji: '🧊', sku: '89345608' },
 
   // Dịch vụ
-  { id: 'srv-club', name: 'Thuê bộ gậy tập', category: 'service', price: 100000, emoji: '🏌️' },
-  { id: 'srv-glove', name: 'Thuê găng tay golf', category: 'service', price: 30000, emoji: '🧤' },
-  { id: 'srv-coach', name: 'HLV hướng dẫn (30p)', category: 'service', price: 250000, emoji: '👨‍🏫' },
-  { id: 'srv-vip', name: 'Phụ thu phòng VIP', category: 'service', price: 150000, emoji: '👑' },
+  { id: 'srv-club', name: 'Thuê bộ gậy tập', category: 'service', price: 100000, emoji: '🏌️', sku: '89345613' },
+  { id: 'srv-glove', name: 'Thuê găng tay golf', category: 'service', price: 30000, emoji: '🧤', sku: '89345614' },
+  { id: 'srv-coach', name: 'HLV hướng dẫn (30p)', category: 'service', price: 250000, emoji: '👨‍🏫', sku: '89345615' },
+  { id: 'srv-vip', name: 'Phụ thu phòng VIP', category: 'service', price: 150000, emoji: '👑', sku: '89345616' },
 
   // Phụ kiện
-  { id: 'acc-balls', name: 'Bóng golf (hộp 3)', category: 'accessory', price: 120000, emoji: '⚪' },
-  { id: 'acc-tee', name: 'Tee golf gỗ (gói 10)', category: 'accessory', price: 30000, emoji: '📍' },
-  { id: 'acc-glove', name: 'Găng tay da cao cấp', category: 'accessory', price: 180000, emoji: '🥊' },
-  { id: 'acc-cap', name: 'Mũ golf Saigon Club', category: 'accessory', price: 250000, emoji: '🧢' },
+  { id: 'acc-balls', name: 'Bóng golf (hộp 3)', category: 'accessory', price: 120000, emoji: '⚪', sku: '89345610' },
+  { id: 'acc-tee', name: 'Tee golf gỗ (gói 10)', category: 'accessory', price: 30000, emoji: '📍', sku: '89345611' },
+  { id: 'acc-glove', name: 'Găng tay da cao cấp', category: 'accessory', price: 180000, emoji: '🥊', sku: '89345609' },
+  { id: 'acc-cap', name: 'Mũ golf Saigon Club', category: 'accessory', price: 250000, emoji: '🧢', sku: '89345612' },
 
   // Combo
-  { id: 'cmb-gdr-water', name: 'Combo Chơi + Nước', category: 'combo', price: 380000, emoji: '⭐' },
-  { id: 'cmb-vip-full', name: 'Combo VIP trọn gói', category: 'combo', price: 650000, emoji: '🌟' },
-  { id: 'cmb-cafe-snack', name: 'Combo Ăn nhẹ + Cafe', category: 'combo', price: 950000, emoji: '🥪' },
+  { id: 'cmb-gdr-water', name: 'Combo Chơi + Nước', category: 'combo', price: 380000, emoji: '⭐', sku: '89345617' },
+  { id: 'cmb-vip-full', name: 'Combo VIP trọn gói', category: 'combo', price: 650000, emoji: '🌟', sku: '89345618' },
+  { id: 'cmb-cafe-snack', name: 'Combo Ăn nhẹ + Cafe', category: 'combo', price: 950000, emoji: '🥪', sku: '89345619' },
 ];
 
 const PAY_LABEL: Record<PayMethod, string> = {
@@ -179,6 +186,35 @@ export function ModernPosFlow({
   const [paid, setPaid] = useState<{ total: number; method: string; at: number; code: string } | null>(null);
   const payKey = useRef(operationKey());
 
+  // Hardware Peripherals & Customer Display (P1)
+  const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeSimInput, setBarcodeSimInput] = useState('');
+  const barcodeBufferRef = useRef<string>('');
+  const lastKeyTimeRef = useRef<number>(0);
+
+  function playBeep() {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1400, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.08);
+    } catch {
+      // Audio autoplay policy
+    }
+  }
+
   const b: Booking | null = useMemo(
     () => (activeId ? (data.bookings.find((x) => x.id === activeId) ?? null) : null),
     [data.bookings, activeId],
@@ -212,6 +248,28 @@ export function ModernPosFlow({
   const visibleRooms = roomStatuses.filter(({ state }) => filterTab === 'all' || state === filterTab);
   const room = b ? rooms.find((r) => r.id === b.room) : undefined;
   const roomShort = (room?.name ?? b?.room ?? 'L3').replace('Line ', 'L');
+
+  const activeBooking: Booking = b ?? {
+    id: 'demo-booking-1',
+    tenant: 'demo',
+    room: 'L3',
+    customer: 'Nguyễn Hoàng Long',
+    phone: '0902 030 165',
+    people: 1,
+    service: 'gdr',
+    start: Date.now() - 45 * 60 * 1000,
+    end: Date.now() + 15 * 60 * 1000,
+    started: Date.now() - 45 * 60 * 1000,
+    finished: null,
+    status: 'playing',
+    price: '{}',
+    segments: '[]',
+    golf_amount: 350000,
+    food_total: 100000,
+    amount: 450000,
+    payment: null,
+    created: Date.now() - 45 * 60 * 1000,
+  };
 
   // Session quote (golf time)
   let q: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 };
@@ -406,6 +464,7 @@ export function ModernPosFlow({
       if (res.ok) {
         setShiftModal(null);
         await onRefresh();
+        setNotice('Đã mở ca làm việc thành công!');
       } else {
         const d = (await res.json()) as { error?: string };
         setNotice(d.error || 'Chưa mở được ca');
@@ -433,8 +492,25 @@ export function ModernPosFlow({
         }),
       });
       if (res.ok) {
+        try {
+          const zReportHtml = generateShiftZReportHtml({
+            shiftName: data.activeShift.name,
+            cashierName: 'Thu ngân quầy POS',
+            openedAt: data.activeShift.opened_at,
+            closedAt: Date.now(),
+            openingCash: (data.activeShift as unknown as { opening_cash?: number }).opening_cash || 0,
+            countedCash: Number(closeCountedCash.replace(/\D/g, '')) || 0,
+            countedTransfer: Number(closeCountedTransfer.replace(/\D/g, '')) || 0,
+            countedCard: Number(closeCountedCard.replace(/\D/g, '')) || 0,
+            notes: closeNote.trim(),
+          });
+          printK80Receipt(zReportHtml);
+        } catch {
+          // Ignore printer error
+        }
         setShiftModal(null);
         await onRefresh();
+        setNotice('Đã chốt ca & in phiếu kết ca (Z-Report) thành công!');
       } else {
         const d = (await res.json()) as { error?: string };
         setNotice(d.error || 'Chưa đóng được ca');
@@ -569,6 +645,9 @@ export function ModernPosFlow({
         expectedAmount: total,
       });
       if (ok || true) {
+        if (payMethod === 'cash') {
+          kickCashDrawer();
+        }
         setPaid({
           total,
           method: PAY_LABEL[payMethod],
@@ -596,6 +675,88 @@ export function ModernPosFlow({
     );
   }
 
+  function handlePrintKitchenTicket() {
+    const fnbItems: { name: string; qty: number; note?: string }[] = [];
+    for (const it of extraItems) {
+      const cat = CATALOG_ITEMS.find((c) => c.name === it.name)?.category;
+      if (cat === 'fnb' || cat === 'combo') {
+        fnbItems.push({ name: it.name, qty: it.qty });
+      }
+    }
+    for (const fl of foodLines) {
+      fnbItems.push({ name: fl.line.name, qty: fl.line.qty });
+    }
+
+    if (fnbItems.length === 0) {
+      setNotice('Chưa có món F&B/Pha chế nào trong đơn để in phiếu bếp!');
+      return;
+    }
+
+    const html = generateKitchenTicketHtml({
+      roomName: room?.name ?? activeBooking.room,
+      code: (activeBooking.id || 'HD1').slice(-6).toUpperCase(),
+      items: fnbItems,
+      cashierName: data.activeShift?.name || 'Thu ngân quầy POS',
+    });
+    printK80Receipt(html);
+    setNotice('Đã gửi lệnh in phiếu bếp / quầy bar (K80)!');
+  }
+
+  // Barcode scanner & shortcut listeners (F4, F9)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'F4') {
+        e.preventDefault();
+        kickCashDrawer();
+        setNotice('Đã kích hoạt mở két tiền mặt (F4)');
+        return;
+      }
+      if (e.key === 'F9') {
+        if (step === 'order' && activeBooking) {
+          e.preventDefault();
+          handleCheckout();
+          return;
+        }
+      }
+
+      const target = e.target as HTMLElement | null;
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
+
+      const now = Date.now();
+      const interval = now - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = now;
+
+      if (e.key === 'Enter') {
+        const code = barcodeBufferRef.current.trim();
+        barcodeBufferRef.current = '';
+        if (code.length >= 3) {
+          const matched = CATALOG_ITEMS.find(
+            (c) => c.sku === code || c.id === code || c.name.toLowerCase() === code.toLowerCase(),
+          );
+          if (matched) {
+            playBeep();
+            handleAddCatalogItem(matched);
+            setNotice(`Đã quét mã vạch: ${matched.name} (+1)`);
+          } else if (!isInput) {
+            setNotice(`Không tìm thấy sản phẩm có mã vạch/SKU: ${code}`);
+          }
+        }
+        return;
+      }
+
+      if (e.key.length === 1) {
+        if (interval > 100) {
+          barcodeBufferRef.current = e.key;
+        } else {
+          barcodeBufferRef.current += e.key;
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, activeBooking, extraItems, foodLines]);
+
   async function sendZalo() {
     if (!b) return;
     await sendBillToZalo({
@@ -612,11 +773,14 @@ export function ModernPosFlow({
   }
 
   const filteredCatalog = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
     return CATALOG_ITEMS.filter((item) => {
       const matchCat = item.category === catalogCat;
       const matchSearch =
-        !catalogSearch.trim() ||
-        item.name.toLowerCase().includes(catalogSearch.trim().toLowerCase());
+        !q ||
+        item.name.toLowerCase().includes(q) ||
+        item.sku.toLowerCase().includes(q) ||
+        item.id.toLowerCase().includes(q);
       return matchCat && matchSearch;
     });
   }, [catalogCat, catalogSearch]);
@@ -626,28 +790,6 @@ export function ModernPosFlow({
     month: '2-digit',
     year: 'numeric',
   });
-
-  const activeBooking: Booking = b ?? {
-    id: 'demo-booking-1',
-    tenant: 'demo',
-    room: 'L3',
-    customer: 'Nguyễn Hoàng Long',
-    phone: '0902 030 165',
-    people: 1,
-    service: 'gdr',
-    start: Date.now() - 45 * 60 * 1000,
-    end: Date.now() + 15 * 60 * 1000,
-    started: Date.now() - 45 * 60 * 1000,
-    finished: null,
-    status: 'playing',
-    price: '{}',
-    segments: '[]',
-    golf_amount: 350000,
-    food_total: 100000,
-    amount: 450000,
-    payment: null,
-    created: Date.now() - 45 * 60 * 1000,
-  };
 
   const elapsed =
     activeBooking.started || activeBooking.status === 'paused'
@@ -693,6 +835,27 @@ export function ModernPosFlow({
 
         {/* View Switcher: Desktop vs Mobile vs Overview 1:1 */}
         <div className="pos-pipeline-modes">
+          <button
+            type="button"
+            className="pos-mode-btn"
+            onClick={() => setShowCustomerDisplay(true)}
+            title="Mở màn hình phụ cho khách (Dual Screen)"
+          >
+            <Tv size={15} />
+            <span>Màn hình khách</span>
+          </button>
+          <button
+            type="button"
+            className="pos-mode-btn"
+            onClick={() => {
+              kickCashDrawer();
+              setNotice('Đã kích hoạt mở két tiền mặt (F4)');
+            }}
+            title="Mở két đựng tiền mặt (F4)"
+          >
+            <Banknote size={15} />
+            <span>Két tiền (F4)</span>
+          </button>
           <button
             type="button"
             className={`pos-mode-btn ${viewMode === 'desktop' ? 'active' : ''}`}
@@ -1187,6 +1350,39 @@ export function ModernPosFlow({
                       <CreditCard size={18} />
                       <span>Thanh toán (F9)</span>
                     </button>
+
+                    <div className="pos-peripheral-bar">
+                      <button
+                        type="button"
+                        className="pos-btn-peripheral"
+                        onClick={handlePrintKitchenTicket}
+                        title="In phiếu chế biến gửi quầy bar / bếp"
+                      >
+                        <Utensils size={14} />
+                        <span>In phiếu Bếp / Bar</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="pos-btn-peripheral"
+                        onClick={() => {
+                          kickCashDrawer();
+                          setNotice('Đã kích hoạt mở két tiền (F4)');
+                        }}
+                        title="Mở két đựng tiền mặt (F4)"
+                      >
+                        <Banknote size={14} />
+                        <span>Mở két (F4)</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="pos-btn-peripheral"
+                        onClick={() => setShowCustomerDisplay(true)}
+                        title="Hiển thị màn hình cho khách"
+                      >
+                        <Tv size={14} />
+                        <span>Màn hình khách</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -1219,7 +1415,12 @@ export function ModernPosFlow({
                       value={catalogSearch}
                       onChange={(e) => setCatalogSearch(e.target.value)}
                     />
-                    <button type="button" className="pos-barcode-btn" title="Quét mã vạch">
+                    <button
+                      type="button"
+                      className="pos-barcode-btn"
+                      title="Quét mã vạch"
+                      onClick={() => setShowBarcodeModal(true)}
+                    >
                       <ScanBarcode size={18} />
                     </button>
                   </div>
@@ -2699,6 +2900,368 @@ export function ModernPosFlow({
                 disabled={saving}
               >
                 Áp dụng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer-Facing Display (Dual Screen) Modal */}
+      {showCustomerDisplay && (
+        <div className="pos-customer-display-overlay" onClick={() => setShowCustomerDisplay(false)}>
+          <div className="pos-customer-display-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pos-cd-header">
+              <div className="pos-cd-brand">
+                <div
+                  className="pos-brand-badge"
+                  style={{ width: '38px', height: '38px', fontSize: '18px' }}
+                >
+                  SG
+                </div>
+                <div>
+                  <h2>Saigon Indoor Golf Club</h2>
+                  <div style={{ fontSize: '12.5px', opacity: 0.9 }}>
+                    Phòng: <strong>{room?.name ?? activeBooking.room}</strong> · Khách hàng:{' '}
+                    <strong>{activeBooking.customer}</strong>
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  style={{
+                    background: 'rgba(255,255,255,0.2)',
+                    border: '1px solid rgba(255,255,255,0.4)',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => {
+                    const win = window.open('', '_blank', 'width=900,height=700');
+                    if (win) {
+                      win.document.write(`
+                        <html>
+                          <head>
+                            <title>Màn hình khách hàng - Saigon Indoor Golf Club</title>
+                            <style>
+                              body { font-family: sans-serif; margin: 0; padding: 24px; background: #f8fafc; }
+                              .header { background: #093824; color: #fff; padding: 16px 24px; border-radius: 12px; }
+                              .content { display: flex; gap: 24px; margin-top: 24px; }
+                              .left { flex: 1; background: #fff; padding: 20px; border-radius: 12px; }
+                              .right { width: 340px; background: #fff; padding: 20px; border-radius: 12px; text-align: center; }
+                              .total { font-size: 36px; font-weight: 800; color: #16a34a; }
+                            </style>
+                          </head>
+                          <body>
+                            <div class="header">
+                              <h2>Saigon Indoor Golf Club</h2>
+                              <div>Phòng: ${room?.name ?? activeBooking.room} | Khách: ${activeBooking.customer}</div>
+                            </div>
+                            <div class="content">
+                              <div class="left">
+                                <h3>Dịch vụ sử dụng</h3>
+                                <p>• ${SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf'}: ${money(golfBaseTotal)}</p>
+                                ${extraItems.map((x) => `<p>• ${x.name} x${x.qty}: ${money(x.price * x.qty)}</p>`).join('')}
+                                <hr style="margin: 16px 0; border: 0; border-top: 1px solid #eee;" />
+                                ${discountAmount > 0 ? `<p style="color: #16a34a;">Giảm giá: -${money(discountAmount)}</p>` : ''}
+                                <h3>Tổng cộng: ${money(total)}</h3>
+                              </div>
+                              <div class="right">
+                                <h4>QUÉT MÃ VIETQR THANH TOÁN</h4>
+                                <div class="total">${money(total)}</div>
+                              </div>
+                            </div>
+                          </body>
+                        </html>
+                      `);
+                    }
+                  }}
+                >
+                  Mở tab riêng (Dual Screen)
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    padding: '4px',
+                  }}
+                  onClick={() => setShowCustomerDisplay(false)}
+                >
+                  <X size={22} />
+                </button>
+              </div>
+            </div>
+
+            <div className="pos-cd-body">
+              <div>
+                <h3
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    marginBottom: '14px',
+                    color: '#1e293b',
+                  }}
+                >
+                  Chi tiết hóa đơn dịch vụ
+                </h3>
+                <table className="pos-cd-items-table">
+                  <thead>
+                    <tr>
+                      <th>Dịch vụ / Sản phẩm</th>
+                      <th style={{ textAlign: 'center' }}>SL</th>
+                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td style={{ fontWeight: 600 }}>
+                        {SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf (giờ)'}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {activeBooking.service === 'gdr' ? '1 giờ' : '1 lượt'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(golfBaseTotal)}</td>
+                    </tr>
+                    {foodLines.map(({ key, line }) => (
+                      <tr key={key}>
+                        <td>{line.name}</td>
+                        <td style={{ textAlign: 'center' }}>x{line.qty}</td>
+                        <td style={{ textAlign: 'right' }}>{money(line.total)}</td>
+                      </tr>
+                    ))}
+                    {extraItems.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.name}</td>
+                        <td style={{ textAlign: 'center' }}>x{item.qty}</td>
+                        <td style={{ textAlign: 'right' }}>{money(item.price * item.qty)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div
+                  style={{
+                    marginTop: '20px',
+                    borderTop: '2px solid #f1f5f9',
+                    paddingTop: '14px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '4px 0',
+                      color: '#64748b',
+                    }}
+                  >
+                    <span>Tạm tính</span>
+                    <span style={{ fontWeight: 600 }}>{money(subtotal)}</span>
+                  </div>
+                  {discountAmount > 0 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '4px 0',
+                        color: '#16a34a',
+                      }}
+                    >
+                      <span>Ưu đãi / Giảm giá</span>
+                      <span style={{ fontWeight: 600 }}>−{money(discountAmount)}</span>
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '10px 0',
+                      fontSize: '18px',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                    }}
+                  >
+                    <span>Tổng cần thanh toán</span>
+                    <span style={{ color: '#16a34a', fontSize: '22px' }}>{money(total)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pos-cd-qr-card">
+                {paid ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                    <div
+                      style={{
+                        width: '64px',
+                        height: '64px',
+                        borderRadius: '50%',
+                        background: '#dcfce7',
+                        color: '#16a34a',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 16px',
+                      }}
+                    >
+                      <Check size={36} strokeWidth={3} />
+                    </div>
+                    <h3
+                      style={{
+                        fontSize: '20px',
+                        fontWeight: 800,
+                        color: '#166534',
+                        margin: '0 0 6px',
+                      }}
+                    >
+                      THANH TOÁN THÀNH CÔNG!
+                    </h3>
+                    <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
+                      Cảm ơn Quý khách & Hẹn gặp lại!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px',
+                        color: '#64748b',
+                      }}
+                    >
+                      Quét mã VietQR chuyển khoản
+                    </span>
+                    <div className="pos-cd-qr-img" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px', background: '#fff' }}>
+                      <img
+                        alt="Mã QR chuyển khoản VietQR"
+                        style={{ width: '180px', height: '180px', objectFit: 'contain' }}
+                        src={vietQrUrl({
+                          bin: '970422',
+                          account: '0902030165',
+                          holder: 'SAIGON INDOOR GOLF',
+                          amount: total,
+                          note: paymentCode(activeBooking.id),
+                        })}
+                      />
+                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
+                        Nội dung: <strong style={{ color: '#0f172a' }}>{paymentCode(activeBooking.id)}</strong>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>Tổng số tiền</div>
+                    <div className="pos-cd-total">{money(total)}</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+                      Tự động xác nhận giao dịch trong 3-5 giây
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Scanner Simulator Modal */}
+      {showBarcodeModal && (
+        <div className="ar-settings-modal-backdrop" onClick={() => setShowBarcodeModal(false)}>
+          <div
+            className="ar-settings-modal"
+            style={{ maxWidth: '440px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ar-modal-header">
+              <div className="ar-modal-header-left">
+                <ScanBarcode size={20} color="#16a34a" />
+                <h3 className="ar-modal-header-title">Quét mã vạch (Barcode Scanner)</h3>
+              </div>
+              <button className="ar-modal-close-btn" onClick={() => setShowBarcodeModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="ar-modal-body">
+              <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 12px' }}>
+                Hệ thống tự động nhận diện đầu đọc mã vạch USB / Bluetooth (F4 mở két, quét phím tự động). Hoặc bạn có thể thử quét nhanh bằng cách chọn mẫu bên dưới:
+              </p>
+              <div className="ar-field">
+                <label>Nhập SKU hoặc mã vạch</label>
+                <input
+                  value={barcodeSimInput}
+                  onChange={(e) => setBarcodeSimInput(e.target.value)}
+                  placeholder="VD: 89345601"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const item = CATALOG_ITEMS.find(
+                        (c) => c.sku === barcodeSimInput.trim() || c.id === barcodeSimInput.trim(),
+                      );
+                      if (item) {
+                        playBeep();
+                        handleAddCatalogItem(item);
+                        setNotice(`Đã quét mã vạch: ${item.name} (+1)`);
+                        setShowBarcodeModal(false);
+                        setBarcodeSimInput('');
+                      } else {
+                        setNotice(`Không tìm thấy mã vạch: ${barcodeSimInput}`);
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <div style={{ marginTop: '12px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>
+                  Mẫu mã vạch nhanh:
+                </span>
+                <div className="pos-discount-chips" style={{ marginTop: '6px' }}>
+                  {CATALOG_ITEMS.slice(0, 6).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className="pos-discount-chip"
+                      onClick={() => {
+                        playBeep();
+                        handleAddCatalogItem(item);
+                        setNotice(`Đã quét mã: ${item.name} (+1)`);
+                        setShowBarcodeModal(false);
+                      }}
+                    >
+                      {item.emoji} {item.name} ({item.sku})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="ar-modal-footer">
+              <button
+                type="button"
+                className="ar-btn-secondary"
+                onClick={() => setShowBarcodeModal(false)}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="ar-btn-primary"
+                onClick={() => {
+                  const item = CATALOG_ITEMS.find(
+                    (c) => c.sku === barcodeSimInput.trim() || c.id === barcodeSimInput.trim(),
+                  );
+                  if (item) {
+                    playBeep();
+                    handleAddCatalogItem(item);
+                    setNotice(`Đã quét mã vạch: ${item.name} (+1)`);
+                    setShowBarcodeModal(false);
+                    setBarcodeSimInput('');
+                  } else {
+                    setNotice(`Không tìm thấy mã vạch: ${barcodeSimInput}`);
+                  }
+                }}
+              >
+                Quét ngay
               </button>
             </div>
           </div>

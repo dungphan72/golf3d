@@ -1797,3 +1797,143 @@
   color: #ffffff;
   border-color: #0284c7;
 }
+
+/* ==========================================================================
+   CUSTOMER FACING DISPLAY (DUAL SCREEN) STYLES
+   ========================================================================== */
+.pos-customer-display-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.pos-customer-display-modal {
+  background: #ffffff;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.pos-cd-header {
+  background: linear-gradient(135deg, #093824 0%, #15803d 100%);
+  color: #ffffff;
+  padding: 20px 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pos-cd-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pos-cd-brand h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.pos-cd-body {
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+}
+
+@media (max-width: 860px) {
+  .pos-cd-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pos-cd-items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pos-cd-items-table th {
+  text-align: left;
+  padding: 10px 0;
+  border-bottom: 2px solid #e2e8f0;
+  color: #64748b;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.pos-cd-items-table td {
+  padding: 12px 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 15px;
+}
+
+.pos-cd-qr-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pos-cd-qr-img {
+  width: 220px;
+  height: 220px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  margin: 12px 0;
+}
+
+.pos-cd-total {
+  font-size: 32px;
+  font-weight: 900;
+  color: #16a34a;
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   PERIPHERAL BUTTONS (BARCODE, DRAWER, KITCHEN TICKET)
+   ========================================================================== */
+.pos-peripheral-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.pos-btn-peripheral {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+}
+
+.pos-btn-peripheral:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}

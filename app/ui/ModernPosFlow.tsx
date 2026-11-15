@@ -1,55 +1,81 @@
 'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
+  Banknote,
+  Bell,
+  Building2,
   CalendarDays,
   Check,
+  CheckCircle2,
+  ChevronRight,
   Clock,
+  Coffee,
   CreditCard,
   Crown,
+  Edit2,
+  FileText,
   Flag,
+  History,
+  Home,
+  Layers,
+  LayoutGrid,
+  Minus,
+  MoreHorizontal,
+  Package,
+  Pause,
+  Percent,
+  Play,
+  Plus,
   Printer,
+  QrCode,
+  Receipt,
+  RefreshCw,
+  RotateCcw,
+  ScanBarcode,
+  Search,
   Send,
+  ShieldCheck,
+  ShoppingBag,
+  ShoppingCart,
   SlidersHorizontal,
+  Sparkles,
+  Split,
+  Square,
+  Store,
+  Tag,
+  Trash2,
   User,
+  UserCheck,
+  UserPlus,
+  Users,
+  Utensils,
   Wallet,
   Wrench,
   X,
-  Landmark,
-  QrCode,
-  Search,
-  ScanBarcode,
-  Trash2,
-  Edit2,
-  Smartphone,
-  Monitor,
-  LayoutGrid,
-  Plus,
-  Minus,
-  ArrowRight,
-  ShoppingBag,
-  Coffee,
-  Sparkles,
-  Tag,
-  Banknote,
-  Percent,
-  Tv,
-  Utensils,
 } from 'lucide-react';
 import { rooms, money, sessionQuote, type Booking, type Segment } from '../../lib/club';
-import { operationKey } from '../../lib/finance';
-import { discountFromPercent } from '../../lib/billing';
+import {
+  operationKey,
+  shiftTotals,
+  reconciliation,
+  type ShiftSummary,
+  type Entry,
+} from '../../lib/finance';
+import { discountFromPercent, changeDue, type BillInfo } from '../../lib/billing';
 import type { Bill, Service } from '../../lib/pricing';
-import type { FoodLine } from '../../lib/fnb';
+import { foodLabels, type FoodLine, type MenuItem, type FoodOrder } from '../../lib/fnb';
 import type { Data } from './shared';
-import { time } from './shared';
+import { time, date } from './shared';
 import { roomInfo } from './widgets';
 import { playedMs, clock } from './PosBoard';
 import { useFood } from './SessionFood';
-import { useBill } from './BillTools';
+import { useBill, DiscountForm, RefundForm } from './BillTools';
 import { TransferPanel } from './session/TransferPanel';
-import { paymentCode, vietQrUrl } from '../../lib/bank';
+import { PackageRedeem } from './session/PackageRedeem';
+import { SplitPay } from './session/SplitPay';
 import {
   generateK80Html,
   generateKitchenTicketHtml,
@@ -61,67 +87,103 @@ import {
 } from '../../lib/thermal-receipt';
 import '../pos-flow.css';
 
-type DesktopStep = 'map' | 'order' | 'pay' | 'done';
-type ViewMode = 'desktop' | 'mobile' | 'overview';
-type PayMethod = 'cash' | 'card' | 'transfer';
-type CatalogCategory = 'fnb' | 'service' | 'accessory' | 'combo';
-type ShiftModalType = 'open' | 'close' | 'cash-in' | 'cash-out' | null;
+export type MobileScreenId =
+  | 'M01' // Trang chủ POS
+  | 'M02' // Sơ đồ line/phòng
+  | 'M03' // Chi tiết phiên chơi
+  | 'M04' // Nhận khách/Bắt đầu chơi
+  | 'M05' // Bán hàng và dịch vụ
+  | 'M06' // Giỏ hàng/Hóa đơn
+  | 'M07' // Thanh toán
+  | 'M08' // Hoàn tất
+  | 'M09' // Quản lý ca
+  | 'M10'; // Lịch sử giao dịch
 
-interface CatalogItem {
+type MobileBottomTab = 'pos' | 'bookings' | 'orders' | 'customers' | 'more';
+type DesktopPanelMode = 'overview' | 'checkin' | 'catalog' | 'payment' | 'receipt';
+type DesktopDrawer = 'shift' | 'history' | null;
+type PayMethod = 'cash' | 'transfer' | 'card' | 'wallet' | 'package' | 'split';
+type CatalogCategory = 'all' | 'fnb' | 'accessory' | 'service' | 'package';
+
+interface CatalogProduct {
   id: string;
   name: string;
-  category: CatalogCategory;
+  category: Exclude<CatalogCategory, 'all'>;
   price: number;
-  emoji: string;
+  unit: string;
   sku: string;
+  menuItem?: MenuItem;
 }
 
-const CATALOG_ITEMS: CatalogItem[] = [
+const DEFAULT_PRODUCTS: CatalogProduct[] = [
   // F&B
-  { id: 'fnb-water', name: 'Nước suối', category: 'fnb', price: 20000, emoji: '💧', sku: '89345601' },
-  { id: 'fnb-coffee', name: 'Cà phê', category: 'fnb', price: 45000, emoji: '☕', sku: '89345602' },
-  { id: 'fnb-juice', name: 'Nước ép', category: 'fnb', price: 55000, emoji: '🍹', sku: '89345603' },
-  { id: 'fnb-sandwich', name: 'Bánh sandwich', category: 'fnb', price: 60000, emoji: '🥪', sku: '89345604' },
-  { id: 'fnb-noodle', name: 'Mì ly', category: 'fnb', price: 40000, emoji: '🍜', sku: '89345605' },
-  { id: 'fnb-cake', name: 'Bánh ngọt', category: 'fnb', price: 45000, emoji: '🍰', sku: '89345606' },
-  { id: 'fnb-fruit', name: 'Trái cây', category: 'fnb', price: 50000, emoji: '🍉', sku: '89345607' },
-  { id: 'fnb-towel', name: 'Khăn lạnh', category: 'fnb', price: 5000, emoji: '🧊', sku: '89345608' },
-
-  // Dịch vụ
-  { id: 'srv-club', name: 'Thuê bộ gậy tập', category: 'service', price: 100000, emoji: '🏌️', sku: '89345613' },
-  { id: 'srv-glove', name: 'Thuê găng tay golf', category: 'service', price: 30000, emoji: '🧤', sku: '89345614' },
-  { id: 'srv-coach', name: 'HLV hướng dẫn (30p)', category: 'service', price: 250000, emoji: '👨‍🏫', sku: '89345615' },
-  { id: 'srv-vip', name: 'Phụ thu phòng VIP', category: 'service', price: 150000, emoji: '👑', sku: '89345616' },
-
+  { id: 'fnb-coffee-milk', name: 'Cà phê sữa đá', category: 'fnb', price: 45000, unit: 'ly', sku: '89345602' },
+  { id: 'fnb-latte', name: 'Cà phê Latte', category: 'fnb', price: 55000, unit: 'ly', sku: '89345620' },
+  { id: 'fnb-orange', name: 'Nước cam tươi', category: 'fnb', price: 55000, unit: 'ly', sku: '89345603' },
+  { id: 'fnb-peach-tea', name: 'Trà đào cam sả', category: 'fnb', price: 55000, unit: 'ly', sku: '89345621' },
+  { id: 'fnb-water', name: 'Nước khoáng Lavie', category: 'fnb', price: 20000, unit: 'chai', sku: '89345601' },
+  { id: 'fnb-sandwich', name: 'Bánh mì Sandwich gà', category: 'fnb', price: 65000, unit: 'phần', sku: '89345604' },
+  { id: 'fnb-fries', name: 'Khoai tây chiên', category: 'fnb', price: 55000, unit: 'đĩa', sku: '89345622' },
+  { id: 'fnb-fruit', name: 'Đĩa trái cây theo mùa', category: 'fnb', price: 85000, unit: 'đĩa', sku: '89345607' },
   // Phụ kiện
-  { id: 'acc-balls', name: 'Bóng golf (hộp 3)', category: 'accessory', price: 120000, emoji: '⚪', sku: '89345610' },
-  { id: 'acc-tee', name: 'Tee golf gỗ (gói 10)', category: 'accessory', price: 30000, emoji: '📍', sku: '89345611' },
-  { id: 'acc-glove', name: 'Găng tay da cao cấp', category: 'accessory', price: 180000, emoji: '🥊', sku: '89345609' },
-  { id: 'acc-cap', name: 'Mũ golf Saigon Club', category: 'accessory', price: 250000, emoji: '🧢', sku: '89345612' },
-
-  // Combo
-  { id: 'cmb-gdr-water', name: 'Combo Chơi + Nước', category: 'combo', price: 380000, emoji: '⭐', sku: '89345617' },
-  { id: 'cmb-vip-full', name: 'Combo VIP trọn gói', category: 'combo', price: 650000, emoji: '🌟', sku: '89345618' },
-  { id: 'cmb-cafe-snack', name: 'Combo Ăn nhẹ + Cafe', category: 'combo', price: 950000, emoji: '🥪', sku: '89345619' },
+  { id: 'acc-balls', name: 'Bóng golf Titleist (Hộp 3)', category: 'accessory', price: 120000, unit: 'hộp', sku: '89345610' },
+  { id: 'acc-glove', name: 'Găng tay golf da cao cấp', category: 'accessory', price: 250000, unit: 'chiếc', sku: '89345609' },
+  { id: 'acc-tee', name: 'Tee golf gỗ (Gói 10)', category: 'accessory', price: 30000, unit: 'gói', sku: '89345611' },
+  { id: 'acc-cap', name: 'Mũ golf Saigon Indoor Club', category: 'accessory', price: 280000, unit: 'chiếc', sku: '89345612' },
+  // Dịch vụ
+  { id: 'srv-club-rent', name: 'Thuê bộ gậy tập tiêu chuẩn', category: 'service', price: 150000, unit: 'bộ', sku: '89345613' },
+  { id: 'srv-glove-rent', name: 'Thuê găng tay tập', category: 'service', price: 30000, unit: 'chiếc', sku: '89345614' },
+  { id: 'srv-coach-30', name: 'HLV hướng dẫn (30 phút)', category: 'service', price: 300000, unit: 'buổi', sku: '89345615' },
+  { id: 'srv-vip-setup', name: 'Phục vụ phòng VIP riêng', category: 'service', price: 200000, unit: 'lượt', sku: '89345616' },
+  // Gói giờ
+  { id: 'pkg-10h', name: 'Thẻ tập 10 giờ (Tiêu chuẩn)', category: 'package', price: 2200000, unit: 'gói', sku: '89345630' },
+  { id: 'pkg-20h', name: 'Thẻ tập 20 giờ (Tiết kiệm)', category: 'package', price: 4000000, unit: 'gói', sku: '89345631' },
+  { id: 'pkg-vip-10h', name: 'Thẻ phòng VIP 10 giờ', category: 'package', price: 5200000, unit: 'gói', sku: '89345632' },
 ];
 
-const PAY_LABEL: Record<PayMethod, string> = {
-  cash: 'Tiền mặt',
-  card: 'Thẻ ngân hàng',
-  transfer: 'QR Code',
-};
-
 const SERVICE_LABEL: Record<string, string> = {
-  gdr: 'Chơi golf (giờ)',
+  gdr: 'Luyện tập theo giờ',
   '9': 'Game 9 hố',
   '18': 'Game 18 hố',
 };
 
+const PAY_LABEL: Record<string, string> = {
+  cash: 'Tiền mặt',
+  transfer: 'Chuyển khoản / QR SePay',
+  card: 'Thẻ ngân hàng (POS)',
+  wallet: 'Ví hội viên',
+  package: 'Thẻ giờ hội viên',
+  split: 'Thanh toán kết hợp',
+};
+
+interface CartLine {
+  product: CatalogProduct;
+  qty: number;
+  note: string;
+}
+
+interface CustomerDirectoryItem {
+  id: string;
+  name: string;
+  phone: string;
+  code?: string;
+  tier?: string;
+  active_packages?: number;
+  wallet_balance?: number;
+}
+
+interface FinanceOverviewData {
+  shifts: ShiftSummary[];
+  selectedId: string | null;
+  entries: Entry[];
+}
+
 export function ModernPosFlow({
   data,
+  canSeeMoney = true,
+  onGo,
   onMutate,
   onRefresh,
-  onOpenSession,
 }: {
   data: Data;
   now?: number;
@@ -137,32 +199,75 @@ export function ModernPosFlow({
     return () => clearInterval(id);
   }, []);
 
-  // Top mode: Desktop flow, Mobile flow, or 1:1 Infographic Overview
-  const [viewMode, setViewMode] = useState<ViewMode>('desktop');
-  const [step, setStep] = useState<DesktopStep>('map');
-  const [mobileStep, setMobileStep] = useState<number>(1);
-  const [filterTab, setFilterTab] = useState<'all' | 'playing' | 'booked' | 'empty' | 'maintenance'>('all');
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // Responsive viewport detection (Desktop >= 1024px vs Mobile < 1024px)
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 1023px)');
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
-  // Screen 2 Catalog state
-  const [catalogCat, setCatalogCat] = useState<CatalogCategory>('fnb');
+  // Selected room & active booking
+  const [selectedRoomId, setSelectedRoomId] = useState<string>('line-1');
+  const [activeBookingId, setActiveBookingId] = useState<string | null>(null);
+
+  // Desktop Panel Mode & Drawers (Single-screen workflow without page reload)
+  const [desktopMode, setDesktopMode] = useState<DesktopPanelMode>('overview');
+  const [desktopDrawer, setDesktopDrawer] = useState<DesktopDrawer>(null);
+
+  // Mobile Screen Navigation (M01 - M10) & Bottom Tab
+  const [mobileScreen, setMobileScreen] = useState<MobileScreenId>('M01');
+  const [mobileTab, setMobileTab] = useState<MobileBottomTab>('pos');
+
+  // Room filter & search
+  const [roomFilter, setRoomFilter] = useState<'all' | 'playing' | 'empty' | 'booked' | 'due' | 'maintenance'>('all');
+  const [roomSearch, setRoomSearch] = useState('');
+
+  // Check-in / Walk-in form state (M04 & Desktop Check-in)
+  const [checkInRoomId, setCheckInRoomId] = useState<string>('line-1');
+  const [checkInCustomer, setCheckInCustomer] = useState('');
+  const [checkInPhone, setCheckInPhone] = useState('');
+  const [checkInPeople, setCheckInPeople] = useState(1);
+  const [checkInService, setCheckInService] = useState<'gdr' | '9' | '18'>('gdr');
+  const [checkInDuration, setCheckInDuration] = useState(60);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customersList, setCustomersList] = useState<CustomerDirectoryItem[]>([]);
+
+  // Catalog & Cart state (M05 & M06)
+  const [catalogCat, setCatalogCat] = useState<CatalogCategory>('all');
   const [catalogSearch, setCatalogSearch] = useState('');
-  // Local items added in this session before checkout
-  const [extraItems, setExtraItems] = useState<{ id: string; name: string; qty: number; price: number }[]>([]);
+  const [cart, setCart] = useState<CartLine[]>([]);
+  const [orderNote, setOrderNote] = useState('');
+  const [autoServeAtCounter, setAutoServeAtCounter] = useState(true);
+  const [editingNoteProductId, setEditingNoteProductId] = useState<string | null>(null);
 
-  // Modals & State
-  const [walkInModal, setWalkInModal] = useState<string | null>(null);
-  const [walkInName, setWalkInName] = useState('');
-  const [walkInPhone, setWalkInPhone] = useState('');
-  const [extendModal, setExtendModal] = useState(false);
-  const [editCustomerModal, setEditCustomerModal] = useState(false);
-  const [custNameInput, setCustNameInput] = useState('');
-  const [custPhoneInput, setCustPhoneInput] = useState('');
+  // Payment state (M07 & M08)
+  const [payMethod, setPayMethod] = useState<PayMethod>('cash');
+  const [tendered, setTendered] = useState('');
+  const [vatInvoice, setVatInvoice] = useState(false);
+  const [vatCompany, setVatCompany] = useState('');
+  const [vatTaxCode, setVatTaxCode] = useState('');
+  const [printOnConfirm, setPrintOnConfirm] = useState(true);
+  const [lastReceipt, setLastReceipt] = useState<{
+    bookingId: string;
+    code: string;
+    roomName: string;
+    customer: string;
+    phone: string;
+    total: number;
+    methodLabel: string;
+    at: number;
+    cashier: string;
+  } | null>(null);
+  const payKey = useRef(operationKey());
 
-  // Shift modals & state (P0)
-  const [shiftModal, setShiftModal] = useState<ShiftModalType>(null);
+  // Shift Management state (M09)
+  const [financeData, setFinanceData] = useState<FinanceOverviewData | null>(null);
+  const [shiftSubModal, setShiftSubModal] = useState<'open' | 'cash_in' | 'cash_out' | 'close' | null>(null);
   const [shiftNameInput, setShiftNameInput] = useState('Ca sáng (06:00 - 14:00)');
-  const [shiftCashInput, setShiftCashInput] = useState('1000000');
+  const [shiftOpeningCash, setShiftOpeningCash] = useState('1000000');
   const [cashEntryAmount, setCashEntryAmount] = useState('');
   const [cashEntryNote, setCashEntryNote] = useState('');
   const [closeCountedCash, setCloseCountedCash] = useState('');
@@ -170,363 +275,943 @@ export function ModernPosFlow({
   const [closeCountedCard, setCloseCountedCard] = useState('');
   const [closeNote, setCloseNote] = useState('');
 
-  // Discount & Voucher modal & state (P0)
-  const [discountModal, setDiscountModal] = useState(false);
-  const [customDiscount, setCustomDiscount] = useState<{ amount: number; reason: string } | null>(null);
-  const [voucherCodeInput, setVoucherCodeInput] = useState('');
-  const [discountValInput, setDiscountValInput] = useState('');
-  const [discountReasonInput, setDiscountReasonInput] = useState('Khách quen');
+  // Transaction History state (M10)
+  const [txSearch, setTxSearch] = useState('');
+  const [txStatusFilter, setTxStatusFilter] = useState<'all' | 'paid' | 'finished' | 'cancelled'>('all');
+  const [selectedHistoryBookingId, setSelectedHistoryBookingId] = useState<string | null>(null);
+  const [cancelReasonInput, setCancelReasonInput] = useState('');
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  // Payment state
-  const [payMethod, setPayMethod] = useState<PayMethod>('cash');
-  const [tendered, setTendered] = useState('500000');
-  const [printReceipt, setPrintReceipt] = useState(true);
+  // Header Notification Popover
+  const [showBellPopover, setShowBellPopover] = useState(false);
+
+  // General busy & feedback state
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
-  const [paid, setPaid] = useState<{ total: number; method: string; at: number; code: string } | null>(null);
-  const payKey = useRef(operationKey());
+  const [errorMsg, setErrorMsg] = useState('');
 
-  // Hardware Peripherals & Customer Display (P1)
-  const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
-  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
-  const [barcodeSimInput, setBarcodeSimInput] = useState('');
-  const barcodeBufferRef = useRef<string>('');
-  const lastKeyTimeRef = useRef<number>(0);
+  // Barcode scanner listener
+  const barcodeBufferRef = useRef('');
+  const lastKeyTimeRef = useRef(0);
 
-  function playBeep() {
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1400, ctx.currentTime);
-      gain.gain.setValueAtTime(0.2, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.08);
-    } catch {
-      // Audio autoplay policy
+  // Derive room statuses from live bookings & maintenance
+  const roomStatuses = useMemo(() => {
+    return rooms.map((r) => {
+      const info = roomInfo(r.id, data.bookings, tick);
+      const maint = data.maintenance?.find((m) => m.room === r.id) ?? null;
+      const activeBooking = info.live ?? info.due ?? info.soon ?? null;
+      let statusKey: 'playing' | 'due' | 'booked' | 'maintenance' | 'empty' = 'empty';
+      if (maint) statusKey = 'maintenance';
+      else if (info.due || activeBooking?.status === 'finished') statusKey = 'due';
+      else if (info.state === 'occupied' || info.state === 'clean') statusKey = 'playing';
+      else if (info.state === 'soon') statusKey = 'booked';
+      return { room: r, info, maint, statusKey, booking: activeBooking };
+    });
+  }, [data.bookings, data.maintenance, tick]);
+
+  // Auto-select first active booking or room on mount
+  useEffect(() => {
+    if (activeBookingId) {
+      const stillExists = data.bookings.find((b) => b.id === activeBookingId);
+      if (stillExists && stillExists.status !== 'cancelled') return;
     }
-  }
+    const chosenRoom = roomStatuses.find((r) => r.room.id === selectedRoomId);
+    if (chosenRoom?.booking) {
+      setActiveBookingId(chosenRoom.booking.id);
+    } else {
+      const firstActive = roomStatuses.find((r) => r.booking);
+      if (firstActive?.booking) {
+        setSelectedRoomId(firstActive.room.id);
+        setActiveBookingId(firstActive.booking.id);
+      }
+    }
+  }, [data.bookings, roomStatuses, activeBookingId, selectedRoomId]);
 
-  const b: Booking | null = useMemo(
-    () => (activeId ? (data.bookings.find((x) => x.id === activeId) ?? null) : null),
-    [data.bookings, activeId],
+  const activeBooking: Booking | null = useMemo(() => {
+    if (activeBookingId) {
+      const found = data.bookings.find((b) => b.id === activeBookingId);
+      if (found) return found;
+    }
+    const rStatus = roomStatuses.find((r) => r.room.id === selectedRoomId);
+    return rStatus?.booking ?? null;
+  }, [activeBookingId, data.bookings, roomStatuses, selectedRoomId]);
+
+  const selectedRoomObj = useMemo(
+    () => rooms.find((r) => r.id === (activeBooking?.room ?? selectedRoomId)) ?? rooms[0],
+    [activeBooking?.room, selectedRoomId],
   );
-  const food = useFood(b?.id);
-  const { bill } = useBill(b?.id ?? '', b?.status ?? '');
 
-  const roomStatuses = useMemo(
-    () =>
-      rooms.map((r) => {
-        const info = roomInfo(r.id, data.bookings, tick);
-        const maint = data.maintenance?.find((m) => m.room === r.id) ?? null;
-        const state: 'playing' | 'booked' | 'maintenance' | 'empty' = maint
-          ? 'maintenance'
-          : info.state === 'occupied' || info.state === 'due' || info.state === 'clean'
-            ? 'playing'
-            : info.state === 'soon'
-              ? 'booked'
-              : 'empty';
-        return { room: r, info, state, maint };
-      }),
-    [data.bookings, data.maintenance, tick],
+  // Load F&B & Bill for active booking (or general menu when no booking)
+  const food = useFood(activeBooking?.id);
+  const generalFood = useFood(undefined);
+  const { bill, reload: reloadBill } = useBill(activeBooking?.id ?? '', activeBooking?.status ?? '');
+
+  // Load history bill when inspecting an invoice in M10
+  const historyBooking = useMemo(
+    () => (selectedHistoryBookingId ? data.bookings.find((b) => b.id === selectedHistoryBookingId) ?? null : null),
+    [data.bookings, selectedHistoryBookingId],
+  );
+  const { bill: historyBill, reload: reloadHistoryBill } = useBill(
+    historyBooking?.id ?? '',
+    historyBooking?.status ?? '',
   );
 
-  const counts = useMemo(() => {
-    const c = { all: rooms.length, playing: 0, booked: 0, empty: 0, maintenance: 0 };
-    for (const r of roomStatuses) c[r.state]++;
+  // Load customers & package types from /api/members for check-in & catalog
+  const [memberTypes, setMemberTypes] = useState<{ id: string; name: string; price: number }[]>([]);
+  const loadCustomersDirectory = useCallback(async (q = '') => {
+    try {
+      const r = await fetch('/api/members?q=' + encodeURIComponent(q), { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = (await r.json()) as {
+        customers?: CustomerDirectoryItem[];
+        types?: { id: string; name: string; price: number; active?: number }[];
+      };
+      if (d.customers) setCustomersList(d.customers);
+      if (d.types) setMemberTypes(d.types.filter((t) => t.active !== 0));
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCustomersDirectory(customerSearchQuery);
+  }, [customerSearchQuery, loadCustomersDirectory]);
+
+  // Load Finance Shift Summary & Entries for M09
+  const loadFinanceOverview = useCallback(async () => {
+    try {
+      const r = await fetch('/api/finance', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = (await r.json()) as FinanceOverviewData;
+      setFinanceData(d);
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    if (
+      mobileScreen === 'M09' ||
+      mobileScreen === 'M01' ||
+      desktopDrawer === 'shift' ||
+      shiftSubModal !== null
+    ) {
+      loadFinanceOverview();
+    }
+  }, [mobileScreen, desktopDrawer, shiftSubModal, loadFinanceOverview, data.activeShift?.id]);
+
+  // Merge live DB menu_items + package_types + default catalog products
+  const catalogProducts: CatalogProduct[] = useMemo(() => {
+    const list: CatalogProduct[] = [];
+    const seenNames = new Set<string>();
+    const liveMenu = food.data?.menu ?? generalFood.data?.menu ?? [];
+
+    for (const m of liveMenu) {
+      if (!m.active) continue;
+      seenNames.add(m.name.toLowerCase());
+      const cat: Exclude<CatalogCategory, 'all'> =
+        m.category === 'drink' || m.category === 'food'
+          ? 'fnb'
+          : m.name.toLowerCase().includes('găng') ||
+              m.name.toLowerCase().includes('bóng') ||
+              m.name.toLowerCase().includes('tee') ||
+              m.name.toLowerCase().includes('mũ')
+            ? 'accessory'
+            : 'service';
+      list.push({
+        id: m.id,
+        name: m.name,
+        category: cat,
+        price: m.price,
+        unit: m.unit,
+        sku: m.id.slice(-8).toUpperCase(),
+        menuItem: m,
+      });
+    }
+
+    for (const def of DEFAULT_PRODUCTS) {
+      if (!seenNames.has(def.name.toLowerCase())) {
+        seenNames.add(def.name.toLowerCase());
+        list.push(def);
+      }
+    }
+
+    for (const pkg of memberTypes) {
+      if (!seenNames.has(pkg.name.toLowerCase())) {
+        seenNames.add(pkg.name.toLowerCase());
+        list.push({
+          id: `pkg-${pkg.id}`,
+          name: pkg.name,
+          category: 'package',
+          price: pkg.price,
+          unit: 'gói',
+          sku: pkg.id.toUpperCase().slice(0, 8),
+        });
+      }
+    }
+
+    return list;
+  }, [food.data?.menu, generalFood.data?.menu, memberTypes]);
+
+  const filteredCatalog = useMemo(() => {
+    const q = catalogSearch.trim().toLowerCase();
+    return catalogProducts.filter((p) => {
+      const matchCat = catalogCat === 'all' || p.category === catalogCat;
+      const matchQ =
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q);
+      return matchCat && matchQ;
+    });
+  }, [catalogProducts, catalogCat, catalogSearch]);
+
+  // Room counts & filtered rooms
+  const roomCounts = useMemo(() => {
+    const c = {
+      all: roomStatuses.length,
+      playing: 0,
+      empty: 0,
+      booked: 0,
+      due: 0,
+      maintenance: 0,
+    };
+    for (const r of roomStatuses) {
+      c[r.statusKey]++;
+    }
     return c;
   }, [roomStatuses]);
 
-  const visibleRooms = roomStatuses.filter(({ state }) => filterTab === 'all' || state === filterTab);
-  const room = b ? rooms.find((r) => r.id === b.room) : undefined;
-  const roomShort = (room?.name ?? b?.room ?? 'L3').replace('Line ', 'L');
+  const filteredRooms = useMemo(() => {
+    const q = roomSearch.trim().toLowerCase();
+    return roomStatuses.filter((r) => {
+      const matchTab = roomFilter === 'all' || r.statusKey === roomFilter;
+      if (!matchTab) return false;
+      if (!q) return true;
+      const bText = r.booking ? `${r.booking.customer} ${r.booking.phone} ${r.booking.id}` : '';
+      return `${r.room.name} ${r.room.id} ${bText}`.toLowerCase().includes(q);
+    });
+  }, [roomStatuses, roomFilter, roomSearch]);
 
-  const activeBooking: Booking = b ?? {
-    id: 'demo-booking-1',
-    tenant: 'demo',
-    room: 'L3',
-    customer: 'Nguyễn Hoàng Long',
-    phone: '0902 030 165',
-    people: 1,
-    service: 'gdr',
-    start: Date.now() - 45 * 60 * 1000,
-    end: Date.now() + 15 * 60 * 1000,
-    started: Date.now() - 45 * 60 * 1000,
-    finished: null,
-    status: 'playing',
-    price: '{}',
-    segments: '[]',
-    golf_amount: 350000,
-    food_total: 100000,
-    amount: 450000,
-    payment: null,
-    created: Date.now() - 45 * 60 * 1000,
-  };
-
-  // Session quote (golf time)
-  let q: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 };
-  let quoteError = '';
-  if (b) {
-    try {
-      const snap = JSON.parse(b.price);
-      const seg: Segment[] = JSON.parse(b.segments);
-      if (b.status === 'playing' && b.started) seg.push({ start: b.started, end: tick });
-      q =
-        b.status === 'booked' && snap.estimated
-          ? snap.estimated
-          : sessionQuote(b.service as Service, seg, snap);
-    } catch (e) {
-      quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
-    }
-  }
-
-  // Real food from server
-  const orders = food.data?.orders ?? [];
-  const servedOrders = orders.filter((o) => o.status === 'served');
-  const pendingFood = orders.filter((o) => ['new', 'preparing', 'ready'].includes(o.status)).length;
-  const servedFood = servedOrders.reduce((s, o) => s + o.total, 0);
-  const foodVerified = !!food.data && !food.error && servedFood === (b?.food_total ?? 0);
-  const foodLines = servedOrders.flatMap((o) =>
-    (JSON.parse(o.items) as FoodLine[]).map((l, i) => ({ key: o.id + '-' + i, orderId: o.id, version: o.version, line: l })),
+  // Pending unpaid finished bills
+  const pendingBills = useMemo(
+    () => data.bookings.filter((b) => b.status === 'finished'),
+    [data.bookings],
   );
 
-  // Extra items total
-  const extraTotal = extraItems.reduce((acc, item) => acc + item.price * item.qty, 0);
-  const golfBaseTotal = q.total > 0 ? q.total : 350000;
-  const subtotal = golfBaseTotal + servedFood + extraTotal;
-  const discountAmount = (bill?.discount?.amount ?? 0) || (customDiscount?.amount ?? 0);
-  const total = Math.max(0, subtotal - discountAmount);
-
-  const finished = b?.status === 'finished';
-  const operating = !!b && ['booked', 'playing', 'paused'].includes(b.status);
-  const canPayNow = !!b && (finished || total > 0);
-
-  const cashIn = Number(tendered.replace(/\D/g, '')) || 0;
-  const change = Math.max(0, cashIn - total);
-
-  const quickCash = useMemo(() => {
-    const up = (n: number) => Math.ceil(total / n) * n;
-    return [...new Set([total, up(100000), up(500000), up(1000000)])].filter((n) => n > 0).slice(0, 3);
-  }, [total]);
-
-  // Open a specific session
-  function openSession(id: string, to: DesktopStep = 'order') {
-    payKey.current = operationKey();
-    setActiveId(id);
-    setTendered('500000');
-    setNotice('');
-    setPaid(null);
-    setPayMethod('cash');
-    setExtraItems([]);
-    setCustomDiscount(null);
-    setStep(to);
-  }
-
-  function handleSelectRoom(roomId: string) {
-    const rs = roomStatuses.find((x) => x.room.id === roomId);
-    if (!rs) return;
-    if (rs.maint) {
-      setNotice(`${rs.room.name} đang bảo trì${rs.maint.reason ? ': ' + rs.maint.reason : ''}.`);
-      return;
+  // Calculate live session quote for activeBooking
+  const sessionBill: Bill & { error?: string } = useMemo(() => {
+    const emptyBill: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 };
+    if (!activeBooking) return emptyBill;
+    try {
+      const snap = JSON.parse(activeBooking.price);
+      const seg: Segment[] = JSON.parse(activeBooking.segments);
+      if (activeBooking.status === 'playing' && activeBooking.started) {
+        seg.push({ start: activeBooking.started, end: tick });
+      }
+      const q =
+        activeBooking.status === 'booked' && snap.estimated
+          ? snap.estimated
+          : sessionQuote(activeBooking.service as Service, seg, snap);
+      return q;
+    } catch (e) {
+      return { ...emptyBill, error: e instanceof Error ? e.message : 'Chưa tính được phí giờ' };
     }
-    const target = rs.info.live ?? rs.info.due ?? rs.info.soon ?? null;
-    if (target) {
-      openSession(target.id, target.status === 'finished' ? 'pay' : 'order');
+  }, [activeBooking, tick]);
+
+  // F&B orders on activeBooking
+  const bookingOrders: FoodOrder[] = food.data?.orders ?? [];
+  const pendingKitchenOrders = bookingOrders.filter((o) =>
+    ['new', 'preparing', 'ready'].includes(o.status),
+  );
+  const servedOrders = bookingOrders.filter((o) => o.status === 'served');
+  const servedFoodTotal = servedOrders.reduce((s, o) => s + o.total, 0);
+  const pendingFoodTotal = pendingKitchenOrders.reduce((s, o) => s + o.total, 0);
+
+  // Unsent cart total
+  const cartTotal = useMemo(
+    () => cart.reduce((s, l) => s + l.product.price * l.qty, 0),
+    [cart],
+  );
+  const cartCount = useMemo(() => cart.reduce((s, l) => s + l.qty, 0), [cart]);
+
+  // Combined totals for activeBooking
+  const golfTotal = activeBooking
+    ? activeBooking.status === 'finished' || activeBooking.status === 'paid'
+      ? (activeBooking.golf_amount ?? sessionBill.total)
+      : sessionBill.total
+    : 0;
+  const fnbTotal = activeBooking
+    ? Math.max(activeBooking.food_total ?? 0, servedFoodTotal) + pendingFoodTotal + cartTotal
+    : cartTotal;
+  const discountAmount = bill?.discount?.amount ?? 0;
+  const grossTotal = golfTotal + fnbTotal;
+  const payableTotal = Math.max(
+    0,
+    activeBooking?.status === 'finished' && cartTotal === 0 && pendingFoodTotal === 0
+      ? (activeBooking.amount ?? grossTotal) - discountAmount
+      : grossTotal - discountAmount,
+  );
+
+  const elapsedMs = useMemo(() => {
+    if (!activeBooking) return 0;
+    if (activeBooking.started || activeBooking.status === 'paused' || activeBooking.status === 'finished') {
+      return playedMs(activeBooking, tick);
+    }
+    return 0;
+  }, [activeBooking, tick]);
+
+  // Standard hourly rate display for a room
+  const getRoomRateLabel = useCallback(
+    (vip: boolean) => {
+      const rate = vip ? (data.config.vipRate || data.config.rate * 2) : data.config.rate;
+      return money(rate) + '/giờ';
+    },
+    [data.config.rate, data.config.vipRate],
+  );
+
+  // Keyboard shortcuts (F4 Cash Drawer) & Barcode Scanner
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'F4') {
+        e.preventDefault();
+        kickCashDrawer();
+        setNotice('Đã mở két đựng tiền mặt (F4)');
+        return;
+      }
+      const target = e.target as HTMLElement | null;
+      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT');
+      const nowMs = Date.now();
+      const gap = nowMs - lastKeyTimeRef.current;
+      lastKeyTimeRef.current = nowMs;
+
+      if (e.key === 'Enter' && !isInput) {
+        const code = barcodeBufferRef.current.trim();
+        barcodeBufferRef.current = '';
+        if (code.length >= 3) {
+          const matched = catalogProducts.find(
+            (p) => p.sku.toLowerCase() === code.toLowerCase() || p.id.toLowerCase() === code.toLowerCase(),
+          );
+          if (matched) {
+            handleAddToCart(matched, 1);
+            setNotice(`Đã quét mã: ${matched.name} (+1)`);
+          }
+        }
+        return;
+      }
+      if (e.key.length === 1 && !isInput) {
+        barcodeBufferRef.current = gap > 100 ? e.key : barcodeBufferRef.current + e.key;
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
+
+  // Clear notice automatically
+  useEffect(() => {
+    if (!notice && !errorMsg) return;
+    const t = setTimeout(() => {
+      setNotice('');
+      setErrorMsg('');
+    }, 4500);
+    return () => clearTimeout(t);
+  }, [notice, errorMsg]);
+
+  // Select a room on Desktop or Mobile
+  function selectRoom(roomId: string, goMobileScreen?: MobileScreenId) {
+    const rStatus = roomStatuses.find((r) => r.room.id === roomId);
+    setSelectedRoomId(roomId);
+    setCheckInRoomId(roomId);
+    setErrorMsg('');
+
+    if (rStatus?.maint) {
+      setNotice(`${rStatus.room.name} đang tạm ngưng bảo trì: ${rStatus.maint.reason || 'Kiểm tra thiết bị'}`);
+    }
+
+    if (rStatus?.booking) {
+      setActiveBookingId(rStatus.booking.id);
+      payKey.current = operationKey();
+      if (rStatus.booking.status === 'finished') {
+        setDesktopMode('payment');
+        if (goMobileScreen) setMobileScreen(goMobileScreen);
+        else if (isMobile) setMobileScreen('M06');
+      } else if (rStatus.booking.status === 'booked') {
+        setCheckInCustomer(rStatus.booking.customer);
+        setCheckInPhone(rStatus.booking.phone);
+        setCheckInPeople(rStatus.booking.people);
+        setCheckInService((rStatus.booking.service as 'gdr' | '9' | '18') || 'gdr');
+        setDesktopMode('overview');
+        if (goMobileScreen) setMobileScreen(goMobileScreen);
+        else if (isMobile) setMobileScreen('M04');
+      } else {
+        setDesktopMode('overview');
+        if (goMobileScreen) setMobileScreen(goMobileScreen);
+        else if (isMobile) setMobileScreen('M03');
+      }
     } else {
-      setWalkInModal(roomId);
+      setActiveBookingId(null);
+      setCheckInCustomer('');
+      setCheckInPhone('');
+      setCheckInPeople(1);
+      setCheckInService('gdr');
+      setDesktopMode('checkin');
+      if (goMobileScreen) setMobileScreen(goMobileScreen);
+      else if (isMobile) setMobileScreen('M04');
     }
   }
 
-  async function handleQuickStartWalkIn() {
-    if (!walkInModal || saving) return;
+  // Cart manipulation
+  function handleAddToCart(product: CatalogProduct, delta = 1) {
+    setCart((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id);
+      if (existing) {
+        const nextQty = existing.qty + delta;
+        if (nextQty <= 0) return prev.filter((l) => l.product.id !== product.id);
+        return prev.map((l) => (l.product.id === product.id ? { ...l, qty: nextQty } : l));
+      }
+      if (delta <= 0) return prev;
+      return [...prev, { product, qty: delta, note: '' }];
+    });
+  }
+
+  function handleUpdateCartNote(productId: string, noteText: string) {
+    setCart((prev) =>
+      prev.map((l) => (l.product.id === productId ? { ...l, note: noteText } : l)),
+    );
+  }
+
+  // Submit cart items to backend /api/fnb for the active session
+  async function handleCommitCartToSession(targetBookingId?: string): Promise<boolean> {
+    const bId = targetBookingId ?? activeBooking?.id;
+    if (!bId || cart.length === 0) return true;
+    setSaving(true);
+    setErrorMsg('');
+    try {
+      // Ensure each cart item exists in menu_items so /api/fnb records it into SQLite
+      let currentMenu = food.data?.menu ?? generalFood.data?.menu ?? [];
+      const orderLines: { itemId: string; qty: number; expectedVersion: number }[] = [];
+
+      for (const line of cart) {
+        let matchedMenu =
+          line.product.menuItem ??
+          currentMenu.find((m) => m.name.toLowerCase() === line.product.name.toLowerCase() && m.active);
+
+        if (!matchedMenu) {
+          // Create item in menu_items on the fly if not yet in DB
+          const createRes = await fetch('/api/fnb', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'item-create',
+              requestId: operationKey(),
+              name: line.product.name,
+              category: line.product.category === 'fnb' ? 'drink' : 'other',
+              unit: line.product.unit || 'phần',
+              price: line.product.price,
+              feeBps: 0,
+              vatBps: 0,
+              active: true,
+            }),
+          });
+          if (createRes.ok) {
+            const refreshed = await food.reload();
+            currentMenu = refreshed?.menu ?? currentMenu;
+            matchedMenu = currentMenu.find(
+              (m) => m.name.toLowerCase() === line.product.name.toLowerCase() && m.active,
+            );
+          }
+        }
+
+        if (matchedMenu) {
+          orderLines.push({
+            itemId: matchedMenu.id,
+            qty: line.qty,
+            expectedVersion: matchedMenu.version,
+          });
+        }
+      }
+
+      if (orderLines.length > 0) {
+        const combinedNotes = [
+          orderNote.trim(),
+          ...cart.filter((c) => c.note.trim()).map((c) => `${c.product.name}: ${c.note.trim()}`),
+        ]
+          .filter(Boolean)
+          .join(' · ');
+
+        const res = await fetch('/api/fnb', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'order',
+            requestId: operationKey(),
+            bookingId: bId,
+            note: combinedNotes || 'Gọi tại quầy POS',
+            lines: orderLines,
+          }),
+        });
+        const dataRes = (await res.json()) as { error?: string };
+        if (!res.ok) {
+          setErrorMsg(dataRes.error || 'Không thể lưu đơn dịch vụ/F&B');
+          return false;
+        }
+
+        const updatedFood = await food.reload();
+        // If autoServeAtCounter is enabled, transition newly created orders to 'served' so bill total updates immediately
+        if (autoServeAtCounter && updatedFood?.orders) {
+          const newOrders = updatedFood.orders.filter((o) => o.status === 'new');
+          for (const ord of newOrders) {
+            await AdvanceOrderToServed(ord);
+          }
+          await food.reload();
+        }
+      }
+
+      setCart([]);
+      setOrderNote('');
+      await onRefresh();
+      setNotice('Đã cập nhật dịch vụ & F&B vào hóa đơn phiên chơi');
+      return true;
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : 'Lỗi khi thêm dịch vụ vào phiên');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Helper to advance an F&B order through new -> preparing -> ready -> served
+  async function AdvanceOrderToServed(ord: FoodOrder) {
+    let curStatus = ord.status;
+    let curVersion = ord.version;
+    const steps: ('preparing' | 'ready' | 'served')[] =
+      curStatus === 'new'
+        ? ['preparing', 'ready', 'served']
+        : curStatus === 'preparing'
+          ? ['ready', 'served']
+          : curStatus === 'ready'
+            ? ['served']
+            : [];
+    for (const nextStatus of steps) {
+      const r = await fetch('/api/fnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'transition',
+          id: ord.id,
+          expectedVersion: curVersion,
+          status: nextStatus,
+          reason: '',
+        }),
+      });
+      if (!r.ok) break;
+      curVersion += 1;
+      curStatus = nextStatus;
+    }
+  }
+
+  async function handleServeAllPendingOrders(): Promise<boolean> {
+    if (!pendingKitchenOrders.length) return true;
     setSaving(true);
     try {
-      const ok = await onMutate({
-        action: 'walkin',
-        room: walkInModal,
-        customer: walkInName.trim() || 'Nguyễn Hoàng Long',
-        phone: walkInPhone.trim() || '0902 030 165',
-        people: 1,
-        duration: 60,
+      for (const ord of pendingKitchenOrders) {
+        await AdvanceOrderToServed(ord);
+      }
+      await food.reload();
+      await onRefresh();
+      setNotice('Đã xác nhận phục vụ tất cả món trong phiên');
+      return true;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleCancelOrder(ord: FoodOrder) {
+    setSaving(true);
+    try {
+      const r = await fetch('/api/fnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'transition',
+          id: ord.id,
+          expectedVersion: ord.version,
+          status: 'cancelled',
+          reason: 'Khách yêu cầu hủy tại quầy POS',
+        }),
       });
-      if (ok) {
-        const roomId = walkInModal;
-        setWalkInModal(null);
-        setWalkInName('');
-        setWalkInPhone('');
-        setAwaitRoom(roomId);
+      if (r.ok) {
+        await food.reload();
         await onRefresh();
+        setNotice(`Đã hủy đơn #${ord.id.slice(-6)}`);
       }
     } finally {
       setSaving(false);
     }
   }
 
-  const [awaitRoom, setAwaitRoom] = useState<string | null>(null);
-  useEffect(() => {
-    if (!awaitRoom) return;
-    const created = data.bookings.find((x) => x.room === awaitRoom && x.status === 'playing');
-    if (created) {
-      setAwaitRoom(null);
-      openSession(created.id, 'order');
-    }
-  }, [awaitRoom, data.bookings]);
+  // Action 1 & 2: Check-in / Start playing (M04 & Desktop)
+  async function handleStartOrWalkIn() {
+    if (saving) return;
+    setErrorMsg('');
+    const targetRoom = checkInRoomId || selectedRoomId;
+    const rStatus = roomStatuses.find((r) => r.room.id === targetRoom);
 
-  async function handleStart() {
-    if (!b || saving) return;
+    // If there is a 'booked' reservation on this line, start it
+    if (rStatus?.booking && rStatus.booking.status === 'booked') {
+      setSaving(true);
+      try {
+        const ok = await onMutate({ action: 'start', id: rStatus.booking.id });
+        if (ok) {
+          setActiveBookingId(rStatus.booking.id);
+          setDesktopMode('overview');
+          setMobileScreen('M03');
+          setNotice(`Đã bắt đầu tính giờ chơi thực tế cho ${rStatus.room.name}`);
+        }
+      } finally {
+        setSaving(false);
+      }
+      return;
+    }
+
+    // Otherwise start a walk-in session (time starts counting from right now)
+    const customerName = checkInCustomer.trim() || 'Khách lẻ tại quầy';
+    const customerPhone = checkInPhone.trim();
+    if (customerName.length < 2) {
+      setErrorMsg('Vui lòng nhập tên khách hàng (tối thiểu 2 ký tự)');
+      return;
+    }
+    if (customerPhone && !/^\+?[0-9 ()-]{8,20}$/.test(customerPhone)) {
+      setErrorMsg('Số điện thoại không hợp lệ (8–20 chữ số)');
+      return;
+    }
+
     setSaving(true);
     try {
-      await onMutate({ action: 'start', id: b.id });
+      const res = await fetch('/api/club', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'walkin',
+          room: targetRoom,
+          customer: customerName,
+          phone: customerPhone,
+          people: checkInPeople,
+          service: checkInService,
+          minutes: checkInDuration,
+        }),
+      });
+      const result = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok) {
+        setErrorMsg(result.error || 'Không thể bắt đầu phiên chơi');
+        return;
+      }
+      await onRefresh();
+      if (result.id) {
+        setActiveBookingId(result.id);
+        if (cart.length > 0) {
+          await handleCommitCartToSession(result.id);
+        }
+      }
+      setDesktopMode('overview');
+      setMobileScreen('M03');
+      setNotice(`Đã nhận khách & bắt đầu tính giờ tại ${rooms.find((r) => r.id === targetRoom)?.name}`);
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleExtend(minutes: number) {
-    if (!b || saving) return;
+  // Reserve a future slot without starting the clock yet
+  async function handleReserveSlotOnly() {
+    if (saving) return;
+    const customerName = checkInCustomer.trim();
+    const customerPhone = checkInPhone.trim();
+    if (customerName.length < 2 || !/^\+?[0-9 ()-]{8,20}$/.test(customerPhone)) {
+      setErrorMsg('Đặt giữ chỗ cần nhập đầy đủ Tên khách và Số điện thoại hợp lệ.');
+      return;
+    }
     setSaving(true);
+    setErrorMsg('');
     try {
-      await onMutate({ action: 'extend', id: b.id, minutes });
-      setExtendModal(false);
+      const ok = await onMutate({
+        action: 'book',
+        room: checkInRoomId || selectedRoomId,
+        service: checkInService,
+        start: Date.now() + 15 * 60000,
+        people: checkInPeople,
+        minutes: checkInDuration,
+        customer: customerName,
+        phone: customerPhone,
+        expectedRevision: data.config.pricingRevision,
+      });
+      if (ok) {
+        setDesktopMode('overview');
+        setMobileScreen('M02');
+        setNotice('Đã tạo lịch đặt giữ chỗ trên line');
+      }
     } finally {
       setSaving(false);
     }
   }
 
-  // Switch Service between Hourly, 9-hole, 18-hole (P0)
+  // Pause / Resume / Extend / Switch Service
+  async function handlePauseOrResume() {
+    if (!activeBooking || saving) return;
+    setSaving(true);
+    try {
+      const act = activeBooking.status === 'paused' ? 'resume' : 'pause';
+      await onMutate({ action: act, id: activeBooking.id });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   async function handleSwitchService(target: 'gdr' | '9' | '18') {
-    if (!b || saving || b.service === target) return;
+    if (!activeBooking || saving || activeBooking.service === target) return;
     setSaving(true);
     try {
-      await onMutate({ action: 'switch-service', id: b.id, service: target });
+      await onMutate({ action: 'switch-service', id: activeBooking.id, service: target });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleExtendMinutes(minutes: number) {
+    if (!activeBooking || saving) return;
+    setSaving(true);
+    try {
+      await onMutate({ action: 'extend', id: activeBooking.id, minutes });
+      setNotice(`Đã gia hạn thêm ${minutes} phút`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Action 4: Finish session (chốt thời gian chơi, chuyển sang chờ thanh toán)
+  async function handleFinishSession(proceedToPay = false) {
+    if (!activeBooking || saving) return;
+    setErrorMsg('');
+
+    // First commit any unsent cart items
+    if (cart.length > 0) {
+      const committed = await handleCommitCartToSession(activeBooking.id);
+      if (!committed) return;
+    }
+
+    // Serve any pending kitchen orders so payment won't be blocked by unserved items
+    if (pendingKitchenOrders.length > 0) {
+      await handleServeAllPendingOrders();
+    }
+
+    if (activeBooking.status === 'playing' || activeBooking.status === 'paused') {
+      setSaving(true);
+      try {
+        const ok = await onMutate({ action: 'finish', id: activeBooking.id });
+        if (!ok) return;
+        await reloadBill();
+      } finally {
+        setSaving(false);
+      }
+    }
+
+    if (proceedToPay) {
+      payKey.current = operationKey();
+      setDesktopMode('payment');
+      setMobileScreen('M07');
+    } else {
+      setNotice('Đã kết thúc tính giờ chơi. Phiên đang chờ thanh toán.');
+      if (isMobile) setMobileScreen('M06');
+    }
+  }
+
+  // Action 5: Confirm Payment (M07 -> M08)
+  async function handleConfirmPayment(bankTxId?: string) {
+    if (!activeBooking || saving) return;
+    if (!data.activeShift) {
+      setErrorMsg('Chưa mở ca làm việc! Vui lòng mở ca trước khi xác nhận thu tiền.');
+      setShiftSubModal('open');
+      return;
+    }
+
+    setErrorMsg('');
+    setSaving(true);
+    try {
+      // Ensure cart is committed & pending orders served first
+      if (cart.length > 0) {
+        const okCart = await handleCommitCartToSession(activeBooking.id);
+        if (!okCart) return;
+      }
+      if (pendingKitchenOrders.length > 0) {
+        await handleServeAllPendingOrders();
+      }
+
+      // Ensure session is finished so final golf_amount & amount are locked in DB
+      if (activeBooking.status === 'playing' || activeBooking.status === 'paused') {
+        const finishedOk = await onMutate({ action: 'finish', id: activeBooking.id });
+        if (!finishedOk) return;
+      }
+
+      // Fetch latest due from /api/bank?booking=ID to avoid any rounding mismatch
+      let exactDue = payableTotal;
+      try {
+        const dueRes = await fetch('/api/bank?booking=' + encodeURIComponent(activeBooking.id), {
+          cache: 'no-store',
+        });
+        if (dueRes.ok) {
+          const dueJson = (await dueRes.json()) as { due: number | null };
+          if (typeof dueJson.due === 'number') exactDue = dueJson.due;
+        }
+      } catch {
+        // Fallback to payableTotal
+      }
+
+      const methodForApi: 'cash' | 'transfer' | 'card' =
+        payMethod === 'transfer' ? 'transfer' : payMethod === 'card' ? 'card' : 'cash';
+
+      const ok = await onMutate({
+        action: 'pay',
+        id: activeBooking.id,
+        method: methodForApi,
+        requestId: payKey.current,
+        expectedAmount: exactDue,
+        ...(bankTxId ? { bankTxId } : {}),
+      });
+
+      if (!ok) {
+        setErrorMsg('Chưa ghi nhận được giao dịch thanh toán. Vui lòng kiểm tra lại.');
+        return;
+      }
+
+      if (methodForApi === 'cash') {
+        kickCashDrawer();
+      }
+
+      const receiptObj = {
+        bookingId: activeBooking.id,
+        code: `HD${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${activeBooking.id.slice(-4).toUpperCase()}`,
+        roomName: selectedRoomObj.name,
+        customer: activeBooking.customer,
+        phone: activeBooking.phone,
+        total: exactDue,
+        methodLabel: PAY_LABEL[payMethod] || 'Tiền mặt',
+        at: Date.now(),
+        cashier: data.user || 'Thu ngân POS',
+      };
+      setLastReceipt(receiptObj);
+
+      if (printOnConfirm) {
+        handlePrintReceipt(activeBooking);
+      }
+
+      setDesktopMode('receipt');
+      setMobileScreen('M08');
       await onRefresh();
     } finally {
       setSaving(false);
     }
   }
 
-  // Discount & Voucher Application (P0)
-  async function handleApplyDiscount(amount: number, reason: string) {
-    if (!b || saving || amount <= 0) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/billing', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'discount',
-          bookingId: b.id,
-          amount,
-          reason: reason.trim() || 'Ưu đãi quầy POS',
-        }),
-      });
-      if (res.ok) {
-        setCustomDiscount({ amount, reason });
-        await bill?.discount;
-        await onRefresh();
-        setDiscountModal(false);
-      } else {
-        // Fallback locally
-        setCustomDiscount({ amount, reason });
-        setDiscountModal(false);
-      }
-    } catch {
-      setCustomDiscount({ amount, reason });
-      setDiscountModal(false);
-    } finally {
-      setSaving(false);
-    }
+  function handlePrintReceipt(targetBooking?: Booking | null) {
+    const bTarget = targetBooking ?? activeBooking;
+    if (!bTarget) return;
+    const rName = rooms.find((r) => r.id === bTarget.room)?.name ?? bTarget.room;
+    printK80Receipt(
+      generateK80Html({
+        booking: bTarget,
+        quote: sessionBill,
+        bill,
+        roomName: rName,
+        food: food.data,
+      }),
+    );
   }
 
-  // Shift Operations (P0)
-  async function handleOpenShift() {
+  function handlePrintKitchen() {
+    if (!activeBooking) return;
+    const itemsToPrint: { name: string; qty: number; note?: string }[] = [];
+    for (const o of bookingOrders) {
+      if (o.status === 'cancelled') continue;
+      const parsed = JSON.parse(o.items) as FoodLine[];
+      for (const l of parsed) {
+        itemsToPrint.push({ name: l.name, qty: l.qty, note: o.note });
+      }
+    }
+    for (const c of cart) {
+      itemsToPrint.push({ name: c.product.name, qty: c.qty, note: c.note });
+    }
+    if (!itemsToPrint.length) {
+      setNotice('Chưa có món ăn/thức uống nào trong phiên để in phiếu bếp.');
+      return;
+    }
+    printK80Receipt(
+      generateKitchenTicketHtml({
+        roomName: selectedRoomObj.name,
+        code: activeBooking.id.slice(-6).toUpperCase(),
+        items: itemsToPrint,
+        cashierName: data.user || 'Thu ngân POS',
+      }),
+    );
+    setNotice('Đã gửi lệnh in phiếu bếp / bar (K80)');
+  }
+
+  async function handleSendZaloReceipt(targetBooking?: Booking | null) {
+    const bTarget = targetBooking ?? activeBooking;
+    if (!bTarget) return;
+    const rName = rooms.find((r) => r.id === bTarget.room)?.name ?? bTarget.room;
+    await sendBillToZalo({
+      phone: bTarget.phone,
+      billText: formatBillZaloText({
+        booking: bTarget,
+        quote: sessionBill,
+        bill,
+        roomName: rName,
+        food: food.data,
+      }),
+      onNotify: (msg) => setNotice(msg),
+    });
+  }
+
+  // Shift operations (M09)
+  async function handleOpenShiftSubmit() {
     if (saving) return;
     setSaving(true);
+    setErrorMsg('');
     try {
-      const res = await fetch('/api/finance', {
+      const r = await fetch('/api/finance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'open',
           requestId: operationKey(),
-          name: shiftNameInput.trim() || 'Ca sáng',
-          openingCash: Number(shiftCashInput.replace(/\D/g, '')) || 0,
+          name: shiftNameInput.trim() || 'Ca tiêu chuẩn',
+          openingCash: Number(shiftOpeningCash.replace(/\D/g, '')) || 0,
         }),
       });
-      if (res.ok) {
-        setShiftModal(null);
-        await onRefresh();
-        setNotice('Đã mở ca làm việc thành công!');
-      } else {
-        const d = (await res.json()) as { error?: string };
-        setNotice(d.error || 'Chưa mở được ca');
+      const resData = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        setErrorMsg(resData.error || 'Không mở được ca làm việc');
+        return;
       }
+      setShiftSubModal(null);
+      await onRefresh();
+      await loadFinanceOverview();
+      setNotice('Đã mở ca làm việc thành công');
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleCloseShift() {
+  async function handleCashEntrySubmit(kind: 'cash_in' | 'cash_out') {
     if (!data.activeShift || saving) return;
-    setSaving(true);
-    try {
-      const res = await fetch('/api/finance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'close',
-          shiftId: data.activeShift.id,
-          expectedVersion: 0,
-          countedCash: Number(closeCountedCash.replace(/\D/g, '')) || 0,
-          countedTransfer: Number(closeCountedTransfer.replace(/\D/g, '')) || 0,
-          countedCard: Number(closeCountedCard.replace(/\D/g, '')) || 0,
-          note: closeNote.trim() || 'Bàn giao ca thành công',
-        }),
-      });
-      if (res.ok) {
-        try {
-          const zReportHtml = generateShiftZReportHtml({
-            shiftName: data.activeShift.name,
-            cashierName: 'Thu ngân quầy POS',
-            openedAt: data.activeShift.opened_at,
-            closedAt: Date.now(),
-            openingCash: (data.activeShift as unknown as { opening_cash?: number }).opening_cash || 0,
-            countedCash: Number(closeCountedCash.replace(/\D/g, '')) || 0,
-            countedTransfer: Number(closeCountedTransfer.replace(/\D/g, '')) || 0,
-            countedCard: Number(closeCountedCard.replace(/\D/g, '')) || 0,
-            notes: closeNote.trim(),
-          });
-          printK80Receipt(zReportHtml);
-        } catch {
-          // Ignore printer error
-        }
-        setShiftModal(null);
-        await onRefresh();
-        setNotice('Đã chốt ca & in phiếu kết ca (Z-Report) thành công!');
-      } else {
-        const d = (await res.json()) as { error?: string };
-        setNotice(d.error || 'Chưa đóng được ca');
-      }
-    } finally {
-      setSaving(false);
+    const amt = Number(cashEntryAmount.replace(/\D/g, '')) || 0;
+    if (amt <= 0) {
+      setErrorMsg('Vui lòng nhập số tiền lớn hơn 0');
+      return;
     }
-  }
-
-  async function handleCashEntry(kind: 'in' | 'out') {
-    if (!data.activeShift || saving) return;
-    const amount = Number(cashEntryAmount.replace(/\D/g, '')) || 0;
-    if (amount <= 0) return;
     setSaving(true);
+    setErrorMsg('');
     try {
-      const res = await fetch('/api/finance', {
+      const r = await fetch('/api/finance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -534,2741 +1219,3396 @@ export function ModernPosFlow({
           requestId: operationKey(),
           shiftId: data.activeShift.id,
           kind,
-          amount,
-          note: cashEntryNote.trim() || (kind === 'in' ? 'Nạp tiền vào quỹ ca' : 'Rút chi tiền mặt từ ca'),
+          amount: amt,
+          note:
+            cashEntryNote.trim() ||
+            (kind === 'cash_in' ? 'Nạp thêm tiền mặt vào két ca' : 'Rút quỹ tiền mặt trong ca'),
         }),
       });
-      if (res.ok) {
-        setShiftModal(null);
-        setCashEntryAmount('');
-        setCashEntryNote('');
-        await onRefresh();
-      } else {
-        const d = (await res.json()) as { error?: string };
-        setNotice(d.error || 'Chưa ghi nhận quỹ');
+      const resData = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        setErrorMsg(resData.error || 'Không ghi nhận được phiếu quỹ');
+        return;
       }
+      setShiftSubModal(null);
+      setCashEntryAmount('');
+      setCashEntryNote('');
+      await onRefresh();
+      await loadFinanceOverview();
+      setNotice(kind === 'cash_in' ? 'Đã nạp quỹ tiền mặt vào ca' : 'Đã ghi nhận rút quỹ tiền mặt');
     } finally {
       setSaving(false);
     }
   }
 
-  // Adding an item from the 4-column catalog
-  async function handleAddCatalogItem(item: CatalogItem) {
-    const menuItem = food.data?.menu.find(
-      (m) => m.name.toLowerCase() === item.name.toLowerCase() && m.active,
-    );
-    if (menuItem && b) {
-      try {
-        const reqId = operationKey();
-        const r = await fetch('/api/fnb', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'order',
-            requestId: reqId,
-            bookingId: b.id,
-            note: 'Gọi tại quầy POS',
-            lines: [{ itemId: menuItem.id, qty: 1, expectedVersion: menuItem.version }],
-          }),
-        });
-        if (r.ok) {
-          await food.reload();
-          await onRefresh();
-          return;
-        }
-      } catch {
-        // Fallback
-      }
-    }
-
-    setExtraItems((prev) => {
-      const exist = prev.find((x) => x.name === item.name);
-      if (exist) {
-        return prev.map((x) => (x.name === item.name ? { ...x, qty: x.qty + 1 } : x));
-      }
-      return [...prev, { id: item.id, name: item.name, qty: 1, price: item.price }];
-    });
-  }
-
-  async function handleRemoveExtraItem(itemName: string) {
-    setExtraItems((prev) => prev.filter((x) => x.name !== itemName));
-  }
-
-  async function handleCancelFoodOrder(orderId: string, version: number) {
+  async function handleCloseShiftSubmit() {
+    if (!data.activeShift || saving) return;
+    const openShiftSummary = financeData?.shifts.find((s) => s.id === data.activeShift?.id);
+    setSaving(true);
+    setErrorMsg('');
     try {
-      await fetch('/api/fnb', {
+      const cCash = Number(closeCountedCash.replace(/\D/g, '')) || 0;
+      const cTransfer = Number(closeCountedTransfer.replace(/\D/g, '')) || 0;
+      const cCard = Number(closeCountedCard.replace(/\D/g, '')) || 0;
+
+      const r = await fetch('/api/finance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'transition',
-          id: orderId,
-          expectedVersion: version,
-          status: 'cancelled',
-          reason: 'Khách yêu cầu hủy món',
+          action: 'close',
+          shiftId: data.activeShift.id,
+          expectedVersion: openShiftSummary?.version ?? 0,
+          countedCash: cCash,
+          countedTransfer: cTransfer,
+          countedCard: cCard,
+          note: closeNote.trim() || 'Đã đối soát và bàn giao ca',
         }),
       });
-      await food.reload();
+      const resData = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        setErrorMsg(resData.error || 'Chưa thể đóng ca');
+        return;
+      }
+      try {
+        printK80Receipt(
+          generateShiftZReportHtml({
+            shiftName: data.activeShift.name,
+            cashierName: data.user || 'Thu ngân POS',
+            openedAt: data.activeShift.opened_at,
+            closedAt: Date.now(),
+            openingCash: openShiftSummary?.opening_cash ?? 0,
+            countedCash: cCash,
+            countedTransfer: cTransfer,
+            countedCard: cCard,
+            notes: closeNote.trim(),
+          }),
+        );
+      } catch {
+        // Ignore printer error
+      }
+      setShiftSubModal(null);
       await onRefresh();
-    } catch {
-      // Ignored
+      await loadFinanceOverview();
+      setNotice('Đã đối soát, chốt ca & xuất báo cáo kết ca (Z-Report)');
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function handleCheckout() {
-    if (!b || saving) return;
-    if (finished) {
-      setStep('pay');
+  // Cancel booking with permission & reason in M10
+  async function handleCancelBooking(bookingToCancel: Booking) {
+    if (saving) return;
+    if (cancelReasonInput.trim().length < 3) {
+      setErrorMsg('Vui lòng nhập lý do hủy (tối thiểu 3 ký tự)');
       return;
     }
     setSaving(true);
     try {
-      if (b.status === 'playing') {
-        await onMutate({ action: 'finish', id: b.id });
-      }
-      setStep('pay');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleConfirmPayment(bankTxId?: string) {
-    if (!b || saving) return;
-    setSaving(true);
-    setNotice('');
-    const code = 'HD' + Math.floor(10000 + Math.random() * 90000);
-    try {
-      const ok = await onMutate({
-        action: 'pay',
-        id: b.id,
-        method: payMethod,
-        requestId: payKey.current,
-        expectedAmount: total,
-        ...(bankTxId ? { bankTxId } : {}),
-      });
-      if (ok || true) {
-        if (payMethod === 'cash') {
-          kickCashDrawer();
-        }
-        setPaid({
-          total,
-          method: PAY_LABEL[payMethod],
-          at: Date.now(),
-          code,
-        });
-        setStep('done');
-        if (printReceipt) printNow();
+      const ok = await onMutate({ action: 'cancel', id: bookingToCancel.id });
+      if (ok) {
+        setShowCancelConfirm(false);
+        setCancelReasonInput('');
+        setNotice(`Đã hủy phiếu #${bookingToCancel.id.slice(-6).toUpperCase()}`);
       }
     } finally {
       setSaving(false);
     }
   }
 
-  function printNow() {
-    if (!b) return;
-    printK80Receipt(
-      generateK80Html({
-        booking: b,
-        quote: q,
-        bill,
-        roomName: room?.name ?? b.room,
-        food: food.data,
-      }),
+  // Active shift summary calculations
+  const activeShiftSummary: ShiftSummary | null = useMemo(() => {
+    if (!data.activeShift) return null;
+    return financeData?.shifts.find((s) => s.id === data.activeShift?.id) ?? null;
+  }, [data.activeShift, financeData]);
+
+  const activeShiftRecon = useMemo(() => {
+    if (!activeShiftSummary) return null;
+    const t = shiftTotals(activeShiftSummary);
+    return reconciliation(t, {
+      cash: Number(closeCountedCash.replace(/\D/g, '')) || t.openingCash + t.cashReceived - (t.cashRefund ?? 0) + t.cashIn - t.cashOut,
+      transfer: Number(closeCountedTransfer.replace(/\D/g, '')) || t.transferReceived - (t.transferRefund ?? 0),
+      card: Number(closeCountedCard.replace(/\D/g, '')) || t.cardReceived - (t.cardRefund ?? 0),
+    });
+  }, [activeShiftSummary, closeCountedCash, closeCountedTransfer, closeCountedCard]);
+
+  // Filtered transaction history for M10
+  const filteredTransactions = useMemo(() => {
+    const q = txSearch.trim().toLowerCase();
+    return data.bookings.filter((b) => {
+      if (txStatusFilter === 'all') {
+        if (!['paid', 'finished', 'cancelled'].includes(b.status)) return false;
+      } else if (b.status !== txStatusFilter) {
+        return false;
+      }
+      if (!q) return true;
+      const rName = rooms.find((r) => r.id === b.room)?.name ?? b.room;
+      return `${b.id} ${b.customer} ${b.phone} ${rName}`.toLowerCase().includes(q);
+    });
+  }, [data.bookings, txSearch, txStatusFilter]);
+
+  // Cash change calculation
+  const cashGiven = Number(tendered.replace(/\D/g, '')) || 0;
+  const cashChange = changeDue(cashGiven, payableTotal);
+  const quickCashDenominations = useMemo(() => {
+    if (payableTotal <= 0) return [100000, 200000, 500000];
+    const roundUp = (step: number) => Math.ceil(payableTotal / step) * step;
+    return Array.from(
+      new Set([payableTotal, roundUp(50000), roundUp(100000), roundUp(500000)]),
+    )
+      .filter((n) => n >= payableTotal)
+      .slice(0, 4);
+  }, [payableTotal]);
+
+  const canRefund = !data.permissions || data.permissions.includes('billing.refund');
+  const canDiscount = !data.permissions || data.permissions.includes('billing.discount');
+  const canCancelBooking = !data.permissions || data.permissions.includes('booking.cancel');
+  const newSupportRequests = data.requests?.filter((r) => r.status === 'new') ?? [];
+  const totalNotifications = newSupportRequests.length + (data.onlinePending ?? 0);
+
+  // ============================================================================
+  // RENDER SHARED SHIFT & TRANSACTION MODALS / DRAWERS
+  // ============================================================================
+  function renderShiftManagementContent() {
+    const shiftRevenue = activeShiftSummary
+      ? activeShiftSummary.cash_received +
+        activeShiftSummary.transfer_received +
+        activeShiftSummary.card_received -
+        (activeShiftSummary.cash_refund +
+          activeShiftSummary.transfer_refund +
+          activeShiftSummary.card_refund)
+      : data.todayReceipts || 0;
+
+    return (
+      <div className="pos-m3-shift-container">
+        {/* Current Shift Status Banner */}
+        <div className={`pos-m3-shift-hero ${data.activeShift ? 'open' : 'closed'}`}>
+          <div className="pos-m3-shift-hero-info">
+            <span className="pos-m3-shift-badge">
+              {data.activeShift ? '● CA ĐANG MỞ' : '○ CHƯA MỞ CA'}
+            </span>
+            <h3>{data.activeShift ? data.activeShift.name : 'Chưa có ca thu ngân hoạt động'}</h3>
+            <p>
+              {data.activeShift
+                ? `Mở lúc ${time(data.activeShift.opened_at)} (${date(data.activeShift.opened_at)}) · Nhân viên: ${data.user || 'Thu ngân'}`
+                : 'Mở ca làm việc để bắt đầu thu tiền và ghi nhận sổ quỹ tại cơ sở.'}
+            </p>
+          </div>
+          <div className="pos-m3-shift-hero-actions">
+            {!data.activeShift ? (
+              <button
+                type="button"
+                className="pos-m3-btn-primary"
+                onClick={() => setShiftSubModal('open')}
+              >
+                <Play size={16} /> Mở ca làm việc
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="pos-m3-btn-tonal"
+                  onClick={() => setShiftSubModal('cash_in')}
+                >
+                  <Plus size={16} /> Nạp quỹ
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-btn-tonal"
+                  onClick={() => setShiftSubModal('cash_out')}
+                >
+                  <Minus size={16} /> Rút quỹ
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-btn-danger"
+                  onClick={() => {
+                    if (activeShiftRecon) {
+                      setCloseCountedCash(String(activeShiftRecon.expectedCash));
+                      setCloseCountedTransfer(String(activeShiftRecon.expectedTransfer));
+                      setCloseCountedCard(String(activeShiftRecon.expectedCard));
+                    }
+                    setShiftSubModal('close');
+                  }}
+                >
+                  <CheckCircle2 size={16} /> Đối soát & Bàn giao ca
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* KPI Cards for Shift */}
+        <div className="pos-m3-shift-kpis">
+          <div className="pos-m3-kpi-card highlight">
+            <span>Tổng doanh thu thuần ca</span>
+            <strong>{canSeeMoney ? money(shiftRevenue) : '***'}</strong>
+            <small>{activeShiftSummary?.entry_count ?? 0} bút toán trong ca</small>
+          </div>
+          <div className="pos-m3-kpi-card">
+            <span>Tiền mặt lý thuyết trong két</span>
+            <strong>
+              {canSeeMoney ? money(activeShiftRecon?.expectedCash ?? (activeShiftSummary?.opening_cash ?? 0)) : '***'}
+            </strong>
+            <small>Đầu ca: {money(activeShiftSummary?.opening_cash ?? 0)}</small>
+          </div>
+          <div className="pos-m3-kpi-card">
+            <span>Thu Chuyển khoản / QR SePay</span>
+            <strong>
+              {canSeeMoney ? money(activeShiftRecon?.expectedTransfer ?? 0) : '***'}
+            </strong>
+            <small>Đã đối soát ngân hàng</small>
+          </div>
+          <div className="pos-m3-kpi-card">
+            <span>Thu Thẻ POS & Khác</span>
+            <strong>{canSeeMoney ? money(activeShiftRecon?.expectedCard ?? 0) : '***'}</strong>
+            <small>
+              Nạp quỹ: +{money(activeShiftSummary?.cash_in ?? 0)} · Rút quỹ: −
+              {money(activeShiftSummary?.cash_out ?? 0)}
+            </small>
+          </div>
+        </div>
+
+        {/* Inline Action Form when opening/cash-in/cash-out/closing */}
+        {shiftSubModal === 'open' && (
+          <div className="pos-m3-card pos-m3-shift-form">
+            <div className="pos-m3-card-head">
+              <h4>Mở ca làm việc mới</h4>
+              <button type="button" className="pos-m3-icon-btn" onClick={() => setShiftSubModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="pos-m3-form-grid">
+              <label className="pos-m3-field">
+                <span>Tên ca làm việc</span>
+                <select value={shiftNameInput} onChange={(e) => setShiftNameInput(e.target.value)}>
+                  <option value="Ca sáng (06:00 - 14:00)">Ca sáng (06:00 - 14:00)</option>
+                  <option value="Ca chiều (14:00 - 22:00)">Ca chiều (14:00 - 22:00)</option>
+                  <option value="Ca tối (18:00 - 23:30)">Ca tối (18:00 - 23:30)</option>
+                  <option value="Ca hành chính (08:00 - 17:00)">Ca hành chính (08:00 - 17:00)</option>
+                </select>
+              </label>
+              <label className="pos-m3-field">
+                <span>Tiền mặt đầu ca trong két (VNĐ)</span>
+                <input
+                  inputMode="numeric"
+                  value={shiftOpeningCash}
+                  onChange={(e) => setShiftOpeningCash(e.target.value.replace(/\D/g, ''))}
+                  placeholder="1000000"
+                />
+              </label>
+            </div>
+            <div className="pos-m3-form-actions">
+              <button type="button" className="pos-m3-btn-outline" onClick={() => setShiftSubModal(null)}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="pos-m3-btn-primary"
+                disabled={saving}
+                onClick={handleOpenShiftSubmit}
+              >
+                {saving ? 'Đang mở ca…' : 'Xác nhận mở ca'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {(shiftSubModal === 'cash_in' || shiftSubModal === 'cash_out') && (
+          <div className="pos-m3-card pos-m3-shift-form">
+            <div className="pos-m3-card-head">
+              <h4>
+                {shiftSubModal === 'cash_in'
+                  ? 'Nạp thêm tiền mặt vào quỹ ca'
+                  : 'Rút tiền mặt từ quỹ ca'}
+              </h4>
+              <button type="button" className="pos-m3-icon-btn" onClick={() => setShiftSubModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="pos-m3-form-grid">
+              <label className="pos-m3-field">
+                <span>Số tiền (VNĐ)</span>
+                <input
+                  inputMode="numeric"
+                  value={cashEntryAmount}
+                  onChange={(e) => setCashEntryAmount(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Nhập số tiền..."
+                />
+              </label>
+              <label className="pos-m3-field">
+                <span>Lý do / Diễn giải (Bắt buộc)</span>
+                <input
+                  value={cashEntryNote}
+                  onChange={(e) => setCashEntryNote(e.target.value)}
+                  placeholder={
+                    shiftSubModal === 'cash_in'
+                      ? 'VD: Bổ sung tiền lẻ thối khách'
+                      : 'VD: Chi mua đá viên / nước uống'
+                  }
+                />
+              </label>
+            </div>
+            <div className="pos-m3-form-actions">
+              <button type="button" className="pos-m3-btn-outline" onClick={() => setShiftSubModal(null)}>
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="pos-m3-btn-primary"
+                disabled={saving}
+                onClick={() => handleCashEntrySubmit(shiftSubModal)}
+              >
+                {saving ? 'Đang lưu…' : 'Ghi nhận sổ quỹ'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {shiftSubModal === 'close' && data.activeShift && (
+          <div className="pos-m3-card pos-m3-shift-form">
+            <div className="pos-m3-card-head">
+              <h4>Đối soát & Bàn giao ca ({data.activeShift.name})</h4>
+              <button type="button" className="pos-m3-icon-btn" onClick={() => setShiftSubModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="pos-m3-form-grid">
+              <label className="pos-m3-field">
+                <span>
+                  Tiền mặt kiểm thực tế (Sổ sách: {money(activeShiftRecon?.expectedCash ?? 0)})
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={closeCountedCash}
+                  onChange={(e) => setCloseCountedCash(e.target.value.replace(/\D/g, ''))}
+                />
+              </label>
+              <label className="pos-m3-field">
+                <span>
+                  Chuyển khoản thực nhận (Sổ sách: {money(activeShiftRecon?.expectedTransfer ?? 0)})
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={closeCountedTransfer}
+                  onChange={(e) => setCloseCountedTransfer(e.target.value.replace(/\D/g, ''))}
+                />
+              </label>
+              <label className="pos-m3-field">
+                <span>
+                  Thẻ POS thực nhận (Sổ sách: {money(activeShiftRecon?.expectedCard ?? 0)})
+                </span>
+                <input
+                  inputMode="numeric"
+                  value={closeCountedCard}
+                  onChange={(e) => setCloseCountedCard(e.target.value.replace(/\D/g, ''))}
+                />
+              </label>
+              <label className="pos-m3-field">
+                <span>Ghi chú bàn giao ca</span>
+                <input
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  placeholder="Ghi chú chênh lệch hoặc bàn giao cho ca sau..."
+                />
+              </label>
+            </div>
+            {activeShiftRecon && (
+              <div className="pos-m3-recon-summary">
+                <span>
+                  Chênh lệch tiền mặt:{' '}
+                  <strong className={activeShiftRecon.cashDifference < 0 ? 'neg' : 'pos'}>
+                    {money(activeShiftRecon.cashDifference)}
+                  </strong>
+                </span>
+                <span>
+                  Tổng chênh lệch:{' '}
+                  <strong
+                    className={
+                      activeShiftRecon.cashDifference +
+                        activeShiftRecon.transferDifference +
+                        activeShiftRecon.cardDifference <
+                      0
+                        ? 'neg'
+                        : 'pos'
+                    }
+                  >
+                    {money(
+                      activeShiftRecon.cashDifference +
+                        activeShiftRecon.transferDifference +
+                        activeShiftRecon.cardDifference,
+                    )}
+                  </strong>
+                </span>
+              </div>
+            )}
+            <div className="pos-m3-form-actions">
+              <button type="button" className="pos-m3-btn-outline" onClick={() => setShiftSubModal(null)}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="pos-m3-btn-danger"
+                disabled={saving}
+                onClick={handleCloseShiftSubmit}
+              >
+                {saving ? 'Đang chốt ca…' : 'Chốt ca & In Z-Report'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Shift Ledger Entries */}
+        <div className="pos-m3-card">
+          <div className="pos-m3-card-head">
+            <h4>Nhật ký thu chi trong ca</h4>
+            <button type="button" className="pos-m3-btn-text" onClick={loadFinanceOverview}>
+              <RefreshCw size={14} /> Làm mới
+            </button>
+          </div>
+          {financeData?.entries.length ? (
+            <div className="pos-m3-entry-list">
+              {financeData.entries.slice(0, 20).map((en) => {
+                const isOut = en.kind === 'cash_out' || en.kind === 'refund';
+                return (
+                  <div key={en.id} className="pos-m3-entry-row">
+                    <div>
+                      <strong>
+                        {en.kind === 'payment'
+                          ? 'Thu tiền hóa đơn'
+                          : en.kind === 'cash_in'
+                            ? 'Nạp quỹ tiền mặt'
+                            : en.kind === 'cash_out'
+                              ? 'Rút quỹ tiền mặt'
+                              : 'Hoàn tiền khách'}
+                      </strong>
+                      <small>
+                        {time(en.created)} · {PAY_LABEL[en.method] || en.method} · {en.note || en.actor}
+                      </small>
+                    </div>
+                    <span className={`pos-m3-entry-amt ${isOut ? 'out' : 'in'}`}>
+                      {isOut ? '−' : '+'}
+                      {money(en.amount)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="pos-m3-empty-note">Chưa có bút toán thu/chi nào trong ca hiện tại.</p>
+          )}
+        </div>
+      </div>
     );
   }
 
-  function handlePrintKitchenTicket() {
-    const fnbItems: { name: string; qty: number; note?: string }[] = [];
-    for (const it of extraItems) {
-      const cat = CATALOG_ITEMS.find((c) => c.name === it.name)?.category;
-      if (cat === 'fnb' || cat === 'combo') {
-        fnbItems.push({ name: it.name, qty: it.qty });
-      }
-    }
-    for (const fl of foodLines) {
-      fnbItems.push({ name: fl.line.name, qty: fl.line.qty });
-    }
-
-    if (fnbItems.length === 0) {
-      setNotice('Chưa có món F&B/Pha chế nào trong đơn để in phiếu bếp!');
-      return;
-    }
-
-    const html = generateKitchenTicketHtml({
-      roomName: room?.name ?? activeBooking.room,
-      code: (activeBooking.id || 'HD1').slice(-6).toUpperCase(),
-      items: fnbItems,
-      cashierName: data.activeShift?.name || 'Thu ngân quầy POS',
-    });
-    printK80Receipt(html);
-    setNotice('Đã gửi lệnh in phiếu bếp / quầy bar (K80)!');
-  }
-
-  // Barcode scanner & shortcut listeners (F4, F9)
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'F4') {
-        e.preventDefault();
-        kickCashDrawer();
-        setNotice('Đã kích hoạt mở két tiền mặt (F4)');
-        return;
-      }
-      if (e.key === 'F9') {
-        if (step === 'order' && activeBooking) {
-          e.preventDefault();
-          handleCheckout();
-          return;
-        }
-      }
-
-      const target = e.target as HTMLElement | null;
-      const isInput = target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA');
-
-      const now = Date.now();
-      const interval = now - lastKeyTimeRef.current;
-      lastKeyTimeRef.current = now;
-
-      if (e.key === 'Enter') {
-        const code = barcodeBufferRef.current.trim();
-        barcodeBufferRef.current = '';
-        if (code.length >= 3) {
-          const matched = CATALOG_ITEMS.find(
-            (c) => c.sku === code || c.id === code || c.name.toLowerCase() === code.toLowerCase(),
-          );
-          if (matched) {
-            playBeep();
-            handleAddCatalogItem(matched);
-            setNotice(`Đã quét mã vạch: ${matched.name} (+1)`);
-          } else if (!isInput) {
-            setNotice(`Không tìm thấy sản phẩm có mã vạch/SKU: ${code}`);
-          }
-        }
-        return;
-      }
-
-      if (e.key.length === 1) {
-        if (interval > 100) {
-          barcodeBufferRef.current = e.key;
-        } else {
-          barcodeBufferRef.current += e.key;
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, activeBooking, extraItems, foodLines]);
-
-  async function sendZalo() {
-    if (!b) return;
-    await sendBillToZalo({
-      phone: b.phone,
-      billText: formatBillZaloText({
-        booking: b,
-        quote: q,
-        bill,
-        roomName: room?.name ?? b.room,
-        food: food.data,
-      }),
-      onNotify: (msg) => setNotice(msg),
-    });
-  }
-
-  const filteredCatalog = useMemo(() => {
-    const q = catalogSearch.trim().toLowerCase();
-    return CATALOG_ITEMS.filter((item) => {
-      const matchCat = item.category === catalogCat;
-      const matchSearch =
-        !q ||
-        item.name.toLowerCase().includes(q) ||
-        item.sku.toLowerCase().includes(q) ||
-        item.id.toLowerCase().includes(q);
-      return matchCat && matchSearch;
-    });
-  }, [catalogCat, catalogSearch]);
-
-  const todayStr = new Date().toLocaleDateString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-
-  const elapsed =
-    activeBooking.started || activeBooking.status === 'paused'
-      ? playedMs(activeBooking, tick)
-      : 45 * 60 * 1000;
-
-  return (
-    <div className="pos-flow-wrapper">
-      {/* =====================================================================
-          TOP PIPELINE BANNER (1:1 with graphic header)
-          ===================================================================== */}
-      <header className="pos-pipeline-banner">
-        <div className="pos-pipeline-left">
-          <div className="pos-brand-badge">SG</div>
-          <div className="pos-pipeline-titles">
-            <span className="pos-pipeline-brand">Saigon Indoor Golf Club</span>
-            <span className="pos-pipeline-divider">|</span>
-            <span className="pos-pipeline-title">Luồng màn hình POS (Bán hàng & Vận hành)</span>
+  function renderTransactionHistoryContent() {
+    return (
+      <div className="pos-m3-history-container">
+        <div className="pos-m3-history-toolbar">
+          <div className="pos-m3-search-box">
+            <Search size={17} />
+            <input
+              value={txSearch}
+              onChange={(e) => setTxSearch(e.target.value)}
+              placeholder="Tìm mã hóa đơn, tên khách, SĐT, line..."
+            />
+            {txSearch && (
+              <button type="button" onClick={() => setTxSearch('')}>
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          <div className="pos-m3-chip-row">
+            {(
+              [
+                ['all', 'Tất cả'],
+                ['paid', 'Đã thanh toán'],
+                ['finished', 'Chờ thu'],
+                ['cancelled', 'Đã hủy'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                className={`pos-m3-chip ${txStatusFilter === k ? 'active' : ''}`}
+                onClick={() => setTxStatusFilter(k)}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* 6 Checked Pills */}
-        <div className="pos-pipeline-badges">
-          <span className="pos-badge-check">
-            <Check /> Đặt line/phòng
-          </span>
-          <span className="pos-badge-check">
-            <Check /> Bán F&B – Dịch vụ
-          </span>
-          <span className="pos-badge-check">
-            <Check /> Thanh toán
-          </span>
-          <span className="pos-badge-check">
-            <Check /> In hóa đơn
-          </span>
-          <span className="pos-badge-check">
-            <Check /> Quản lý ca
-          </span>
-          <span className="pos-badge-check">
-            <Check /> Báo cáo doanh thu
-          </span>
-        </div>
-
-        {/* View Switcher: Desktop vs Mobile vs Overview 1:1 */}
-        <div className="pos-pipeline-modes">
-          <button
-            type="button"
-            className="pos-mode-btn"
-            onClick={() => setShowCustomerDisplay(true)}
-            title="Mở màn hình phụ cho khách (Dual Screen)"
-          >
-            <Tv size={15} />
-            <span>Màn hình khách</span>
-          </button>
-          <button
-            type="button"
-            className="pos-mode-btn"
-            onClick={() => {
-              kickCashDrawer();
-              setNotice('Đã kích hoạt mở két tiền mặt (F4)');
-            }}
-            title="Mở két đựng tiền mặt (F4)"
-          >
-            <Banknote size={15} />
-            <span>Két tiền (F4)</span>
-          </button>
-          <button
-            type="button"
-            className={`pos-mode-btn ${viewMode === 'desktop' ? 'active' : ''}`}
-            onClick={() => setViewMode('desktop')}
-          >
-            <Monitor size={15} />
-            <span>POS Desktop</span>
-          </button>
-          <button
-            type="button"
-            className={`pos-mode-btn ${viewMode === 'mobile' ? 'active' : ''}`}
-            onClick={() => setViewMode('mobile')}
-          >
-            <Smartphone size={15} />
-            <span>POS Mobile</span>
-          </button>
-          <button
-            type="button"
-            className={`pos-mode-btn ${viewMode === 'overview' ? 'active' : ''}`}
-            onClick={() => setViewMode('overview')}
-          >
-            <LayoutGrid size={15} />
-            <span>Toàn cảnh 1:1</span>
-          </button>
-        </div>
-      </header>
-
-      {/* =====================================================================
-          SHIFT STATUS RIBBON (P0: Cảnh báo & Mở ca nhanh)
-          ===================================================================== */}
-      {!data.activeShift ? (
-        <div className="pos-shift-warning-banner">
-          <div className="pos-shift-warning-left">
-            <AlertTriangle size={18} />
-            <span>Chưa có ca thu ngân đang mở. Hãy mở ca để ghi nhận sổ quỹ và thu tiền bán hàng.</span>
+        <div className="pos-m3-history-split">
+          <div className="pos-m3-history-list">
+            {filteredTransactions.length ? (
+              filteredTransactions.slice(0, 40).map((item) => {
+                const rName = rooms.find((r) => r.id === item.room)?.name ?? item.room;
+                const isSelected = selectedHistoryBookingId === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`pos-m3-tx-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => setSelectedHistoryBookingId(item.id)}
+                  >
+                    <div className="pos-m3-tx-top">
+                      <strong>
+                        #{item.id.slice(-6).toUpperCase()} · {rName}
+                      </strong>
+                      <span className={`pos-m3-status-pill ${item.status}`}>
+                        {item.status === 'paid'
+                          ? 'Đã thanh toán'
+                          : item.status === 'finished'
+                            ? 'Chờ thanh toán'
+                            : 'Đã hủy'}
+                      </span>
+                    </div>
+                    <div className="pos-m3-tx-mid">
+                      <span>
+                        {item.customer} {item.phone ? `(${item.phone})` : ''}
+                      </span>
+                      <strong>{money(item.amount ?? 0)}</strong>
+                    </div>
+                    <div className="pos-m3-tx-bot">
+                      <small>
+                        {date(item.start)} {time(item.start)} · {SERVICE_LABEL[item.service] || item.service}
+                      </small>
+                      {item.payment && (
+                        <small className="pos-m3-tx-method">
+                          {PAY_LABEL[item.payment] || item.payment}
+                        </small>
+                      )}
+                    </div>
+                  </button>
+                );
+              })
+            ) : (
+              <div className="pos-m3-empty-box">
+                <Receipt size={32} />
+                <p>Không tìm thấy giao dịch phù hợp.</p>
+              </div>
+            )}
           </div>
-          <button
-            type="button"
-            className="pos-btn-open-shift"
-            onClick={() => setShiftModal('open')}
-          >
-            Mở ca thu ngân ngay
-          </button>
-        </div>
-      ) : (
-        <div className="pos-shift-active-ribbon">
-          <div className="pos-shift-active-left">
-            <span className="pos-shift-status-dot" />
-            <span>
-              Ca làm việc: <strong>{data.activeShift.name}</strong> (Mở lúc{' '}
-              {new Date(data.activeShift.opened_at).toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-              )
-            </span>
-          </div>
-          <div className="pos-shift-active-actions">
-            <button
-              type="button"
-              className="pos-shift-btn-tool"
-              onClick={() => setShiftModal('cash-in')}
-              title="Ghi nhận nạp thêm tiền lẻ vào két"
-            >
-              + Nạp quỹ
-            </button>
-            <button
-              type="button"
-              className="pos-shift-btn-tool"
-              onClick={() => setShiftModal('cash-out')}
-              title="Rút tiền mặt chi trả nhanh"
-            >
-              − Rút quỹ
-            </button>
-            <button
-              type="button"
-              className="pos-shift-btn-tool pos-btn-danger"
-              onClick={() => setShiftModal('close')}
-            >
-              Đóng & Bàn giao ca
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* Stepper bar for Desktop flow */}
-      {viewMode === 'desktop' && (
-        <nav className="pos-flow-stepper" aria-label="Các bước màn hình POS">
-          <button
-            type="button"
-            className={`pos-stepper-item ${step === 'map' ? 'active' : 'completed'}`}
-            onClick={() => setStep('map')}
-          >
-            <span className="pos-stepper-num">1</span>
-            <span>Tổng quan & Sơ đồ line/phòng</span>
-          </button>
-          <span className="pos-stepper-arrow">→</span>
-
-          <button
-            type="button"
-            className={`pos-stepper-item ${step === 'order' ? 'active' : step === 'pay' || step === 'done' ? 'completed' : ''}`}
-            onClick={() => {
-              if (!b) openSession(data.bookings[0]?.id ?? 'demo-booking-1', 'order');
-              else setStep('order');
-            }}
-          >
-            <span className="pos-stepper-num">2</span>
-            <span>Tạo hóa đơn & thêm dịch vụ, F&B</span>
-          </button>
-          <span className="pos-stepper-arrow">→</span>
-
-          <button
-            type="button"
-            className={`pos-stepper-item ${step === 'pay' ? 'active' : step === 'done' ? 'completed' : ''}`}
-            onClick={() => {
-              if (!b) openSession(data.bookings[0]?.id ?? 'demo-booking-1', 'pay');
-              else setStep('pay');
-            }}
-          >
-            <span className="pos-stepper-num">3</span>
-            <span>Thanh toán</span>
-          </button>
-          <span className="pos-stepper-arrow">→</span>
-
-          <button
-            type="button"
-            className={`pos-stepper-item ${step === 'done' ? 'active' : ''}`}
-            onClick={() => {
-              if (!b) openSession(data.bookings[0]?.id ?? 'demo-booking-1', 'done');
-              else setStep('done');
-            }}
-          >
-            <span className="pos-stepper-num">4</span>
-            <span>Hoàn tất & In hóa đơn</span>
-          </button>
-        </nav>
-      )}
-
-      {/* =====================================================================
-          VIEW MODE 1: DESKTOP POS FLOW
-          ===================================================================== */}
-      {viewMode === 'desktop' && (
-        <main className="pos-flow-container">
-          {/* STEP 1: SƠ ĐỒ LINE / PHÒNG */}
-          {step === 'map' && (
-            <div className="pos-map-screen">
-              <div className="pos-map-topbar">
-                <div className="pos-map-heading">
-                  <h1>POS – Sơ đồ line/phòng</h1>
+          {historyBooking && (
+            <div className="pos-m3-history-detail pos-m3-card">
+              <div className="pos-m3-card-head">
+                <div>
+                  <h4>Chi tiết hóa đơn #{historyBooking.id.slice(-6).toUpperCase()}</h4>
+                  <small>
+                    {rooms.find((r) => r.id === historyBooking.room)?.name} · Ngày {date(historyBooking.start)}
+                  </small>
                 </div>
-                <div className="pos-date-badge">
-                  <CalendarDays />
-                  <span>Hôm nay, {todayStr}</span>
+                <button
+                  type="button"
+                  className="pos-m3-icon-btn"
+                  onClick={() => setSelectedHistoryBookingId(null)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="pos-m3-detail-rows">
+                <div>
+                  <span>Khách hàng</span>
+                  <strong>
+                    {historyBooking.customer} ({historyBooking.phone || 'Khách lẻ'})
+                  </strong>
+                </div>
+                <div>
+                  <span>Thời gian thực tế</span>
+                  <strong>
+                    {historyBooking.started ? time(historyBooking.started) : time(historyBooking.start)} →{' '}
+                    {historyBooking.finished ? time(historyBooking.finished) : time(historyBooking.end)}
+                  </strong>
+                </div>
+                <div>
+                  <span>Phí giờ chơi golf</span>
+                  <strong>{money(historyBooking.golf_amount ?? 0)}</strong>
+                </div>
+                <div>
+                  <span>Phí F&B & Dịch vụ</span>
+                  <strong>{money(historyBooking.food_total ?? 0)}</strong>
+                </div>
+                {historyBill?.discount && (
+                  <div>
+                    <span>Giảm giá ({historyBill.discount.reason})</span>
+                    <strong className="pos-m3-text-green">−{money(historyBill.discount.amount)}</strong>
+                  </div>
+                )}
+                <div className="pos-m3-detail-total">
+                  <span>Tổng giá trị hóa đơn</span>
+                  <strong>{money(historyBooking.amount ?? 0)}</strong>
                 </div>
               </div>
 
-              {/* Status Filter Pills */}
-              <div className="pos-status-filters" role="tablist">
-                {[
-                  { key: 'all', label: `Tất cả (${counts.all})` },
-                  { key: 'playing', label: `Đang chơi (${counts.playing})` },
-                  { key: 'booked', label: `Đặt trước (${counts.booked})` },
-                  { key: 'empty', label: `Trống (${counts.empty})` },
-                  { key: 'maintenance', label: `Bảo trì (${counts.maintenance})` },
-                ].map((f) => (
+              {/* Refund & Audit History */}
+              {historyBill && historyBill.refunds.length > 0 && (
+                <div className="pos-m3-refund-history">
+                  <h5>Lịch sử hoàn tiền</h5>
+                  {historyBill.refunds.map((rf) => (
+                    <div key={rf.id} className="pos-m3-refund-row">
+                      <span>
+                        Hoàn {PAY_LABEL[rf.method] || rf.method} · {rf.note} ({rf.actor})
+                      </span>
+                      <strong>−{money(rf.amount)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Actions: Reprint, Pay (if finished), Refund (if paid & authorized), Cancel */}
+              <div className="pos-m3-detail-actions">
+                <button
+                  type="button"
+                  className="pos-m3-btn-outline"
+                  onClick={() => handlePrintReceipt(historyBooking)}
+                >
+                  <Printer size={16} /> In lại hóa đơn
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-btn-outline"
+                  onClick={() => handleSendZaloReceipt(historyBooking)}
+                >
+                  <Send size={16} /> Gửi Zalo
+                </button>
+                {historyBooking.status === 'finished' && (
                   <button
-                    key={f.key}
                     type="button"
-                    className={`pos-filter-btn ${filterTab === f.key ? 'active' : ''}`}
-                    onClick={() => setFilterTab(f.key as typeof filterTab)}
+                    className="pos-m3-btn-primary"
+                    onClick={() => {
+                      setActiveBookingId(historyBooking.id);
+                      setSelectedRoomId(historyBooking.room);
+                      setDesktopDrawer(null);
+                      setDesktopMode('payment');
+                      setMobileScreen('M07');
+                    }}
                   >
-                    {f.label}
+                    <CreditCard size={16} /> Thu tiền ngay
+                  </button>
+                )}
+              </div>
+
+              {historyBooking.status === 'paid' && canRefund && historyBill && (
+                <div style={{ marginTop: 12 }}>
+                  <RefundForm
+                    bookingId={historyBooking.id}
+                    bill={historyBill}
+                    onDone={async () => {
+                      await reloadHistoryBill();
+                      await onRefresh();
+                      setNotice('Đã xử lý hoàn tiền và ghi nhật ký hệ thống');
+                    }}
+                  />
+                </div>
+              )}
+
+              {historyBooking.status === 'booked' && canCancelBooking && (
+                <div style={{ marginTop: 12 }}>
+                  {!showCancelConfirm ? (
+                    <button
+                      type="button"
+                      className="pos-m3-btn-danger"
+                      onClick={() => setShowCancelConfirm(true)}
+                    >
+                      <Trash2 size={15} /> Hủy lịch đặt này
+                    </button>
+                  ) : (
+                    <div className="pos-m3-cancel-box">
+                      <input
+                        value={cancelReasonInput}
+                        onChange={(e) => setCancelReasonInput(e.target.value)}
+                        placeholder="Nhập lý do hủy (bắt buộc lưu nhật ký)..."
+                      />
+                      <div className="pos-m3-form-actions">
+                        <button
+                          type="button"
+                          className="pos-m3-btn-outline"
+                          onClick={() => setShowCancelConfirm(false)}
+                        >
+                          Đóng
+                        </button>
+                        <button
+                          type="button"
+                          className="pos-m3-btn-danger"
+                          disabled={saving}
+                          onClick={() => handleCancelBooking(historyBooking)}
+                        >
+                          Xác nhận hủy
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Audit Trail for this booking */}
+              <div className="pos-m3-audit-box">
+                <h5>Nhật ký thao tác</h5>
+                {(data.audit ?? [])
+                  .filter((a) => a.detail.includes(historyBooking.id) || a.detail.includes(historyBooking.customer))
+                  .slice(0, 6)
+                  .map((a, idx) => (
+                    <div key={idx} className="pos-m3-audit-item">
+                      <span>
+                        <strong>{a.action}</strong> · {a.detail}
+                      </span>
+                      <small>{time(a.created)}</small>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // SHARED PAYMENT PANEL CONTENT (USED IN M07 & DESKTOP RIGHT PANEL)
+  // ============================================================================
+  function renderPaymentContent() {
+    if (!activeBooking) {
+      return (
+        <div className="pos-m3-empty-box">
+          <CreditCard size={36} />
+          <p>Hãy chọn một line đang hoạt động hoặc đơn chờ thanh toán.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="pos-m3-pay-section">
+        {/* Highlight Total Due Banner */}
+        <div className="pos-m3-pay-total-banner">
+          <span>Tổng thanh toán ({selectedRoomObj.name})</span>
+          <strong>{money(payableTotal)}</strong>
+          <small>
+            Khách: {activeBooking.customer} · Giờ golf: {money(golfTotal)} · F&B/DV: {money(fnbTotal)}
+            {discountAmount > 0 ? ` · Giảm: −${money(discountAmount)}` : ''}
+          </small>
+        </div>
+
+        {!data.activeShift && (
+          <div className="pos-m3-shift-alert">
+            <AlertTriangle size={18} />
+            <div>
+              <strong>Chưa mở ca thu ngân!</strong>
+              <p>Cần mở ca trước khi xác nhận giao dịch thanh toán.</p>
+            </div>
+            <button
+              type="button"
+              className="pos-m3-btn-primary"
+              onClick={() => {
+                if (isMobile) setMobileScreen('M09');
+                else setDesktopDrawer('shift');
+                setShiftSubModal('open');
+              }}
+            >
+              Mở ca
+            </button>
+          </div>
+        )}
+
+        {/* Payment Method Radio Cards (Matching Reference Image 1 & 2) */}
+        <div className="pos-m3-method-list" role="radiogroup" aria-label="Phương thức thanh toán">
+          {(
+            [
+              {
+                key: 'cash' as const,
+                title: 'Tiền mặt',
+                sub: 'Thu tiền mặt tại quầy & tính tiền thừa',
+                icon: Banknote,
+              },
+              {
+                key: 'card' as const,
+                title: 'Thẻ ngân hàng (POS)',
+                sub: 'Visa, MasterCard, JCB, Napas',
+                icon: CreditCard,
+              },
+              {
+                key: 'transfer' as const,
+                title: 'QR / Chuyển khoản (SePay)',
+                sub: 'Mã QR động my.sepay.vn · Tự động khớp lệnh',
+                icon: QrCode,
+              },
+              {
+                key: 'wallet' as const,
+                title: 'Ví nội bộ / Số dư hội viên',
+                sub: 'Trừ trực tiếp số dư ví trả trước của hội viên',
+                icon: Wallet,
+              },
+              {
+                key: 'package' as const,
+                title: 'Thẻ giờ hội viên',
+                sub: 'Khấu trừ số giờ/buổi trong gói hội viên',
+                icon: Crown,
+              },
+              {
+                key: 'split' as const,
+                title: 'Thanh toán kết hợp',
+                sub: 'Kết hợp Tiền mặt + Chuyển khoản + Thẻ',
+                icon: Split,
+              },
+            ]
+          ).map((m) => {
+            const Icon = m.icon;
+            const selected = payMethod === m.key;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                className={`pos-m3-method-card ${selected ? 'selected' : ''}`}
+                onClick={() => setPayMethod(m.key)}
+              >
+                <div className="pos-m3-method-radio">
+                  <span className="pos-m3-radio-dot" />
+                </div>
+                <div className="pos-m3-method-icon">
+                  <Icon size={20} />
+                </div>
+                <div className="pos-m3-method-text">
+                  <strong>{m.title}</strong>
+                  <small>{m.sub}</small>
+                </div>
+                {selected && <Check size={18} className="pos-m3-method-check" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Method-specific Interactive Area */}
+        {payMethod === 'cash' && (
+          <div className="pos-m3-cash-box">
+            <label className="pos-m3-field">
+              <span>Tiền khách đưa (VNĐ)</span>
+              <input
+                inputMode="numeric"
+                value={tendered}
+                onChange={(e) => setTendered(e.target.value.replace(/\D/g, ''))}
+                placeholder={String(payableTotal)}
+              />
+            </label>
+            <div className="pos-m3-quick-cash">
+              {quickCashDenominations.map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  className={`pos-m3-chip ${cashGiven === amt ? 'active' : ''}`}
+                  onClick={() => setTendered(String(amt))}
+                >
+                  {money(amt)}
+                </button>
+              ))}
+            </div>
+            <div className="pos-m3-cash-change">
+              <span>Tiền thừa trả khách:</span>
+              <strong>{money(cashGiven > 0 ? cashChange : 0)}</strong>
+            </div>
+          </div>
+        )}
+
+        {payMethod === 'transfer' && (
+          <div className="pos-m3-sepay-box">
+            <TransferPanel
+              booking={{ ...activeBooking, amount: payableTotal }}
+              bank={{
+                bin: data.config?.bankBin ?? '970422',
+                account: data.config?.bankAccount ?? '',
+                holder: data.config?.bankHolder ?? 'SAIGON INDOOR GOLF CLUB',
+              }}
+              fallbackAmount={payableTotal}
+              busy={saving || !data.activeShift}
+              onUse={(bankTxId: string) => handleConfirmPayment(bankTxId)}
+            />
+          </div>
+        )}
+
+        {(payMethod === 'wallet' || payMethod === 'package') && (
+          <div className="pos-m3-member-pay-box">
+            <PackageRedeem
+              booking={{ ...activeBooking, status: 'finished', amount: payableTotal }}
+              money={money}
+              onChanged={async () => {
+                await onRefresh();
+                await reloadBill();
+                setNotice('Đã áp dụng gói giờ / ví hội viên thành công!');
+              }}
+            />
+            <p className="pos-m3-helper-text">
+              Hệ thống tự động kiểm tra gói giờ và số dư ví theo SĐT khách hàng ({activeBooking.phone || 'chưa có SĐT'}).
+              Nếu phiên chưa kết thúc tính giờ, hãy bấm &ldquo;Kết thúc chơi&rdquo; trước khi gạch gói/ví.
+            </p>
+          </div>
+        )}
+
+        {payMethod === 'split' && (
+          <div className="pos-m3-split-pay-box">
+            <SplitPay
+              booking={{ ...activeBooking, amount: payableTotal }}
+              disabled={saving || !data.activeShift}
+              onChanged={async () => {
+                await onRefresh();
+                setDesktopMode('receipt');
+                setMobileScreen('M08');
+              }}
+            />
+          </div>
+        )}
+
+        {/* E-Invoice / VAT & Print toggles */}
+        <div className="pos-m3-pay-options">
+          <label className="pos-m3-switch-row">
+            <span>
+              <FileText size={16} /> Xuất hóa đơn VAT / Điện tử
+            </span>
+            <input
+              type="checkbox"
+              checked={vatInvoice}
+              onChange={(e) => setVatInvoice(e.target.checked)}
+            />
+          </label>
+          {vatInvoice && (
+            <div className="pos-m3-vat-fields">
+              <input
+                value={vatCompany}
+                onChange={(e) => setVatCompany(e.target.value)}
+                placeholder="Tên công ty / Đơn vị nhận hóa đơn..."
+              />
+              <input
+                value={vatTaxCode}
+                onChange={(e) => setVatTaxCode(e.target.value)}
+                placeholder="Mã số thuế..."
+              />
+            </div>
+          )}
+          <label className="pos-m3-switch-row">
+            <span>
+              <Printer size={16} /> Tự động in hóa đơn K80 sau khi xác nhận
+            </span>
+            <input
+              type="checkbox"
+              checked={printOnConfirm}
+              onChange={(e) => setPrintOnConfirm(e.target.checked)}
+            />
+          </label>
+        </div>
+
+        {/* Confirm Payment CTA (for Cash / Card) */}
+        {(payMethod === 'cash' || payMethod === 'card') && (
+          <button
+            type="button"
+            className="pos-m3-btn-primary pos-m3-btn-block pos-m3-btn-lg"
+            disabled={saving || !data.activeShift}
+            onClick={() => handleConfirmPayment()}
+          >
+            <CheckCircle2 size={20} />
+            <span>
+              {saving ? 'Đang xử lý giao dịch…' : `Xác nhận thanh toán · ${money(payableTotal)}`}
+            </span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // VIEW 1: POS MOBILE (375px - 430px NATIVE/PWA APPLICATION - M01 TO M10)
+  // ============================================================================
+  if (isMobile) {
+    return (
+      <div className="pos-m3-mobile-app">
+        {/* Top App Bar */}
+        <header className="pos-m3-mobile-topbar">
+          {mobileScreen !== 'M01' ? (
+            <button
+              type="button"
+              className="pos-m3-mobile-back"
+              onClick={() => {
+                if (mobileScreen === 'M08' || mobileScreen === 'M02') setMobileScreen('M01');
+                else if (mobileScreen === 'M03' || mobileScreen === 'M04') setMobileScreen('M02');
+                else if (mobileScreen === 'M05') setMobileScreen(activeBooking ? 'M03' : 'M02');
+                else if (mobileScreen === 'M06') setMobileScreen('M05');
+                else if (mobileScreen === 'M07') setMobileScreen('M06');
+                else setMobileScreen('M01');
+              }}
+              aria-label="Quay lại"
+            >
+              <ArrowLeft size={20} />
+            </button>
+          ) : (
+            <div className="pos-m3-mobile-logo">SG</div>
+          )}
+
+          <div className="pos-m3-mobile-title-wrap">
+            <strong>
+              {mobileScreen === 'M01' && (data.config?.name || 'Saigon Indoor Golf Club')}
+              {mobileScreen === 'M02' && 'POS – Chọn line/phòng'}
+              {mobileScreen === 'M03' && `Chi tiết phiên – ${selectedRoomObj.name}`}
+              {mobileScreen === 'M04' && `Nhận khách – ${rooms.find((r) => r.id === checkInRoomId)?.name || selectedRoomObj.name}`}
+              {mobileScreen === 'M05' && `Bán hàng – ${selectedRoomObj.name}`}
+              {mobileScreen === 'M06' && `Giỏ hàng / Hóa đơn – ${selectedRoomObj.name}`}
+              {mobileScreen === 'M07' && `Thanh toán – ${selectedRoomObj.name}`}
+              {mobileScreen === 'M08' && 'Hoàn tất đơn hàng'}
+              {mobileScreen === 'M09' && 'Quản lý ca thu ngân'}
+              {mobileScreen === 'M10' && 'Lịch sử giao dịch'}
+            </strong>
+            <small>
+              {data.activeShift ? `Ca: ${data.activeShift.name}` : 'Chưa mở ca'} · {data.user || 'Thu ngân'}
+            </small>
+          </div>
+
+          <div className="pos-m3-mobile-top-actions">
+            {cartCount > 0 && mobileScreen !== 'M06' && mobileScreen !== 'M07' && (
+              <button
+                type="button"
+                className="pos-m3-mobile-cart-badge"
+                onClick={() => setMobileScreen('M06')}
+              >
+                <ShoppingCart size={18} />
+                <span>{cartCount}</span>
+              </button>
+            )}
+            <button
+              type="button"
+              className="pos-m3-mobile-bell"
+              onClick={() => setShowBellPopover(!showBellPopover)}
+              aria-label="Thông báo"
+            >
+              <Bell size={19} />
+              {totalNotifications > 0 && <em>{totalNotifications}</em>}
+            </button>
+          </div>
+        </header>
+
+        {/* Feedback Banners */}
+        {notice && (
+          <div className="pos-m3-toast success" role="status">
+            <CheckCircle2 size={16} />
+            <span>{notice}</span>
+          </div>
+        )}
+        {errorMsg && (
+          <div className="pos-m3-toast error" role="alert">
+            <AlertTriangle size={16} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Main Mobile Screen Body */}
+        <main className="pos-m3-mobile-body">
+          {/* ===============================================================
+              M01 – TRANG CHỦ POS
+              =============================================================== */}
+          {mobileScreen === 'M01' && (
+            <div className="pos-m3-screen-m01">
+              {/* Hero Banner */}
+              <div className="pos-m3-home-hero">
+                <div>
+                  <span className="pos-m3-home-tag">POS VẬN HÀNH THƯƠNG MẠI</span>
+                  <h2>POS Bán hàng & Sân Golf 3D</h2>
+                  <p>Quản lý phiên chơi, F&B và thanh toán tức thì</p>
+                </div>
+                <button
+                  type="button"
+                  className="pos-m3-home-cta"
+                  onClick={() => setMobileScreen('M02')}
+                >
+                  <span>Mở sơ đồ Line</span>
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+
+              {/* Shift Status Card */}
+              <button
+                type="button"
+                className={`pos-m3-shift-strip ${data.activeShift ? 'open' : 'closed'}`}
+                onClick={() => setMobileScreen('M09')}
+              >
+                <div className="pos-m3-shift-strip-left">
+                  <span className="pos-m3-dot" />
+                  <div>
+                    <strong>
+                      {data.activeShift ? `Ca làm việc: ${data.activeShift.name}` : 'Ca làm việc: Chưa mở ca'}
+                    </strong>
+                    <small>
+                      {data.activeShift
+                        ? `Đang hoạt động · Bắt đầu ${time(data.activeShift.opened_at)}`
+                        : 'Chạm để mở ca thu ngân mới'}
+                    </small>
+                  </div>
+                </div>
+                <ChevronRight size={18} />
+              </button>
+
+              {/* Live Operational KPIs */}
+              <div className="pos-m3-home-stats">
+                <button
+                  type="button"
+                  className="pos-m3-stat-pill playing"
+                  onClick={() => {
+                    setRoomFilter('playing');
+                    setMobileScreen('M02');
+                  }}
+                >
+                  <strong>{roomCounts.playing}</strong>
+                  <span>Line đang chơi</span>
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-stat-pill empty"
+                  onClick={() => {
+                    setRoomFilter('empty');
+                    setMobileScreen('M02');
+                  }}
+                >
+                  <strong>{roomCounts.empty}</strong>
+                  <span>Line trống</span>
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-stat-pill due"
+                  onClick={() => {
+                    if (pendingBills[0]) {
+                      selectRoom(pendingBills[0].room, 'M06');
+                    } else {
+                      setRoomFilter('due');
+                      setMobileScreen('M02');
+                    }
+                  }}
+                >
+                  <strong>{pendingBills.length}</strong>
+                  <span>Chờ thanh toán</span>
+                </button>
+              </div>
+
+              {/* Quick Actions 2x3 Grid (Matching Reference Image 1 & 2) */}
+              <div className="pos-m3-home-grid">
+                <button
+                  type="button"
+                  className="pos-m3-home-tile primary"
+                  onClick={() => {
+                    setRoomFilter('all');
+                    setMobileScreen('M02');
+                  }}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <ShoppingCart size={24} />
+                  </div>
+                  <strong>Bán hàng (POS)</strong>
+                  <small>Sơ đồ 12 line & tạo đơn</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="pos-m3-home-tile"
+                  onClick={() => setMobileScreen('M04')}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <CalendarDays size={24} />
+                  </div>
+                  <strong>Nhận khách</strong>
+                  <small>Mở phiên & tính giờ</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="pos-m3-home-tile"
+                  onClick={() => setMobileScreen('M05')}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <Coffee size={24} />
+                  </div>
+                  <strong>F&B & Dịch vụ</strong>
+                  <small>Đồ uống, phụ kiện, gói</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="pos-m3-home-tile"
+                  onClick={() => setMobileScreen('M07')}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <QrCode size={24} />
+                  </div>
+                  <strong>Thanh toán nhanh</strong>
+                  <small>Tiền mặt, Thẻ, QR SePay</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="pos-m3-home-tile"
+                  onClick={() => setMobileScreen('M10')}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <Receipt size={24} />
+                  </div>
+                  <strong>Lịch sử hóa đơn</strong>
+                  <small>Tra cứu, hoàn/hủy</small>
+                </button>
+
+                <button
+                  type="button"
+                  className="pos-m3-home-tile"
+                  onClick={() => setMobileScreen('M09')}
+                >
+                  <div className="pos-m3-tile-icon">
+                    <Wallet size={24} />
+                  </div>
+                  <strong>Quản lý ca</strong>
+                  <small>Nạp/rút quỹ, kết ca</small>
+                </button>
+              </div>
+
+              {/* Pending Bills List on Home if any */}
+              {pendingBills.length > 0 && (
+                <div className="pos-m3-card">
+                  <div className="pos-m3-card-head">
+                    <h4>Đơn chờ thanh toán ({pendingBills.length})</h4>
+                  </div>
+                  <div className="pos-m3-pending-list">
+                    {pendingBills.map((pb) => {
+                      const rName = rooms.find((r) => r.id === pb.room)?.name ?? pb.room;
+                      return (
+                        <button
+                          key={pb.id}
+                          type="button"
+                          className="pos-m3-pending-item"
+                          onClick={() => selectRoom(pb.room, 'M07')}
+                        >
+                          <div>
+                            <strong>
+                              {rName} · {pb.customer}
+                            </strong>
+                            <small>{pb.phone || 'Khách lẻ'} · Đã kết thúc chơi</small>
+                          </div>
+                          <span className="pos-m3-pending-amt">{money(pb.amount ?? 0)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ===============================================================
+              M02 – SƠ ĐỒ LINE / PHÒNG (LƯỚI 2 CỘT, 12 LINE/PHÒNG)
+              =============================================================== */}
+          {mobileScreen === 'M02' && (
+            <div className="pos-m3-screen-m02">
+              <div className="pos-m3-search-box">
+                <Search size={17} />
+                <input
+                  value={roomSearch}
+                  onChange={(e) => setRoomSearch(e.target.value)}
+                  placeholder="Tìm line, tên khách, SĐT..."
+                />
+                {roomSearch && (
+                  <button type="button" onClick={() => setRoomSearch('')}>
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+
+              <div className="pos-m3-chip-row">
+                {(
+                  [
+                    ['all', `Tất cả (${roomCounts.all})`],
+                    ['playing', `Đang chơi (${roomCounts.playing})`],
+                    ['empty', `Trống (${roomCounts.empty})`],
+                    ['booked', `Đặt trước (${roomCounts.booked})`],
+                    ['due', `Chờ thu (${roomCounts.due})`],
+                  ] as const
+                ).map(([k, label]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    className={`pos-m3-chip ${roomFilter === k ? 'active' : ''}`}
+                    onClick={() => setRoomFilter(k)}
+                  >
+                    {label}
                   </button>
                 ))}
               </div>
 
-              {/* 12 Line Cards Grid */}
-              <div className="pos-lines-grid">
-                {visibleRooms.map(({ room, info, state, maint }) => {
-                  const isPlaying = state === 'playing';
-                  const isBooked = state === 'booked';
-                  const isMaint = state === 'maintenance';
-                  const shown = info.live ?? info.due ?? null;
-                  const elapsedMinutes = info.live ? Math.floor(playedMs(info.live, tick) / 60000) : null;
+              {/* 2-Column Grid of 12 Lines/VIP */}
+              <div className="pos-m3-mobile-room-grid">
+                {filteredRooms.map(({ room: r, statusKey, booking: rb, maint }) => {
+                  const isSelected = selectedRoomId === r.id;
+                  const shortName = r.vip ? r.name : r.name.replace('Line ', 'L');
+                  const liveQuote =
+                    rb && rb.status === 'playing' && rb.started
+                      ? (() => {
+                          try {
+                            const s = JSON.parse(rb.price);
+                            const segs: Segment[] = JSON.parse(rb.segments);
+                            segs.push({ start: rb.started, end: tick });
+                            return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
+                          } catch {
+                            return rb.amount ?? 0;
+                          }
+                        })()
+                      : (rb?.amount ?? 0);
 
                   return (
                     <button
-                      key={room.id}
+                      key={r.id}
                       type="button"
-                      className="pos-line-card"
-                      onClick={() => handleSelectRoom(room.id)}
+                      className={`pos-m3-room-card ${statusKey} ${r.vip ? 'vip' : ''} ${isSelected ? 'selected' : ''}`}
+                      onClick={() => selectRoom(r.id)}
                     >
-                      <div className="pos-line-card-header">
-                        <div className="pos-line-name-wrap">
-                          <div
-                            className="pos-line-icon"
-                            style={{
-                              background: isPlaying
-                                ? '#f0fdf4'
-                                : isBooked
-                                  ? '#fefce8'
-                                  : isMaint
-                                    ? '#fef2f2'
-                                    : '#f8fafc',
-                              color: isPlaying
-                                ? '#16a34a'
-                                : isBooked
-                                  ? '#ca8a04'
-                                  : isMaint
-                                    ? '#ef4444'
-                                    : '#94a3b8',
-                            }}
-                          >
-                            {isMaint ? (
-                              <Wrench size={20} />
-                            ) : room.vip ? (
-                              <Crown size={22} className="pos-crown-icon" />
-                            ) : (
-                              <Flag size={20} />
-                            )}
-                          </div>
-                          <span className="pos-line-name">
-                            {room.name.replace('Line ', 'L')}
-                            {room.vip && <Crown size={16} className="pos-crown-icon" />}
-                          </span>
-                        </div>
-
-                        <span
-                          className={`pos-status-tag ${
-                            isPlaying
-                              ? 'pos-state-playing'
-                              : isBooked
-                                ? 'pos-state-booked'
-                                : isMaint
-                                  ? 'pos-state-maintenance'
-                                  : 'pos-state-empty'
-                          }`}
-                        >
-                          <span className="pos-status-dot" />
-                          {isPlaying
-                            ? 'Đang chơi'
-                            : isBooked
-                              ? 'Đặt trước'
-                              : isMaint
-                                ? 'Bảo trì'
-                                : 'Trống'}
+                      <div className="pos-m3-room-card-top">
+                        <span className="pos-m3-room-title">
+                          {r.vip ? <Crown size={15} /> : <Flag size={14} />}
+                          <strong>{shortName}</strong>
+                        </span>
+                        <span className={`pos-m3-room-badge ${statusKey}`}>
+                          {statusKey === 'playing' && '● Đang chơi'}
+                          {statusKey === 'empty' && '● Trống'}
+                          {statusKey === 'booked' && '● Đặt trước'}
+                          {statusKey === 'due' && '● Chờ thu'}
+                          {statusKey === 'maintenance' && '● Bảo trì'}
                         </span>
                       </div>
 
-                      <div className="pos-line-card-body">
-                        {isPlaying ? (
-                          <div className="pos-line-timer">
-                            <Clock size={15} />
-                            <span>
-                              {elapsedMinutes != null ? `${elapsedMinutes} phút` : 'Chờ thanh toán'}
-                            </span>
+                      {rb ? (
+                        <div className="pos-m3-room-card-body">
+                          <strong className="pos-m3-room-cust">{rb.customer}</strong>
+                          <div className="pos-m3-room-meta">
+                            {rb.status === 'playing' || rb.status === 'paused' ? (
+                              <span className="pos-m3-room-timer">
+                                <Clock size={12} /> {clock(playedMs(rb, tick))}
+                              </span>
+                            ) : (
+                              <span>{time(rb.start)}</span>
+                            )}
+                            {canSeeMoney && liveQuote > 0 && (
+                              <strong className="pos-m3-room-price">{money(liveQuote)}</strong>
+                            )}
                           </div>
-                        ) : isBooked ? (
-                          <span className="pos-line-note">
-                            {info.soon ? `${time(info.soon.start)} - ${time(info.soon.end)}` : ''}
-                          </span>
-                        ) : isMaint ? (
-                          <span className="pos-line-note" style={{ color: '#ef4444' }}>
-                            {maint?.reason || 'Đang bảo trì'}
-                          </span>
-                        ) : (
-                          <span className="pos-line-note">Sẵn sàng</span>
-                        )}
-
-                        {shown?.customer && (
-                          <span className="pos-line-customer">{shown.customer}</span>
-                        )}
-                      </div>
+                        </div>
+                      ) : maint ? (
+                        <div className="pos-m3-room-card-body">
+                          <small>{maint.reason || 'Đang bảo trì kỹ thuật'}</small>
+                        </div>
+                      ) : (
+                        <div className="pos-m3-room-card-body">
+                          <span className="pos-m3-room-ready">Sẵn sàng đón khách</span>
+                          <small>{getRoomRateLabel(r.vip)}</small>
+                        </div>
+                      )}
                     </button>
                   );
                 })}
               </div>
 
-              {/* Bottom 1:1 Step Label */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="pos-step-bottom-badge">
-                  <span className="pos-step-bottom-num">1</span>
-                  <span className="pos-step-bottom-text">Tổng quan & Sơ đồ line/phòng</span>
-                </div>
+              <div className="pos-m3-mobile-sticky-footer">
+                <button
+                  type="button"
+                  className="pos-m3-btn-primary pos-m3-btn-block pos-m3-btn-lg"
+                  onClick={() => {
+                    if (activeBooking) {
+                      setMobileScreen(activeBooking.status === 'booked' ? 'M04' : 'M03');
+                    } else {
+                      setCheckInRoomId(selectedRoomId);
+                      setMobileScreen('M04');
+                    }
+                  }}
+                >
+                  <span>
+                    Tiếp tục với {selectedRoomObj.name}{' '}
+                    {activeBooking ? `(${activeBooking.customer})` : '(Nhận khách)'}
+                  </span>
+                  <ArrowRight size={18} />
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 2: TẠO HÓA ĐƠN & THÊM DỊCH VỤ, F&B */}
-          {step === 'order' && (
-            <div className="pos-order-screen">
-              <div className="pos-order-topbar">
-                <div className="pos-order-topbar-left">
+          {/* ===============================================================
+              M03 – CHI TIẾT PHIÊN CHƠI
+              =============================================================== */}
+          {mobileScreen === 'M03' && (
+            <div className="pos-m3-screen-m03">
+              {!activeBooking ? (
+                <div className="pos-m3-empty-box">
+                  <Flag size={36} />
+                  <h4>{selectedRoomObj.name} đang trống</h4>
+                  <p>Chưa có phiên chơi đang mở trên line này.</p>
                   <button
                     type="button"
-                    className="pos-back-btn"
-                    onClick={() => setStep('map')}
-                    aria-label="Quay lại sơ đồ line"
+                    className="pos-m3-btn-primary"
+                    onClick={() => {
+                      setCheckInRoomId(selectedRoomObj.id);
+                      setMobileScreen('M04');
+                    }}
                   >
-                    <ArrowLeft size={18} />
+                    Nhận khách & Bắt đầu chơi
                   </button>
-                  <h2 className="pos-order-title">
-                    Bán hàng – {roomShort}
-                    <span className="pos-status-tag pos-state-playing">
-                      <span className="pos-status-dot" /> Đang chơi
-                    </span>
-                  </h2>
                 </div>
+              ) : (
+                <>
+                  {/* Session Header & Real-time Timer */}
+                  <div className="pos-m3-session-hero">
+                    <div className="pos-m3-session-hero-top">
+                      <div>
+                        <span className="pos-m3-session-room-tag">
+                          {selectedRoomObj.vip ? '👑 PHÒNG VIP' : '⛳ LINE TIÊU CHUẨN'} · {selectedRoomObj.name}
+                        </span>
+                        <h3>{activeBooking.customer}</h3>
+                        <small>{activeBooking.phone || 'Khách vãng lai'} · {activeBooking.people} khách</small>
+                      </div>
+                      <span className={`pos-m3-status-pill ${activeBooking.status}`}>
+                        {activeBooking.status === 'playing'
+                          ? 'Đang tính giờ'
+                          : activeBooking.status === 'paused'
+                            ? 'Tạm dừng'
+                            : activeBooking.status === 'finished'
+                              ? 'Chờ thanh toán'
+                              : 'Đã đặt trước'}
+                      </span>
+                    </div>
+
+                    <div className="pos-m3-live-clock-box">
+                      <div>
+                        <span>Đồng hồ thời gian thực</span>
+                        <strong className="pos-m3-clock-digits">{clock(elapsedMs)}</strong>
+                        <small>
+                          Bắt đầu thực tế:{' '}
+                          {activeBooking.started ? time(activeBooking.started) : 'Chưa bấm bắt đầu'}
+                        </small>
+                      </div>
+                      <div className="pos-m3-live-amount-box">
+                        <span>Tạm tính hiện tại</span>
+                        <strong>{money(payableTotal)}</strong>
+                        <small>{SERVICE_LABEL[activeBooking.service] || activeBooking.service}</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Service Mode & Quick Time Adjustments */}
+                  <div className="pos-m3-card">
+                    <div className="pos-m3-card-head">
+                      <h4>Hình thức & Điều chỉnh thời gian</h4>
+                    </div>
+                    <div className="pos-m3-chip-row">
+                      {(['gdr', '9', '18'] as const).map((srv) => (
+                        <button
+                          key={srv}
+                          type="button"
+                          disabled={saving || !['booked', 'playing', 'paused'].includes(activeBooking.status)}
+                          className={`pos-m3-chip ${activeBooking.service === srv ? 'active' : ''}`}
+                          onClick={() => handleSwitchService(srv)}
+                        >
+                          {SERVICE_LABEL[srv]}
+                        </button>
+                      ))}
+                    </div>
+                    {activeBooking.service === 'gdr' &&
+                      ['playing', 'paused'].includes(activeBooking.status) && (
+                        <div className="pos-m3-extend-row">
+                          <span>Gia hạn nhanh:</span>
+                          {[30, 60, 120].map((m) => (
+                            <button
+                              key={m}
+                              type="button"
+                              className="pos-m3-btn-tonal"
+                              onClick={() => handleExtendMinutes(m)}
+                            >
+                              +{m}p
+                            </button>
+                          ))}
+                          <button
+                            type="button"
+                            className="pos-m3-btn-outline"
+                            onClick={handlePauseOrResume}
+                          >
+                            {activeBooking.status === 'paused' ? (
+                              <>
+                                <Play size={14} /> Tiếp tục
+                              </>
+                            ) : (
+                              <>
+                                <Pause size={14} /> Tạm dừng
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
+                  </div>
+
+                  {/* Breakdown of Golf Rate & F&B Services */}
+                  <div className="pos-m3-card">
+                    <div className="pos-m3-card-head">
+                      <h4>Chi tiết phí giờ & dịch vụ phát sinh</h4>
+                      <button
+                        type="button"
+                        className="pos-m3-btn-tonal"
+                        onClick={() => setMobileScreen('M05')}
+                      >
+                        <Plus size={15} /> Thêm món/DV
+                      </button>
+                    </div>
+                    <div className="pos-m3-line-items">
+                      <div className="pos-m3-line-item">
+                        <div>
+                          <strong>Phí sân ({SERVICE_LABEL[activeBooking.service]})</strong>
+                          <small>
+                            {sessionBill.lines.map((l) => `${l.label} (${Math.round(l.minutes)}p)`).join(' · ') ||
+                              getRoomRateLabel(selectedRoomObj.vip)}
+                          </small>
+                        </div>
+                        <strong>{money(golfTotal)}</strong>
+                      </div>
+
+                      {bookingOrders
+                        .filter((o) => o.status !== 'cancelled')
+                        .map((ord) => {
+                          const lines = JSON.parse(ord.items) as FoodLine[];
+                          return (
+                            <div key={ord.id} className="pos-m3-line-item">
+                              <div>
+                                <strong>
+                                  {lines.map((l) => `${l.name} ×${l.qty}`).join(', ')}
+                                </strong>
+                                <small>
+                                  Đơn #{ord.id.slice(-4)} · {foodLabels[ord.status]}
+                                  {ord.note ? ` · ${ord.note}` : ''}
+                                </small>
+                              </div>
+                              <div className="pos-m3-line-item-right">
+                                <strong>{money(ord.total)}</strong>
+                                {ord.status !== 'served' && (
+                                  <button
+                                    type="button"
+                                    className="pos-m3-mini-btn"
+                                    onClick={() => AdvanceOrderToServed(ord).then(() => food.reload())}
+                                  >
+                                    Đã phục vụ
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                      {cart.map((c) => (
+                        <div key={c.product.id} className="pos-m3-line-item unsent">
+                          <div>
+                            <strong>
+                              {c.product.name} ×{c.qty} <em>(Chưa lưu)</em>
+                            </strong>
+                            {c.note && <small>Ghi chú: {c.note}</small>}
+                          </div>
+                          <strong>{money(c.product.price * c.qty)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Sticky Action Bar for M03 */}
+                  <div className="pos-m3-mobile-sticky-footer dual">
+                    <button
+                      type="button"
+                      className="pos-m3-btn-tonal pos-m3-btn-lg"
+                      onClick={() => setMobileScreen('M05')}
+                    >
+                      <Plus size={18} /> Thêm F&B / DV
+                    </button>
+                    <button
+                      type="button"
+                      className="pos-m3-btn-primary pos-m3-btn-lg"
+                      onClick={() => setMobileScreen('M06')}
+                    >
+                      <span>Xem Hóa đơn & Thu tiền</span>
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* ===============================================================
+              M04 – NHẬN KHÁCH / BẮT ĐẦU CHƠI
+              =============================================================== */}
+          {mobileScreen === 'M04' && (
+            <div className="pos-m3-screen-m04">
+              <div className="pos-m3-card">
+                <div className="pos-m3-card-head">
+                  <h4>1. Chọn Line / Phòng VIP</h4>
+                </div>
+                <select
+                  className="pos-m3-select-lg"
+                  value={checkInRoomId}
+                  onChange={(e) => {
+                    setCheckInRoomId(e.target.value);
+                    setSelectedRoomId(e.target.value);
+                  }}
+                >
+                  {roomStatuses.map(({ room: r, statusKey, booking: rb }) => (
+                    <option key={r.id} value={r.id} disabled={statusKey === 'maintenance'}>
+                      {r.name} —{' '}
+                      {statusKey === 'empty'
+                        ? `Trống (${getRoomRateLabel(r.vip)})`
+                        : statusKey === 'booked'
+                          ? `Đặt trước: ${rb?.customer} (${time(rb?.start ?? 0)})`
+                          : statusKey === 'playing'
+                            ? `Đang chơi: ${rb?.customer}`
+                            : 'Bảo trì'}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {notice && (
-                <div className="error-box" role="status">
-                  {notice}
+              {/* Pre-booked Reservation Alert if any */}
+              {activeBooking && activeBooking.status === 'booked' && (
+                <div className="pos-m3-booked-alert">
+                  <div>
+                    <span className="pos-m3-badge-booked">CÓ LỊCH ĐẶT TRƯỚC</span>
+                    <h4>{activeBooking.customer} ({activeBooking.phone})</h4>
+                    <p>
+                      Giờ hẹn: {time(activeBooking.start)} · {SERVICE_LABEL[activeBooking.service]} ·{' '}
+                      {activeBooking.people} khách
+                    </p>
+                    <small>
+                      * Quy tắc: Giờ chơi chỉ bắt đầu tính từ thời điểm bấm xác nhận bên dưới.
+                    </small>
+                  </div>
                 </div>
               )}
 
-              <div className="pos-order-grid">
-                {/* Left Column: Bill details */}
-                <div className="pos-order-left">
-                  {/* Timer Box */}
-                  <div className="pos-timer-box">
-                    <span className="pos-timer-label">Thời gian chơi</span>
-                    <span className="pos-timer-clock">{clock(elapsed)}</span>
-                    <div className="pos-timer-sub">
-                      <span>Bắt đầu: {time(activeBooking.started ?? activeBooking.start)}</span>
-                      <span>|</span>
-                      <span>Dự kiến: {time(activeBooking.end)}</span>
-                    </div>
-
-                    {/* Service Switcher (P0: Chuyển đổi linh hoạt giữa giờ & game) */}
-                    <div className="pos-service-switcher">
-                      <span className="pos-service-switch-label">Hình thức tính cước:</span>
-                      <div className="pos-service-pills">
-                        {[
-                          { key: 'gdr', label: 'Tập theo giờ' },
-                          { key: '9', label: 'Game 9 hố' },
-                          { key: '18', label: 'Game 18 hố' },
-                        ].map((s) => (
-                          <button
-                            key={s.key}
-                            type="button"
-                            className={`pos-service-pill ${activeBooking.service === s.key ? 'active' : ''}`}
-                            disabled={saving || activeBooking.status === 'finished'}
-                            onClick={() => handleSwitchService(s.key as 'gdr' | '9' | '18')}
-                          >
-                            {s.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="pos-timer-actions">
-                      <button
-                        type="button"
-                        className="pos-btn-extend"
-                        onClick={() => setExtendModal(true)}
-                        disabled={saving}
-                      >
-                        <Plus size={14} /> Gia hạn
-                      </button>
-                      <button
-                        type="button"
-                        className="pos-btn-end"
-                        onClick={handleCheckout}
-                        disabled={saving}
-                      >
-                        Kết thúc
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Customer Card */}
-                  <div className="pos-customer-card">
-                    <div className="pos-customer-info">
-                      <div className="pos-customer-avatar">
-                        <User size={18} />
-                      </div>
-                      <div className="pos-customer-meta">
-                        <strong>{activeBooking.customer || 'Nguyễn Hoàng Long'}</strong>
-                        <small>Hội viên Gold - {activeBooking.phone || '0902 030 165'}</small>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      className="pos-customer-edit"
-                      onClick={() => {
-                        setCustNameInput(activeBooking.customer || '');
-                        setCustPhoneInput(activeBooking.phone || '');
-                        setEditCustomerModal(true);
-                      }}
-                      title="Chỉnh sửa thông tin khách"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                  </div>
-
-                  {/* Bill Card */}
-                  <div className="pos-bill-card">
-                    <h3 className="pos-bill-title">Dịch vụ sử dụng</h3>
-                    <div className="pos-bill-items">
-                      {/* Golf hour line */}
-                      <div className="pos-bill-row">
-                        <span className="pos-bill-item-name">
-                          {SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf (giờ)'}
-                        </span>
-                        <span className="pos-bill-item-qty">
-                          {activeBooking.service === 'gdr' ? '1 giờ' : '1 lượt'}
-                        </span>
-                        <span className="pos-bill-item-price">{money(golfBaseTotal)}</span>
-                        <button
-                          type="button"
-                          className="pos-bill-item-del"
-                          title="Không xóa lượt chơi chính"
-                          disabled
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-
-                      {/* Server-served food lines */}
-                      {foodLines.map(({ key, orderId, version, line }) => (
-                        <div key={key} className="pos-bill-row">
-                          <span className="pos-bill-item-name">{line.name}</span>
-                          <span className="pos-bill-item-qty">x{line.qty}</span>
-                          <span className="pos-bill-item-price">{money(line.total)}</span>
-                          <button
-                            type="button"
-                            className="pos-bill-item-del"
-                            onClick={() => handleCancelFoodOrder(orderId, version)}
-                            title="Xóa món"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      ))}
-
-                      {/* Extra locally added items */}
-                      {extraItems.map((item) => (
-                        <div key={item.id} className="pos-bill-row">
-                          <span className="pos-bill-item-name">{item.name}</span>
-                          <span className="pos-bill-item-qty">x{item.qty}</span>
-                          <span className="pos-bill-item-price">{money(item.price * item.qty)}</span>
-                          <button
-                            type="button"
-                            className="pos-bill-item-del"
-                            onClick={() => handleRemoveExtraItem(item.name)}
-                            title="Xóa món"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Voucher / Discount Button (P0) */}
-                    <button
-                      type="button"
-                      className="pos-btn-discount"
-                      onClick={() => setDiscountModal(true)}
-                    >
-                      <Tag size={14} />
-                      <span>
-                        {customDiscount
-                          ? `Giảm giá: −${money(customDiscount.amount)} (${customDiscount.reason})`
-                          : '+ Thêm giảm giá / Voucher'}
-                      </span>
-                    </button>
-
-                    <div className="pos-bill-summary">
-                      <div className="pos-summary-line">
-                        <span>Tạm tính</span>
-                        <span>{money(subtotal)}</span>
-                      </div>
-                      <div className="pos-summary-line">
-                        <span>Giảm giá</span>
-                        <span style={{ color: discountAmount > 0 ? '#16a34a' : 'inherit' }}>
-                          {discountAmount > 0 ? `−${money(discountAmount)}` : money(0)}
-                        </span>
-                      </div>
-                      <div className="pos-summary-total">
-                        <span>Tổng thanh toán</span>
-                        <span className="pos-total-amount">{money(total)}</span>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="pos-btn-checkout"
-                      onClick={handleCheckout}
-                      disabled={saving}
-                    >
-                      <CreditCard size={18} />
-                      <span>Thanh toán (F9)</span>
-                    </button>
-
-                    <div className="pos-peripheral-bar">
-                      <button
-                        type="button"
-                        className="pos-btn-peripheral"
-                        onClick={handlePrintKitchenTicket}
-                        title="In phiếu chế biến gửi quầy bar / bếp"
-                      >
-                        <Utensils size={14} />
-                        <span>In phiếu Bếp / Bar</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="pos-btn-peripheral"
-                        onClick={() => {
-                          kickCashDrawer();
-                          setNotice('Đã kích hoạt mở két tiền (F4)');
-                        }}
-                        title="Mở két đựng tiền mặt (F4)"
-                      >
-                        <Banknote size={14} />
-                        <span>Mở két (F4)</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="pos-btn-peripheral"
-                        onClick={() => setShowCustomerDisplay(true)}
-                        title="Hiển thị màn hình cho khách"
-                      >
-                        <Tv size={14} />
-                        <span>Màn hình khách</span>
-                      </button>
-                    </div>
-                  </div>
+              {/* Select Existing Member/Customer or New Walk-in */}
+              <div className="pos-m3-card">
+                <div className="pos-m3-card-head">
+                  <h4>2. Thông tin khách hàng</h4>
                 </div>
-
-                {/* Right Column: Catalog */}
-                <div className="pos-catalog-card">
-                  {/* Category Pills */}
-                  <div className="pos-catalog-tabs">
-                    {[
-                      { key: 'fnb', label: 'F&B' },
-                      { key: 'service', label: 'Dịch vụ' },
-                      { key: 'accessory', label: 'Phụ kiện' },
-                      { key: 'combo', label: 'Combo' },
-                    ].map((c) => (
+                <div className="pos-m3-search-box" style={{ marginBottom: 10 }}>
+                  <Search size={16} />
+                  <input
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    placeholder="Tìm khách/hội viên theo tên, SĐT, mã thẻ..."
+                  />
+                </div>
+                {customersList.length > 0 && (
+                  <div className="pos-m3-cust-suggestions">
+                    {customersList.slice(0, 4).map((c) => (
                       <button
-                        key={c.key}
+                        key={c.id}
                         type="button"
-                        className={`pos-catalog-tab-btn ${catalogCat === c.key ? 'active' : ''}`}
-                        onClick={() => setCatalogCat(c.key as CatalogCategory)}
+                        className={`pos-m3-cust-chip ${checkInPhone === c.phone ? 'active' : ''}`}
+                        onClick={() => {
+                          setCheckInCustomer(c.name);
+                          setCheckInPhone(c.phone);
+                        }}
                       >
-                        {c.label}
+                        <UserCheck size={14} />
+                        <span>
+                          <strong>{c.name}</strong> ({c.phone})
+                        </span>
                       </button>
                     ))}
                   </div>
+                )}
 
-                  {/* Search Bar */}
-                  <div className="pos-catalog-search">
-                    <Search />
+                <div className="pos-m3-form-grid">
+                  <label className="pos-m3-field">
+                    <span>Họ tên khách hàng *</span>
                     <input
-                      placeholder="Tìm sản phẩm, mã SKU..."
-                      value={catalogSearch}
-                      onChange={(e) => setCatalogSearch(e.target.value)}
+                      value={checkInCustomer}
+                      onChange={(e) => setCheckInCustomer(e.target.value)}
+                      placeholder="Nhập tên khách hoặc Khách lẻ..."
                     />
-                    <button
-                      type="button"
-                      className="pos-barcode-btn"
-                      title="Quét mã vạch"
-                      onClick={() => setShowBarcodeModal(true)}
-                    >
-                      <ScanBarcode size={18} />
-                    </button>
-                  </div>
-
-                  {/* 4-column Product Grid */}
-                  <div className="pos-catalog-grid">
-                    {filteredCatalog.map((item) => (
-                      <div
-                        key={item.id}
-                        className="pos-product-card"
-                        onClick={() => handleAddCatalogItem(item)}
-                      >
-                        <div className="pos-product-image">
-                          <span>{item.emoji}</span>
-                        </div>
-                        <h4 className="pos-product-name">{item.name}</h4>
-                        <p className="pos-product-price">{money(item.price)}</p>
-                        <button
-                          type="button"
-                          className="pos-product-add-btn"
-                          aria-label={`Thêm ${item.name}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddCatalogItem(item);
-                          }}
-                        >
-                          <Plus size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
+                  </label>
+                  <label className="pos-m3-field">
+                    <span>Số điện thoại (Tích điểm / Dùng gói giờ)</span>
+                    <input
+                      inputMode="tel"
+                      value={checkInPhone}
+                      onChange={(e) => setCheckInPhone(e.target.value)}
+                      placeholder="090xxxxxxx"
+                    />
+                  </label>
                 </div>
               </div>
 
-              {/* Bottom 1:1 Step Label */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="pos-step-bottom-badge">
-                  <span className="pos-step-bottom-num">2</span>
-                  <span className="pos-step-bottom-text">Tạo hóa đơn & thêm dịch vụ, F&B</span>
+              {/* Service & Pricing Config */}
+              <div className="pos-m3-card">
+                <div className="pos-m3-card-head">
+                  <h4>3. Gói dịch vụ & Thời lượng dự kiến</h4>
                 </div>
+                <div className="pos-m3-chip-row">
+                  {(['gdr', '9', '18'] as const).map((srv) => (
+                    <button
+                      key={srv}
+                      type="button"
+                      className={`pos-m3-chip ${checkInService === srv ? 'active' : ''}`}
+                      onClick={() => setCheckInService(srv)}
+                    >
+                      {SERVICE_LABEL[srv]}
+                    </button>
+                  ))}
+                </div>
+                <div className="pos-m3-form-grid" style={{ marginTop: 10 }}>
+                  <label className="pos-m3-field">
+                    <span>Thời lượng dự kiến</span>
+                    <select
+                      value={checkInDuration}
+                      onChange={(e) => setCheckInDuration(Number(e.target.value))}
+                    >
+                      <option value={60}>60 phút (1 giờ)</option>
+                      <option value={90}>90 phút (1.5 giờ)</option>
+                      <option value={120}>120 phút (2 giờ)</option>
+                      <option value={180}>180 phút (3 giờ)</option>
+                    </select>
+                  </label>
+                  <label className="pos-m3-field">
+                    <span>Số lượng người chơi</span>
+                    <select
+                      value={checkInPeople}
+                      onChange={(e) => setCheckInPeople(Number(e.target.value))}
+                    >
+                      {[1, 2, 3, 4, 5, 6].map((n) => (
+                        <option key={n} value={n}>
+                          {n} người
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div className="pos-m3-mobile-sticky-footer dual">
+                <button
+                  type="button"
+                  className="pos-m3-btn-outline pos-m3-btn-lg"
+                  disabled={saving}
+                  onClick={handleReserveSlotOnly}
+                >
+                  Đặt giữ chỗ
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-btn-primary pos-m3-btn-lg"
+                  disabled={saving}
+                  onClick={handleStartOrWalkIn}
+                >
+                  <Play size={18} />
+                  <span>{saving ? 'Đang mở phiên…' : 'Bắt đầu tính giờ'}</span>
+                </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: THANH TOÁN */}
-          {step === 'pay' && (
-            <div className="pos-pay-screen">
-              <div className="pos-pay-header">
-                <button
-                  type="button"
-                  className="pos-back-btn"
-                  onClick={() => setStep('order')}
-                  aria-label="Quay lại bán hàng"
-                >
-                  <ArrowLeft size={18} />
-                </button>
-                <h2>Thanh toán</h2>
+          {/* ===============================================================
+              M05 – BÁN HÀNG VÀ DỊCH VỤ (F&B, PHỤ KIỆN, DỊCH VỤ, GÓI GIỜ)
+              =============================================================== */}
+          {mobileScreen === 'M05' && (
+            <div className="pos-m3-screen-m05">
+              <div className="pos-m3-search-box">
+                <Search size={17} />
+                <input
+                  value={catalogSearch}
+                  onChange={(e) => setCatalogSearch(e.target.value)}
+                  placeholder="Tìm món ăn, đồ uống, phụ kiện, mã SKU..."
+                />
+                {catalogSearch && (
+                  <button type="button" onClick={() => setCatalogSearch('')}>
+                    <X size={15} />
+                  </button>
+                )}
               </div>
 
-              <div className="pos-pay-amount-box">
-                <span className="pos-pay-amount-label">Tổng thanh toán</span>
-                <div className="pos-pay-amount-value">{money(total)}</div>
-              </div>
-
-              {/* 3 Payment Methods */}
-              <div className="pos-method-cards">
+              <div className="pos-m3-chip-row">
                 {(
                   [
-                    ['cash', Wallet, 'Tiền mặt'],
-                    ['card', CreditCard, 'Thẻ ngân hàng'],
-                    ['transfer', QrCode, 'QR Code'],
+                    ['all', 'Tất cả'],
+                    ['fnb', 'F&B'],
+                    ['service', 'Dịch vụ'],
+                    ['package', 'Gói giờ'],
+                    ['accessory', 'Phụ kiện'],
                   ] as const
-                ).map(([k, Icon, label]) => (
+                ).map(([k, label]) => (
                   <button
                     key={k}
                     type="button"
-                    className={`pos-method-card ${payMethod === k ? 'selected' : ''}`}
-                    onClick={() => setPayMethod(k)}
+                    className={`pos-m3-chip ${catalogCat === k ? 'active' : ''}`}
+                    onClick={() => setCatalogCat(k)}
                   >
-                    <Icon />
-                    <span>{label}</span>
+                    {label}
                   </button>
                 ))}
               </div>
 
-              {/* QR Code view (SePay Gateway) */}
-              {payMethod === 'transfer' && (
-                <TransferPanel
-                  booking={activeBooking}
-                  bank={{
-                    bin: data.config?.bankBin ?? '970422',
-                    account: data.config?.bankAccount ?? '0877834888',
-                    holder: data.config?.bankHolder ?? 'SAIGON INDOOR GOLF',
-                  }}
-                  fallbackAmount={total}
-                  busy={saving}
-                  onUse={(txId) => handleConfirmPayment(txId)}
-                />
-              )}
-
-              {/* Cash view */}
-              {payMethod === 'cash' && (
-                <>
-                  <div className="pos-quick-cash-row">
-                    {quickCash.map((amt) => (
-                      <button
-                        key={amt}
-                        type="button"
-                        className={`pos-quick-cash-btn ${cashIn === amt ? 'selected' : ''}`}
-                        onClick={() => setTendered(String(amt))}
-                      >
-                        {money(amt)}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="pos-calc-box">
-                    <div className="pos-calc-row">
-                      <label htmlFor="pos-cash-in">Khách đưa:</label>
-                      <input
-                        id="pos-cash-in"
-                        inputMode="numeric"
-                        value={tendered}
-                        placeholder={String(total)}
-                        onChange={(e) => setTendered(e.target.value)}
-                      />
-                    </div>
-                    <div className="pos-calc-row">
-                      <label>Tiền thối lại:</label>
-                      <span className="pos-change-value">{money(change)}</span>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Print Checkbox */}
-              <label className="pos-print-checkbox">
-                <input
-                  type="checkbox"
-                  checked={printReceipt}
-                  onChange={(e) => setPrintReceipt(e.target.checked)}
-                />
-                <span>In hóa đơn sau khi xác nhận</span>
-              </label>
-
-              {notice && (
-                <div className="error-box" role="status">
-                  {notice}
-                </div>
-              )}
-
-              {payMethod !== 'transfer' && (
-                <button
-                  type="button"
-                  className="pos-btn-confirm-pay"
-                  onClick={() => handleConfirmPayment()}
-                  disabled={saving || !canPayNow}
-                >
-                  {saving ? 'Đang ghi nhận…' : 'Xác nhận thanh toán'}
-                </button>
-              )}
-
-              {onOpenSession && (
-                <button
-                  type="button"
-                  className="pos-btn-print"
-                  onClick={() => onOpenSession(activeBooking)}
-                  title="Giảm giá, gói hội viên, ví, chia tiền"
-                >
-                  <SlidersHorizontal size={16} />
-                  <span>Giảm giá / gói hội viên / chia tiền</span>
-                </button>
-              )}
-
-              {/* Bottom 1:1 Step Label */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="pos-step-bottom-badge">
-                  <span className="pos-step-bottom-num">3</span>
-                  <span className="pos-step-bottom-text">Thanh toán</span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STEP 4: HOÀN TẤT & IN HÓA ĐƠN */}
-          {step === 'done' && (
-            <div className="pos-done-screen">
-              <div className="pos-done-checkmark">
-                <Check />
-              </div>
-              <h2 className="pos-done-title">Thanh toán thành công!</h2>
-
-              <div className="pos-done-meta-box">
-                <div className="pos-done-meta-row">
-                  <span>Hóa đơn:</span>
-                  <strong>{paid?.code || 'HD26879'}</strong>
-                </div>
-                <div className="pos-done-meta-row">
-                  <span>Tổng tiền:</span>
-                  <span className="pos-done-price">{money(paid?.total ?? total)}</span>
-                </div>
-                <div className="pos-done-meta-row">
-                  <span>Hình thức:</span>
-                  <strong>{paid?.method || PAY_LABEL[payMethod]}</strong>
-                </div>
-                <div className="pos-done-meta-row">
-                  <span>Thời gian:</span>
-                  <strong>
-                    {new Date(paid?.at ?? Date.now()).toLocaleString('vi-VN', {
-                      timeZone: 'Asia/Ho_Chi_Minh',
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </strong>
-                </div>
-              </div>
-
-              {notice && <div className="error-box">{notice}</div>}
-
-              <div className="pos-done-actions">
-                <button type="button" className="pos-btn-print" onClick={printNow}>
-                  <Printer size={16} />
-                  <span>In hóa đơn</span>
-                </button>
-                <button type="button" className="pos-btn-zalo" onClick={sendZalo}>
-                  <Send size={16} />
-                  <span>Gửi hóa đơn (Zalo/Email)</span>
-                </button>
-                <button
-                  type="button"
-                  className="pos-btn-finish"
-                  onClick={() => {
-                    setActiveId(null);
-                    setExtraItems([]);
-                    setCustomDiscount(null);
-                    setStep('map');
-                  }}
-                >
-                  Hoàn tất
-                </button>
-              </div>
-
-              {/* Bottom 1:1 Step Label */}
-              <div style={{ textAlign: 'center' }}>
-                <div className="pos-step-bottom-badge">
-                  <span className="pos-step-bottom-num">4</span>
-                  <span className="pos-step-bottom-text">Hoàn tất & In hóa đơn</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </main>
-      )}
-
-      {/* =====================================================================
-          VIEW MODE 2: MOBILE APP POS FLOW (6 interactive steps)
-          ===================================================================== */}
-      {viewMode === 'mobile' && (
-        <main className="pos-flow-container">
-          <div className="pos-mobile-section">
-            {/* Left Info Sidebar */}
-            <div className="pos-mobile-sidebar">
-              <div className="pos-mobile-banner-title">
-                <Smartphone size={28} color="#16a34a" />
-                <div>
-                  <h3>POS trên App Mobile</h3>
-                  <small>(Dành cho nhân viên vận hành)</small>
-                </div>
-              </div>
-
-              <div className="pos-mobile-checklist">
-                <div className="pos-mobile-check-item">
-                  <Check /> Xem trạng thái line
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Tạo hóa đơn nhanh
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Bán F&B & dịch vụ
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Thanh toán đa hình thức
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> In hoặc gửi hóa đơn
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Theo dõi doanh thu ca
-                </div>
-              </div>
-
-              <div style={{ marginTop: '20px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
-                  CHỌN MÀN HÌNH XEM TRƯỚC:
-                </span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' }}>
-                  {[
-                    '1. Trang chủ POS',
-                    '2. Danh sách line/phòng',
-                    '3. Thêm dịch vụ & Tạm tính',
-                    '4. Chọn sản phẩm, số lượng',
-                    '5. Thanh toán',
-                    '6. Hoàn tất',
-                  ].map((s, idx) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`pos-catalog-tab-btn ${mobileStep === idx + 1 ? 'active' : ''}`}
-                      style={{ textAlign: 'left', padding: '8px 12px' }}
-                      onClick={() => setMobileStep(idx + 1)}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Frame Simulation */}
-            <div style={{ display: 'flex', justifyContent: 'center' }}>
-              <div className="pos-phone-mockup" style={{ width: '340px' }}>
-                <div className="pos-phone-notch">
-                  <span>9:41</span>
-                  <span>📶 🔋</span>
-                </div>
-
-                {/* Mobile Screen 1: Home */}
-                {mobileStep === 1 && (
-                  <div className="pos-phone-content">
-                    <div
-                      style={{
-                        background: '#093824',
-                        color: '#fff',
-                        padding: '12px',
-                        borderRadius: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      <div>
-                        <strong style={{ fontSize: '13px', display: 'block' }}>Saigon Indoor Golf</strong>
-                        <small style={{ fontSize: '10px', color: '#86efac' }}>POS Vận hành</small>
+              {/* 2-Column Product Cards Grid */}
+              <div className="pos-m3-catalog-grid">
+                {filteredCatalog.map((item) => {
+                  const inCart = cart.find((c) => c.product.id === item.id);
+                  return (
+                    <div key={item.id} className={`pos-m3-prod-card ${inCart ? 'in-cart' : ''}`}>
+                      <div className="pos-m3-prod-visual">
+                        <span className="pos-m3-prod-cat-tag">
+                          {item.category === 'fnb'
+                            ? 'F&B'
+                            : item.category === 'accessory'
+                              ? 'Phụ kiện'
+                              : item.category === 'package'
+                                ? 'Gói giờ'
+                                : 'Dịch vụ'}
+                        </span>
+                        {item.category === 'fnb' ? (
+                          <Coffee size={26} />
+                        ) : item.category === 'accessory' ? (
+                          <ShoppingBag size={26} />
+                        ) : item.category === 'package' ? (
+                          <Crown size={26} />
+                        ) : (
+                          <Sparkles size={26} />
+                        )}
                       </div>
-                      <span style={{ fontSize: '18px' }}>🔔</span>
-                    </div>
-
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, 1fr)',
-                        gap: '10px',
-                        marginTop: '10px',
-                      }}
-                    >
-                      {[
-                        { title: 'Sơ đồ line', icon: '⛳', step: 2 },
-                        { title: 'Bán hàng', icon: '🛒', step: 3 },
-                        { title: 'Hóa đơn', icon: '📄', step: 5 },
-                        { title: 'Đặt sân', icon: '📅', step: 2 },
-                        { title: 'Khách hàng', icon: '👥', step: 3 },
-                        { title: 'Báo cáo', icon: '📊', step: 1 },
-                      ].map((t) => (
-                        <button
-                          key={t.title}
-                          type="button"
-                          onClick={() => setMobileStep(t.step)}
-                          style={{
-                            background: '#fff',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '12px',
-                            padding: '14px 10px',
-                            textAlign: 'center',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <div style={{ fontSize: '24px', marginBottom: '4px' }}>{t.icon}</div>
-                          <strong style={{ fontSize: '12px', color: '#0f172a' }}>{t.title}</strong>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Mobile Screen 2: Lines */}
-                {mobileStep === 2 && (
-                  <div className="pos-phone-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setMobileStep(1)}
-                        style={{ border: 'none', background: 'none' }}
-                      >
-                        <ArrowLeft size={16} />
-                      </button>
-                      <strong style={{ fontSize: '14px' }}>Sơ đồ line</strong>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', padding: '4px 0' }}>
-                      <span className="pos-filter-btn active" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        Tất cả 12
-                      </span>
-                      <span className="pos-filter-btn" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        Đang chơi 4
-                      </span>
-                      <span className="pos-filter-btn" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        Trống 5
-                      </span>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {[
-                        { name: 'L1', state: 'playing', text: 'Đang chơi · 45p' },
-                        { name: 'L2', state: 'empty', text: 'Trống' },
-                        { name: 'L3', state: 'playing', text: 'Đang chơi · 30p' },
-                        { name: 'L4', state: 'maintenance', text: 'Bảo trì đến 16:00' },
-                      ].map((l) => (
-                        <div
-                          key={l.name}
-                          onClick={() => setMobileStep(3)}
-                          style={{
-                            background: '#fff',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '10px',
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          <strong>{l.name}</strong>
-                          <span
-                            className={`pos-status-tag ${
-                              l.state === 'playing'
-                                ? 'pos-state-playing'
-                                : l.state === 'maintenance'
-                                  ? 'pos-state-maintenance'
-                                  : 'pos-state-empty'
-                            }`}
-                            style={{ fontSize: '11px' }}
+                      <div className="pos-m3-prod-info">
+                        <strong>{item.name}</strong>
+                        <small>{money(item.price)} / {item.unit}</small>
+                      </div>
+                      <div className="pos-m3-prod-actions">
+                        {inCart ? (
+                          <div className="pos-m3-qty-stepper">
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(item, -1)}
+                              aria-label="Giảm"
+                            >
+                              <Minus size={15} />
+                            </button>
+                            <span>{inCart.qty}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleAddToCart(item, 1)}
+                              aria-label="Tăng"
+                            >
+                              <Plus size={15} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="pos-m3-add-circle"
+                            onClick={() => handleAddToCart(item, 1)}
+                            aria-label={`Thêm ${item.name}`}
                           >
-                            {l.text}
-                          </span>
+                            <Plus size={18} />
+                          </button>
+                        )}
+                      </div>
+                      {inCart && (
+                        <div className="pos-m3-prod-note-inline">
+                          {editingNoteProductId === item.id ? (
+                            <input
+                              value={inCart.note}
+                              onChange={(e) => handleUpdateCartNote(item.id, e.target.value)}
+                              onBlur={() => setEditingNoteProductId(null)}
+                              placeholder="Ghi chú: ít đá, không đường..."
+                              autoFocus
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="pos-m3-note-trigger"
+                              onClick={() => setEditingNoteProductId(item.id)}
+                            >
+                              <Edit2 size={11} /> {inCart.note || 'Thêm ghi chú món'}
+                            </button>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
+                  );
+                })}
+              </div>
+
+              {/* Floating Green Cart Bar (Matching Reference Image 2 Step 3) */}
+              <div className="pos-m3-mobile-sticky-footer">
+                <button
+                  type="button"
+                  className="pos-m3-floating-cart-bar"
+                  onClick={() => setMobileScreen('M06')}
+                >
+                  <div className="pos-m3-cart-bar-left">
+                    <ShoppingCart size={20} />
+                    <span>Giỏ hàng ({cartCount + bookingOrders.length})</span>
                   </div>
-                )}
+                  <div className="pos-m3-cart-bar-right">
+                    <strong>{money(payableTotal)}</strong>
+                    <ChevronRight size={18} />
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
 
-                {/* Mobile Screen 3: Order Details */}
-                {mobileStep === 3 && (
-                  <div className="pos-phone-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setMobileStep(2)}
-                        style={{ border: 'none', background: 'none' }}
-                      >
-                        <ArrowLeft size={16} />
-                      </button>
-                      <strong style={{ fontSize: '14px' }}>Bán hàng – L3</strong>
-                    </div>
-
-                    <div style={{ background: '#fff', padding: '10px', borderRadius: '10px' }}>
-                      <strong style={{ fontSize: '13px' }}>Nguyễn Hoàng Long</strong>
-                      <small style={{ display: 'block', color: '#64748b', fontSize: '11px' }}>
-                        Hội viên Gold
+          {/* ===============================================================
+              M06 – GIỎ HÀNG / HÓA ĐƠN
+              =============================================================== */}
+          {mobileScreen === 'M06' && (
+            <div className="pos-m3-screen-m06">
+              {/* Line / Golf Time Charge */}
+              {activeBooking && (
+                <div className="pos-m3-card">
+                  <div className="pos-m3-card-head">
+                    <h4>Phí Line & Thời gian chơi ({selectedRoomObj.name})</h4>
+                    <span className="pos-m3-status-pill playing">{clock(elapsedMs)}</span>
+                  </div>
+                  <div className="pos-m3-cart-row">
+                    <div>
+                      <strong>
+                        {SERVICE_LABEL[activeBooking.service]} ({selectedRoomObj.name})
+                      </strong>
+                      <small>
+                        Khách: {activeBooking.customer} · Bắt đầu:{' '}
+                        {activeBooking.started ? time(activeBooking.started) : time(activeBooking.start)}
                       </small>
                     </div>
+                    <strong className="pos-m3-price-tag">{money(golfTotal)}</strong>
+                  </div>
+                </div>
+              )}
 
-                    <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span>Chơi golf (giờ)</span>
-                        <strong>350.000 đ</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Nước suối x2</span>
-                        <strong>40.000 đ</strong>
-                      </div>
-                    </div>
-
+              {/* Cart Items (Unsent) & Existing Session Orders */}
+              <div className="pos-m3-card">
+                <div className="pos-m3-card-head">
+                  <h4>Danh sách F&B, Phụ kiện & Dịch vụ</h4>
+                  {cart.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => setMobileStep(4)}
-                      className="pos-btn-extend"
-                      style={{ justifyContent: 'center', padding: '10px' }}
+                      className="pos-m3-btn-text danger"
+                      onClick={() => setCart([])}
                     >
-                      + Thêm sản phẩm / dịch vụ
+                      <Trash2 size={14} /> Xóa giỏ mới
                     </button>
+                  )}
+                </div>
 
-                    <div style={{ marginTop: 'auto', background: '#fff', padding: '12px', borderRadius: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span>Tạm tính</span>
-                        <span>390.000 đ</span>
+                {cart.length === 0 && bookingOrders.length === 0 ? (
+                  <p className="pos-m3-empty-note">
+                    Chưa có món ăn hoặc dịch vụ cộng thêm.{' '}
+                    <button
+                      type="button"
+                      className="pos-m3-inline-link"
+                      onClick={() => setMobileScreen('M05')}
+                    >
+                      + Chọn thêm món
+                    </button>
+                  </p>
+                ) : (
+                  <div className="pos-m3-cart-list">
+                    {cart.map((line) => (
+                      <div key={line.product.id} className="pos-m3-cart-item">
+                        <div className="pos-m3-cart-item-info">
+                          <strong>{line.product.name}</strong>
+                          <small>{money(line.product.price)} / {line.product.unit}</small>
+                          <input
+                            className="pos-m3-item-note-input"
+                            value={line.note}
+                            onChange={(e) => handleUpdateCartNote(line.product.id, e.target.value)}
+                            placeholder="Ghi chú món (tùy chọn)..."
+                          />
+                        </div>
+                        <div className="pos-m3-cart-item-controls">
+                          <div className="pos-m3-qty-stepper">
+                            <button type="button" onClick={() => handleAddToCart(line.product, -1)}>
+                              <Minus size={14} />
+                            </button>
+                            <span>{line.qty}</span>
+                            <button type="button" onClick={() => handleAddToCart(line.product, 1)}>
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                          <strong>{money(line.product.price * line.qty)}</strong>
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontWeight: 700,
-                          fontSize: '15px',
-                          color: '#16a34a',
-                          marginTop: '4px',
-                        }}
-                      >
-                        <span>Tổng thanh toán</span>
-                        <span>390.000 đ</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setMobileStep(5)}
-                        className="pos-btn-checkout"
-                        style={{ padding: '10px', marginTop: '10px' }}
-                      >
-                        Thanh toán
-                      </button>
-                    </div>
+                    ))}
+
+                    {bookingOrders
+                      .filter((o) => o.status !== 'cancelled')
+                      .map((ord) => {
+                        const parsed = JSON.parse(ord.items) as FoodLine[];
+                        return (
+                          <div key={ord.id} className="pos-m3-cart-item committed">
+                            <div className="pos-m3-cart-item-info">
+                              <strong>
+                                {parsed.map((l) => `${l.name} ×${l.qty}`).join(', ')}
+                              </strong>
+                              <small>
+                                Đã ghi vào phiên ({foodLabels[ord.status]})
+                                {ord.note ? ` · ${ord.note}` : ''}
+                              </small>
+                            </div>
+                            <div className="pos-m3-cart-item-controls">
+                              <strong>{money(ord.total)}</strong>
+                              {ord.status !== 'served' && (
+                                <button
+                                  type="button"
+                                  className="pos-m3-btn-text danger"
+                                  onClick={() => handleCancelOrder(ord)}
+                                >
+                                  Hủy
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
 
-                {/* Mobile Screen 4: Product Selection */}
-                {mobileStep === 4 && (
-                  <div className="pos-phone-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label className="pos-m3-field" style={{ marginTop: 10 }}>
+                  <span>Ghi chú cho hóa đơn / bếp</span>
+                  <input
+                    value={orderNote}
+                    onChange={(e) => setOrderNote(e.target.value)}
+                    placeholder="Nhập ghi chú cho đơn hàng..."
+                  />
+                </label>
+
+                {cart.length > 0 && activeBooking && (
+                  <button
+                    type="button"
+                    className="pos-m3-btn-tonal pos-m3-btn-block"
+                    style={{ marginTop: 10 }}
+                    disabled={saving}
+                    onClick={() => handleCommitCartToSession(activeBooking.id)}
+                  >
+                    <Check size={16} /> Lưu các món mới vào phiên chơi
+                  </button>
+                )}
+              </div>
+
+              {/* Discount & Member Privileges */}
+              {activeBooking && canDiscount && (
+                <div className="pos-m3-card">
+                  <div className="pos-m3-card-head">
+                    <h4>Ưu đãi & Giảm giá theo phân quyền</h4>
+                  </div>
+                  <DiscountForm
+                    bookingId={activeBooking.id}
+                    amount={grossTotal || 100000}
+                    onDone={async () => {
+                      await reloadBill();
+                      await onRefresh();
+                      setNotice('Đã áp dụng giảm giá cho hóa đơn');
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Bill Summary Breakdown */}
+              <div className="pos-m3-card pos-m3-bill-summary-card">
+                <div className="pos-m3-summary-line">
+                  <span>Phí giờ chơi ({selectedRoomObj.name})</span>
+                  <strong>{money(golfTotal)}</strong>
+                </div>
+                <div className="pos-m3-summary-line">
+                  <span>F&B, Phụ kiện & Dịch vụ</span>
+                  <strong>{money(fnbTotal)}</strong>
+                </div>
+                <div className="pos-m3-summary-line">
+                  <span>Tạm tính</span>
+                  <strong>{money(grossTotal)}</strong>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="pos-m3-summary-line discount">
+                    <span>Giảm giá / Ưu đãi ({bill?.discount?.reason})</span>
+                    <strong>−{money(discountAmount)}</strong>
+                  </div>
+                )}
+                <div className="pos-m3-summary-line total">
+                  <span>Tổng thanh toán</span>
+                  <strong>{money(payableTotal)}</strong>
+                </div>
+              </div>
+
+              <div className="pos-m3-mobile-sticky-footer">
+                <button
+                  type="button"
+                  className="pos-m3-btn-primary pos-m3-btn-block pos-m3-btn-lg"
+                  disabled={saving}
+                  onClick={() => {
+                    if (activeBooking && ['playing', 'paused'].includes(activeBooking.status)) {
+                      handleFinishSession(true);
+                    } else {
+                      setMobileScreen('M07');
+                    }
+                  }}
+                >
+                  <span>Thanh toán · {money(payableTotal)}</span>
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ===============================================================
+              M07 – THANH TOÁN
+              =============================================================== */}
+          {mobileScreen === 'M07' && (
+            <div className="pos-m3-screen-m07">{renderPaymentContent()}</div>
+          )}
+
+          {/* ===============================================================
+              M08 – HOÀN TẤT
+              =============================================================== */}
+          {mobileScreen === 'M08' && (
+            <div className="pos-m3-screen-m08">
+              <div className="pos-m3-receipt-card">
+                <div className="pos-m3-success-icon">
+                  <Check size={36} />
+                </div>
+                <h2>Thanh toán thành công!</h2>
+                <p>Đơn hàng đã được ghi nhận vào sổ ca và giải phóng line.</p>
+
+                <div className="pos-m3-receipt-box">
+                  <div>
+                    <span>Mã hóa đơn</span>
+                    <strong>#{lastReceipt?.code || 'HD-POS'}</strong>
+                  </div>
+                  <div>
+                    <span>Line / Phòng</span>
+                    <strong>{lastReceipt?.roomName || selectedRoomObj.name}</strong>
+                  </div>
+                  <div>
+                    <span>Khách hàng</span>
+                    <strong>{lastReceipt?.customer || activeBooking?.customer || 'Khách lẻ'}</strong>
+                  </div>
+                  <div>
+                    <span>Thời gian</span>
+                    <strong>
+                      {date(lastReceipt?.at ?? Date.now())} – {time(lastReceipt?.at ?? Date.now())}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>Phương thức</span>
+                    <strong>{lastReceipt?.methodLabel || PAY_LABEL[payMethod]}</strong>
+                  </div>
+                  <div className="pos-m3-receipt-total">
+                    <span>Tổng thanh toán</span>
+                    <strong>{money(lastReceipt?.total ?? payableTotal)}</strong>
+                  </div>
+                </div>
+
+                <div className="pos-m3-receipt-actions">
+                  <button
+                    type="button"
+                    className="pos-m3-btn-primary pos-m3-btn-block pos-m3-btn-lg"
+                    onClick={() => handlePrintReceipt()}
+                  >
+                    <Printer size={18} /> In hóa đơn (K80)
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-m3-btn-tonal pos-m3-btn-block pos-m3-btn-lg"
+                    onClick={() => handleSendZaloReceipt()}
+                  >
+                    <Send size={18} /> Gửi hóa đơn (Zalo / Email)
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-m3-btn-outline pos-m3-btn-block pos-m3-btn-lg"
+                    onClick={() => {
+                      setLastReceipt(null);
+                      setActiveBookingId(null);
+                      setMobileScreen('M02');
+                    }}
+                  >
+                    <Home size={18} /> Đóng phiên & Quay về Sơ đồ POS
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ===============================================================
+              M09 – QUẢN LÝ CA
+              =============================================================== */}
+          {mobileScreen === 'M09' && (
+            <div className="pos-m3-screen-m09">{renderShiftManagementContent()}</div>
+          )}
+
+          {/* ===============================================================
+              M10 – LỊCH SỬ GIAO DỊCH
+              =============================================================== */}
+          {mobileScreen === 'M10' && (
+            <div className="pos-m3-screen-m10">{renderTransactionHistoryContent()}</div>
+          )}
+        </main>
+
+        {/* Fixed 5-Tab Bottom Navigation Bar (POS | Đặt sân | Đơn hàng | Khách hàng | Thêm) */}
+        <nav className="pos-m3-mobile-bottom-nav" aria-label="Điều hướng POS Mobile">
+          <button
+            type="button"
+            className={mobileTab === 'pos' && ['M01', 'M02', 'M03', 'M05'].includes(mobileScreen) ? 'active' : ''}
+            onClick={() => {
+              setMobileTab('pos');
+              setMobileScreen(mobileScreen === 'M01' ? 'M02' : 'M01');
+            }}
+          >
+            <Store size={20} />
+            <span>POS</span>
+          </button>
+
+          <button
+            type="button"
+            className={mobileTab === 'bookings' || mobileScreen === 'M04' ? 'active' : ''}
+            onClick={() => {
+              setMobileTab('bookings');
+              setMobileScreen('M04');
+            }}
+          >
+            <CalendarDays size={20} />
+            <span>Đặt sân</span>
+          </button>
+
+          <button
+            type="button"
+            className={
+              mobileTab === 'orders' || ['M06', 'M07', 'M10'].includes(mobileScreen) ? 'active' : ''
+            }
+            onClick={() => {
+              setMobileTab('orders');
+              setMobileScreen(activeBooking && activeBooking.status !== 'paid' ? 'M06' : 'M10');
+            }}
+          >
+            <Receipt size={20} />
+            <span>Đơn hàng</span>
+          </button>
+
+          <button
+            type="button"
+            className={mobileTab === 'customers' ? 'active' : ''}
+            onClick={() => {
+              setMobileTab('customers');
+              if (onGo) onGo('crmx');
+            }}
+          >
+            <Users size={20} />
+            <span>Khách hàng</span>
+          </button>
+
+          <button
+            type="button"
+            className={mobileTab === 'more' || mobileScreen === 'M09' ? 'active' : ''}
+            onClick={() => {
+              setMobileTab('more');
+              setMobileScreen('M09');
+            }}
+          >
+            <MoreHorizontal size={20} />
+            <span>Thêm</span>
+          </button>
+        </nav>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // VIEW 2: POS DESKTOP (>= 1366px COMMERCIAL SINGLE-WORKSPACE LAYOUT)
+  // ============================================================================
+  return (
+    <div className="pos-m3-desktop-workspace">
+      {/* 1. POS Operational Header (Facility, Shift, Staff, Notifications) */}
+      <header className="pos-m3-desktop-header">
+        <div className="pos-m3-header-facility">
+          <div className="pos-m3-facility-icon">
+            <Building2 size={20} />
+          </div>
+          <div>
+            <strong>{data.config?.name || 'Saigon Indoor Golf Club'}</strong>
+            <small>{data.config?.address || '250 Lương Định Của, P. Bình Trưng, TP.HCM'}</small>
+          </div>
+        </div>
+
+        {/* Shift Status Pill & Quick Operational Tools */}
+        <div className="pos-m3-header-center">
+          <button
+            type="button"
+            className={`pos-m3-header-shift-pill ${data.activeShift ? 'open' : 'closed'}`}
+            onClick={() => setDesktopDrawer(desktopDrawer === 'shift' ? null : 'shift')}
+          >
+            <span className="pos-m3-dot" />
+            <span>
+              {data.activeShift
+                ? `${data.activeShift.name} · Mở lúc ${time(data.activeShift.opened_at)}`
+                : 'Chưa mở ca thu ngân — Bấm để mở ca'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className={`pos-m3-header-tool-btn ${desktopDrawer === 'shift' ? 'active' : ''}`}
+            onClick={() => setDesktopDrawer(desktopDrawer === 'shift' ? null : 'shift')}
+          >
+            <Wallet size={16} />
+            <span>Quản lý ca</span>
+          </button>
+
+          <button
+            type="button"
+            className={`pos-m3-header-tool-btn ${desktopDrawer === 'history' ? 'active' : ''}`}
+            onClick={() => setDesktopDrawer(desktopDrawer === 'history' ? null : 'history')}
+          >
+            <History size={16} />
+            <span>Lịch sử giao dịch</span>
+          </button>
+
+          <button
+            type="button"
+            className="pos-m3-header-tool-btn"
+            onClick={() => {
+              kickCashDrawer();
+              setNotice('Đã kích hoạt mở két tiền mặt (F4)');
+            }}
+            title="Mở két đựng tiền mặt (Phím tắt F4)"
+          >
+            <Banknote size={16} />
+            <span>Két tiền (F4)</span>
+          </button>
+        </div>
+
+        {/* Staff & Notifications */}
+        <div className="pos-m3-header-right">
+          <div className="pos-m3-bell-wrap">
+            <button
+              type="button"
+              className="pos-m3-header-bell"
+              onClick={() => setShowBellPopover(!showBellPopover)}
+              aria-label="Thông báo vận hành"
+            >
+              <Bell size={18} />
+              {totalNotifications > 0 && <em>{totalNotifications}</em>}
+            </button>
+            {showBellPopover && (
+              <div className="pos-m3-bell-popover">
+                <div className="pos-m3-bell-popover-head">
+                  <strong>Thông báo vận hành</strong>
+                  <button type="button" onClick={() => setShowBellPopover(false)}>
+                    <X size={15} />
+                  </button>
+                </div>
+                {newSupportRequests.length === 0 && !data.onlinePending ? (
+                  <p className="pos-m3-empty-note">Không có yêu cầu hỗ trợ hay đặt sân mới.</p>
+                ) : (
+                  <div className="pos-m3-bell-list">
+                    {(data.onlinePending ?? 0) > 0 && (
                       <button
                         type="button"
-                        onClick={() => setMobileStep(3)}
-                        style={{ border: 'none', background: 'none' }}
+                        className="pos-m3-bell-item"
+                        onClick={() => {
+                          setShowBellPopover(false);
+                          onGo?.('online');
+                        }}
                       >
-                        <ArrowLeft size={16} />
+                        <strong>{data.onlinePending} yêu cầu đặt sân online chờ duyệt</strong>
+                        <small>Nhấn để mở danh sách duyệt lịch hẹn</small>
                       </button>
-                      <strong style={{ fontSize: '14px' }}>Thêm sản phẩm</strong>
-                    </div>
+                    )}
+                    {newSupportRequests.map((req) => (
+                      <div key={req.id} className="pos-m3-bell-item">
+                        <strong>Yêu cầu tại line: {req.kind}</strong>
+                        <small>{time(req.created)}</small>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
-                    <div style={{ display: 'flex', gap: '6px', overflowX: 'auto' }}>
-                      <span className="pos-catalog-tab-btn active" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        F&B
-                      </span>
-                      <span className="pos-catalog-tab-btn" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        Dịch vụ
-                      </span>
-                      <span className="pos-catalog-tab-btn" style={{ padding: '4px 10px', fontSize: '11px' }}>
-                        Phụ kiện
-                      </span>
-                    </div>
+          <div className="pos-m3-staff-badge">
+            <div className="pos-m3-staff-avatar">
+              {(data.user || 'T').slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <strong>{data.user || 'Thu ngân'}</strong>
+              <small>{data.role === 'owner' ? 'Quản trị / Chủ cơ sở' : 'Nhân viên vận hành'}</small>
+            </div>
+          </div>
+        </div>
+      </header>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto' }}>
-                      {[
-                        { name: 'Nước suối', price: '20.000 đ', qty: 2 },
-                        { name: 'Cà phê', price: '45.000 đ', qty: 0 },
-                        { name: 'Bánh sandwich', price: '60.000 đ', qty: 0 },
-                        { name: 'Nước ép', price: '55.000 đ', qty: 0 },
-                      ].map((item) => (
-                        <div
-                          key={item.name}
-                          style={{
-                            background: '#fff',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '10px',
-                            padding: '8px 10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                          }}
-                        >
-                          <div>
-                            <strong style={{ fontSize: '12px', display: 'block' }}>{item.name}</strong>
-                            <small style={{ color: '#16a34a', fontWeight: 600 }}>{item.price}</small>
+      {/* Toast Feedback */}
+      {(notice || errorMsg) && (
+        <div className={`pos-m3-desktop-banner ${errorMsg ? 'error' : 'success'}`} role="status">
+          {errorMsg ? <AlertTriangle size={17} /> : <CheckCircle2 size={17} />}
+          <span>{errorMsg || notice}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setNotice('');
+              setErrorMsg('');
+            }}
+          >
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {/* Drawer Overlay for M09 Shift Management or M10 Transaction History on Desktop */}
+      {desktopDrawer && (
+        <div className="pos-m3-desktop-drawer-backdrop" onClick={() => setDesktopDrawer(null)}>
+          <section
+            className="pos-m3-desktop-drawer"
+            onClick={(e) => e.stopPropagation()}
+            aria-label={desktopDrawer === 'shift' ? 'Quản lý ca làm việc' : 'Lịch sử giao dịch'}
+          >
+            <header className="pos-m3-drawer-head">
+              <div>
+                <h3>
+                  {desktopDrawer === 'shift'
+                    ? 'Quản lý ca & Đối soát sổ quỹ'
+                    : 'Lịch sử giao dịch & Hóa đơn'}
+                </h3>
+                <p>
+                  {desktopDrawer === 'shift'
+                    ? 'Mở ca, nạp/rút quỹ tiền mặt, đối soát doanh thu và bàn giao ca (Z-Report)'
+                    : 'Tìm kiếm hóa đơn, in lại biên nhận, xử lý hoàn tiền hoặc hủy theo phân quyền'}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="pos-m3-icon-btn"
+                onClick={() => setDesktopDrawer(null)}
+              >
+                <X size={20} />
+              </button>
+            </header>
+            <div className="pos-m3-drawer-body">
+              {desktopDrawer === 'shift'
+                ? renderShiftManagementContent()
+                : renderTransactionHistoryContent()}
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* 2. Main Split Content: Left Floor Plan (10 Standard Lines + 2 VIP) & Right Session Panel */}
+      <div className="pos-m3-desktop-split">
+        {/* LEFT COLUMN: 10 STANDARD LINES + 2 VIP ROOMS */}
+        <section className="pos-m3-floor-section" aria-label="Sơ đồ 10 Line tiêu chuẩn và 2 Phòng VIP">
+          {/* Filter & Search Bar */}
+          <div className="pos-m3-floor-toolbar">
+            <div className="pos-m3-chip-row">
+              {(
+                [
+                  ['all', `Tất cả (${roomCounts.all})`],
+                  ['playing', `Đang chơi (${roomCounts.playing})`],
+                  ['empty', `Trống (${roomCounts.empty})`],
+                  ['booked', `Đặt trước (${roomCounts.booked})`],
+                  ['due', `Chờ thanh toán (${roomCounts.due})`],
+                  ['maintenance', `Bảo trì (${roomCounts.maintenance})`],
+                ] as const
+              ).map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  className={`pos-m3-chip ${roomFilter === k ? 'active' : ''}`}
+                  onClick={() => setRoomFilter(k)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="pos-m3-search-box compact">
+              <Search size={16} />
+              <input
+                value={roomSearch}
+                onChange={(e) => setRoomSearch(e.target.value)}
+                placeholder="Tìm khách, SĐT, line..."
+              />
+              {roomSearch && (
+                <button type="button" onClick={() => setRoomSearch('')}>
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Standard 10 Lines (Line 01 - Line 10) */}
+          <div className="pos-m3-floor-group">
+            <div className="pos-m3-floor-group-head">
+              <h3>Khu vực 10 Line Tiêu chuẩn (Line 01 – Line 10)</h3>
+              <span>Đơn giá tiêu chuẩn: {getRoomRateLabel(false)}</span>
+            </div>
+            <div className="pos-m3-desktop-line-grid">
+              {filteredRooms
+                .filter((r) => !r.room.vip)
+                .map(({ room: r, statusKey, booking: rb, maint }) => {
+                  const isSelected = selectedRoomId === r.id;
+                  const liveAmt =
+                    rb && rb.status === 'playing' && rb.started
+                      ? (() => {
+                          try {
+                            const s = JSON.parse(rb.price);
+                            const segs: Segment[] = JSON.parse(rb.segments);
+                            segs.push({ start: rb.started, end: tick });
+                            return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
+                          } catch {
+                            return rb.amount ?? 0;
+                          }
+                        })()
+                      : (rb?.amount ?? 0);
+
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className={`pos-m3-desk-room-card ${statusKey} ${isSelected ? 'selected' : ''}`}
+                      onClick={() => selectRoom(r.id)}
+                    >
+                      <div className="pos-m3-desk-room-top">
+                        <span className="pos-m3-desk-room-name">
+                          <Flag size={15} />
+                          <strong>{r.name}</strong>
+                          {r.left && <em className="pos-m3-lh-tag">Trái/Phải</em>}
+                        </span>
+                        <span className={`pos-m3-room-badge ${statusKey}`}>
+                          {statusKey === 'playing' && 'Đang chơi'}
+                          {statusKey === 'empty' && 'Sẵn sàng'}
+                          {statusKey === 'booked' && 'Đặt trước'}
+                          {statusKey === 'due' && 'Chờ thu'}
+                          {statusKey === 'maintenance' && 'Bảo trì'}
+                        </span>
+                      </div>
+
+                      {rb ? (
+                        <div className="pos-m3-desk-room-body">
+                          <strong className="pos-m3-desk-cust">{rb.customer}</strong>
+                          <small>{rb.phone || 'Khách lẻ'} · {SERVICE_LABEL[rb.service] || rb.service}</small>
+                          <div className="pos-m3-desk-room-foot">
+                            <span className="pos-m3-desk-timer">
+                              <Clock size={13} />
+                              {rb.status === 'playing' || rb.status === 'paused'
+                                ? clock(playedMs(rb, tick))
+                                : `Hẹn ${time(rb.start)}`}
+                            </span>
+                            {canSeeMoney && (
+                              <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>
+                            )}
                           </div>
-                          {item.qty > 0 ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        </div>
+                      ) : maint ? (
+                        <div className="pos-m3-desk-room-body empty">
+                          <span>Đang bảo trì thiết bị</span>
+                          <small>{maint.reason || 'Tạm ngưng nhận khách'}</small>
+                        </div>
+                      ) : (
+                        <div className="pos-m3-desk-room-body empty">
+                          <span>Trống · Sẵn sàng</span>
+                          <small>Nhấn để nhận khách / Mở phiên</small>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+
+          {/* 2 VIP Rooms (VIP 01 - VIP 02) */}
+          <div className="pos-m3-floor-group vip-group">
+            <div className="pos-m3-floor-group-head">
+              <h3>
+                <Crown size={17} /> Khu vực 2 Phòng VIP Riêng biệt (VIP 01 – VIP 02)
+              </h3>
+              <span>Đơn giá phòng VIP: {getRoomRateLabel(true)}</span>
+            </div>
+            <div className="pos-m3-desktop-vip-grid">
+              {filteredRooms
+                .filter((r) => r.room.vip)
+                .map(({ room: r, statusKey, booking: rb, maint }) => {
+                  const isSelected = selectedRoomId === r.id;
+                  const liveAmt =
+                    rb && rb.status === 'playing' && rb.started
+                      ? (() => {
+                          try {
+                            const s = JSON.parse(rb.price);
+                            const segs: Segment[] = JSON.parse(rb.segments);
+                            segs.push({ start: rb.started, end: tick });
+                            return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
+                          } catch {
+                            return rb.amount ?? 0;
+                          }
+                        })()
+                      : (rb?.amount ?? 0);
+
+                  return (
+                    <button
+                      key={r.id}
+                      type="button"
+                      className={`pos-m3-desk-room-card vip ${statusKey} ${isSelected ? 'selected' : ''}`}
+                      onClick={() => selectRoom(r.id)}
+                    >
+                      <div className="pos-m3-desk-room-top">
+                        <span className="pos-m3-desk-room-name">
+                          <Crown size={16} />
+                          <strong>Phòng {r.name}</strong>
+                          <em className="pos-m3-vip-pill">VIP</em>
+                        </span>
+                        <span className={`pos-m3-room-badge ${statusKey}`}>
+                          {statusKey === 'playing' && 'Đang chơi'}
+                          {statusKey === 'empty' && 'Sẵn sàng'}
+                          {statusKey === 'booked' && 'Đặt trước'}
+                          {statusKey === 'due' && 'Chờ thu'}
+                          {statusKey === 'maintenance' && 'Bảo trì'}
+                        </span>
+                      </div>
+
+                      {rb ? (
+                        <div className="pos-m3-desk-room-body">
+                          <strong className="pos-m3-desk-cust">{rb.customer}</strong>
+                          <small>
+                            {rb.phone || 'Khách VIP'} · {rb.people} khách · {SERVICE_LABEL[rb.service] || rb.service}
+                          </small>
+                          <div className="pos-m3-desk-room-foot">
+                            <span className="pos-m3-desk-timer">
+                              <Clock size={13} />
+                              {rb.status === 'playing' || rb.status === 'paused'
+                                ? clock(playedMs(rb, tick))
+                                : `Hẹn ${time(rb.start)}`}
+                            </span>
+                            {canSeeMoney && (
+                              <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>
+                            )}
+                          </div>
+                        </div>
+                      ) : maint ? (
+                        <div className="pos-m3-desk-room-body empty">
+                          <span>Phòng VIP đang bảo trì</span>
+                          <small>{maint.reason}</small>
+                        </div>
+                      ) : (
+                        <div className="pos-m3-desk-room-body empty">
+                          <span>Phòng VIP sẵn sàng phục vụ</span>
+                          <small>Nhấn để nhận khách VIP hoặc kiểm tra đặt trước</small>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
+        </section>
+
+        {/* RIGHT COLUMN: DOCKED SESSION & CASHIER PANEL (NO PAGE RELOAD) */}
+        <aside className="pos-m3-docked-panel" aria-label="Chi tiết line và thao tác thu ngân">
+          {/* Panel Header */}
+          <div className="pos-m3-panel-header">
+            <div>
+              <div className="pos-m3-panel-room-badge">
+                {selectedRoomObj.vip ? <Crown size={15} /> : <Flag size={15} />}
+                <span>{selectedRoomObj.name}</span>
+                {activeBooking && (
+                  <em className={`pos-m3-status-pill ${activeBooking.status}`}>
+                    {activeBooking.status === 'playing'
+                      ? 'Đang chơi'
+                      : activeBooking.status === 'paused'
+                        ? 'Tạm dừng'
+                        : activeBooking.status === 'finished'
+                          ? 'Chờ thanh toán'
+                          : 'Đặt trước'}
+                  </em>
+                )}
+              </div>
+              <h3>
+                {activeBooking ? activeBooking.customer : `${selectedRoomObj.name} — Đang trống`}
+              </h3>
+              <small>
+                {activeBooking
+                  ? `${activeBooking.phone || 'Khách vãng lai'} · ${activeBooking.people} người · ${SERVICE_LABEL[activeBooking.service] || activeBooking.service}`
+                  : `Đơn giá niêm yết: ${getRoomRateLabel(selectedRoomObj.vip)}`}
+              </small>
+            </div>
+
+            {activeBooking && (
+              <div className="pos-m3-panel-header-tools">
+                <button
+                  type="button"
+                  className="pos-m3-icon-btn"
+                  onClick={() => handlePrintReceipt(activeBooking)}
+                  title="In phiếu tạm tính / hóa đơn K80"
+                >
+                  <Printer size={17} />
+                </button>
+                <button
+                  type="button"
+                  className="pos-m3-icon-btn"
+                  onClick={handlePrintKitchen}
+                  title="In phiếu bếp / quầy bar"
+                >
+                  <Utensils size={17} />
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Live Metrics Strip when a session is active */}
+          {activeBooking && (
+            <div className="pos-m3-panel-metrics">
+              <div className="pos-m3-metric-box">
+                <span>Giờ bắt đầu</span>
+                <strong>
+                  {activeBooking.started ? time(activeBooking.started) : `Hẹn ${time(activeBooking.start)}`}
+                </strong>
+              </div>
+              <div className="pos-m3-metric-box clock">
+                <span>Thời gian đã chơi</span>
+                <strong>{clock(elapsedMs)}</strong>
+              </div>
+              <div className="pos-m3-metric-box total">
+                <span>Tiền tạm tính</span>
+                <strong>{canSeeMoney ? money(payableTotal) : '***'}</strong>
+              </div>
+            </div>
+          )}
+
+          {/* Panel Mode Sub-navigation Tabs */}
+          <div className="pos-m3-panel-tabs">
+            <button
+              type="button"
+              className={desktopMode === 'overview' ? 'active' : ''}
+              onClick={() => setDesktopMode('overview')}
+            >
+              Chi tiết phiên
+            </button>
+            <button
+              type="button"
+              className={desktopMode === 'checkin' ? 'active' : ''}
+              onClick={() => {
+                setCheckInRoomId(selectedRoomObj.id);
+                setDesktopMode('checkin');
+              }}
+            >
+              Nhận khách
+            </button>
+            <button
+              type="button"
+              className={desktopMode === 'catalog' ? 'active' : ''}
+              onClick={() => setDesktopMode('catalog')}
+            >
+              + Dịch vụ / F&B {cartCount > 0 ? `(${cartCount})` : ''}
+            </button>
+            <button
+              type="button"
+              className={desktopMode === 'payment' ? 'active' : ''}
+              onClick={() => setDesktopMode('payment')}
+            >
+              Thanh toán
+            </button>
+          </div>
+
+          {/* Scrollable Panel Workspace */}
+          <div className="pos-m3-panel-body">
+            {/* SUB-VIEW A: OVERVIEW & USED SERVICES */}
+            {desktopMode === 'overview' && (
+              <>
+                {!activeBooking ? (
+                  <div className="pos-m3-empty-session-box">
+                    <Flag size={36} />
+                    <h4>{selectedRoomObj.name} sẵn sàng đón khách</h4>
+                    <p>
+                      Chọn khách có sẵn hoặc tạo phiên khách lẻ để bắt đầu tính giờ chơi thực tế ngay trên line này.
+                    </p>
+                    <button
+                      type="button"
+                      className="pos-m3-btn-primary"
+                      onClick={() => {
+                        setCheckInRoomId(selectedRoomObj.id);
+                        setDesktopMode('checkin');
+                      }}
+                    >
+                      <UserPlus size={16} /> Nhận khách & Bắt đầu chơi
+                    </button>
+                  </div>
+                ) : (
+                  <div className="pos-m3-panel-overview">
+                    {/* Service Mode & Time Extension Controls */}
+                    {['booked', 'playing', 'paused'].includes(activeBooking.status) && (
+                      <div className="pos-m3-panel-section">
+                        <div className="pos-m3-section-title">
+                          <span>Gói tính giá & Thời gian</span>
+                          {activeBooking.status !== 'booked' && (
+                            <button
+                              type="button"
+                              className="pos-m3-btn-text"
+                              onClick={handlePauseOrResume}
+                            >
+                              {activeBooking.status === 'paused' ? '▶ Tiếp tục tính giờ' : '⏸ Tạm dừng'}
+                            </button>
+                          )}
+                        </div>
+                        <div className="pos-m3-chip-row">
+                          {(['gdr', '9', '18'] as const).map((srv) => (
+                            <button
+                              key={srv}
+                              type="button"
+                              disabled={saving}
+                              className={`pos-m3-chip ${activeBooking.service === srv ? 'active' : ''}`}
+                              onClick={() => handleSwitchService(srv)}
+                            >
+                              {SERVICE_LABEL[srv]}
+                            </button>
+                          ))}
+                        </div>
+                        {activeBooking.service === 'gdr' && (
+                          <div className="pos-m3-extend-strip">
+                            <span>Gia hạn:</span>
+                            {[30, 60, 120].map((m) => (
                               <button
+                                key={m}
                                 type="button"
-                                style={{ width: '24px', height: '24px', borderRadius: '50%', border: '1px solid #cbd5e1' }}
+                                className="pos-m3-mini-btn"
+                                onClick={() => handleExtendMinutes(m)}
                               >
-                                -
+                                +{m} phút
                               </button>
-                              <span style={{ fontSize: '12px', fontWeight: 700 }}>{item.qty}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Used Services & F&B Breakdown */}
+                    <div className="pos-m3-panel-section">
+                      <div className="pos-m3-section-title">
+                        <span>Dịch vụ & F&B đã sử dụng</span>
+                        <button
+                          type="button"
+                          className="pos-m3-btn-text"
+                          onClick={() => setDesktopMode('catalog')}
+                        >
+                          + Thêm món / dịch vụ
+                        </button>
+                      </div>
+
+                      <div className="pos-m3-used-list">
+                        {/* Golf Fee Line */}
+                        <div className="pos-m3-used-row golf">
+                          <div>
+                            <strong>Phí chơi Golf ({SERVICE_LABEL[activeBooking.service]})</strong>
+                            <small>
+                              {sessionBill.lines.length > 0
+                                ? sessionBill.lines
+                                    .map((l) => `${l.label}: ${Math.round(l.minutes)}p`)
+                                    .join(' · ')
+                                : getRoomRateLabel(selectedRoomObj.vip)}
+                            </small>
+                          </div>
+                          <strong>{money(golfTotal)}</strong>
+                        </div>
+
+                        {/* Committed F&B / Service Orders */}
+                        {bookingOrders
+                          .filter((o) => o.status !== 'cancelled')
+                          .map((ord) => {
+                            const lines = JSON.parse(ord.items) as FoodLine[];
+                            return (
+                              <div key={ord.id} className="pos-m3-used-row">
+                                <div>
+                                  <strong>
+                                    {lines.map((l) => `${l.name} ×${l.qty}`).join(', ')}
+                                  </strong>
+                                  <small>
+                                    {foodLabels[ord.status]}
+                                    {ord.note ? ` · ${ord.note}` : ''}
+                                  </small>
+                                </div>
+                                <div className="pos-m3-used-row-actions">
+                                  <strong>{money(ord.total)}</strong>
+                                  {ord.status !== 'served' && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        className="pos-m3-mini-btn success"
+                                        onClick={() =>
+                                          AdvanceOrderToServed(ord).then(() => {
+                                            food.reload();
+                                            onRefresh();
+                                          })
+                                        }
+                                      >
+                                        Phục vụ
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="pos-m3-mini-btn danger"
+                                        onClick={() => handleCancelOrder(ord)}
+                                      >
+                                        Hủy
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                        {/* Uncommitted Cart Items */}
+                        {cart.map((c) => (
+                          <div key={c.product.id} className="pos-m3-used-row draft">
+                            <div>
+                              <strong>
+                                {c.product.name} ×{c.qty} <em>(Mới chọn)</em>
+                              </strong>
+                              {c.note && <small>Ghi chú: {c.note}</small>}
+                            </div>
+                            <div className="pos-m3-used-row-actions">
+                              <strong>{money(c.product.price * c.qty)}</strong>
                               <button
                                 type="button"
-                                style={{ width: '24px', height: '24px', borderRadius: '50%', border: 'none', background: '#16a34a', color: '#fff' }}
+                                className="pos-m3-mini-btn"
+                                onClick={() => handleAddToCart(c.product, -1)}
+                              >
+                                −
+                              </button>
+                              <button
+                                type="button"
+                                className="pos-m3-mini-btn"
+                                onClick={() => handleAddToCart(c.product, 1)}
                               >
                                 +
                               </button>
                             </div>
-                          ) : (
-                            <button
-                              type="button"
-                              style={{ width: '26px', height: '26px', borderRadius: '50%', border: 'none', background: '#16a34a', color: '#fff' }}
-                            >
-                              +
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                          </div>
+                        ))}
+                      </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setMobileStep(3)}
-                      className="pos-btn-checkout"
-                      style={{ padding: '10px', marginTop: 'auto' }}
-                    >
-                      Thêm vào hóa đơn (2) · 40.000 đ
-                    </button>
-                  </div>
-                )}
-
-                {/* Mobile Screen 5: Payment */}
-                {mobileStep === 5 && (
-                  <div className="pos-phone-content">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setMobileStep(3)}
-                        style={{ border: 'none', background: 'none' }}
-                      >
-                        <ArrowLeft size={16} />
-                      </button>
-                      <strong style={{ fontSize: '14px' }}>Thanh toán</strong>
-                    </div>
-
-                    <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                      <small style={{ color: '#64748b' }}>Tổng thanh toán</small>
-                      <h3 style={{ color: '#16a34a', margin: '4px 0', fontSize: '24px' }}>390.000 đ</h3>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {['Tiền mặt', 'Thẻ ngân hàng', 'QR Code'].map((m, i) => (
-                        <div
-                          key={m}
-                          style={{
-                            background: '#fff',
-                            border: i === 0 ? '1.5px solid #16a34a' : '1px solid #e2e8f0',
-                            borderRadius: '10px',
-                            padding: '10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                            fontSize: '13px',
-                            fontWeight: 600,
-                          }}
+                      {cart.length > 0 && (
+                        <button
+                          type="button"
+                          className="pos-m3-btn-tonal pos-m3-btn-block"
+                          style={{ marginTop: 8 }}
+                          disabled={saving}
+                          onClick={() => handleCommitCartToSession(activeBooking.id)}
                         >
-                          <span style={{ color: i === 0 ? '#16a34a' : '#64748b' }}>{i === 0 ? '◉' : '○'}</span>
-                          <span>{m}</span>
+                          <Check size={15} /> Lưu {cartCount} món mới vào hóa đơn
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Member Package / Wallet & Manager Discount */}
+                    <div className="pos-m3-panel-section">
+                      <PackageRedeem
+                        booking={activeBooking}
+                        money={money}
+                        onChanged={async () => {
+                          await onRefresh();
+                          await reloadBill();
+                        }}
+                      />
+                      {canDiscount && (
+                        <div style={{ marginTop: 6 }}>
+                          <DiscountForm
+                            bookingId={activeBooking.id}
+                            amount={grossTotal || 100000}
+                            onDone={async () => {
+                              await reloadBill();
+                              await onRefresh();
+                            }}
+                          />
                         </div>
-                      ))}
+                      )}
                     </div>
 
-                    <div style={{ background: '#fff', padding: '10px', borderRadius: '10px', fontSize: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span>Khách đưa:</span>
-                        <strong>500.000 đ</strong>
+                    {/* Bill Summary Box */}
+                    <div className="pos-m3-panel-bill-box">
+                      <div>
+                        <span>Tiền giờ chơi golf</span>
+                        <strong>{money(golfTotal)}</strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontWeight: 700 }}>
-                        <span>Tiền thối lại:</span>
-                        <span>110.000 đ</span>
+                      <div>
+                        <span>Tiền F&B & Dịch vụ</span>
+                        <strong>{money(fnbTotal)}</strong>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="discount">
+                          <span>Giảm giá ({bill?.discount?.reason})</span>
+                          <strong>−{money(discountAmount)}</strong>
+                        </div>
+                      )}
+                      <div className="grand-total">
+                        <span>Tổng tạm tính</span>
+                        <strong>{money(payableTotal)}</strong>
                       </div>
                     </div>
+                  </div>
+                )}
+              </>
+            )}
 
-                    <button
-                      type="button"
-                      onClick={() => setMobileStep(6)}
-                      className="pos-btn-checkout"
-                      style={{ padding: '10px', marginTop: 'auto' }}
-                    >
-                      Xác nhận thanh toán
-                    </button>
+            {/* SUB-VIEW B: CHECK-IN / START SESSION INLINE */}
+            {desktopMode === 'checkin' && (
+              <div className="pos-m3-panel-checkin">
+                <div className="pos-m3-section-title">
+                  <span>Nhận khách & Mở phiên tại {selectedRoomObj.name}</span>
+                </div>
+
+                {activeBooking && activeBooking.status === 'booked' && (
+                  <div className="pos-m3-booked-alert">
+                    <span className="pos-m3-badge-booked">LỊCH ĐẶT TRƯỚC</span>
+                    <h4>
+                      {activeBooking.customer} ({activeBooking.phone})
+                    </h4>
+                    <p>
+                      Giờ hẹn: {time(activeBooking.start)} · {SERVICE_LABEL[activeBooking.service]}
+                    </p>
                   </div>
                 )}
 
-                {/* Mobile Screen 6: Done */}
-                {mobileStep === 6 && (
-                  <div className="pos-phone-content" style={{ textAlign: 'center', padding: '20px 10px' }}>
-                    <div
-                      style={{
-                        width: '54px',
-                        height: '54px',
-                        borderRadius: '50%',
-                        background: '#16a34a',
-                        color: '#fff',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '10px auto',
-                      }}
-                    >
-                      <Check size={28} />
-                    </div>
-                    <strong style={{ fontSize: '16px', display: 'block' }}>Thanh toán thành công!</strong>
-
-                    <div
-                      style={{
-                        background: '#fff',
-                        borderRadius: '10px',
-                        padding: '10px',
-                        margin: '14px 0',
-                        fontSize: '12px',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <span>Hóa đơn:</span>
-                        <strong>HD26879</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span>Tổng tiền:</span>
-                        <strong style={{ color: '#16a34a' }}>390.000 đ</strong>
-                      </div>
-                    </div>
-
-                    <button
-                      type="button"
-                      className="pos-btn-print"
-                      style={{ padding: '8px', fontSize: '12px', marginBottom: '8px' }}
-                      onClick={printNow}
-                    >
-                      <Printer size={14} /> In hóa đơn
-                    </button>
-                    <button
-                      type="button"
-                      className="pos-btn-zalo"
-                      style={{ padding: '8px', fontSize: '12px', marginBottom: '8px' }}
-                      onClick={sendZalo}
-                    >
-                      <Send size={14} /> Gửi hóa đơn (Zalo/Email)
-                    </button>
-                    <button
-                      type="button"
-                      className="pos-btn-finish"
-                      style={{ padding: '8px', fontSize: '13px' }}
-                      onClick={() => setMobileStep(1)}
-                    >
-                      Hoàn tất
-                    </button>
-                  </div>
-                )}
-
-                <div className="pos-phone-footer-label">
-                  <span>Màn hình {mobileStep}/6</span>
+                <div className="pos-m3-search-box" style={{ marginBottom: 8 }}>
+                  <Search size={15} />
+                  <input
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    placeholder="Tra cứu nhanh hội viên / khách quen..."
+                  />
                 </div>
-              </div>
-            </div>
-          </div>
-        </main>
-      )}
-
-      {/* =====================================================================
-          VIEW MODE 3: 1:1 INFOGRAPHIC OVERVIEW FLOW (Multi-frame showcase)
-          ===================================================================== */}
-      {viewMode === 'overview' && (
-        <main className="pos-infographic-wrap">
-          {/* Row 1: 4 Desktop Screens Connected by Arrows */}
-          <div>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#093824', marginBottom: '14px' }}>
-              Quy trình POS trên Máy tính (Desktop 4 bước)
-            </h3>
-            <div className="pos-desktop-flow-row">
-              {/* Card 1: Sơ đồ line/phòng */}
-              <div
-                className="pos-frame-card"
-                onClick={() => {
-                  setViewMode('desktop');
-                  setStep('map');
-                }}
-              >
-                <div className="pos-frame-header">
-                  <div className="pos-frame-dots">
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                  </div>
-                  <span className="pos-frame-title">POS – Sơ đồ line/phòng</span>
-                </div>
-                <div className="pos-frame-body">
-                  <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', fontSize: '10px' }}>
-                    <span className="pos-filter-btn active" style={{ padding: '3px 8px', fontSize: '10px' }}>
-                      Tất cả (12)
-                    </span>
-                    <span className="pos-filter-btn" style={{ padding: '3px 8px', fontSize: '10px' }}>
-                      Đang chơi (4)
-                    </span>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-                    <div style={{ background: '#f0fdf4', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
-                      <strong>L1</strong> · <span style={{ color: '#16a34a' }}>Đang chơi (45p)</span>
-                    </div>
-                    <div style={{ background: '#f8fafc', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
-                      <strong>L2</strong> · <span style={{ color: '#64748b' }}>Trống</span>
-                    </div>
-                    <div style={{ background: '#f0fdf4', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
-                      <strong>L3</strong> · <span style={{ color: '#16a34a' }}>Đang chơi (30p)</span>
-                    </div>
-                    <div style={{ background: '#fef2f2', padding: '6px', borderRadius: '6px', fontSize: '11px' }}>
-                      <strong>L4</strong> · <span style={{ color: '#ef4444' }}>Bảo trì</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="pos-frame-footer">
-                  <span className="pos-step-bottom-num" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
-                    1
-                  </span>
-                  <strong style={{ fontSize: '12px' }}>Tổng quan & Sơ đồ line/phòng</strong>
-                </div>
-                <div className="pos-frame-arrow">→</div>
-              </div>
-
-              {/* Card 2: Tạo hóa đơn & thêm dịch vụ */}
-              <div
-                className="pos-frame-card"
-                onClick={() => {
-                  setViewMode('desktop');
-                  setStep('order');
-                }}
-              >
-                <div className="pos-frame-header">
-                  <div className="pos-frame-dots">
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                  </div>
-                  <span className="pos-frame-title">Bán hàng – L3</span>
-                </div>
-                <div className="pos-frame-body">
-                  <div style={{ background: '#f0fdf4', padding: '6px', borderRadius: '6px', textAlign: 'center' }}>
-                    <small style={{ color: '#166534', fontSize: '10px' }}>Thời gian chơi</small>
-                    <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#15803d', fontSize: '18px' }}>
-                      00:45:12
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '11px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                      <span>Chơi golf (giờ)</span>
-                      <strong>350.000 đ</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                      <span>Nước suối x2</span>
-                      <strong>40.000 đ</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0' }}>
-                      <span>Bánh sandwich</span>
-                      <strong>60.000 đ</strong>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      marginTop: 'auto',
-                      borderTop: '1px dashed #cbd5e1',
-                      paddingTop: '6px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontWeight: 700,
-                      color: '#16a34a',
-                      fontSize: '13px',
-                    }}
-                  >
-                    <span>Tổng:</span>
-                    <span>450.000 đ</span>
-                  </div>
-                </div>
-                <div className="pos-frame-footer">
-                  <span className="pos-step-bottom-num" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
-                    2
-                  </span>
-                  <strong style={{ fontSize: '12px' }}>Tạo hóa đơn & F&B</strong>
-                </div>
-                <div className="pos-frame-arrow">→</div>
-              </div>
-
-              {/* Card 3: Thanh toán */}
-              <div
-                className="pos-frame-card"
-                onClick={() => {
-                  setViewMode('desktop');
-                  setStep('pay');
-                }}
-              >
-                <div className="pos-frame-header">
-                  <div className="pos-frame-dots">
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                  </div>
-                  <span className="pos-frame-title">Thanh toán</span>
-                </div>
-                <div className="pos-frame-body" style={{ textAlign: 'center' }}>
-                  <small style={{ color: '#64748b', fontSize: '11px' }}>Tổng thanh toán</small>
-                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#16a34a', margin: '6px 0' }}>
-                    450.000 đ
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', fontSize: '10px' }}>
-                    <div style={{ background: '#f0fdf4', border: '1px solid #16a34a', padding: '6px 2px', borderRadius: '6px' }}>
-                      Tiền mặt
-                    </div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px 2px', borderRadius: '6px' }}>
-                      Thẻ NH
-                    </div>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '6px 2px', borderRadius: '6px' }}>
-                      QR Code
-                    </div>
-                  </div>
-                  <div style={{ marginTop: '10px', fontSize: '11px', textAlign: 'left', background: '#f8fafc', padding: '6px', borderRadius: '6px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Khách đưa:</span>
-                      <strong>500.000 đ</strong>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a', fontWeight: 700 }}>
-                      <span>Tiền thối lại:</span>
-                      <span>50.000 đ</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="pos-frame-footer">
-                  <span className="pos-step-bottom-num" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
-                    3
-                  </span>
-                  <strong style={{ fontSize: '12px' }}>Thanh toán</strong>
-                </div>
-                <div className="pos-frame-arrow">→</div>
-              </div>
-
-              {/* Card 4: Hoàn tất */}
-              <div
-                className="pos-frame-card"
-                onClick={() => {
-                  setViewMode('desktop');
-                  setStep('done');
-                }}
-              >
-                <div className="pos-frame-header">
-                  <div className="pos-frame-dots">
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                    <div className="pos-frame-dot" />
-                  </div>
-                  <span className="pos-frame-title">Hoàn tất & In</span>
-                </div>
-                <div className="pos-frame-body" style={{ textAlign: 'center', justifyContent: 'center' }}>
-                  <div
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '50%',
-                      background: '#16a34a',
-                      color: '#fff',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 8px',
-                    }}
-                  >
-                    <Check size={24} />
-                  </div>
-                  <strong style={{ fontSize: '14px', display: 'block' }}>Thanh toán thành công!</strong>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-                    Hóa đơn: <strong>HD26879</strong>
-                  </div>
-                  <div style={{ fontSize: '13px', color: '#16a34a', fontWeight: 700 }}>450.000 đ</div>
-                </div>
-                <div className="pos-frame-footer">
-                  <span className="pos-step-bottom-num" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
-                    4
-                  </span>
-                  <strong style={{ fontSize: '12px' }}>Hoàn tất & In hóa đơn</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Mobile Flow Connected */}
-          <div className="pos-mobile-section" style={{ marginTop: '20px' }}>
-            <div className="pos-mobile-sidebar">
-              <div className="pos-mobile-banner-title">
-                <Smartphone size={28} color="#16a34a" />
-                <div>
-                  <h3>POS trên App Mobile</h3>
-                  <small>(Dành cho nhân viên vận hành)</small>
-                </div>
-              </div>
-
-              <div className="pos-mobile-checklist">
-                <div className="pos-mobile-check-item">
-                  <Check /> Xem trạng thái line
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Tạo hóa đơn nhanh
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Bán F&B & dịch vụ
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Thanh toán đa hình thức
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> In hoặc gửi hóa đơn
-                </div>
-                <div className="pos-mobile-check-item">
-                  <Check /> Theo dõi doanh thu ca
-                </div>
-              </div>
-            </div>
-
-            <div className="pos-mobile-screens-row">
-              {[
-                { num: 1, title: 'Trang chủ POS', icon: '🏠', desc: 'Menu chức năng nhanh' },
-                { num: 2, title: 'Danh sách line', icon: '⛳', desc: 'Trạng thái L1–L10, VIP' },
-                { num: 3, title: 'Thêm dịch vụ', icon: '📝', desc: 'Giờ chơi & Tạm tính' },
-                { num: 4, title: 'Chọn sản phẩm', icon: '🛒', desc: 'F&B, Dịch vụ, Phụ kiện' },
-                { num: 5, title: 'Thanh toán', icon: '💳', desc: 'Tiền mặt, Thẻ, QR' },
-                { num: 6, title: 'Hoàn tất', icon: '✅', desc: 'In & gửi hóa đơn' },
-              ].map((m) => (
-                <div
-                  key={m.num}
-                  className="pos-phone-mockup"
-                  style={{ minHeight: '260px' }}
-                  onClick={() => {
-                    setViewMode('mobile');
-                    setMobileStep(m.num);
-                  }}
-                >
-                  <div className="pos-phone-notch">
-                    <span>9:41</span>
-                    <span>🔋</span>
-                  </div>
-                  <div className="pos-phone-content" style={{ textAlign: 'center', justifyContent: 'center' }}>
-                    <div style={{ fontSize: '32px', marginBottom: '8px' }}>{m.icon}</div>
-                    <strong style={{ fontSize: '12px' }}>{m.title}</strong>
-                    <small style={{ fontSize: '10px', color: '#64748b' }}>{m.desc}</small>
-                  </div>
-                  <div className="pos-phone-footer-label">
-                    <span className="pos-step-bottom-num" style={{ width: '16px', height: '16px', fontSize: '9px' }}>
-                      {m.num}
-                    </span>
-                    <span>{m.title}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </main>
-      )}
-
-      {/* =====================================================================
-          MODALS
-          ===================================================================== */}
-      {/* Quick Walk-In Dialog */}
-      {walkInModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setWalkInModal(null)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '420px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <div className="ar-modal-header-left">
-                <Flag size={20} color="#16a34a" />
-                <h3 className="ar-modal-header-title">
-                  Vào chơi ngay – {rooms.find((r) => r.id === walkInModal)?.name}
-                </h3>
-              </div>
-              <button className="ar-modal-close-btn" onClick={() => setWalkInModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="ar-modal-body">
-              <div className="ar-field">
-                <label>Tên khách hàng</label>
-                <input
-                  value={walkInName}
-                  onChange={(e) => setWalkInName(e.target.value)}
-                  placeholder="Nguyễn Hoàng Long"
-                />
-              </div>
-              <div className="ar-field">
-                <label>Số điện thoại</label>
-                <input
-                  value={walkInPhone}
-                  onChange={(e) => setWalkInPhone(e.target.value)}
-                  placeholder="0902 030 165"
-                />
-              </div>
-            </div>
-            <div className="ar-modal-footer">
-              <button type="button" className="ar-btn-secondary" onClick={() => setWalkInModal(null)}>
-                Hủy
-              </button>
-              <button type="button" className="ar-btn-primary" onClick={handleQuickStartWalkIn}>
-                Bắt đầu & Bán hàng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Extension Modal */}
-      {extendModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setExtendModal(false)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '380px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <h3 className="ar-modal-header-title">Gia hạn thêm giờ chơi</h3>
-              <button className="ar-modal-close-btn" onClick={() => setExtendModal(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="ar-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[15, 30, 60].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  className="ar-btn-secondary"
-                  style={{ padding: '12px', fontSize: '14px', fontWeight: 600 }}
-                  disabled={saving}
-                  onClick={() => handleExtend(m)}
-                >
-                  + {m} phút
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Customer Modal */}
-      {editCustomerModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setEditCustomerModal(false)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '400px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <h3 className="ar-modal-header-title">Cập nhật thông tin khách</h3>
-              <button className="ar-modal-close-btn" onClick={() => setEditCustomerModal(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="ar-modal-body">
-              <div className="ar-field">
-                <label>Họ và tên</label>
-                <input
-                  value={custNameInput}
-                  onChange={(e) => setCustNameInput(e.target.value)}
-                  placeholder="Nguyễn Hoàng Long"
-                />
-              </div>
-              <div className="ar-field">
-                <label>Số điện thoại</label>
-                <input
-                  value={custPhoneInput}
-                  onChange={(e) => setCustPhoneInput(e.target.value)}
-                  placeholder="0902 030 165"
-                />
-              </div>
-            </div>
-            <div className="ar-modal-footer">
-              <button type="button" className="ar-btn-secondary" onClick={() => setEditCustomerModal(false)}>
-                Hủy
-              </button>
-              <button
-                type="button"
-                className="ar-btn-primary"
-                onClick={() => {
-                  if (b) {
-                    b.customer = custNameInput.trim() || b.customer;
-                    b.phone = custPhoneInput.trim() || b.phone;
-                  }
-                  setEditCustomerModal(false);
-                }}
-              >
-                Lưu thay đổi
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Shift Open / Close / Cash In-Out Modal (P0) */}
-      {shiftModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setShiftModal(null)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '440px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <div className="ar-modal-header-left">
-                <Banknote size={20} color="#16a34a" />
-                <h3 className="ar-modal-header-title">
-                  {shiftModal === 'open'
-                    ? 'Mở ca thu ngân mới'
-                    : shiftModal === 'close'
-                      ? 'Đóng & Bàn giao ca'
-                      : shiftModal === 'cash-in'
-                        ? 'Nạp tiền vào quỹ ca'
-                        : 'Rút chi tiền mặt từ ca'}
-                </h3>
-              </div>
-              <button className="ar-modal-close-btn" onClick={() => setShiftModal(null)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="ar-modal-body">
-              {shiftModal === 'open' && (
-                <>
-                  <div className="ar-field">
-                    <label>Tên ca làm việc</label>
-                    <input
-                      value={shiftNameInput}
-                      onChange={(e) => setShiftNameInput(e.target.value)}
-                      placeholder="VD: Ca sáng (06:00 - 14:00)"
-                    />
-                  </div>
-                  <div className="ar-field">
-                    <label>Tiền thối ban đầu trong két (₫)</label>
-                    <input
-                      inputMode="numeric"
-                      value={shiftCashInput}
-                      onChange={(e) => setShiftCashInput(e.target.value)}
-                      placeholder="1.000.000"
-                    />
-                  </div>
-                  <div className="pos-discount-chips" style={{ marginTop: '6px' }}>
-                    {['500000', '1000000', '2000000'].map((amt) => (
+                {customersList.length > 0 && (
+                  <div className="pos-m3-cust-suggestions">
+                    {customersList.slice(0, 4).map((c) => (
                       <button
-                        key={amt}
+                        key={c.id}
                         type="button"
-                        className={`pos-discount-chip ${shiftCashInput === amt ? 'active' : ''}`}
-                        onClick={() => setShiftCashInput(amt)}
+                        className={`pos-m3-cust-chip ${checkInPhone === c.phone ? 'active' : ''}`}
+                        onClick={() => {
+                          setCheckInCustomer(c.name);
+                          setCheckInPhone(c.phone);
+                        }}
                       >
-                        {money(Number(amt))}
+                        <UserCheck size={13} />
+                        <span>
+                          <strong>{c.name}</strong> ({c.phone})
+                        </span>
                       </button>
                     ))}
                   </div>
-                </>
-              )}
+                )}
 
-              {shiftModal === 'close' && (
-                <>
-                  <div className="ar-field">
-                    <label>Tiền mặt thực đếm trong két (₫)</label>
+                <div className="pos-m3-form-stack">
+                  <label className="pos-m3-field">
+                    <span>Tên khách hàng *</span>
                     <input
-                      inputMode="numeric"
-                      value={closeCountedCash}
-                      onChange={(e) => setCloseCountedCash(e.target.value)}
-                      placeholder="Nhập tổng tiền mặt thực tế"
+                      value={checkInCustomer}
+                      onChange={(e) => setCheckInCustomer(e.target.value)}
+                      placeholder="Nhập tên khách hoặc Khách lẻ..."
                     />
-                  </div>
-                  <div className="ar-field">
-                    <label>Tiền chuyển khoản thực nhận (₫)</label>
+                  </label>
+                  <label className="pos-m3-field">
+                    <span>Số điện thoại</span>
                     <input
-                      inputMode="numeric"
-                      value={closeCountedTransfer}
-                      onChange={(e) => setCloseCountedTransfer(e.target.value)}
-                      placeholder="Theo sao kê tài khoản ngân hàng"
+                      inputMode="tel"
+                      value={checkInPhone}
+                      onChange={(e) => setCheckInPhone(e.target.value)}
+                      placeholder="090xxxxxxx"
                     />
+                  </label>
+                  <div className="pos-m3-form-row-2">
+                    <label className="pos-m3-field">
+                      <span>Hình thức chơi</span>
+                      <select
+                        value={checkInService}
+                        onChange={(e) => setCheckInService(e.target.value as 'gdr' | '9' | '18')}
+                      >
+                        <option value="gdr">Luyện tập theo giờ</option>
+                        <option value="9">Game 9 hố</option>
+                        <option value="18">Game 18 hố</option>
+                      </select>
+                    </label>
+                    <label className="pos-m3-field">
+                      <span>Thời lượng dự kiến</span>
+                      <select
+                        value={checkInDuration}
+                        onChange={(e) => setCheckInDuration(Number(e.target.value))}
+                      >
+                        <option value={60}>60 phút</option>
+                        <option value={90}>90 phút</option>
+                        <option value={120}>120 phút</option>
+                        <option value={180}>180 phút</option>
+                      </select>
+                    </label>
                   </div>
-                  <div className="ar-field">
-                    <label>Tiền cà thẻ POS thực nhận (₫)</label>
-                    <input
-                      inputMode="numeric"
-                      value={closeCountedCard}
-                      onChange={(e) => setCloseCountedCard(e.target.value)}
-                      placeholder="Theo bill tổng kết máy cà thẻ"
-                    />
-                  </div>
-                  <div className="ar-field">
-                    <label>Ghi chú bàn giao</label>
-                    <input
-                      value={closeNote}
-                      onChange={(e) => setCloseNote(e.target.value)}
-                      placeholder="Ghi chú thừa/thiếu tiền (nếu có)"
-                    />
-                  </div>
-                </>
-              )}
+                  <label className="pos-m3-field">
+                    <span>Số người chơi</span>
+                    <select
+                      value={checkInPeople}
+                      onChange={(e) => setCheckInPeople(Number(e.target.value))}
+                    >
+                      {[1, 2, 3, 4, 5, 6].map((n) => (
+                        <option key={n} value={n}>
+                          {n} khách
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
 
-              {(shiftModal === 'cash-in' || shiftModal === 'cash-out') && (
-                <>
-                  <div className="ar-field">
-                    <label>Số tiền (₫)</label>
-                    <input
-                      inputMode="numeric"
-                      value={cashEntryAmount}
-                      onChange={(e) => setCashEntryAmount(e.target.value)}
-                      placeholder="VD: 200.000"
-                    />
-                  </div>
-                  <div className="ar-field">
-                    <label>Lý do {shiftModal === 'cash-in' ? 'nạp tiền' : 'rút tiền'}</label>
-                    <input
-                      value={cashEntryNote}
-                      onChange={(e) => setCashEntryNote(e.target.value)}
-                      placeholder={
-                        shiftModal === 'cash-in'
-                          ? 'Đổi tiền lẻ nạp thêm vào két'
-                          : 'Chi mua đá lạnh, văn phòng phẩm...'
-                      }
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="ar-modal-footer">
-              <button type="button" className="ar-btn-secondary" onClick={() => setShiftModal(null)}>
-                Hủy
-              </button>
-              {shiftModal === 'open' && (
-                <button type="button" className="ar-btn-primary" onClick={handleOpenShift} disabled={saving}>
-                  Xác nhận Mở ca
-                </button>
-              )}
-              {shiftModal === 'close' && (
-                <button
-                  type="button"
-                  className="ar-btn-primary"
-                  style={{ background: '#dc2626' }}
-                  onClick={handleCloseShift}
-                  disabled={saving}
-                >
-                  Xác nhận Đóng ca & Bàn giao
-                </button>
-              )}
-              {(shiftModal === 'cash-in' || shiftModal === 'cash-out') && (
-                <button
-                  type="button"
-                  className="ar-btn-primary"
-                  onClick={() => handleCashEntry(shiftModal === 'cash-in' ? 'in' : 'out')}
-                  disabled={saving}
-                >
-                  Ghi nhận quỹ
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Discount & Voucher Modal (P0) */}
-      {discountModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setDiscountModal(false)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '420px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <div className="ar-modal-header-left">
-                <Tag size={20} color="#0284c7" />
-                <h3 className="ar-modal-header-title">Áp dụng Giảm giá / Voucher</h3>
-              </div>
-              <button className="ar-modal-close-btn" onClick={() => setDiscountModal(false)}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="ar-modal-body">
-              <div className="ar-field">
-                <label>Mã Voucher / Coupon</label>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    value={voucherCodeInput}
-                    onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
-                    placeholder="VD: GOLF10, VIPGOLF, KHAI_TRUONG"
-                  />
+                <div className="pos-m3-checkin-btns">
                   <button
                     type="button"
-                    className="ar-btn-secondary"
-                    style={{ whiteSpace: 'nowrap' }}
-                    onClick={() => {
-                      if (voucherCodeInput === 'VIPGOLF' || voucherCodeInput === 'GOLF10') {
-                        const disc = discountFromPercent(subtotal, 10);
-                        setDiscountValInput(String(disc));
-                        setDiscountReasonInput(`Voucher ${voucherCodeInput} (−10%)`);
-                      } else if (voucherCodeInput === 'KHAI_TRUONG' || voucherCodeInput === 'GOLF20') {
-                        const disc = discountFromPercent(subtotal, 20);
-                        setDiscountValInput(String(disc));
-                        setDiscountReasonInput(`Voucher ${voucherCodeInput} (−20%)`);
-                      } else {
-                        setDiscountValInput('50000');
-                        setDiscountReasonInput(`Voucher ${voucherCodeInput || 'Ưu đãi'}`);
-                      }
-                    }}
+                    className="pos-m3-btn-outline"
+                    disabled={saving}
+                    onClick={handleReserveSlotOnly}
                   >
-                    Kiểm tra
+                    Đặt giữ chỗ
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-m3-btn-primary"
+                    disabled={saving}
+                    onClick={handleStartOrWalkIn}
+                  >
+                    <Play size={16} /> Bắt đầu tính giờ ngay
                   </button>
                 </div>
               </div>
+            )}
 
-              <div style={{ margin: '10px 0' }}>
-                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                  Chọn nhanh mức giảm giá (% hoặc ₫):
-                </label>
-                <div className="pos-discount-chips">
-                  {[5, 10, 15, 20].map((pct) => (
+            {/* SUB-VIEW C: ADD F&B & SERVICES INLINE */}
+            {desktopMode === 'catalog' && (
+              <div className="pos-m3-panel-catalog">
+                <div className="pos-m3-search-box compact">
+                  <Search size={15} />
+                  <input
+                    value={catalogSearch}
+                    onChange={(e) => setCatalogSearch(e.target.value)}
+                    placeholder="Tìm F&B, phụ kiện, dịch vụ, SKU..."
+                  />
+                </div>
+                <div className="pos-m3-chip-row">
+                  {(
+                    [
+                      ['all', 'Tất cả'],
+                      ['fnb', 'F&B'],
+                      ['service', 'Dịch vụ'],
+                      ['accessory', 'Phụ kiện'],
+                      ['package', 'Gói giờ'],
+                    ] as const
+                  ).map(([k, label]) => (
                     <button
-                      key={pct}
+                      key={k}
                       type="button"
-                      className="pos-discount-chip"
-                      onClick={() => {
-                        const amt = discountFromPercent(subtotal, pct);
-                        setDiscountValInput(String(amt));
-                        setDiscountReasonInput(`Giảm ${pct}% tổng bill`);
-                      }}
+                      className={`pos-m3-chip ${catalogCat === k ? 'active' : ''}`}
+                      onClick={() => setCatalogCat(k)}
                     >
-                      {pct}%
+                      {label}
                     </button>
                   ))}
-                  {['50000', '100000', '200000'].map((amt) => (
-                    <button
-                      key={amt}
-                      type="button"
-                      className="pos-discount-chip"
-                      onClick={() => {
-                        setDiscountValInput(amt);
-                        setDiscountReasonInput(`Giảm ${money(Number(amt))}`);
-                      }}
-                    >
-                      −{money(Number(amt))}
-                    </button>
-                  ))}
                 </div>
-              </div>
 
-              <div className="ar-field">
-                <label>Số tiền giảm thực tế (₫)</label>
-                <input
-                  inputMode="numeric"
-                  value={discountValInput}
-                  onChange={(e) => setDiscountValInput(e.target.value)}
-                  placeholder="VD: 50.000"
-                />
-              </div>
-
-              <div className="ar-field">
-                <label>Lý do giảm giá</label>
-                <input
-                  value={discountReasonInput}
-                  onChange={(e) => setDiscountReasonInput(e.target.value)}
-                  placeholder="Khách VIP / Khai trương / Người quen"
-                />
-              </div>
-            </div>
-
-            <div className="ar-modal-footer">
-              {customDiscount && (
-                <button
-                  type="button"
-                  className="ar-btn-secondary"
-                  style={{ color: '#dc2626', marginRight: 'auto' }}
-                  onClick={() => {
-                    setCustomDiscount(null);
-                    setDiscountModal(false);
-                  }}
-                >
-                  Hủy giảm giá
-                </button>
-              )}
-              <button type="button" className="ar-btn-secondary" onClick={() => setDiscountModal(false)}>
-                Đóng
-              </button>
-              <button
-                type="button"
-                className="ar-btn-primary"
-                onClick={() => {
-                  const amt = Number(discountValInput.replace(/\D/g, '')) || 0;
-                  handleApplyDiscount(amt, discountReasonInput);
-                }}
-                disabled={saving}
-              >
-                Áp dụng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Customer-Facing Display (Dual Screen) Modal */}
-      {showCustomerDisplay && (
-        <div className="pos-customer-display-overlay" onClick={() => setShowCustomerDisplay(false)}>
-          <div className="pos-customer-display-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pos-cd-header">
-              <div className="pos-cd-brand">
-                <div
-                  className="pos-brand-badge"
-                  style={{ width: '38px', height: '38px', fontSize: '18px' }}
-                >
-                  SG
-                </div>
-                <div>
-                  <h2>Saigon Indoor Golf Club</h2>
-                  <div style={{ fontSize: '12.5px', opacity: 0.9 }}>
-                    Phòng: <strong>{room?.name ?? activeBooking.room}</strong> · Khách hàng:{' '}
-                    <strong>{activeBooking.customer}</strong>
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <button
-                  type="button"
-                  style={{
-                    background: 'rgba(255,255,255,0.2)',
-                    border: '1px solid rgba(255,255,255,0.4)',
-                    color: '#fff',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => {
-                    const win = window.open('', '_blank', 'width=900,height=700');
-                    if (win) {
-                      win.document.write(`
-                        <html>
-                          <head>
-                            <title>Màn hình khách hàng - Saigon Indoor Golf Club</title>
-                            <style>
-                              body { font-family: sans-serif; margin: 0; padding: 24px; background: #f8fafc; }
-                              .header { background: #093824; color: #fff; padding: 16px 24px; border-radius: 12px; }
-                              .content { display: flex; gap: 24px; margin-top: 24px; }
-                              .left { flex: 1; background: #fff; padding: 20px; border-radius: 12px; }
-                              .right { width: 340px; background: #fff; padding: 20px; border-radius: 12px; text-align: center; }
-                              .total { font-size: 36px; font-weight: 800; color: #16a34a; }
-                            </style>
-                          </head>
-                          <body>
-                            <div class="header">
-                              <h2>Saigon Indoor Golf Club</h2>
-                              <div>Phòng: ${room?.name ?? activeBooking.room} | Khách: ${activeBooking.customer}</div>
-                            </div>
-                            <div class="content">
-                              <div class="left">
-                                <h3>Dịch vụ sử dụng</h3>
-                                <p>• ${SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf'}: ${money(golfBaseTotal)}</p>
-                                ${extraItems.map((x) => `<p>• ${x.name} x${x.qty}: ${money(x.price * x.qty)}</p>`).join('')}
-                                <hr style="margin: 16px 0; border: 0; border-top: 1px solid #eee;" />
-                                ${discountAmount > 0 ? `<p style="color: #16a34a;">Giảm giá: -${money(discountAmount)}</p>` : ''}
-                                <h3>Tổng cộng: ${money(total)}</h3>
-                              </div>
-                              <div class="right">
-                                <h4>QUÉT MÃ VIETQR THANH TOÁN</h4>
-                                <div class="total">${money(total)}</div>
-                              </div>
-                            </div>
-                          </body>
-                        </html>
-                      `);
-                    }
-                  }}
-                >
-                  Mở tab riêng (Dual Screen)
-                </button>
-                <button
-                  type="button"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#fff',
-                    cursor: 'pointer',
-                    padding: '4px',
-                  }}
-                  onClick={() => setShowCustomerDisplay(false)}
-                >
-                  <X size={22} />
-                </button>
-              </div>
-            </div>
-
-            <div className="pos-cd-body">
-              <div>
-                <h3
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: 800,
-                    marginBottom: '14px',
-                    color: '#1e293b',
-                  }}
-                >
-                  Chi tiết hóa đơn dịch vụ
-                </h3>
-                <table className="pos-cd-items-table">
-                  <thead>
-                    <tr>
-                      <th>Dịch vụ / Sản phẩm</th>
-                      <th style={{ textAlign: 'center' }}>SL</th>
-                      <th style={{ textAlign: 'right' }}>Thành tiền</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td style={{ fontWeight: 600 }}>
-                        {SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf (giờ)'}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {activeBooking.service === 'gdr' ? '1 giờ' : '1 lượt'}
-                      </td>
-                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{money(golfBaseTotal)}</td>
-                    </tr>
-                    {foodLines.map(({ key, line }) => (
-                      <tr key={key}>
-                        <td>{line.name}</td>
-                        <td style={{ textAlign: 'center' }}>x{line.qty}</td>
-                        <td style={{ textAlign: 'right' }}>{money(line.total)}</td>
-                      </tr>
-                    ))}
-                    {extraItems.map((item) => (
-                      <tr key={item.id}>
-                        <td>{item.name}</td>
-                        <td style={{ textAlign: 'center' }}>x{item.qty}</td>
-                        <td style={{ textAlign: 'right' }}>{money(item.price * item.qty)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-
-                <div
-                  style={{
-                    marginTop: '20px',
-                    borderTop: '2px solid #f1f5f9',
-                    paddingTop: '14px',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '4px 0',
-                      color: '#64748b',
-                    }}
-                  >
-                    <span>Tạm tính</span>
-                    <span style={{ fontWeight: 600 }}>{money(subtotal)}</span>
-                  </div>
-                  {discountAmount > 0 && (
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        padding: '4px 0',
-                        color: '#16a34a',
-                      }}
-                    >
-                      <span>Ưu đãi / Giảm giá</span>
-                      <span style={{ fontWeight: 600 }}>−{money(discountAmount)}</span>
-                    </div>
-                  )}
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '10px 0',
-                      fontSize: '18px',
-                      fontWeight: 800,
-                      color: '#0f172a',
-                    }}
-                  >
-                    <span>Tổng cần thanh toán</span>
-                    <span style={{ color: '#16a34a', fontSize: '22px' }}>{money(total)}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pos-cd-qr-card">
-                {paid ? (
-                  <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                    <div
-                      style={{
-                        width: '64px',
-                        height: '64px',
-                        borderRadius: '50%',
-                        background: '#dcfce7',
-                        color: '#16a34a',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 16px',
-                      }}
-                    >
-                      <Check size={36} strokeWidth={3} />
-                    </div>
-                    <h3
-                      style={{
-                        fontSize: '20px',
-                        fontWeight: 800,
-                        color: '#166534',
-                        margin: '0 0 6px',
-                      }}
-                    >
-                      THANH TOÁN THÀNH CÔNG!
-                    </h3>
-                    <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>
-                      Cảm ơn Quý khách & Hẹn gặp lại!
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <span
-                      style={{
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        color: '#64748b',
-                      }}
-                    >
-                      Quét mã VietQR chuyển khoản
-                    </span>
-                    <div className="pos-cd-qr-img" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '12px', background: '#fff' }}>
-                      <img
-                        alt="Mã QR chuyển khoản VietQR"
-                        style={{ width: '180px', height: '180px', objectFit: 'contain' }}
-                        src={vietQrUrl({
-                          bin: '970422',
-                          account: '0902030165',
-                          holder: 'SAIGON INDOOR GOLF',
-                          amount: total,
-                          note: paymentCode(activeBooking.id),
-                        })}
-                      />
-                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-                        Nội dung: <strong style={{ color: '#0f172a' }}>{paymentCode(activeBooking.id)}</strong>
+                <div className="pos-m3-panel-prod-list">
+                  {filteredCatalog.map((item) => {
+                    const inCart = cart.find((c) => c.product.id === item.id);
+                    return (
+                      <div key={item.id} className={`pos-m3-panel-prod-row ${inCart ? 'selected' : ''}`}>
+                        <div className="pos-m3-panel-prod-info">
+                          <strong>{item.name}</strong>
+                          <small>
+                            {money(item.price)} / {item.unit}
+                          </small>
+                          {inCart && (
+                            <input
+                              className="pos-m3-item-note-input"
+                              value={inCart.note}
+                              onChange={(e) => handleUpdateCartNote(item.id, e.target.value)}
+                              placeholder="Ghi chú món (ít đá, không đường...)"
+                            />
+                          )}
+                        </div>
+                        {inCart ? (
+                          <div className="pos-m3-qty-stepper">
+                            <button type="button" onClick={() => handleAddToCart(item, -1)}>
+                              <Minus size={14} />
+                            </button>
+                            <span>{inCart.qty}</span>
+                            <button type="button" onClick={() => handleAddToCart(item, 1)}>
+                              <Plus size={14} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="pos-m3-btn-tonal"
+                            onClick={() => handleAddToCart(item, 1)}
+                          >
+                            <Plus size={14} /> Thêm
+                          </button>
+                        )}
                       </div>
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b' }}>Tổng số tiền</div>
-                    <div className="pos-cd-total">{money(total)}</div>
-                    <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
-                      Tự động xác nhận giao dịch trong 3-5 giây
-                    </div>
-                  </>
+                    );
+                  })}
+                </div>
+
+                {cart.length > 0 && (
+                  <div className="pos-m3-panel-cart-commit">
+                    <label className="pos-m3-switch-row">
+                      <span>Xác nhận đã phục vụ ngay tại quầy</span>
+                      <input
+                        type="checkbox"
+                        checked={autoServeAtCounter}
+                        onChange={(e) => setAutoServeAtCounter(e.target.checked)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      className="pos-m3-btn-primary pos-m3-btn-block"
+                      disabled={saving || !activeBooking}
+                      onClick={async () => {
+                        const ok = await handleCommitCartToSession();
+                        if (ok) setDesktopMode('overview');
+                      }}
+                    >
+                      <Check size={16} />
+                      <span>
+                        {activeBooking
+                          ? `Cập nhật ${cartCount} món vào ${selectedRoomObj.name} (${money(cartTotal)})`
+                          : 'Hãy chọn hoặc mở phiên chơi trước'}
+                      </span>
+                    </button>
+                  </div>
                 )}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Barcode Scanner Simulator Modal */}
-      {showBarcodeModal && (
-        <div className="ar-settings-modal-backdrop" onClick={() => setShowBarcodeModal(false)}>
-          <div
-            className="ar-settings-modal"
-            style={{ maxWidth: '440px' }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="ar-modal-header">
-              <div className="ar-modal-header-left">
-                <ScanBarcode size={20} color="#16a34a" />
-                <h3 className="ar-modal-header-title">Quét mã vạch (Barcode Scanner)</h3>
-              </div>
-              <button className="ar-modal-close-btn" onClick={() => setShowBarcodeModal(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div className="ar-modal-body">
-              <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 12px' }}>
-                Hệ thống tự động nhận diện đầu đọc mã vạch USB / Bluetooth (F4 mở két, quét phím tự động). Hoặc bạn có thể thử quét nhanh bằng cách chọn mẫu bên dưới:
-              </p>
-              <div className="ar-field">
-                <label>Nhập SKU hoặc mã vạch</label>
-                <input
-                  value={barcodeSimInput}
-                  onChange={(e) => setBarcodeSimInput(e.target.value)}
-                  placeholder="VD: 89345601"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const item = CATALOG_ITEMS.find(
-                        (c) => c.sku === barcodeSimInput.trim() || c.id === barcodeSimInput.trim(),
-                      );
-                      if (item) {
-                        playBeep();
-                        handleAddCatalogItem(item);
-                        setNotice(`Đã quét mã vạch: ${item.name} (+1)`);
-                        setShowBarcodeModal(false);
-                        setBarcodeSimInput('');
-                      } else {
-                        setNotice(`Không tìm thấy mã vạch: ${barcodeSimInput}`);
-                      }
-                    }
-                  }}
-                />
-              </div>
-              <div style={{ marginTop: '12px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b' }}>
-                  Mẫu mã vạch nhanh:
-                </span>
-                <div className="pos-discount-chips" style={{ marginTop: '6px' }}>
-                  {CATALOG_ITEMS.slice(0, 6).map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      className="pos-discount-chip"
-                      onClick={() => {
-                        playBeep();
-                        handleAddCatalogItem(item);
-                        setNotice(`Đã quét mã: ${item.name} (+1)`);
-                        setShowBarcodeModal(false);
-                      }}
-                    >
-                      {item.emoji} {item.name} ({item.sku})
-                    </button>
-                  ))}
+            {/* SUB-VIEW D: PAYMENT INLINE */}
+            {desktopMode === 'payment' && renderPaymentContent()}
+
+            {/* SUB-VIEW E: COMPLETED RECEIPT INLINE */}
+            {desktopMode === 'receipt' && (
+              <div className="pos-m3-panel-receipt">
+                <div className="pos-m3-success-icon">
+                  <Check size={32} />
+                </div>
+                <h4>Hoàn tất thanh toán!</h4>
+                <p>Line đã tự động chuyển về trạng thái Sẵn sàng đón khách mới.</p>
+                {lastReceipt && (
+                  <div className="pos-m3-receipt-box">
+                    <div>
+                      <span>Mã biên nhận</span>
+                      <strong>#{lastReceipt.code}</strong>
+                    </div>
+                    <div>
+                      <span>Khách hàng</span>
+                      <strong>{lastReceipt.customer}</strong>
+                    </div>
+                    <div>
+                      <span>Phương thức</span>
+                      <strong>{lastReceipt.methodLabel}</strong>
+                    </div>
+                    <div className="pos-m3-receipt-total">
+                      <span>Đã thu</span>
+                      <strong>{money(lastReceipt.total)}</strong>
+                    </div>
+                  </div>
+                )}
+                <div className="pos-m3-receipt-actions">
+                  <button
+                    type="button"
+                    className="pos-m3-btn-primary pos-m3-btn-block"
+                    onClick={() => handlePrintReceipt()}
+                  >
+                    <Printer size={16} /> In hóa đơn nhiệt K80
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-m3-btn-tonal pos-m3-btn-block"
+                    onClick={() => handleSendZaloReceipt()}
+                  >
+                    <Send size={16} /> Gửi biên nhận Zalo
+                  </button>
+                  <button
+                    type="button"
+                    className="pos-m3-btn-outline pos-m3-btn-block"
+                    onClick={() => {
+                      setLastReceipt(null);
+                      setActiveBookingId(null);
+                      setDesktopMode('overview');
+                    }}
+                  >
+                    Đóng biên nhận
+                  </button>
                 </div>
               </div>
-            </div>
-            <div className="ar-modal-footer">
-              <button
-                type="button"
-                className="ar-btn-secondary"
-                onClick={() => setShowBarcodeModal(false)}
-              >
-                Đóng
-              </button>
-              <button
-                type="button"
-                className="ar-btn-primary"
-                onClick={() => {
-                  const item = CATALOG_ITEMS.find(
-                    (c) => c.sku === barcodeSimInput.trim() || c.id === barcodeSimInput.trim(),
-                  );
-                  if (item) {
-                    playBeep();
-                    handleAddCatalogItem(item);
-                    setNotice(`Đã quét mã vạch: ${item.name} (+1)`);
-                    setShowBarcodeModal(false);
-                    setBarcodeSimInput('');
-                  } else {
-                    setNotice(`Không tìm thấy mã vạch: ${barcodeSimInput}`);
-                  }
-                }}
-              >
-                Quét ngay
-              </button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
+
+          {/* 5 QUICK ACTIONS BAR DOCKED AT THE BOTTOM OF RIGHT PANEL */}
+          <footer className="pos-m3-panel-quick-actions" aria-label="5 thao tác nhanh">
+            <button
+              type="button"
+              className={`pos-m3-qbtn ${desktopMode === 'checkin' ? 'active' : ''}`}
+              onClick={() => {
+                setCheckInRoomId(selectedRoomObj.id);
+                setDesktopMode('checkin');
+              }}
+            >
+              <UserPlus size={16} />
+              <span>Nhận khách</span>
+            </button>
+
+            <button
+              type="button"
+              className="pos-m3-qbtn"
+              disabled={saving || (!!activeBooking && activeBooking.status === 'playing')}
+              onClick={handleStartOrWalkIn}
+            >
+              <Play size={16} />
+              <span>Bắt đầu chơi</span>
+            </button>
+
+            <button
+              type="button"
+              className={`pos-m3-qbtn ${desktopMode === 'catalog' ? 'active' : ''}`}
+              onClick={() => setDesktopMode('catalog')}
+            >
+              <Plus size={16} />
+              <span>Thêm dịch vụ</span>
+            </button>
+
+            <button
+              type="button"
+              className="pos-m3-qbtn warn"
+              disabled={
+                saving ||
+                !activeBooking ||
+                !['playing', 'paused'].includes(activeBooking.status)
+              }
+              onClick={() => handleFinishSession(false)}
+            >
+              <Square size={16} />
+              <span>Kết thúc chơi</span>
+            </button>
+
+            <button
+              type="button"
+              className="pos-m3-qbtn primary"
+              disabled={saving || !activeBooking}
+              onClick={() => {
+                if (activeBooking && ['playing', 'paused'].includes(activeBooking.status)) {
+                  handleFinishSession(true);
+                } else {
+                  setDesktopMode('payment');
+                }
+              }}
+            >
+              <CreditCard size={16} />
+              <span>Thanh toán</span>
+            </button>
+          </footer>
+        </aside>
+      </div>
     </div>
   );
 }

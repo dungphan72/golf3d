@@ -1213,3 +1213,20 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.pos-done-title,
+.pos-pay-header h2,
+.pos-order-title {
+  font-family: var(--font-display, 'Be Vietnam Pro', sans-serif);
+}
+.pos-print-checkbox {
+  justify-content: flex-start;
+}
+.pos-print-checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  flex: none;
+  padding: 0;
+  accent-color: #16a34a;
+}

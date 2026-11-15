@@ -255,6 +255,7 @@ export default function ClubApp() {
                   onGo={go}
                   onMutate={mutate}
                   onRefresh={load}
+                  onOpenSession={setSelected}
                 />
               )}
               {HUB_VIEWS.includes(view as (typeof HUB_VIEWS)[number]) && data && (

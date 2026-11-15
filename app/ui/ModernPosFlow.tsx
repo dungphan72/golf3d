@@ -1,405 +1,342 @@
 'use client';
-/* eslint-disable @next/next/no-img-element */
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   ArrowLeft,
   CalendarDays,
   Check,
-  CheckCircle2,
   Clock,
   CreditCard,
   Crown,
-  Edit2,
-  FileText,
   Flag,
-  Grid2X2,
-  MessageCircle,
-  Package,
-  Plus,
   Printer,
-  QrCode,
-  RotateCcw,
-  Search,
   Send,
-  Trash2,
+  SlidersHorizontal,
   User,
-  Users,
   Wallet,
   Wrench,
   X,
+  Landmark,
 } from 'lucide-react';
-import { rooms, money, type Booking, type Segment } from '../../lib/club';
+import { rooms, money, sessionQuote, type Booking, type Segment } from '../../lib/club';
+import { operationKey } from '../../lib/finance';
+import type { Bill, Service } from '../../lib/pricing';
+import type { FoodLine } from '../../lib/fnb';
 import type { Data } from './shared';
+import { time } from './shared';
 import { roomInfo } from './widgets';
 import { playedMs, clock } from './PosBoard';
-import { generateK80Html, printK80Receipt, formatBillZaloText, sendBillToZalo } from '../../lib/thermal-receipt';
+import { useFood, SessionOrdering } from './SessionFood';
+import { useBill } from './BillTools';
+import { TransferPanel } from './session/TransferPanel';
+import {
+  generateK80Html,
+  printK80Receipt,
+  formatBillZaloText,
+  sendBillToZalo,
+} from '../../lib/thermal-receipt';
 import '../pos-flow.css';
 
-export interface OrderItem {
-  id: string;
-  name: string;
-  unitPrice: number;
-  qty: number;
-  category: 'golf' | 'fnb' | 'service' | 'accessory' | 'combo';
-}
+type Step = 'map' | 'order' | 'pay' | 'done';
+type PayMethod = 'cash' | 'card' | 'transfer';
+const PAY_LABEL: Record<PayMethod, string> = {
+  cash: 'Tiền mặt',
+  card: 'Thẻ ngân hàng',
+  transfer: 'Chuyển khoản / QR',
+};
+const SERVICE_LABEL: Record<string, string> = {
+  gdr: 'Luyện tập theo giờ',
+  '9': 'Game 9 hố',
+  '18': 'Game 18 hố',
+};
 
-interface ProductDef {
-  id: string;
-  name: string;
-  price: number;
-  category: 'fnb' | 'service' | 'accessory' | 'combo';
-  icon: string;
-}
-
-const DEFAULT_PRODUCTS: ProductDef[] = [
-  // F&B
-  { id: 'p-water', name: 'Nước suối', price: 20000, category: 'fnb', icon: '💧' },
-  { id: 'p-coffee', name: 'Cà phê', price: 45000, category: 'fnb', icon: '☕' },
-  { id: 'p-juice', name: 'Nước ép', price: 55000, category: 'fnb', icon: '🍹' },
-  { id: 'p-sandwich', name: 'Bánh sandwich', price: 60000, category: 'fnb', icon: '🥪' },
-  { id: 'p-noodle', name: 'Mì ly', price: 40000, category: 'fnb', icon: '🍜' },
-  { id: 'p-cake', name: 'Bánh ngọt', price: 45000, category: 'fnb', icon: '🧁' },
-  { id: 'p-fruit', name: 'Trái cây', price: 50000, category: 'fnb', icon: '🍎' },
-  { id: 'p-towel', name: 'Khăn lạnh', price: 5000, category: 'fnb', icon: '🧊' },
-  // Dịch vụ
-  { id: 's-clubs-taylor', name: 'Thuê bộ gậy TaylorMade', price: 150000, category: 'service', icon: '🏌️' },
-  { id: 's-clubs-callaway', name: 'Thuê bộ gậy Nữ Callaway', price: 150000, category: 'service', icon: '🏌️‍♀️' },
-  { id: 's-caddie', name: 'Phí Caddie hỗ trợ', price: 100000, category: 'service', icon: '🤝' },
-  { id: 's-shoes', name: 'Thuê giày golf FootJoy', price: 50000, category: 'service', icon: '👟' },
-  // Phụ kiện
-  { id: 'a-glove-m', name: 'Găng tay golf nam', price: 120000, category: 'accessory', icon: '🧤' },
-  { id: 'a-glove-w', name: 'Găng tay golf nữ', price: 120000, category: 'accessory', icon: '🧤' },
-  { id: 'a-balls', name: 'Bóng Titleist Pro V1 (3q)', price: 240000, category: 'accessory', icon: '⚪' },
-  { id: 'a-tee', name: 'Tee golf cao su/gỗ', price: 25000, category: 'accessory', icon: '📍' },
-  // Combo
-  { id: 'c-swing-coffee', name: 'Combo Swing & Coffee', price: 79000, category: 'combo', icon: '⚡' },
-  { id: 'c-vip-breakfast', name: 'Combo VIP Breakfast & Golf', price: 120000, category: 'combo', icon: '⭐' },
-];
-
+/**
+ * POS flow (reference: "Luồng POS Saigon Indoor Golf Club.png"):
+ * 1 line map -> 2 sale (session + real F&B menu) -> 3 payment -> 4 done.
+ * Every number comes from the server: session quote, kitchen-served food, the
+ * booking amount and the shift ledger payment. Nothing is invented client-side.
+ */
 export function ModernPosFlow({
   data,
-  now,
-  canSeeMoney,
-  onGo,
   onMutate,
   onRefresh,
+  onOpenSession,
 }: {
   data: Data;
-  now: number;
-  canSeeMoney: boolean;
-  onGo: (v: string) => void;
-  onMutate: (body: unknown) => Promise<boolean>;
+  now?: number;
+  canSeeMoney?: boolean;
+  onGo?: (v: string) => void;
+  onMutate: (body: Record<string, unknown>) => Promise<boolean>;
   onRefresh: () => Promise<void>;
+  onOpenSession?: (b: Booking) => void;
 }) {
-  // Timer tick for real-time updates
   const [tick, setTick] = useState(() => Date.now());
   useEffect(() => {
     const id = setInterval(() => setTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  // Flow State: 'map' (Screen 1) -> 'order' (Screen 2) -> 'pay' (Screen 3) -> 'done' (Screen 4)
-  const [step, setStep] = useState<'map' | 'order' | 'pay' | 'done'>('map');
-  const [filterTab, setFilterTab] = useState<'all' | 'playing' | 'booked' | 'empty' | 'maintenance'>('all');
-
-  // Active room & session being serviced
-  const [activeRoomId, setActiveRoomId] = useState<string>('line-3');
-  const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
-
-  // Active customer info
-  const [customer, setCustomer] = useState<{ name: string; phone: string; tier: string }>({
-    name: 'Nguyễn Hoàng Long',
-    phone: '0902 030 165',
-    tier: 'Hội viên Gold',
-  });
-
-  // Items currently on the order bill
-  const [billItems, setBillItems] = useState<OrderItem[]>([
-    { id: 'item-golf', name: 'Chơi golf (giờ)', unitPrice: 350000, qty: 1, category: 'golf' },
-    { id: 'item-water', name: 'Nước suối', unitPrice: 20000, qty: 2, category: 'fnb' },
-    { id: 'item-sandwich', name: 'Bánh sandwich', unitPrice: 60000, qty: 1, category: 'fnb' },
-  ]);
-
-  // Catalog search & category tabs
-  const [catalogTab, setCatalogTab] = useState<'fnb' | 'service' | 'accessory' | 'combo'>('fnb');
-  const [searchProduct, setSearchProduct] = useState('');
-
-  // Payment Screen states
-  const [payMethod, setPayMethod] = useState<'cash' | 'card' | 'qr'>('cash');
-  const [tenderedCash, setTenderedCash] = useState<number>(500000);
+  const [step, setStep] = useState<Step>('map');
+  const [filterTab, setFilterTab] = useState<'all' | 'playing' | 'booked' | 'empty' | 'maintenance'>(
+    'all',
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [payMethod, setPayMethod] = useState<PayMethod>('cash');
+  const [tendered, setTendered] = useState('');
   const [printReceipt, setPrintReceipt] = useState(true);
-
-  // Completed Invoice data
-  const [completedInvoice, setCompletedInvoice] = useState<{
-    code: string;
-    total: number;
-    method: string;
-    time: string;
-  }>({
-    code: 'HD26879',
-    total: 450000,
-    method: 'Tiền mặt',
-    time: '04/11/2026 – 15:15',
-  });
-
-  // Quick modals for Walk-in or Extending
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [paid, setPaid] = useState<{ total: number; method: string; at: number } | null>(null);
   const [walkInModal, setWalkInModal] = useState<string | null>(null);
-  const [extendModal, setExtendModal] = useState<boolean>(false);
-  const [walkInName, setWalkInName] = useState('Khách vãng lai');
-  const [walkInPhone, setWalkInPhone] = useState('0909000111');
+  const [extendModal, setExtendModal] = useState(false);
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const payKey = useRef(operationKey());
 
-  // Calculate room states from real data
-  const roomStatuses = useMemo(() => {
-    return rooms.map((r) => {
-      const info = roomInfo(r.id, data.bookings, data.maintenance, tick);
-      return { room: r, info, state: info.state };
-    });
-  }, [data.bookings, data.maintenance, tick]);
+  const b: Booking | null = useMemo(
+    () => (activeId ? (data.bookings.find((x) => x.id === activeId) ?? null) : null),
+    [data.bookings, activeId],
+  );
+  const food = useFood(b?.id);
+  const { bill } = useBill(b?.id ?? '', b?.status ?? '');
 
-  // Counts for filter pills
+  const roomStatuses = useMemo(
+    () =>
+      rooms.map((r) => {
+        const info = roomInfo(r.id, data.bookings, tick);
+        const maint = data.maintenance?.find((m) => m.room === r.id) ?? null;
+        const state: 'playing' | 'booked' | 'maintenance' | 'empty' = maint
+          ? 'maintenance'
+          : info.state === 'occupied' || info.state === 'due' || info.state === 'clean'
+            ? 'playing'
+            : info.state === 'soon'
+              ? 'booked'
+              : 'empty';
+        return { room: r, info, state, maint };
+      }),
+    [data.bookings, data.maintenance, tick],
+  );
   const counts = useMemo(() => {
-    let playing = 0;
-    let booked = 0;
-    let empty = 0;
-    let maintenance = 0;
-    for (const r of roomStatuses) {
-      if (r.state === 'occupied' || r.state === 'due' || r.state === 'clean') playing++;
-      else if (r.state === 'soon') booked++;
-      else if (r.state === 'maintenance') maintenance++;
-      else empty++;
-    }
-    return { all: rooms.length, playing, booked, empty, maintenance };
+    const c = { all: rooms.length, playing: 0, booked: 0, empty: 0, maintenance: 0 };
+    for (const r of roomStatuses) c[r.state]++;
+    return c;
   }, [roomStatuses]);
+  const visibleRooms = roomStatuses.filter(({ state }) => filterTab === 'all' || state === filterTab);
+  const room = b ? rooms.find((r) => r.id === b.room) : undefined;
+  const roomShort = (room?.name ?? b?.room ?? '').replace('Line ', 'L');
 
-  // Filtered rooms
-  const visibleRooms = useMemo(() => {
-    return roomStatuses.filter(({ state }) => {
-      if (filterTab === 'all') return true;
-      if (filterTab === 'playing') return state === 'occupied' || state === 'due' || state === 'clean';
-      if (filterTab === 'booked') return state === 'soon';
-      if (filterTab === 'maintenance') return state === 'maintenance';
-      if (filterTab === 'empty') return state === 'empty';
-      return true;
-    });
-  }, [roomStatuses, filterTab]);
-
-  // Active room details
-  const activeRoom = useMemo(() => {
-    return rooms.find((r) => r.id === activeRoomId) ?? rooms[0];
-  }, [activeRoomId]);
-
-  // Subtotal & Total calculations
-  const subtotal = useMemo(() => {
-    return billItems.reduce((acc, it) => acc + it.unitPrice * it.qty, 0);
-  }, [billItems]);
-
-  const discount = 0;
-  const totalAmount = Math.max(0, subtotal - discount);
-  const changeDue = Math.max(0, tenderedCash - totalAmount);
-
-  // Filtered products catalog
-  const filteredProducts = useMemo(() => {
-    const q = searchProduct.trim().toLowerCase();
-    return DEFAULT_PRODUCTS.filter((p) => {
-      const matchCat = p.category === catalogTab;
-      if (!matchCat) return false;
-      if (!q) return true;
-      return p.name.toLowerCase().includes(q);
-    });
-  }, [catalogTab, searchProduct]);
+  // Session quote (the golf time) plus kitchen-served food, as the server will bill it.
+  let q: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 };
+  let quoteError = '';
+  if (b) {
+    try {
+      const snap = JSON.parse(b.price);
+      const seg: Segment[] = JSON.parse(b.segments);
+      if (b.status === 'playing' && b.started) seg.push({ start: b.started, end: tick });
+      q =
+        b.status === 'booked' && snap.estimated
+          ? snap.estimated
+          : sessionQuote(b.service as Service, seg, snap);
+    } catch (e) {
+      quoteError = e instanceof Error ? e.message : 'Chưa tính được tiền';
+    }
+  }
+  const orders = food.data?.orders ?? [];
+  const servedOrders = orders.filter((o) => o.status === 'served');
+  const pendingFood = orders.filter((o) => ['new', 'preparing', 'ready'].includes(o.status)).length;
+  const servedFood = servedOrders.reduce((s, o) => s + o.total, 0);
+  const foodVerified = !!food.data && !food.error && servedFood === (b?.food_total ?? 0);
+  const foodLines = servedOrders.flatMap((o) =>
+    (JSON.parse(o.items) as FoodLine[]).map((l, i) => ({ key: o.id + '-' + i, line: l })),
+  );
+  const estimate = q.total + servedFood;
+  const total = b?.amount ?? estimate;
+  const finished = b?.status === 'finished';
+  const operating = !!b && ['booked', 'playing', 'paused'].includes(b.status);
+  const canPayNow =
+    !!b && finished && b.amount != null && !quoteError && foodVerified && pendingFood === 0;
+  const cashIn = Number(tendered.replace(/\D/g, '')) || 0;
+  const change = Math.max(0, cashIn - total);
+  const quickCash = useMemo(() => {
+    const up = (n: number) => Math.ceil(total / n) * n;
+    return [...new Set([total, up(100000), up(500000)])].filter((n) => n > 0).slice(0, 3);
+  }, [total]);
 
   // ---------------------------------------------------------------------------
-  // Action Handlers
+  // Actions (all go to the server; the screen only reflects what comes back)
   // ---------------------------------------------------------------------------
-
-  const handleSelectRoom = (roomId: string) => {
-    setActiveRoomId(roomId);
-    const rInfo = roomStatuses.find((x) => x.room.id === roomId);
-    const b = rInfo?.info.live ?? rInfo?.info.due ?? rInfo?.info.soon ?? null;
-    setActiveBooking(b);
-
-    if (b) {
-      setCustomer({
-        name: b.customer || 'Nguyễn Hoàng Long',
-        phone: b.phone || '0902 030 165',
-        tier: b.phone ? 'Hội viên Gold' : 'Khách vãng lai',
-      });
-      // Set initial items from booking
-      const rate = rInfo?.room.vip ? (data.config.vipRate ?? 500000) : data.config.rate;
-      setBillItems([
-        { id: 'item-golf', name: 'Chơi golf (giờ)', unitPrice: rate, qty: 1, category: 'golf' },
-        { id: 'item-water', name: 'Nước suối', unitPrice: 20000, qty: 2, category: 'fnb' },
-        { id: 'item-sandwich', name: 'Bánh sandwich', unitPrice: 60000, qty: 1, category: 'fnb' },
-      ]);
-      setStep('order');
-    } else {
-      // Empty line -> open quick start
-      setWalkInModal(roomId);
+  function open(id: string, to: Step) {
+    payKey.current = operationKey();
+    setActiveId(id);
+    setTendered('');
+    setNotice('');
+    setPaid(null);
+    setPayMethod('cash');
+    setStep(to);
+  }
+  function handleSelectRoom(roomId: string) {
+    const rs = roomStatuses.find((x) => x.room.id === roomId);
+    if (!rs) return;
+    if (rs.maint) {
+      setNotice(`${rs.room.name} đang bảo trì${rs.maint.reason ? ': ' + rs.maint.reason : ''}.`);
+      return;
     }
-  };
-
-  const handleQuickStartWalkIn = async () => {
-    if (!walkInModal) return;
-    const ok = await onMutate({
-      action: 'walkin',
-      room: walkInModal,
-      customer: walkInName,
-      phone: walkInPhone,
-      people: 1,
-      duration: 60,
-    });
-    if (ok) {
-      setActiveRoomId(walkInModal);
-      setWalkInModal(null);
-      setCustomer({
-        name: walkInName,
-        phone: walkInPhone,
-        tier: 'Khách vãng lai',
+    const target = rs.info.live ?? rs.info.due ?? rs.info.soon ?? null;
+    if (target) open(target.id, target.status === 'finished' ? 'pay' : 'order');
+    else setWalkInModal(roomId);
+  }
+  async function handleQuickStartWalkIn() {
+    if (!walkInModal || saving) return;
+    setSaving(true);
+    try {
+      const ok = await onMutate({
+        action: 'walkin',
+        room: walkInModal,
+        customer: walkInName.trim() || 'Khách vãng lai',
+        phone: walkInPhone.trim(),
+        people: 1,
+        duration: 60,
       });
-      const roomObj = rooms.find((r) => r.id === walkInModal);
-      const rate = roomObj?.vip ? (data.config.vipRate ?? 500000) : data.config.rate;
-      setBillItems([
-        { id: 'item-golf', name: 'Chơi golf (giờ)', unitPrice: rate, qty: 1, category: 'golf' },
-      ]);
-      setStep('order');
-      await onRefresh();
-    }
-  };
-
-  const handleAddProduct = (p: ProductDef) => {
-    setBillItems((prev) => {
-      const existing = prev.find((it) => it.id === p.id);
-      if (existing) {
-        return prev.map((it) => (it.id === p.id ? { ...it, qty: it.qty + 1 } : it));
+      if (ok) {
+        const roomId = walkInModal;
+        setWalkInModal(null);
+        setWalkInName('');
+        setWalkInPhone('');
+        setAwaitRoom(roomId);
+        await onRefresh();
       }
-      return [
-        ...prev,
-        { id: p.id, name: p.name, unitPrice: p.price, qty: 1, category: p.category },
-      ];
-    });
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setBillItems((prev) => prev.filter((it) => it.id !== itemId));
-  };
-
-  const handleExtend = async (minutes: number) => {
-    if (activeBooking) {
-      await onMutate({ action: 'extend', id: activeBooking.id, minutes });
-      await onRefresh();
+    } finally {
+      setSaving(false);
     }
-    // Update golf hours on bill
-    setBillItems((prev) =>
-      prev.map((it) =>
-        it.category === 'golf' ? { ...it, qty: it.qty + minutes / 60 } : it,
-      ),
-    );
-    setExtendModal(false);
-  };
-
-  const handleFinishSession = async () => {
-    if (activeBooking && activeBooking.status === 'playing') {
-      await onMutate({ action: 'finish', id: activeBooking.id });
-      await onRefresh();
+  }
+  // After "vào chơi ngay" the new booking arrives with the next data refresh.
+  const [awaitRoom, setAwaitRoom] = useState<string | null>(null);
+  useEffect(() => {
+    if (!awaitRoom) return;
+    const created = data.bookings.find((x) => x.room === awaitRoom && x.status === 'playing');
+    if (created) {
+      /* eslint-disable react-hooks/set-state-in-effect -- open the session once the refreshed data contains it */
+      setAwaitRoom(null);
+      open(created.id, 'order');
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
-  };
-
-  const handleConfirmPayment = async () => {
-    const invCode = 'HD' + Math.floor(10000 + Math.random() * 90000);
-    const nowStr = new Date().toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    const methodLabels: Record<string, string> = {
-      cash: 'Tiền mặt',
-      card: 'Thẻ ngân hàng',
-      qr: 'QR Code (VietQR)',
-    };
-
-    setCompletedInvoice({
-      code: invCode,
-      total: totalAmount,
-      method: methodLabels[payMethod] || 'Tiền mặt',
-      time: nowStr,
-    });
-
-    // Process server payment if booking exists
-    if (activeBooking) {
-      await onMutate({
+  }, [awaitRoom, data.bookings]);
+  async function handleStart() {
+    if (!b || saving) return;
+    setSaving(true);
+    try {
+      await onMutate({ action: 'start', id: b.id });
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function handleExtend(minutes: number) {
+    if (!b || saving) return;
+    setSaving(true);
+    try {
+      await onMutate({ action: 'extend', id: b.id, minutes });
+      setExtendModal(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+  /** "Thanh toán (F9)": stop the clock if still playing, then go to payment. */
+  async function handleCheckout() {
+    if (!b || saving) return;
+    if (finished) {
+      setStep('pay');
+      return;
+    }
+    if (b.status === 'booked') {
+      setNotice('Hãy bấm "Bắt đầu" trước khi thanh toán.');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (await onMutate({ action: 'finish', id: b.id })) setStep('pay');
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function pay(extra: Record<string, unknown> = {}, method: PayMethod = payMethod) {
+    if (!b || b.amount == null || !canPayNow || saving) return;
+    if (method === 'cash' && cashIn > 0 && cashIn < b.amount) {
+      setNotice('Tiền khách đưa chưa đủ.');
+      return;
+    }
+    setSaving(true);
+    setNotice('');
+    try {
+      const ok = await onMutate({
         action: 'pay',
-        id: activeBooking.id,
-        method: payMethod,
-        requestId: crypto.randomUUID(),
-        expectedAmount: totalAmount,
+        id: b.id,
+        method,
+        requestId: payKey.current,
+        expectedAmount: b.amount,
+        ...extra,
       });
-      await onRefresh();
+      if (ok) {
+        setPaid({ total: b.amount, method: PAY_LABEL[method], at: Date.now() });
+        setStep('done');
+        if (printReceipt) printNow();
+      }
+    } finally {
+      setSaving(false);
     }
+  }
+  const quoteForPrint = () => q;
+  function printNow() {
+    if (!b) return;
+    printK80Receipt(
+      generateK80Html({
+        booking: b,
+        quote: quoteForPrint(),
+        bill,
+        roomName: room?.name ?? b.room,
+        food: food.data,
+      }),
+    );
+  }
+  async function sendZalo() {
+    if (!b) return;
+    await sendBillToZalo({
+      phone: b.phone,
+      billText: formatBillZaloText({
+        booking: b,
+        quote: q,
+        bill,
+        roomName: room?.name ?? b.room,
+        food: food.data,
+      }),
+      onNotify: (msg) => setNotice(msg),
+    });
+  }
 
-    // Auto trigger print if checked
-    if (printReceipt) {
-      handlePrintInvoice(invCode, totalAmount);
-    }
+  // F9 = checkout from the sale screen.
+  useEffect(() => {
+    if (step !== 'order') return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'F9') {
+        e.preventDefault();
+        void handleCheckout();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, b?.id, b?.status, saving]);
 
-    setStep('done');
-  };
-
-  const handlePrintInvoice = (code = completedInvoice.code, total = completedInvoice.total) => {
-    const html = `
-      <div style="font-family: monospace; width: 280px; margin: 0 auto; padding: 10px; font-size: 13px;">
-        <h2 style="text-align: center; margin: 0 0 6px;">SAIGON INDOOR GOLF CLUB</h2>
-        <p style="text-align: center; margin: 0 0 10px; font-size: 11px;">250 Lương Định Của, TP. Thủ Đức<br>Hotline: 0877 834 888</p>
-        <hr style="border-top: 1px dashed #000; margin: 8px 0;" />
-        <p style="margin: 3px 0;"><strong>HÓA ĐƠN:</strong> ${code}</p>
-        <p style="margin: 3px 0;"><strong>Line:</strong> ${activeRoom.name}</p>
-        <p style="margin: 3px 0;"><strong>Khách:</strong> ${customer.name}</p>
-        <p style="margin: 3px 0;"><strong>Thời gian:</strong> ${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')}</p>
-        <hr style="border-top: 1px dashed #000; margin: 8px 0;" />
-        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-          ${billItems
-            .map(
-              (it) => `
-            <tr>
-              <td>${it.name} x${it.qty}</td>
-              <td style="text-align: right;">${money(it.unitPrice * it.qty)}</td>
-            </tr>
-          `,
-            )
-            .join('')}
-        </table>
-        <hr style="border-top: 1px dashed #000; margin: 8px 0;" />
-        <p style="display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; margin: 6px 0;">
-          <span>TỔNG CỘNG:</span>
-          <span>${money(total)}</span>
-        </p>
-        <p style="text-align: center; margin: 12px 0 4px; font-size: 11px;">Cảm ơn Quý khách & Hẹn gặp lại!</p>
-      </div>
-    `;
-    printK80Receipt(html);
-  };
-
-  const handleSendZalo = () => {
-    const text = `SAIGON INDOOR GOLF CLUB - Hóa đơn #${completedInvoice.code}\nKhách hàng: ${customer.name}\nLine: ${activeRoom.name}\nTổng tiền: ${money(completedInvoice.total)}\nCảm ơn Quý khách đã trải nghiệm tại CLB!`;
-    if (customer.phone) {
-      sendBillToZalo({ phone: customer.phone, billText: text });
-    }
-    navigator.clipboard?.writeText(text);
-    alert('Đã sao chép nội dung hóa đơn để gửi Zalo / SMS cho khách!');
-  };
+  // If the booking disappears (cancelled elsewhere), show the map again.
+  const cur: Step = step !== 'map' && !b ? 'map' : step;
 
   // ---------------------------------------------------------------------------
-  // RENDER STEP 1: SƠ ĐỒ LINE / PHÒNG
+  // STEP 1 — line / room map
   // ---------------------------------------------------------------------------
-  if (step === 'map') {
+  if (cur === 'map') {
     const todayStr = new Date().toLocaleDateString('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
     });
-
     return (
       <div className="pos-flow-container">
         {/* Top bar */}
@@ -435,13 +372,13 @@ export function ModernPosFlow({
 
         {/* 12 Line Cards Grid */}
         <div className="pos-lines-grid">
-          {visibleRooms.map(({ room, info, state }) => {
-            const isPlaying = state === 'occupied' || state === 'due' || state === 'clean';
-            const isBooked = state === 'soon';
+          {visibleRooms.map(({ room, info, state, maint }) => {
+            const isPlaying = state === 'playing';
+            const isBooked = state === 'booked';
             const isMaint = state === 'maintenance';
-            const isEmpty = state === 'empty';
 
-            const elapsedMinutes = isPlaying && info.live ? Math.floor(playedMs(info.live, tick) / 60000) : 45;
+            const shown = info.live ?? info.due ?? null;
+            const elapsedMinutes = info.live ? Math.floor(playedMs(info.live, tick) / 60000) : null;
 
             return (
               <button
@@ -512,20 +449,26 @@ export function ModernPosFlow({
                   {isPlaying ? (
                     <div className="pos-line-timer">
                       <Clock size={15} />
-                      <span>{elapsedMinutes} phút</span>
+                      <span>
+                        {elapsedMinutes != null
+                          ? `${elapsedMinutes} phút`
+                          : 'Chờ thanh toán'}
+                      </span>
                     </div>
                   ) : isBooked ? (
-                    <span className="pos-line-note">20:00 - 21:00</span>
+                    <span className="pos-line-note">
+                      {info.soon ? `${time(info.soon.start)} - ${time(info.soon.end)}` : ''}
+                    </span>
                   ) : isMaint ? (
                     <span className="pos-line-note" style={{ color: '#ef4444' }}>
-                      Đến 16:00
+                      {maint?.reason || 'Đang bảo trì'}
                     </span>
                   ) : (
                     <span className="pos-line-note">Sẵn sàng</span>
                   )}
 
-                  {info.live?.customer && (
-                    <span className="pos-line-customer">{info.live.customer}</span>
+                  {shown?.customer && (
+                    <span className="pos-line-customer">{shown.customer}</span>
                   )}
                 </div>
               </button>
@@ -592,16 +535,22 @@ export function ModernPosFlow({
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER STEP 2: TẠO HÓA ĐƠN & THÊM DỊCH VỤ, F&B (BÁN HÀNG - L3)
+  // STEP 2 — sale: session, customer, real bill, real F&B menu
   // ---------------------------------------------------------------------------
-  if (step === 'order') {
-    const elapsedMs = activeBooking?.started ? playedMs(activeBooking, tick) : 45 * 60000 + 12000;
-    const timeFormatted = clock(elapsedMs);
-
+  if (cur === 'order' && b) {
+    const elapsed = b.started || b.status === 'paused' ? playedMs(b, tick) : 0;
+    const hours = (min: number) => `${+(min / 60).toFixed(2)} giờ`.replace('.', ',');
+    const statusTag =
+      b.status === 'playing'
+        ? ['pos-state-playing', 'Đang chơi']
+        : b.status === 'paused'
+          ? ['pos-state-booked', 'Tạm dừng']
+          : b.status === 'booked'
+            ? ['pos-state-booked', 'Đặt trước']
+            : ['pos-state-empty', 'Chờ thanh toán'];
     return (
       <div className="pos-flow-container">
         <div className="pos-order-screen">
-          {/* Topbar */}
           <div className="pos-order-topbar">
             <div className="pos-order-topbar-left">
               <button
@@ -613,115 +562,126 @@ export function ModernPosFlow({
                 <ArrowLeft size={18} />
               </button>
               <h2 className="pos-order-title">
-                Bán hàng – {activeRoom.name.replace('Line ', 'L')}
-                <span className="pos-status-tag pos-state-playing">Đang chơi</span>
+                Bán hàng – {roomShort}
+                <span className={`pos-status-tag ${statusTag[0]}`}>{statusTag[1]}</span>
               </h2>
             </div>
           </div>
+          {notice && (
+            <div className="error-box" role="status">
+              {notice}
+            </div>
+          )}
 
-          {/* Two-Column Split View */}
           <div className="pos-order-grid">
-            {/* Left Column: Bill & Session info */}
             <div className="pos-order-left">
-              {/* Timer card */}
               <div className="pos-timer-box">
                 <span className="pos-timer-label">Thời gian chơi</span>
-                <span className="pos-timer-clock">{timeFormatted}</span>
+                <span className="pos-timer-clock">{clock(elapsed)}</span>
                 <div className="pos-timer-sub">
-                  <span>Bắt đầu: 14:30</span>
+                  <span>Bắt đầu: {time(b.started ?? b.start)}</span>
                   <span>|</span>
-                  <span>Dự kiến: 15:30</span>
+                  <span>Dự kiến: {time(b.end)}</span>
                 </div>
                 <div className="pos-timer-actions">
-                  <button
-                    type="button"
-                    className="pos-btn-extend"
-                    onClick={() => setExtendModal(true)}
-                  >
-                    + Gia hạn
-                  </button>
+                  {b.status === 'booked' ? (
+                    <button
+                      type="button"
+                      className="pos-btn-extend"
+                      onClick={handleStart}
+                      disabled={saving}
+                    >
+                      Bắt đầu
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="pos-btn-extend"
+                      onClick={() => setExtendModal(true)}
+                      disabled={saving || !operating || b.service !== 'gdr'}
+                      title={b.service !== 'gdr' ? 'Chỉ gia hạn lượt luyện tập theo giờ' : undefined}
+                    >
+                      + Gia hạn
+                    </button>
+                  )}
                   <button
                     type="button"
                     className="pos-btn-end"
-                    onClick={handleFinishSession}
+                    onClick={handleCheckout}
+                    disabled={saving || b.status === 'booked'}
                   >
                     Kết thúc
                   </button>
                 </div>
               </div>
 
-              {/* Customer Info */}
               <div className="pos-customer-card">
                 <div className="pos-customer-info">
                   <div className="pos-customer-avatar">
-                    {customer.name.slice(0, 1).toUpperCase()}
+                    {(b.customer || '?').slice(0, 1).toUpperCase() || <User size={16} />}
                   </div>
                   <div className="pos-customer-meta">
-                    <strong>{customer.name}</strong>
-                    <small>
-                      {customer.tier} · {customer.phone}
-                    </small>
+                    <strong>{b.customer || 'Khách vãng lai'}</strong>
+                    <small>{b.phone || 'Chưa có số điện thoại'}</small>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  className="pos-customer-edit"
-                  onClick={() => {
-                    const nextName = prompt('Nhập tên khách hàng:', customer.name);
-                    if (nextName) setCustomer({ ...customer, name: nextName });
-                  }}
-                  title="Đổi thông tin khách"
-                >
-                  <Edit2 size={16} />
-                </button>
               </div>
 
-              {/* Order Bill Items */}
               <div className="pos-bill-card">
                 <h3 className="pos-bill-title">Dịch vụ sử dụng</h3>
                 <div className="pos-bill-items">
-                  {billItems.map((item) => (
-                    <div key={item.id} className="pos-bill-row">
-                      <span className="pos-bill-item-name">{item.name}</span>
-                      <span className="pos-bill-item-qty">
-                        {item.category === 'golf' ? `${item.qty} giờ` : `x${item.qty}`}
-                      </span>
-                      <span className="pos-bill-item-price">
-                        {money(item.unitPrice * item.qty)}
-                      </span>
-                      <button
-                        type="button"
-                        className="pos-bill-item-del"
-                        onClick={() => handleRemoveItem(item.id)}
-                        aria-label="Xóa món"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                  {quoteError ? (
+                    <div className="pos-bill-row">
+                      <span className="pos-bill-item-name">{quoteError}</span>
+                    </div>
+                  ) : (
+                    q.lines.map((l, i) => (
+                      <div key={i} className="pos-bill-row">
+                        <span className="pos-bill-item-name">
+                          {SERVICE_LABEL[b.service] ?? 'Chơi golf'}
+                          {l.label ? ` · ${l.label}` : ''}
+                        </span>
+                        <span className="pos-bill-item-qty">{hours(l.minutes)}</span>
+                        <span className="pos-bill-item-price">{money(l.amount)}</span>
+                      </div>
+                    ))
+                  )}
+                  {foodLines.map(({ key, line }) => (
+                    <div key={key} className="pos-bill-row">
+                      <span className="pos-bill-item-name">{line.name}</span>
+                      <span className="pos-bill-item-qty">x{line.qty}</span>
+                      <span className="pos-bill-item-price">{money(line.total)}</span>
                     </div>
                   ))}
+                  {pendingFood > 0 && (
+                    <div className="pos-bill-row">
+                      <span className="pos-bill-item-name">
+                        {pendingFood} đơn món đang chuẩn bị – chỉ tính tiền khi đã phục vụ
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Summary */}
                 <div className="pos-bill-summary">
                   <div className="pos-summary-line">
                     <span>Tạm tính</span>
-                    <span>{money(subtotal)}</span>
+                    <span>{money(estimate)}</span>
                   </div>
                   <div className="pos-summary-line">
                     <span>Giảm giá</span>
-                    <span>{money(discount)}</span>
+                    <span>{bill?.discount ? '−' + money(bill.discount.amount) : money(0)}</span>
                   </div>
                   <div className="pos-summary-total">
                     <span>Tổng thanh toán</span>
-                    <span className="pos-total-amount">{money(totalAmount)}</span>
+                    <span className="pos-total-amount">{money(total)}</span>
                   </div>
                 </div>
 
-                {/* Checkout button */}
                 <button
                   type="button"
                   className="pos-btn-checkout"
-                  onClick={() => setStep('pay')}
+                  onClick={handleCheckout}
+                  disabled={saving || b.status === 'booked' || !!quoteError}
                 >
                   <CreditCard size={18} />
                   <span>Thanh toán (F9)</span>
@@ -729,61 +689,20 @@ export function ModernPosFlow({
               </div>
             </div>
 
-            {/* Right Column: F&B and Services Catalog */}
             <div className="pos-catalog-card">
-              {/* Category Tabs */}
-              <div className="pos-catalog-tabs">
-                {[
-                  { key: 'fnb', label: 'F&B' },
-                  { key: 'service', label: 'Dịch vụ' },
-                  { key: 'accessory', label: 'Phụ kiện' },
-                  { key: 'combo', label: 'Combo' },
-                ].map((t) => (
-                  <button
-                    key={t.key}
-                    type="button"
-                    className={`pos-catalog-tab-btn ${catalogTab === t.key ? 'active' : ''}`}
-                    onClick={() => setCatalogTab(t.key as typeof catalogTab)}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Search */}
-              <div className="pos-catalog-search">
-                <Search />
-                <input
-                  type="text"
-                  placeholder="Tìm sản phẩm, mã SKU..."
-                  value={searchProduct}
-                  onChange={(e) => setSearchProduct(e.target.value)}
-                />
-              </div>
-
-              {/* Product Grid */}
-              <div className="pos-catalog-grid">
-                {filteredProducts.map((p) => (
-                  <div key={p.id} className="pos-product-card">
-                    <div className="pos-product-image">{p.icon}</div>
-                    <h4 className="pos-product-name">{p.name}</h4>
-                    <span className="pos-product-price">{money(p.price)}</span>
-                    <button
-                      type="button"
-                      className="pos-product-add-btn"
-                      onClick={() => handleAddProduct(p)}
-                      title={`Thêm ${p.name}`}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
+              {operating && food.data ? (
+                <SessionOrdering booking={b} data={food.data} onRefresh={food.reload} />
+              ) : food.error ? (
+                <div className="error-box">{food.error}</div>
+              ) : (
+                <p className="pos-line-note">
+                  {operating ? 'Đang tải thực đơn…' : 'Phiên đã kết thúc, không thêm món được.'}
+                </p>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Extend Modal */}
         {extendModal && (
           <div className="ar-settings-modal-backdrop" onClick={() => setExtendModal(false)}>
             <div
@@ -797,16 +716,20 @@ export function ModernPosFlow({
                   <X size={18} />
                 </button>
               </div>
-              <div className="ar-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div
+                className="ar-modal-body"
+                style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}
+              >
                 {[15, 30, 60].map((m) => (
                   <button
                     key={m}
                     type="button"
                     className="ar-btn-secondary"
                     style={{ padding: '12px', fontSize: '14px', fontWeight: 600 }}
+                    disabled={saving}
                     onClick={() => handleExtend(m)}
                   >
-                    + {m} phút ({money((activeRoom.vip ? 500000 : 350000) * (m / 60))})
+                    + {m} phút
                   </button>
                 ))}
               </div>
@@ -818,9 +741,18 @@ export function ModernPosFlow({
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER STEP 3: THANH TOÁN
+  // STEP 3 — payment (amount, methods and ledger entry are server-side)
   // ---------------------------------------------------------------------------
-  if (step === 'pay') {
+  if (cur === 'pay' && b) {
+    const blocked = !data.activeShift
+      ? 'Chưa mở ca bán hàng. Hãy mở ca trước khi thu tiền.'
+      : pendingFood > 0
+        ? `Còn ${pendingFood} đơn món chưa phục vụ.`
+        : !foodVerified
+          ? 'Đang đối chiếu tiền món với bếp…'
+          : b.amount == null
+            ? 'Phiên chưa chốt tiền.'
+            : '';
     return (
       <div className="pos-flow-container">
         <div className="pos-pay-screen">
@@ -829,103 +761,84 @@ export function ModernPosFlow({
               type="button"
               className="pos-back-btn"
               onClick={() => setStep('order')}
-              aria-label="Quay lại giỏ hàng"
+              aria-label="Quay lại bán hàng"
             >
               <ArrowLeft size={18} />
             </button>
-            <h2>Thanh toán</h2>
+            <h2>Thanh toán – {roomShort}</h2>
           </div>
 
           <div className="pos-pay-amount-box">
             <span className="pos-pay-amount-label">Tổng thanh toán</span>
-            <div className="pos-pay-amount-value">{money(totalAmount)}</div>
+            <div className="pos-pay-amount-value">{money(total)}</div>
           </div>
 
-          {/* 3 Payment Methods */}
           <div className="pos-method-cards">
-            <button
-              type="button"
-              className={`pos-method-card ${payMethod === 'cash' ? 'selected' : ''}`}
-              onClick={() => setPayMethod('cash')}
-            >
-              <Wallet />
-              <span>Tiền mặt</span>
-            </button>
-            <button
-              type="button"
-              className={`pos-method-card ${payMethod === 'card' ? 'selected' : ''}`}
-              onClick={() => setPayMethod('card')}
-            >
-              <CreditCard />
-              <span>Thẻ ngân hàng</span>
-            </button>
-            <button
-              type="button"
-              className={`pos-method-card ${payMethod === 'qr' ? 'selected' : ''}`}
-              onClick={() => setPayMethod('qr')}
-            >
-              <QrCode />
-              <span>QR Code</span>
-            </button>
+            {(
+              [
+                ['cash', Wallet],
+                ['card', CreditCard],
+                ['transfer', Landmark],
+              ] as const
+            ).map(([k, Icon]) => (
+              <button
+                key={k}
+                type="button"
+                className={`pos-method-card ${payMethod === k ? 'selected' : ''}`}
+                onClick={() => setPayMethod(k)}
+              >
+                <Icon />
+                <span>{PAY_LABEL[k]}</span>
+              </button>
+            ))}
           </div>
 
-          {/* If QR Code selected, show QR image preview */}
-          {payMethod === 'qr' && (
-            <div
-              style={{
-                textAlign: 'center',
-                padding: '16px',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
+          {payMethod === 'transfer' && (
+            <TransferPanel
+              booking={b}
+              bank={{
+                bin: data.config.bankBin ?? '',
+                account: data.config.bankAccount ?? '',
+                holder: data.config.bankHolder ?? '',
               }}
-            >
-              <img
-                src={`https://img.vietqr.io/image/${data.config.bankBin || '970422'}-${data.config.bankAccount || '0877834888'}-compact2.png?amount=${totalAmount}&addInfo=SIGOLF%20${activeRoom.name}`}
-                alt="VietQR"
-                style={{ width: '180px', height: '180px', objectFit: 'contain', margin: '0 auto' }}
-              />
-              <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#475569' }}>
-                Quét mã VietQR để thanh toán tự động qua SePay
-              </p>
-            </div>
+              busy={saving || !canPayNow}
+              onUse={(txId) => pay({ bankTxId: txId }, 'transfer')}
+            />
           )}
 
-          {/* Quick cash suggestions for Cash payment */}
           {payMethod === 'cash' && (
             <>
               <div className="pos-quick-cash-row">
-                {[500000, 1000000, 2000000].map((amt) => (
+                {quickCash.map((amt) => (
                   <button
                     key={amt}
                     type="button"
-                    className={`pos-quick-cash-btn ${tenderedCash === amt ? 'selected' : ''}`}
-                    onClick={() => setTenderedCash(amt)}
+                    className={`pos-quick-cash-btn ${cashIn === amt ? 'selected' : ''}`}
+                    onClick={() => setTendered(String(amt))}
                   >
                     {money(amt)}
                   </button>
                 ))}
               </div>
-
               <div className="pos-calc-box">
                 <div className="pos-calc-row">
-                  <label>Khách đưa:</label>
+                  <label htmlFor="pos-cash-in">Khách đưa:</label>
                   <input
-                    type="number"
-                    step="10000"
-                    value={tenderedCash}
-                    onChange={(e) => setTenderedCash(Number(e.target.value))}
+                    id="pos-cash-in"
+                    inputMode="numeric"
+                    value={tendered}
+                    placeholder={String(total)}
+                    onChange={(e) => setTendered(e.target.value)}
                   />
                 </div>
                 <div className="pos-calc-row">
                   <label>Tiền thối lại:</label>
-                  <span className="pos-change-value">{money(changeDue)}</span>
+                  <span className="pos-change-value">{money(change)}</span>
                 </div>
               </div>
             </>
           )}
 
-          {/* In hoa don checkbox */}
           <label className="pos-print-checkbox">
             <input
               type="checkbox"
@@ -935,75 +848,103 @@ export function ModernPosFlow({
             <span>In hóa đơn sau khi xác nhận</span>
           </label>
 
-          {/* Confirm Payment button */}
-          <button
-            type="button"
-            className="pos-btn-confirm-pay"
-            onClick={handleConfirmPayment}
-          >
-            Xác nhận thanh toán
-          </button>
+          {(blocked || notice) && (
+            <div className="error-box" role="status">
+              {blocked || notice}
+            </div>
+          )}
+
+          {payMethod !== 'transfer' && (
+            <button
+              type="button"
+              className="pos-btn-confirm-pay"
+              onClick={() => pay()}
+              disabled={saving || !canPayNow || !data.activeShift}
+            >
+              {saving ? 'Đang ghi nhận…' : 'Xác nhận thanh toán'}
+            </button>
+          )}
+          {onOpenSession && (
+            <button
+              type="button"
+              className="pos-btn-print"
+              onClick={() => onOpenSession(b)}
+              title="Giảm giá, gói hội viên, ví, chia tiền"
+            >
+              <SlidersHorizontal size={16} />
+              <span>Giảm giá / gói hội viên / chia tiền</span>
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
   // ---------------------------------------------------------------------------
-  // RENDER STEP 4: HOÀN TẤT & IN HÓA ĐƠN
+  // STEP 4 — done
   // ---------------------------------------------------------------------------
-  return (
-    <div className="pos-flow-container">
-      <div className="pos-done-screen">
-        <div className="pos-done-checkmark">
-          <Check />
-        </div>
-        <h2 className="pos-done-title">Thanh toán thành công!</h2>
-
-        <div className="pos-done-meta-box">
-          <div className="pos-done-meta-row">
-            <span>Hóa đơn:</span>
-            <strong>{completedInvoice.code}</strong>
+  if (cur === 'done' && b && paid) {
+    return (
+      <div className="pos-flow-container">
+        <div className="pos-done-screen">
+          <div className="pos-done-checkmark">
+            <Check />
           </div>
-          <div className="pos-done-meta-row">
-            <span>Tổng tiền:</span>
-            <span className="pos-done-price">{money(completedInvoice.total)}</span>
+          <h2 className="pos-done-title">Thanh toán thành công!</h2>
+          <div className="pos-done-meta-box">
+            <div className="pos-done-meta-row">
+              <span>Phiên:</span>
+              <strong>
+                {roomShort} · {b.id.slice(-6).toUpperCase()}
+              </strong>
+            </div>
+            <div className="pos-done-meta-row">
+              <span>Tổng tiền:</span>
+              <span className="pos-done-price">{money(paid.total)}</span>
+            </div>
+            <div className="pos-done-meta-row">
+              <span>Hình thức:</span>
+              <strong>{paid.method}</strong>
+            </div>
+            <div className="pos-done-meta-row">
+              <span>Thời gian:</span>
+              <strong>
+                {new Date(paid.at).toLocaleString('vi-VN', {
+                  timeZone: 'Asia/Ho_Chi_Minh',
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </strong>
+            </div>
           </div>
-          <div className="pos-done-meta-row">
-            <span>Hình thức:</span>
-            <strong>{completedInvoice.method}</strong>
+          {notice && <div className="error-box">{notice}</div>}
+          <div className="pos-done-actions">
+            <button type="button" className="pos-btn-print" onClick={printNow}>
+              <Printer size={16} />
+              <span>In hóa đơn</span>
+            </button>
+            <button type="button" className="pos-btn-zalo" onClick={sendZalo}>
+              <Send size={16} />
+              <span>Gửi hóa đơn (Zalo)</span>
+            </button>
+            <button
+              type="button"
+              className="pos-btn-finish"
+              onClick={() => {
+                setActiveId(null);
+                setStep('map');
+              }}
+            >
+              Hoàn tất
+            </button>
           </div>
-          <div className="pos-done-meta-row">
-            <span>Thời gian:</span>
-            <strong>{completedInvoice.time}</strong>
-          </div>
-        </div>
-
-        <div className="pos-done-actions">
-          <button
-            type="button"
-            className="pos-btn-print"
-            onClick={() => handlePrintInvoice()}
-          >
-            <Printer size={16} />
-            <span>In hóa đơn</span>
-          </button>
-          <button
-            type="button"
-            className="pos-btn-zalo"
-            onClick={handleSendZalo}
-          >
-            <Send size={16} />
-            <span>Gửi hóa đơn (Zalo/Email)</span>
-          </button>
-          <button
-            type="button"
-            className="pos-btn-finish"
-            onClick={() => setStep('map')}
-          >
-            Hoàn tất
-          </button>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return null;
 }

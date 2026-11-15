@@ -1,4 +1,5 @@
 # Design contract
+> **ĐÃ BỊ THAY THẾ** bởi `docs/UI_DESIGN_BASELINE.md` (Material, xanh `#0a5c1e` + vàng `#fcb000`, nền trắng). Chỉ giữ để tham khảo lịch sử.
 - Source evidence: user supplied existing Indoor Golf website and requested KiotViet-style operational depth; green/gold GolfHub-inspired brand, mobile app interaction explicitly requested.
 - Primary staff screen: understand 12 room states quickly, create a booking and enter session actions without deep menus.
 - Desktop: permanent dark forest sidebar, pale warm workspace, thin dividers, compact summary numbers and room map. Editorial golf illustration is decorative, never a photo of the facility.

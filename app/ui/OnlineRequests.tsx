@@ -147,32 +147,53 @@ export function OnlineRequests({ onChanged }: { onChanged: () => void }) {
   const pendingCount = data?.requests.filter((r) => r.status === 'pending').length ?? 0;
   const rows = (data?.requests ?? []).filter((r) => filter === 'all' || r.status === 'pending');
   return (
-    <section className="online-panel">
+    <section className="online-panel mod-section-body">
       {error && (
         <div className="error-box" role="alert">
           {error}
         </div>
       )}
       {data && !data.enabled && (
-        <p className="form-note">
-          Chưa bật nhận đặt online. Vào Cài đặt cơ sở → mục Đặt lịch để bật và đặt mã đường dẫn.
-        </p>
+        <div className="mod-info-banner amber">
+          <span>
+            Chưa bật nhận đặt online. Vào <strong>Cài đặt hệ thống → Cài đặt đặt sân</strong> để bật
+            và đặt mã đường dẫn.
+          </span>
+        </div>
       )}
       {data?.enabled && (
-        <p className="form-note">
-          Đường dẫn cho khách: <code>/book/{data.slug}</code>
-        </p>
+        <div className="mod-info-banner">
+          <span>
+            Đường dẫn đặt sân công khai cho khách: <code>/book/{data.slug}</code>
+          </span>
+          <a
+            href={`/book/${data.slug}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mod-btn-outline sm"
+          >
+            Mở trang đặt sân
+          </a>
+        </div>
       )}
-      <FilterBar>
-        <Chips
-          value={filter}
-          onChange={setFilter}
-          options={[
+      <div className="mod-toolbar">
+        <div className="mod-chip-group">
+          {[
             { key: 'pending', label: 'Chờ xác nhận', count: pendingCount },
             { key: 'all', label: 'Tất cả', count: data?.requests.length ?? 0 },
-          ]}
-        />
-      </FilterBar>
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              type="button"
+              className={`mod-filter-chip ${filter === opt.key ? 'active' : ''}`}
+              onClick={() => setFilter(opt.key)}
+            >
+              <span>{opt.label}</span>
+              <span className="mod-chip-count">{opt.count}</span>
+            </button>
+          ))}
+        </div>
+      </div>
       {data && (
         <DataTable
           rows={rows}

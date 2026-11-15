@@ -6,19 +6,21 @@ import { money } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
 import { LESSON_STATUS_LABELS } from '../../lib/coaching';
 import {
-  GraduationCap,
+  AlertCircle,
+  Award,
   Calendar,
+  CheckCircle2,
   Clock,
-  UserCheck,
+  FileText,
+  GraduationCap,
+  Phone,
   Plus,
   RefreshCw,
   Search,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  FileText,
+  UserCheck,
+  Users,
   UserX,
-  Phone,
+  XCircle,
 } from 'lucide-react';
 
 type Coach = { id: string; user_id: string | null; name: string; phone: string; active: number };
@@ -123,6 +125,9 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
   const lessons = data?.lessons ?? [];
   const scheduledCount = lessons.filter((l) => l.status === 'scheduled').length;
   const doneCount = lessons.filter((l) => l.status === 'done').length;
+  const totalRevenue = lessons
+    .filter((l) => l.status === 'done' || l.status === 'scheduled')
+    .reduce((sum, l) => sum + (l.price ?? 0), 0);
 
   const mark = async (l: Lesson, status: 'done' | 'no_show' | 'cancelled') => {
     const coachNote =
@@ -152,32 +157,98 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
   });
 
   return (
-    <section className="coaching-panel operate-coaching">
-      {/* Top Coaching Overview Ribbon */}
-      <div className="operate-ribbon">
-        <div className="operate-kpi-card highlight">
-          <div className="operate-kpi-label">Buổi học sắp tới</div>
-          <div className="operate-kpi-val text-green">{scheduledCount}</div>
-          <div className="operate-kpi-sub">Trong vòng 3 tuần tới</div>
+    <section className="mod-workspace coaching-panel operate-coaching">
+      {/* Page Header */}
+      <div className="mod-page-header">
+        <div className="mod-page-title-group">
+          <div className="mod-page-icon blue">
+            <GraduationCap size={22} />
+          </div>
+          <div>
+            <h2>Học viện Golf (Academy) & Huấn luyện viên</h2>
+            <p>
+              Quản lý lịch dạy 1-kèm-1, đội ngũ Huấn luyện viên PGA, điểm danh học viên và nhật ký
+              chuyên môn
+            </p>
+          </div>
+        </div>
+        <div className="mod-page-actions">
+          <button
+            type="button"
+            className="mod-btn-outline"
+            onClick={load}
+            disabled={busy}
+          >
+            <RefreshCw size={15} />
+            <span>Làm mới lịch</span>
+          </button>
+          {canSchedule && (
+            <button
+              type="button"
+              className="mod-btn-primary"
+              onClick={() => setFormTab('schedule')}
+            >
+              <Calendar size={15} />
+              <span>Xếp lịch học mới</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 4 KPI Cards */}
+      <div className="mod-kpi-strip">
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon green">
+            <Calendar size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Buổi học sắp tới</span>
+            <div className="mod-kpi-val-row">
+              <strong className="text-green">{scheduledCount}</strong>
+              <span className="mod-kpi-sub">trong 3 tuần tới</span>
+            </div>
+          </div>
         </div>
 
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Đã hoàn thành</div>
-          <div className="operate-kpi-val" style={{ color: '#16a34a' }}>
-            {doneCount}
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon blue">
+            <UserCheck size={18} />
           </div>
-          <div className="operate-kpi-sub">Buổi học thành công</div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Đã hoàn thành</span>
+            <div className="mod-kpi-val-row">
+              <strong>{doneCount}</strong>
+              <span className="mod-kpi-sub">buổi học thành công</span>
+            </div>
+          </div>
         </div>
 
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Đội ngũ HLV</div>
-          <div className="operate-kpi-val" style={{ color: '#2563eb' }}>
-            {activeCoaches.length}
-            <span className="operate-kpi-sub" style={{ marginLeft: '6px' }}>
-              / {data?.coaches.length ?? 0} người
-            </span>
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon purple">
+            <Users size={18} />
           </div>
-          <div className="operate-kpi-sub">Đang nhận lịch dạy</div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Đội ngũ Huấn luyện viên</span>
+            <div className="mod-kpi-val-row">
+              <strong>
+                {activeCoaches.length} / {data?.coaches.length ?? 0}
+              </strong>
+              <span className="mod-kpi-sub">đang nhận lịch dạy</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon amber">
+            <Award size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Học phí dự kiến / thực thu</span>
+            <div className="mod-kpi-val-row">
+              <strong>{money(totalRevenue)}</strong>
+              <span className="mod-kpi-sub">{lessons.length} tổng buổi</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -189,58 +260,50 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
 
       {/* Main Content Layout: Table & Forms */}
       <div className="operate-coaching-layout">
-        <div className="coaching-schedule-card">
-          <div className="operate-filterbar" style={{ padding: '0 0 14px 0' }}>
-            <div className="operate-filter-left">
-              <div className="operate-search-wrap">
-                <Search size={15} className="operate-search-icon" />
-                <input
-                  type="search"
-                  placeholder="Tìm học viên, số ĐT, HLV…"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="operate-search-input"
-                />
-              </div>
-
-              {!data?.me && (
-                <select
-                  value={coachFilter}
-                  onChange={(e) => setCoachFilter(e.target.value)}
-                  className="operate-select"
-                  style={{ width: 'auto' }}
-                >
-                  <option value="">Tất cả Huấn luyện viên</option>
-                  {data?.coaches.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.active ? '' : '(ngừng)'}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="operate-select"
-                style={{ width: 'auto' }}
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="scheduled">Đã xếp lịch</option>
-                <option value="done">Đã dạy xong</option>
-                <option value="no_show">Học viên vắng</option>
-                <option value="cancelled">Đã hủy</option>
-              </select>
+        <div className="mod-surface-card mod-section-body coaching-schedule-card">
+          <div className="mod-toolbar" style={{ marginBottom: 14 }}>
+            <div className="mod-search-input">
+              <Search size={15} />
+              <input
+                type="search"
+                placeholder="Tìm học viên, số ĐT, HLV…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
-            <div className="operate-filter-right">
-              <button
-                type="button"
-                className="secondary operate-btn"
-                onClick={load}
-                disabled={busy}
+
+            {!data?.me && (
+              <select
+                value={coachFilter}
+                onChange={(e) => setCoachFilter(e.target.value)}
+                className="mod-select"
               >
-                <RefreshCw size={15} /> Tải lại
-              </button>
+                <option value="">Tất cả Huấn luyện viên</option>
+                {data?.coaches.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} {c.active ? '' : '(ngừng)'}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            <div className="mod-chip-group">
+              {[
+                { key: 'all', label: 'Tất cả' },
+                { key: 'scheduled', label: 'Đã xếp lịch' },
+                { key: 'done', label: 'Đã dạy xong' },
+                { key: 'no_show', label: 'Học viên vắng' },
+                { key: 'cancelled', label: 'Đã hủy' },
+              ].map((st) => (
+                <button
+                  key={st.key}
+                  type="button"
+                  className={`mod-filter-chip ${statusFilter === st.key ? 'active' : ''}`}
+                  onClick={() => setStatusFilter(st.key)}
+                >
+                  {st.label}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -314,7 +377,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                         {l.start <= from + 6 * 3600_000 && (
                           <>
                             <button
-                              className="secondary operate-btn-sm"
+                              className="mod-btn-outline sm"
                               disabled={busy}
                               title="Xác nhận đã hoàn thành buổi dạy"
                               onClick={() => mark(l, 'done')}
@@ -322,7 +385,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                               <CheckCircle2 size={13} style={{ color: '#16a34a' }} /> Đã dạy
                             </button>
                             <button
-                              className="secondary operate-btn-sm"
+                              className="mod-btn-outline sm"
                               disabled={busy}
                               title="Học viên không đến"
                               onClick={() => mark(l, 'no_show')}
@@ -333,7 +396,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                         )}
                         {canSchedule && (
                           <button
-                            className="secondary operate-btn-sm"
+                            className="mod-btn-outline sm"
                             disabled={busy}
                             title="Hủy buổi học"
                             onClick={() => mark(l, 'cancelled')}
@@ -345,7 +408,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                     )}
                     {l.status !== 'cancelled' && (
                       <button
-                        className="secondary operate-btn-sm"
+                        className="mod-btn-outline sm"
                         disabled={busy}
                         title="Thêm hoặc sửa ghi chú buổi học"
                         onClick={async () => {
@@ -371,26 +434,26 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
 
         {/* Right Action Forms: Schedule Lesson & Add Coach */}
         {(canSchedule || canManage) && (
-          <div className="coaching-side-card">
-            <div className="operate-cat-pills" style={{ marginBottom: '16px' }}>
+          <div className="mod-surface-card mod-section-body coaching-side-card">
+            <div className="mod-pill-nav" style={{ marginBottom: 16 }}>
               {canSchedule && (
                 <button
                   type="button"
-                  className={`operate-pill ${formTab === 'schedule' ? 'active' : ''}`}
+                  className={`mod-pill-tab ${formTab === 'schedule' ? 'active' : ''}`}
                   onClick={() => setFormTab('schedule')}
                 >
-                  <Calendar size={13} style={{ marginRight: '4px' }} />
-                  Xếp lịch học
+                  <Calendar size={14} />
+                  <span>Xếp lịch học</span>
                 </button>
               )}
               {canManage && (
                 <button
                   type="button"
-                  className={`operate-pill ${formTab === 'coach' ? 'active' : ''}`}
+                  className={`mod-pill-tab ${formTab === 'coach' ? 'active' : ''}`}
                   onClick={() => setFormTab('coach')}
                 >
-                  <GraduationCap size={13} style={{ marginRight: '4px' }} />
-                  Quản lý HLV ({data?.coaches.length ?? 0})
+                  <GraduationCap size={14} />
+                  <span>Quản lý HLV ({data?.coaches.length ?? 0})</span>
                 </button>
               )}
             </div>
@@ -505,12 +568,12 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                 </label>
 
                 <button
-                  className="primary operate-btn"
+                  className="mod-btn-primary primary"
                   disabled={busy}
-                  style={{ marginTop: '8px' }}
+                  style={{ marginTop: 8, width: '100%', justifyContent: 'center' }}
                 >
                   <Calendar size={15} />
-                  {busy ? 'Đang xếp lịch…' : 'Xác nhận xếp lịch dạy'}
+                  <span>{busy ? 'Đang xếp lịch…' : 'Xác nhận xếp lịch dạy'}</span>
                 </button>
               </form>
             )}
@@ -556,12 +619,16 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                       className="operate-input"
                     />
                   </label>
-                  <button className="primary operate-btn" disabled={busy}>
+                  <button
+                    className="mod-btn-primary primary"
+                    disabled={busy}
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
                     <Plus size={15} /> Thêm HLV
                   </button>
                 </form>
 
-                <div className="coaches-list-section">
+                <div className="coaches-list-section" style={{ marginTop: 18 }}>
                   <h4 className="coaches-list-title">Danh sách Huấn luyện viên</h4>
                   <div className="coaches-items-wrap">
                     {data?.coaches.map((c) => (
@@ -571,7 +638,7 @@ export function CoachingPanel({ permissions }: { permissions: string[] }) {
                           <small className="text-muted">{c.phone || 'Chưa có SĐT'}</small>
                         </div>
                         <button
-                          className="secondary operate-btn-sm"
+                          className="mod-btn-outline sm"
                           disabled={busy}
                           onClick={(e) => {
                             e.preventDefault();

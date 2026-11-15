@@ -122,11 +122,13 @@ export function MembersPanel({
   permissions,
   initialCustomer,
   initialPhone,
+  initialTab = 'members',
   onStartSession,
 }: {
   permissions: string[];
   initialCustomer?: string | null;
   initialPhone?: string | null;
+  initialTab?: 'members' | 'catalog';
   onStartSession?: (customer: { name: string; phone: string }) => void;
 }) {
   const canSell = permissions.includes('member.sell');
@@ -152,7 +154,8 @@ export function MembersPanel({
   const [now] = useState(() => Date.now());
 
   // UI state
-  const [tab, setTab] = useState('members');
+  const [tab, setTab] = useState(initialTab);
+  const [pkgRoomFilter, setPkgRoomFilter] = useState<'all' | 'standard' | 'vip'>('all');
   const [filterMode, setFilterMode] = useState<'all' | 'pending' | 'orders'>('all');
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [showDigitalCard, setShowDigitalCard] = useState(false);
@@ -160,6 +163,10 @@ export function MembersPanel({
   const [customerNote, setCustomerNote] = useState('');
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [editing, setEditing] = useState<PackageType | 'new' | null>(null);
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- browser-only value or load-on-open; runs once per dependency change
@@ -276,23 +283,36 @@ export function MembersPanel({
       )}
 
       {/* Top Hero Bar & Tabs */}
-      <div className="members-hero-header">
-        <div className="members-hero-title">
-          <div className="title-row">
-            <h2>Quản lý Hội viên & Thẻ</h2>
-            <span className="members-badge-count">{data?.customers.length ?? 0} khách hàng</span>
+      <div className="mod-page-header" style={{ marginBottom: 16 }}>
+        <div className="mod-page-title-group">
+          <div className={`mod-page-icon ${tab === 'catalog' ? 'blue' : 'green'}`}>
+            {tab === 'catalog' ? <Package size={22} /> : <Users size={22} />}
           </div>
-          <p className="hero-sub">
-            Tra cứu hội viên, bán gói quyền lợi, quản lý thẻ kỹ thuật số và điểm thưởng tích lũy.
-          </p>
+          <div>
+            <h2>
+              {tab === 'catalog'
+                ? 'Danh mục Gói giờ & Thẻ trả trước'
+                : 'Quản lý Hội viên & Thẻ số'}
+            </h2>
+            <p>
+              {tab === 'catalog'
+                ? 'Thiết lập gói giờ chơi, thẻ tháng, quyền lợi VIP và niêm yết trực tiếp trên bảng giá công khai'
+                : 'Tra cứu hội viên, cấp gói quyền lợi, quản lý thẻ kỹ thuật số QR và điểm thưởng tích lũy'}
+            </p>
+          </div>
         </div>
 
         {/* Global KPI Strip */}
         <div className="members-hero-stats">
           <div className="hero-stat-pill">
             <Users size={15} className="text-emerald" />
-            <span className="stat-label">Tổng khách:</span>
+            <span className="stat-label">Tổng hội viên:</span>
             <span className="stat-num">{data?.customers.length ?? 0}</span>
+          </div>
+          <div className="hero-stat-pill">
+            <Package size={15} className="text-emerald" />
+            <span className="stat-label">Gói đang bán:</span>
+            <span className="stat-num">{activeTypes.length}</span>
           </div>
           {pendingAccountCount > 0 && (
             <button
@@ -328,10 +348,10 @@ export function MembersPanel({
       {/* Sub tabs */}
       <PageTabs
         value={tab}
-        onChange={setTab}
+        onChange={(v) => setTab(v as 'members' | 'catalog')}
         tabs={[
-          { key: 'members', label: 'Khách & hội viên' },
-          { key: 'catalog', label: 'Danh mục gói' },
+          { key: 'members', label: 'Hội viên & Thẻ số' },
+          { key: 'catalog', label: `Danh mục Gói giờ & Thẻ (${data?.types.length ?? 0})` },
         ]}
       />
 
@@ -1244,30 +1264,57 @@ export function MembersPanel({
             </div>
           )}
 
-          <div className="catalog-toolbar">
-            {canAdjust && !editing && (
-              <button
-                className="primary btn-add-pkg"
-                disabled={busy}
-                onClick={() => setEditing('new')}
-              >
-                <Package size={15} /> Thêm gói mới
-              </button>
-            )}
-            {canAdjust && data && !data.types.length && (
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={() =>
-                  act(
-                    () => post({ action: 'types-seed' }),
-                    'Đã nạp danh mục gói theo bảng giá chính thức',
-                  )
-                }
-              >
-                Nạp danh mục theo bảng giá chính thức
-              </button>
-            )}
+          <div className="mod-toolbar" style={{ marginBottom: 14 }}>
+            <div className="mod-chip-group">
+              {[
+                { key: 'all', label: 'Tất cả gói', count: data?.types.length ?? 0 },
+                {
+                  key: 'standard',
+                  label: 'Line Tiêu chuẩn',
+                  count: (data?.types ?? []).filter((t) => t.room !== 'vip').length,
+                },
+                {
+                  key: 'vip',
+                  label: 'Phòng VIP',
+                  count: (data?.types ?? []).filter((t) => t.room === 'vip').length,
+                },
+              ].map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  className={`mod-filter-chip ${pkgRoomFilter === opt.key ? 'active' : ''}`}
+                  onClick={() => setPkgRoomFilter(opt.key as 'all' | 'standard' | 'vip')}
+                >
+                  <span>{opt.label}</span>
+                  <span className="mod-chip-count">{opt.count}</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {canAdjust && !editing && (
+                <button
+                  className="mod-btn-primary"
+                  disabled={busy}
+                  onClick={() => setEditing('new')}
+                >
+                  <Package size={15} /> Thêm gói mới
+                </button>
+              )}
+              {canAdjust && data && !data.types.length && (
+                <button
+                  className="mod-btn-outline"
+                  disabled={busy}
+                  onClick={() =>
+                    act(
+                      () => post({ action: 'types-seed' }),
+                      'Đã nạp danh mục gói theo bảng giá chính thức',
+                    )
+                  }
+                >
+                  Nạp danh mục theo bảng giá chính thức
+                </button>
+              )}
+            </div>
           </div>
 
           {canAdjust && editing && (
@@ -1381,7 +1428,13 @@ export function MembersPanel({
                     ]
                   : []),
               ]}
-              rows={data?.types ?? []}
+              rows={(data?.types ?? []).filter((t) =>
+                pkgRoomFilter === 'all'
+                  ? true
+                  : pkgRoomFilter === 'vip'
+                    ? t.room === 'vip'
+                    : t.room !== 'vip',
+              )}
               rowKey={(t) => t.id}
               empty="Chưa có gói hội viên"
             />

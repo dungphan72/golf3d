@@ -85,42 +85,103 @@ export default function FnbPanel({ onChanged }: { onChanged: () => Promise<void>
   });
 
   return (
-    <section className="fnb-panel operate-fnb">
+    <section className="mod-workspace fnb-panel operate-fnb">
+      {/* Top Page Header */}
+      <div className="mod-page-header">
+        <div className="mod-page-title-group">
+          <div className="mod-page-icon green">
+            <UtensilsCrossed size={22} />
+          </div>
+          <div>
+            <h2>Sản phẩm F&B, Dịch vụ & Quản lý Kho</h2>
+            <p>
+              Điều phối đơn Bếp/Bar thời gian thực (KDS), thiết lập thực đơn đồ ăn thức uống và kiểm
+              soát tồn kho
+            </p>
+          </div>
+        </div>
+        <div className="mod-page-actions">
+          <button
+            type="button"
+            className="mod-btn-outline"
+            onClick={food.reload}
+            disabled={busy || food.loading}
+          >
+            <RefreshCw size={15} />
+            <span>Làm mới dữ liệu</span>
+          </button>
+          <button
+            type="button"
+            className="mod-btn-primary"
+            disabled={!food.data || busy}
+            onClick={() => {
+              setTab('menu');
+              setEditor('new');
+            }}
+          >
+            <Plus size={15} />
+            <span>Thêm món / Dịch vụ mới</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Header & Metrics Ribbon */}
-      <div className="operate-ribbon">
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Đơn cần xử lý</div>
-          <div className="operate-kpi-val" style={{ color: pending.length > 0 ? '#dc2626' : 'var(--text)' }}>
-            {pending.length}
-            {newOrders.length > 0 && (
-              <span className="operate-kpi-sub" style={{ color: '#dc2626', marginLeft: '6px' }}>
-                ({newOrders.length} mới)
+      <div className="mod-kpi-strip">
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon amber">
+            <BellRing size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Đơn cần xử lý</span>
+            <div className="mod-kpi-val-row">
+              <strong style={{ color: pending.length > 0 ? '#dc2626' : '#0f172a' }}>
+                {pending.length}
+              </strong>
+              <span className="mod-kpi-sub">
+                {newOrders.length > 0 ? `${newOrders.length} đơn mới` : 'ổn định'}
               </span>
-            )}
+            </div>
           </div>
         </div>
 
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Đang chế biến</div>
-          <div className="operate-kpi-val" style={{ color: '#d97706' }}>
-            {prepOrders.length}
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon blue">
+            <ChefHat size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Đang chế biến</span>
+            <div className="mod-kpi-val-row">
+              <strong style={{ color: '#d97706' }}>{prepOrders.length}</strong>
+              <span className="mod-kpi-sub">tại quầy Bếp/Bar</span>
+            </div>
           </div>
         </div>
 
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Sẵn sàng phục vụ</div>
-          <div className="operate-kpi-val" style={{ color: '#16a34a' }}>
-            {readyOrders.length}
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon green">
+            <CheckCircle2 size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Sẵn sàng phục vụ</span>
+            <div className="mod-kpi-val-row">
+              <strong className="text-green">{readyOrders.length}</strong>
+              <span className="mod-kpi-sub">chờ mang ra Line</span>
+            </div>
           </div>
         </div>
 
-        <div className="operate-kpi-card">
-          <div className="operate-kpi-label">Món trong thực đơn</div>
-          <div className="operate-kpi-val">
-            {menuItems.filter((m) => m.active).length}
-            <span className="operate-kpi-sub" style={{ marginLeft: '6px' }}>
-              / {menuItems.length} món
-            </span>
+        <div className="mod-kpi-card">
+          <div className="mod-kpi-icon purple">
+            <Coffee size={18} />
+          </div>
+          <div className="mod-kpi-info">
+            <span className="mod-kpi-label">Món trong thực đơn</span>
+            <div className="mod-kpi-val-row">
+              <strong>
+                {menuItems.filter((m) => m.active).length} / {menuItems.length}
+              </strong>
+              <span className="mod-kpi-sub">đang mở bán</span>
+            </div>
           </div>
         </div>
       </div>
@@ -129,9 +190,9 @@ export default function FnbPanel({ onChanged }: { onChanged: () => Promise<void>
         value={tab}
         onChange={setTab}
         tabs={[
-          { key: 'kitchen', label: 'Bếp / Bar (KDS)', count: pending.length },
-          { key: 'menu', label: `Thực đơn · ${menuItems.length}` },
-          { key: 'stock', label: 'Kho F&B' },
+          { key: 'kitchen', label: 'Bếp & Pha chế (KDS)', count: pending.length },
+          { key: 'menu', label: `Thực đơn & Dịch vụ (${menuItems.length})` },
+          { key: 'stock', label: 'Quản lý Tồn kho' },
         ]}
       />
 

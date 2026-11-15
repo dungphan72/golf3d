@@ -24,6 +24,7 @@ import { CrmModule } from '../../modules/crm/ui/CrmApp';
 
 import { WalkInDialog } from './WalkInDialog';
 import { ContentPanel } from './ContentPanel';
+import { CoachingPanel } from './CoachingPanel';
 import { useBellSound } from './BellAlerts';
 import { FinanceDialog } from './finance/FinanceDialog';
 export default function ClubApp() {
@@ -160,8 +161,10 @@ export default function ClubApp() {
     finance: 'finance.view',
     reports: 'finance.view',
     content: 'settings.manage',
+    coaching: 'coach.view',
     settings: 'settings.manage',
     members: 'member.view',
+    packages: 'member.view',
     crm: 'crm.view',
     crmx: 'crm.view',
     online: 'booking.create',
@@ -237,7 +240,7 @@ export default function ClubApp() {
                   ? 'ar-pos-wrap'
                   : view === 'crmx' || view === 'marketing'
                     ? 'ar-crm-wrap'
-                    : 'ds-root ar-legacy-content'
+                    : 'ds-root ar-legacy-content ar-modern-page-wrap'
           }
         >
           {error && (
@@ -284,10 +287,16 @@ export default function ClubApp() {
                   canOnline={allowed('online')}
                   onSelect={setSelected}
                   onChanged={load}
+                  onNewBooking={() => bookRoom('line-1')}
+                  onMutate={mutate}
+                  busy={busy}
                 />
               )}
               {view === 'fnb' && <FnbPanel onChanged={load} />}
               {view === 'content' && allowed('content') && <ContentPanel />}
+              {view === 'coaching' && allowed('coaching') && (
+                <CoachingPanel permissions={data?.permissions ?? []} />
+              )}
               {view === 'settings' && allowed('settings') && (
                 <SystemSettingsHub
                   config={c}
@@ -301,11 +310,13 @@ export default function ClubApp() {
                 />
               )}
               {view === 'reports' && allowed('reports') && <ReportsPanel />}
-              {view === 'members' && allowed('members') && (
+              {(view === 'members' || view === 'packages') && allowed('members') && (
                 <MembersPanel
+                  key={view}
                   permissions={data?.permissions ?? []}
                   initialCustomer={memberTarget?.id}
                   initialPhone={memberTarget?.phone}
+                  initialTab={view === 'packages' ? 'catalog' : 'members'}
                   onStartSession={(cust) => {
                     setBookingCustomer({ name: cust.name, phone: cust.phone });
                     setBookingRoom('line-1');

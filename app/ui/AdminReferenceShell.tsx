@@ -113,13 +113,7 @@ export function AdminReferenceShell({
         .slice(0, 5) ?? [])
     : [];
   function go(v: string) {
-    if (v === 'packages') {
-      onGo('members');
-    } else if (v === 'coaching') {
-      onGo('content');
-    } else {
-      onGo(v);
-    }
+    onGo(v);
     setMore(false);
     setBell(false);
     setProfile(false);

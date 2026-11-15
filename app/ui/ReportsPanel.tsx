@@ -111,18 +111,55 @@ export function ReportsPanel() {
   };
 
   return (
-    <section className="ds-reports operate-reports">
+    <section className="mod-workspace ds-reports operate-reports">
+      {/* Page Header */}
+      <div className="mod-page-header">
+        <div className="mod-page-title-group">
+          <div className="mod-page-icon blue">
+            <BarChart3 size={22} />
+          </div>
+          <div>
+            <h2>Báo cáo Doanh thu & Phân tích Vận hành</h2>
+            <p>
+              Đối soát dòng tiền sổ cái bất biến (Tiền mặt, VietQR/SePay, Thẻ POS), doanh thu gói hội
+              viên và hiệu suất F&B
+            </p>
+          </div>
+        </div>
+        <div className="mod-page-actions">
+          <button
+            type="button"
+            className="mod-btn-outline"
+            onClick={loadData}
+            disabled={loading}
+          >
+            <RefreshCw size={15} />
+            <span>Tải lại</span>
+          </button>
+          <button
+            aria-label="Tải file CSV"
+            type="button"
+            className="mod-btn-primary primary"
+            disabled={!report}
+            onClick={download}
+          >
+            <Download size={15} />
+            <span>Tải file CSV</span>
+          </button>
+        </div>
+      </div>
+
       {/* Top Filter and Actions Ribbon */}
-      <div className="operate-filterbar">
+      <div className="mod-surface-card mod-toolbar" style={{ padding: '12px 16px', marginBottom: 0 }}>
         <div className="operate-filter-left">
-          <div className="operate-cat-pills" role="group" aria-label="Khoảng nhanh">
-            <button type="button" className="operate-pill" onClick={() => range(7)}>
+          <div className="mod-chip-group" role="group" aria-label="Khoảng nhanh">
+            <button type="button" className="mod-filter-chip" onClick={() => range(7)}>
               7 ngày
             </button>
-            <button type="button" className="operate-pill" onClick={() => range(30)}>
+            <button type="button" className="mod-filter-chip" onClick={() => range(30)}>
               30 ngày
             </button>
-            <button type="button" className="operate-pill" onClick={monthStart}>
+            <button type="button" className="mod-filter-chip" onClick={monthStart}>
               Từ đầu tháng
             </button>
           </div>
@@ -148,25 +185,6 @@ export function ReportsPanel() {
               />
             </label>
           </div>
-        </div>
-        <div className="operate-filter-right">
-          <button
-            type="button"
-            className="secondary operate-btn"
-            onClick={loadData}
-            disabled={loading}
-          >
-            <RefreshCw size={15} /> Tải lại
-          </button>
-          <button
-            aria-label="Tải file CSV"
-            type="button"
-            className="primary operate-btn"
-            disabled={!report}
-            onClick={download}
-          >
-            <Download size={15} /> Tải file CSV
-          </button>
         </div>
       </div>
 

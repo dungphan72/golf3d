@@ -100,7 +100,7 @@ async function loadReport(c: Ctx, p: Period) {
            COALESCE((SELECT SUM(p.paid_amount) FROM crm2_order_payments p JOIN crm2_orders o ON o.id=p.order_id AND o.tenant=p.tenant
              WHERE o.lead_id=l.id AND o.tenant=l.tenant AND p.status<>'CANCELLED'),0)
            + CASE WHEN l.phone_norm<>'' AND l.id=(SELECT x.id FROM crm2_leads x WHERE x.tenant=l.tenant AND x.phone_norm=l.phone_norm ORDER BY x.created,x.id LIMIT 1)
-               THEN COALESCE((SELECT SUM(b.amount) FROM bookings b WHERE b.tenant=l.tenant AND b.phone=l.phone_norm AND b.status='paid' AND b.finished>=l.created),0)
+               THEN COALESCE((SELECT SUM(b.amount) FROM bookings b WHERE b.tenant=l.tenant AND replace(replace(replace(replace(replace(b.phone,' ',''),'-',''),'(',''),')',''),'.','')=l.phone_norm AND b.status='paid' AND b.finished>=l.created),0)
                ELSE 0 END AS revenue
          FROM crm2_leads l WHERE l.tenant=? AND l.created>=? AND l.created<? LIMIT 20000`,
       )

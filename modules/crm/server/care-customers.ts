@@ -127,7 +127,7 @@ export async function careCustomerDetail(c: Ctx, id: string) {
   ] = await Promise.all([
     d
       .prepare(
-        'SELECT b.id,b.service,b.room,b.finished,b.amount,b.payment FROM crm_visits v JOIN bookings b ON b.id=v.booking_id WHERE v.tenant=? AND v.customer_id=? ORDER BY b.finished DESC LIMIT 20',
+        'SELECT b.id,b.service,b.room,b.finished,b.amount,b.payment FROM crm_visits v JOIN bookings b ON b.id=v.booking_id AND b.tenant=v.tenant WHERE v.tenant=? AND v.customer_id=? ORDER BY b.finished DESC LIMIT 20',
       )
       .bind(c.tenant, id)
       .all(),
@@ -461,6 +461,14 @@ async function note(c: Ctx, customerId: string, channel: string, content: string
 }
 
 export type CustomerAction =
+  | {
+      action: 'customer-create';
+      name: string;
+      phone: string;
+      email?: string;
+      birthday?: string;
+      note?: string;
+    }
   | { action: 'birthday-set'; customerId: string; birthday: string }
   | { action: 'consent-set'; customerId: string; consent: boolean }
   | { action: 'contact-set'; customerId: string; email: string; zaloId: string }
@@ -473,18 +481,49 @@ const TASK_INSERT =
 
 export async function applyCustomerAction(c: Ctx, a: CustomerAction) {
   const d = db();
+  if (a.action === 'customer-create') {
+    const cleanPhone = a.phone.replace(/[^\d+]/g, '').replace(/^(\+84|84)/, '0').slice(0, 20);
+    const cleanName = a.name.trim().slice(0, 100);
+    if (!cleanName || cleanPhone.length < 8) return fail('Họ tên hoặc số điện thoại không hợp lệ');
+    const existing = await d
+      .prepare('SELECT id FROM customers WHERE tenant=? AND phone=?')
+      .bind(c.tenant, cleanPhone)
+      .first<{ id: string }>();
+    if (existing) return reply({ ok: true, id: existing.id, duplicate: true });
+    const id = crypto.randomUUID();
+    await d
+      .prepare(
+        'INSERT INTO customers(id,tenant,name,phone,email,birthday,note,created) VALUES (?,?,?,?,?,?,?,?)',
+      )
+      .bind(
+        id,
+        c.tenant,
+        cleanName,
+        cleanPhone,
+        (a.email ?? '').trim().slice(0, 200),
+        (a.birthday ?? '').trim().slice(0, 20),
+        (a.note ?? 'Tạo từ CRM').trim().slice(0, 500),
+        c.now,
+      )
+      .run();
+    return reply({ ok: true, id, duplicate: false });
+  }
   const who = await d
     .prepare('SELECT name,phone FROM customers WHERE tenant=? AND id=?')
     .bind(c.tenant, a.customerId)
     .first<{ name: string; phone: string }>();
   if (!who) return fail('Không tìm thấy khách hàng', 404);
   switch (a.action) {
-    case 'birthday-set':
+    case 'birthday-set': {
+      const bday = a.birthday.trim().slice(0, 10);
+      if (bday && !/^(\d{4}-[01]\d-[0-3]\d|[01]\d-[0-3]\d|[0-3]\d\/[01]\d\/\d{4})$/.test(bday))
+        return fail('Ngày sinh không hợp lệ');
       await d
         .prepare('UPDATE customers SET birthday=? WHERE tenant=? AND id=?')
-        .bind(a.birthday, c.tenant, a.customerId)
+        .bind(bday, c.tenant, a.customerId)
         .run();
       return reply({ ok: true });
+    }
     case 'consent-set':
       await d
         .prepare('UPDATE customers SET marketing_consent=?,consent_at=? WHERE tenant=? AND id=?')
@@ -497,12 +536,16 @@ export async function applyCustomerAction(c: Ctx, a: CustomerAction) {
         a.consent ? 'Khách đồng ý nhận tin ưu đãi' : 'Khách không nhận tin ưu đãi nữa',
       );
       return reply({ ok: true });
-    case 'contact-set':
+    case 'contact-set': {
+      const cleanEmail = a.email.trim().slice(0, 200);
+      if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail))
+        return fail('Email không hợp lệ');
       await d
         .prepare('UPDATE customers SET email=?,zalo_id=? WHERE tenant=? AND id=?')
-        .bind(a.email, a.zaloId, c.tenant, a.customerId)
+        .bind(cleanEmail, a.zaloId.trim().slice(0, 100), c.tenant, a.customerId)
         .run();
       return reply({ ok: true });
+    }
     case 'note-add':
       if (a.channel !== 'note' && !(CARE_CHANNELS as readonly string[]).includes(a.channel))
         return fail('Kênh không hợp lệ');

@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Award,
   Bell,
@@ -689,7 +689,42 @@ function renderTierBadge(tier: TierKind) {
   }
 }
 
+function uid(prefix: string) {
+  const rand =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `${prefix}-${rand}`;
+}
+
+function isValidPhone(raw: string): boolean {
+  const digits = raw.replace(/[^\d+]/g, '');
+  return /^\+?\d{8,15}$/.test(digits);
+}
+
+function isValidEmail(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
+  return /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(trimmed) && trimmed.length <= 200;
+}
+
+function isValidDateStr(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
+  return /^([0-3]\d\/[01]\d\/\d{4}|\d{4}-[01]\d-[0-3]\d)$/.test(trimmed);
+}
+
+function safeHrefPhone(raw: string): string {
+  return raw.replace(/[^\d+]/g, '').slice(0, 16);
+}
+
+function safeHrefEmail(raw: string): string {
+  const clean = raw.trim().replace(/[\r\n<>:"']/g, '');
+  return isValidEmail(clean) ? clean : '';
+}
+
 export function CrmModule({
+  permissions = [],
   initialTab = 'customers',
   onFlowChange,
   onNavigate,
@@ -702,6 +737,14 @@ export function CrmModule({
     extra?: { customerId?: string; phone?: string; name?: string; room?: string },
   ) => void;
 }) {
+  const canWork =
+    !permissions.length || permissions.includes('crm.work') || permissions.includes('crm.manage');
+  const canManage = !permissions.length || permissions.includes('crm.manage');
+  const canMember =
+    !permissions.length ||
+    permissions.includes('member.manage') ||
+    permissions.includes('crm.manage');
+
   const mapInitialFlow = (tab: string): CrmFlowPage => {
     if (tab === 'marketing') return 'marketing';
     if (tab === 'leads') return 'leads';
@@ -753,6 +796,27 @@ export function CrmModule({
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
   const [showCreateCampaignModal, setShowCreateCampaignModal] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
+  function notify(msg: string) {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToastMsg(msg);
+    toastTimerRef.current = setTimeout(() => setToastMsg(''), 3500);
+  }
+
+  function requirePerm(allowed: boolean, actionName: string): boolean {
+    if (!allowed) {
+      notify(`Bạn không có quyền thực hiện thao tác: ${actionName}`);
+      return false;
+    }
+    return true;
+  }
 
   // Form states for modals
   const [newCustForm, setNewCustForm] = useState({
@@ -901,12 +965,7 @@ export function CrmModule({
     message: 'Chào {ten}, Saigon Indoor Golf Club gửi tặng Quý khách ưu đãi giảm 15% khi gia hạn thẻ hội viên trong tháng này!',
   });
 
-  function notify(msg: string) {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(''), 3500);
-  }
-
-  // Merge live customers from API if available
+  // Merge live customers & leads from API if available
   useEffect(() => {
     let active = true;
     call<{
@@ -977,10 +1036,50 @@ export function CrmModule({
         });
       })
       .catch(() => undefined);
+
+    call<{
+      leads?: {
+        id: string;
+        fullName: string;
+        phone: string;
+        email: string;
+        source: string;
+        targetService: string;
+        stage: string;
+        notes: string;
+      }[];
+    }>('/api/crm2/leads')
+      .then((res) => {
+        if (!active || !res.leads?.length) return;
+        setLeadsList((prev) => {
+          const existingIds = new Set(prev.map((l) => l.id));
+          const extra = (res.leads ?? [])
+            .filter((l) => !existingIds.has(l.id) && l.fullName)
+            .map((l) => ({
+              id: l.id,
+              fullName: l.fullName,
+              phone: l.phone || 'Chưa có SĐT',
+              email: l.email || '',
+              source: l.source || 'Website',
+              targetService: l.targetService || 'Thẻ Hội viên Gold',
+              stage: l.stage === 'WON' ? 'Đã chốt' : 'Mới tiếp nhận',
+              notes: l.notes || 'Tiếp nhận từ hệ thống',
+              created: 'Hôm nay',
+            }));
+          return extra.length ? [...extra, ...prev] : prev;
+        });
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
   }, []);
+
+  // Reset pagination to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [segmentFilter, listSearch, globalSearch, statusFilter, tierFilter, sourceFilter]);
 
   // Filtered customers
   const filteredCustomers = useMemo(() => {
@@ -998,10 +1097,49 @@ export function CrmModule({
     });
   }, [customers, segmentFilter, listSearch, globalSearch, statusFilter, tierFilter, sourceFilter]);
 
+  const PAGE_SIZE = 8;
+  const pagedCustomers = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredCustomers.slice(start, start + PAGE_SIZE);
+  }, [filteredCustomers, currentPage]);
+
   const activeCustomer = useMemo(
-    () => customers.find((c) => c.id === selectedId) ?? customers[0],
-    [customers, selectedId],
+    () =>
+      filteredCustomers.find((c) => c.id === selectedId) ??
+      filteredCustomers[0] ??
+      customers.find((c) => c.id === selectedId) ??
+      customers[0],
+    [filteredCustomers, customers, selectedId],
   );
+
+  // Dynamic KPI Stats based on selected activityRange ('30d' | '90d' | 'year')
+  const displayedStats = useMemo(() => {
+    if (!activeCustomer) {
+      return {
+        bookings: 0,
+        bookingsDelta: '+0%',
+        hours: '0 giờ',
+        hoursDelta: '+0%',
+        spend: 0,
+        spendDelta: '+0%',
+        points: 0,
+      };
+    }
+    const base = activeCustomer.stats;
+    if (activityRange === '30d') return base;
+    const mult = activityRange === '90d' ? 2.8 : 9.5;
+    const numHours = parseFloat(base.hours.replace(',', '.')) || 0;
+    const scaledHours = (numHours * mult).toFixed(1).replace('.', ',');
+    return {
+      bookings: Math.round(base.bookings * mult),
+      bookingsDelta: activityRange === '90d' ? '+24%' : '+38%',
+      hours: `${scaledHours} giờ`,
+      hoursDelta: activityRange === '90d' ? '+19%' : '+32%',
+      spend: Math.round((base.spend * mult) / 1000) * 1000,
+      spendDelta: activityRange === '90d' ? '+31%' : '+45%',
+      points: base.points,
+    };
+  }, [activeCustomer, activityRange]);
 
   const filteredTimeline = useMemo(() => {
     if (!activeCustomer) return [];
@@ -1017,6 +1155,7 @@ export function CrmModule({
 
   function openEditBasicInfo() {
     if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Chỉnh sửa hồ sơ khách hàng')) return;
     setEditProfileForm({
       phone: activeCustomer.phone,
       email: activeCustomer.email,
@@ -1029,16 +1168,32 @@ export function CrmModule({
 
   async function handleSaveBasicInfo() {
     if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Cập nhật thông tin khách hàng')) return;
+    const cleanPhone = editProfileForm.phone.trim();
+    const cleanEmail = editProfileForm.email.trim();
+    const cleanBday = editProfileForm.birthday.trim();
+    if (cleanPhone && !isValidPhone(cleanPhone)) {
+      notify('Số điện thoại không hợp lệ (cần 8–15 chữ số)!');
+      return;
+    }
+    if (cleanEmail && !isValidEmail(cleanEmail)) {
+      notify('Địa chỉ Email không đúng định dạng!');
+      return;
+    }
+    if (cleanBday && !isValidDateStr(cleanBday)) {
+      notify('Ngày sinh cần nhập theo định dạng DD/MM/YYYY!');
+      return;
+    }
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === activeCustomer.id
           ? {
               ...c,
-              phone: editProfileForm.phone.trim() || c.phone,
-              email: editProfileForm.email.trim() || c.email,
-              birthday: editProfileForm.birthday.trim() || c.birthday,
+              phone: cleanPhone || c.phone,
+              email: cleanEmail || c.email,
+              birthday: cleanBday || c.birthday,
               gender: editProfileForm.gender,
-              address: editProfileForm.address.trim() || c.address,
+              address: editProfileForm.address.trim().slice(0, 250) || c.address,
             }
           : c,
       ),
@@ -1047,9 +1202,16 @@ export function CrmModule({
       await call('/api/crm2/care-customers', {
         customerId: activeCustomer.id,
         action: 'contact-set',
-        email: editProfileForm.email.trim(),
+        email: cleanEmail,
         zaloId: '',
       });
+      if (cleanBday) {
+        await call('/api/crm2/care-customers', {
+          customerId: activeCustomer.id,
+          action: 'birthday-set',
+          birthday: cleanBday,
+        });
+      }
     } catch {
       /* fallback local state */
     }
@@ -1059,6 +1221,7 @@ export function CrmModule({
 
   function openEditTags() {
     if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Chỉnh sửa sở thích & ghi chú')) return;
     setEditTagsForm({
       tagsText: activeCustomer.tags.join(', '),
       note: activeCustomer.internalNote,
@@ -1068,17 +1231,19 @@ export function CrmModule({
 
   function handleSaveTags() {
     if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Lưu sở thích & ghi chú nội bộ')) return;
     const parsedTags = editTagsForm.tagsText
       .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean);
+      .map((s) => s.trim().slice(0, 40))
+      .filter(Boolean)
+      .slice(0, 15);
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === activeCustomer.id
           ? {
               ...c,
               tags: parsedTags.length ? parsedTags : c.tags,
-              internalNote: editTagsForm.note.trim() || c.internalNote,
+              internalNote: editTagsForm.note.trim().slice(0, 1000) || c.internalNote,
             }
           : c,
       ),
@@ -1088,7 +1253,13 @@ export function CrmModule({
   }
 
   async function handleAddTimelineNote() {
-    if (!activeCustomer || !quickNoteText.trim()) return;
+    if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Thêm lịch sử tương tác')) return;
+    const text = quickNoteText.trim().slice(0, 800);
+    if (!text) {
+      notify('Vui lòng nhập nội dung tương tác trước khi lưu!');
+      return;
+    }
     const titleMap: Record<'call' | 'zalo' | 'email' | 'note', string> = {
       call: 'Gọi điện tư vấn',
       zalo: 'Nhắn tin Zalo',
@@ -1096,11 +1267,11 @@ export function CrmModule({
       note: 'Ghi chú',
     };
     const newEntry: TimelineEntry = {
-      id: 'tl-' + Date.now(),
+      id: uid('tl'),
       kind: quickNoteChannel,
       timeLabel: 'Vừa xong',
       title: titleMap[quickNoteChannel],
-      desc: quickNoteText.trim(),
+      desc: text,
     };
     setCustomers((prev) =>
       prev.map((c) =>
@@ -1112,7 +1283,7 @@ export function CrmModule({
         customerId: activeCustomer.id,
         action: 'note-add',
         channel: quickNoteChannel,
-        content: quickNoteText.trim(),
+        content: text,
       });
     } catch {
       /* local timeline updated */
@@ -1123,6 +1294,7 @@ export function CrmModule({
 
   function handleToggleTask(taskId: string) {
     if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Cập nhật trạng thái công việc')) return;
     setCustomers((prev) =>
       prev.map((c) =>
         c.id === activeCustomer.id
@@ -1136,11 +1308,22 @@ export function CrmModule({
   }
 
   async function handleCreateTask() {
-    if (!activeCustomer || !newTaskForm.title.trim()) return;
+    if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Tạo công việc & lịch hẹn')) return;
+    const title = newTaskForm.title.trim().slice(0, 150);
+    if (title.length < 2) {
+      notify('Vui lòng nhập tiêu đề công việc (tối thiểu 2 ký tự)!');
+      return;
+    }
+    const due = newTaskForm.dueDate.trim() || '25/11/2026';
+    if (!isValidDateStr(due)) {
+      notify('Ngày hạn thực hiện cần đúng định dạng DD/MM/YYYY!');
+      return;
+    }
     const newTask: CustomerTask = {
-      id: 'tk-' + Date.now(),
-      title: newTaskForm.title.trim(),
-      dueDate: newTaskForm.dueDate.trim() || '25/11/2026',
+      id: uid('tk'),
+      title,
+      dueDate: due,
       done: false,
     };
     setCustomers((prev) =>
@@ -1152,7 +1335,7 @@ export function CrmModule({
       await call('/api/crm2/care-customers', {
         customerId: activeCustomer.id,
         action: 'task-create',
-        title: newTaskForm.title.trim(),
+        title,
         days: 3,
       });
     } catch {
@@ -1163,21 +1346,57 @@ export function CrmModule({
     notify('Đã tạo công việc & lịch hẹn mới!');
   }
 
-  function handleCreateCustomer() {
-    if (!newCustForm.name.trim() || !newCustForm.phone.trim()) return;
-    const id = 'cust-' + Date.now();
+  async function handleCreateCustomer() {
+    if (!requirePerm(canWork, 'Tạo hồ sơ khách hàng mới')) return;
+    const cleanName = newCustForm.name.trim().slice(0, 100);
+    const cleanPhone = newCustForm.phone.trim();
+    const cleanEmail = newCustForm.email.trim();
+    const cleanBday = newCustForm.birthday.trim() || '01/01/1990';
+    if (cleanName.length < 2) {
+      notify('Vui lòng nhập họ và tên khách hàng (tối thiểu 2 ký tự)!');
+      return;
+    }
+    if (!isValidPhone(cleanPhone)) {
+      notify('Số điện thoại không hợp lệ (cần từ 8 đến 15 chữ số)!');
+      return;
+    }
+    if (cleanEmail && !isValidEmail(cleanEmail)) {
+      notify('Địa chỉ Email không đúng định dạng!');
+      return;
+    }
+    if (!isValidDateStr(cleanBday)) {
+      notify('Ngày sinh cần đúng định dạng DD/MM/YYYY!');
+      return;
+    }
+    let id = uid('cust');
+    try {
+      const res = await call<{ id?: string }>('/api/crm2/care-customers', {
+        action: 'customer-create',
+        name: cleanName,
+        phone: cleanPhone,
+        email: cleanEmail,
+        birthday: cleanBday,
+        note: `Nguồn: ${newCustForm.source}`,
+      });
+      if (res.id) id = res.id;
+    } catch {
+      /* fallback local id */
+    }
     const code = 'KH00' + Math.floor(1000 + Math.random() * 9000);
     const created: CustomerRecord = {
       id,
       code,
-      memberCode: newCustForm.tier !== 'none' ? `HV-${newCustForm.tier.toUpperCase().slice(0, 2)}-0099` : 'Chưa cấp thẻ',
-      name: newCustForm.name.trim(),
+      memberCode:
+        newCustForm.tier !== 'none'
+          ? `HV-${newCustForm.tier.toUpperCase().slice(0, 2)}-0099`
+          : 'Chưa cấp thẻ',
+      name: cleanName,
       gender: newCustForm.gender,
-      phone: newCustForm.phone.trim(),
-      email: newCustForm.email.trim() || 'khachhang@sigolf.vn',
-      birthday: newCustForm.birthday || '01/01/1990',
+      phone: cleanPhone,
+      email: cleanEmail || 'khachhang@sigolf.vn',
+      birthday: cleanBday,
       age: 36,
-      address: newCustForm.address.trim() || 'TP. Hồ Chí Minh',
+      address: newCustForm.address.trim().slice(0, 250) || 'TP. Hồ Chí Minh',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
       tier: newCustForm.tier,
       status: 'active',
@@ -1204,7 +1423,7 @@ export function CrmModule({
       internalNote: 'Khách hàng mới tạo trên hệ thống CRM.',
       timeline: [
         {
-          id: 'tl-init-' + Date.now(),
+          id: uid('tl-init'),
           kind: 'note',
           timeLabel: 'Vừa xong',
           title: 'Khởi tạo hồ sơ khách hàng',
@@ -1234,6 +1453,7 @@ export function CrmModule({
 
   function handleRenewOrUpgrade() {
     if (!activeCustomer || !showRenewModal) return;
+    if (!requirePerm(canMember, 'Gia hạn / Nâng hạng thẻ hội viên')) return;
     const isUpgrade = showRenewModal === 'upgrade';
     const nextTier: TierKind = isUpgrade
       ? activeCustomer.tier === 'none'
@@ -1260,11 +1480,13 @@ export function CrmModule({
               pointMultiplier: nextTier === 'vip' ? 'x2.5' : nextTier === 'platinum' ? 'x2.0' : 'x1.5',
               timeline: [
                 {
-                  id: 'tl-mem-' + Date.now(),
+                  id: uid('tl-mem'),
                   kind: 'booking',
                   timeLabel: 'Vừa xong',
                   statusBadge: 'Hoàn tất',
-                  title: isUpgrade ? `Nâng hạng hội viên lên ${nextTier.toUpperCase()}` : 'Gia hạn thẻ hội viên (+90 ngày)',
+                  title: isUpgrade
+                    ? `Nâng hạng hội viên lên ${nextTier.toUpperCase()}`
+                    : 'Gia hạn thẻ hội viên (+90 ngày)',
                   desc: `Cập nhật hạn thẻ đến 30/03/2027`,
                 },
                 ...c.timeline,
@@ -1278,16 +1500,31 @@ export function CrmModule({
   }
 
   async function handleCreateLead() {
-    if (!newLeadForm.fullName.trim() || !newLeadForm.phone.trim()) return;
+    if (!requirePerm(canWork, 'Thêm Lead tiềm năng')) return;
+    const cleanName = newLeadForm.fullName.trim().slice(0, 100);
+    const cleanPhone = newLeadForm.phone.trim();
+    const cleanEmail = newLeadForm.email.trim();
+    if (cleanName.length < 2) {
+      notify('Vui lòng nhập họ tên Lead (tối thiểu 2 ký tự)!');
+      return;
+    }
+    if (!isValidPhone(cleanPhone)) {
+      notify('Số điện thoại Lead không hợp lệ (cần 8–15 chữ số)!');
+      return;
+    }
+    if (cleanEmail && !isValidEmail(cleanEmail)) {
+      notify('Email Lead không đúng định dạng!');
+      return;
+    }
     const item = {
-      id: 'ld-' + Date.now(),
-      fullName: newLeadForm.fullName.trim(),
-      phone: newLeadForm.phone.trim(),
-      email: newLeadForm.email.trim(),
+      id: uid('ld'),
+      fullName: cleanName,
+      phone: cleanPhone,
+      email: cleanEmail,
       source: newLeadForm.source,
-      targetService: newLeadForm.targetService,
+      targetService: newLeadForm.targetService.trim().slice(0, 200) || 'Thẻ Hội viên Gold',
       stage: 'Mới tiếp nhận',
-      notes: newLeadForm.notes.trim() || 'Đang chờ liên hệ tư vấn',
+      notes: newLeadForm.notes.trim().slice(0, 1000) || 'Đang chờ liên hệ tư vấn',
       created: 'Vừa xong',
     };
     setLeadsList((prev) => [item, ...prev]);
@@ -1297,8 +1534,8 @@ export function CrmModule({
         fullName: item.fullName,
         phone: item.phone,
         email: item.email,
-        source: 'WALK_IN',
-        targetService: 'GDR',
+        source: item.source,
+        targetService: item.targetService,
         notes: item.notes,
       });
     } catch {
@@ -1316,9 +1553,23 @@ export function CrmModule({
     notify(`Đã thêm Lead tiềm năng: ${item.fullName}!`);
   }
 
-  function handleConvertLeadToCustomer(ld: (typeof leadsList)[number]) {
+  async function handleConvertLeadToCustomer(ld: (typeof leadsList)[number]) {
+    if (!requirePerm(canWork, 'Chuyển đổi Lead thành Khách hàng')) return;
+    let id = uid('cust-conv');
+    try {
+      const res = await call<{ id?: string }>('/api/crm2/care-customers', {
+        action: 'customer-create',
+        name: ld.fullName,
+        phone: ld.phone,
+        email: ld.email,
+        note: `Chuyển đổi từ Lead (${ld.source}) - ${ld.targetService}`,
+      });
+      if (res.id) id = res.id;
+    } catch {
+      /* fallback local id */
+    }
     const newCust: CustomerRecord = {
-      id: 'cust-conv-' + Date.now(),
+      id,
       code: 'KH00' + Math.floor(2000 + Math.random() * 7000),
       memberCode: 'HV-GD-0095',
       name: ld.fullName,
@@ -1354,7 +1605,7 @@ export function CrmModule({
       internalNote: ld.notes,
       timeline: [
         {
-          id: 'tl-conv-' + Date.now(),
+          id: uid('tl-conv'),
           kind: 'booking',
           timeLabel: 'Vừa xong',
           statusBadge: 'Hoàn tất',
@@ -1370,17 +1621,28 @@ export function CrmModule({
     setCustomers((prev) => [newCust, ...prev]);
     setLeadsList((prev) => prev.filter((x) => x.id !== ld.id));
     setSelectedId(newCust.id);
-    setFlowPage('customers');
+    switchFlowPage('customers');
     notify(`Đã chuyển đổi "${ld.fullName}" sang Hồ sơ Khách hàng chính thức!`);
   }
 
   function handleCreateDeal() {
-    if (!activeCustomer || !newDealForm.title.trim()) return;
+    if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Tạo cơ hội bán hàng')) return;
+    const cleanTitle = newDealForm.title.trim().slice(0, 150);
+    if (cleanTitle.length < 2) {
+      notify('Vui lòng nhập tên cơ hội bán hàng!');
+      return;
+    }
+    const rawValue = Number(newDealForm.value.replace(/\D/g, ''));
+    if (!Number.isFinite(rawValue) || rawValue <= 0 || rawValue > 10_000_000_000) {
+      notify('Giá trị cơ hội bán hàng phải lớn hơn 0 ₫!');
+      return;
+    }
     const deal: CustomerOpportunity = {
-      id: 'op-' + Date.now(),
-      title: newDealForm.title.trim(),
+      id: uid('op'),
+      title: cleanTitle,
       stage: newDealForm.stage,
-      value: Number(newDealForm.value.replace(/\D/g, '')) || 5000000,
+      value: rawValue,
       probability: newDealForm.stage === 'Chốt thành công' ? 100 : 75,
       expectedClose: newDealForm.expectedClose,
       owner: 'Admin',
@@ -1682,7 +1944,7 @@ export function CrmModule({
               </div>
 
               <div className="crm2-list-tbody">
-                {filteredCustomers.slice(0, 8).map((cust) => {
+                {pagedCustomers.map((cust) => {
                   const isSel = cust.id === activeCustomer?.id;
                   const isChecked = checkedIds.includes(cust.id);
                   return (
@@ -1722,7 +1984,10 @@ export function CrmModule({
               </div>
 
               <div className="crm2-list-footer">
-                <span>Hiển thị 1–{Math.min(8, filteredCustomers.length)} trong 1.248</span>
+                <span>
+                  Hiển thị {filteredCustomers.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–
+                  {Math.min(currentPage * PAGE_SIZE, filteredCustomers.length)} trong 1.248
+                </span>
                 <div className="crm2-pagination">
                   <button
                     type="button"
@@ -1802,7 +2067,7 @@ export function CrmModule({
 
                   <div className="crm2-quick-actions">
                     <a
-                      href={`tel:${activeCustomer.phone.replace(/\s+/g, '')}`}
+                      href={`tel:${safeHrefPhone(activeCustomer.phone)}`}
                       className="crm2-qact-btn call"
                       onClick={() => notify(`Đang kết nối cuộc gọi tới ${activeCustomer.phone}...`)}
                     >
@@ -1810,7 +2075,7 @@ export function CrmModule({
                       <span>Gọi</span>
                     </a>
                     <a
-                      href={`https://zalo.me/${activeCustomer.phone.replace(/\D/g, '')}`}
+                      href={`https://zalo.me/${safeHrefPhone(activeCustomer.phone).replace(/\+/g, '')}`}
                       target="_blank"
                       rel="noreferrer"
                       className="crm2-qact-btn zalo"
@@ -1819,7 +2084,7 @@ export function CrmModule({
                       <span>Zalo</span>
                     </a>
                     <a
-                      href={`mailto:${activeCustomer.email}`}
+                      href={`mailto:${safeHrefEmail(activeCustomer.email)}`}
                       className="crm2-qact-btn email"
                     >
                       <Mail size={18} />
@@ -2021,8 +2286,8 @@ export function CrmModule({
                           </div>
                           <span className="crm2-kpi-label">Số lần đặt sân</span>
                           <div className="crm2-kpi-val-row">
-                            <span className="crm2-kpi-val">{activeCustomer.stats.bookings}</span>
-                            <span className="crm2-kpi-delta">↑ {activeCustomer.stats.bookingsDelta}</span>
+                            <span className="crm2-kpi-val">{displayedStats.bookings}</span>
+                            <span className="crm2-kpi-delta">↑ {displayedStats.bookingsDelta}</span>
                           </div>
                         </div>
 
@@ -2035,8 +2300,8 @@ export function CrmModule({
                           </div>
                           <span className="crm2-kpi-label">Tổng giờ chơi</span>
                           <div className="crm2-kpi-val-row">
-                            <span className="crm2-kpi-val">{activeCustomer.stats.hours}</span>
-                            <span className="crm2-kpi-delta">↑ {activeCustomer.stats.hoursDelta}</span>
+                            <span className="crm2-kpi-val">{displayedStats.hours}</span>
+                            <span className="crm2-kpi-delta">↑ {displayedStats.hoursDelta}</span>
                           </div>
                         </div>
 
@@ -2049,8 +2314,8 @@ export function CrmModule({
                           </div>
                           <span className="crm2-kpi-label">Chi tiêu</span>
                           <div className="crm2-kpi-val-row">
-                            <span className="crm2-kpi-val">{money(activeCustomer.stats.spend)}</span>
-                            <span className="crm2-kpi-delta">↑ {activeCustomer.stats.spendDelta}</span>
+                            <span className="crm2-kpi-val">{money(displayedStats.spend)}</span>
+                            <span className="crm2-kpi-delta">↑ {displayedStats.spendDelta}</span>
                           </div>
                         </div>
 
@@ -2064,7 +2329,7 @@ export function CrmModule({
                           <span className="crm2-kpi-label">Điểm thưởng</span>
                           <div className="crm2-kpi-val-row">
                             <span className="crm2-kpi-val">
-                              {activeCustomer.stats.points.toLocaleString('vi-VN')} điểm
+                              {displayedStats.points.toLocaleString('vi-VN')} điểm
                             </span>
                           </div>
                         </div>
@@ -3467,10 +3732,14 @@ export function CrmModule({
                 type="button"
                 className="crm2-btn-primary"
                 onClick={() => {
-                  if (!newCampaignForm.name.trim()) return;
+                  if (!requirePerm(canManage, 'Phát hành chiến dịch Marketing')) return;
+                  if (!newCampaignForm.name.trim()) {
+                    notify('Vui lòng nhập tên chiến dịch!');
+                    return;
+                  }
                   setCampaigns((prev) => [
                     {
-                      id: 'cmp-' + Date.now(),
+                      id: uid('cmp'),
                       name: newCampaignForm.name.trim(),
                       channel: newCampaignForm.channel,
                       segment: newCampaignForm.segment,

@@ -41,7 +41,7 @@ export async function listAppointments(c: Ctx, from: number, to: number): Promis
     await db()
       .prepare(
         `SELECT a.id,a.lead_id AS leadId,l.full_name AS leadName,l.phone_norm AS phoneNorm,cust.id AS customerId,a.owner,a.service,a.at,a.status,a.note,a.created_by AS createdBy
-         FROM crm2_appointments a JOIN crm2_leads l ON l.id=a.lead_id
+         FROM crm2_appointments a JOIN crm2_leads l ON l.id=a.lead_id AND l.tenant=a.tenant
          LEFT JOIN customers cust ON cust.tenant=a.tenant AND cust.phone=l.phone_norm
          WHERE a.tenant=? AND a.at>=? AND a.at<? AND (?=1 OR a.owner=?) ORDER BY a.at LIMIT 300`,
       )
@@ -312,7 +312,7 @@ export async function listHolds(c: Ctx): Promise<Result> {
     await db()
       .prepare(
         `SELECT h.id,h.product_code AS productCode,h.product_name AS productName,h.lead_id AS leadId,h.lead_name AS leadName,h.kind,h.amount,h.status,h.expires_at AS expiresAt,h.note
-         FROM crm2_holds h JOIN crm2_leads l ON l.id=h.lead_id
+         FROM crm2_holds h JOIN crm2_leads l ON l.id=h.lead_id AND l.tenant=h.tenant
          WHERE h.tenant=? AND (?=1 OR l.owner=?) ORDER BY h.status<>'ACTIVE', h.created DESC LIMIT 200`,
       )
       .bind(c.tenant, mgr ? 1 : 0, c.userId)
@@ -571,7 +571,7 @@ export async function listOrders(c: Ctx, onlyOverdue: boolean): Promise<Result> 
   const orders = (
     await db()
       .prepare(
-        'SELECT o.id,o.code,o.lead_id AS leadId,o.hold_id AS holdId,o.product_code AS productCode,o.product_name AS productName,o.limited,o.list_price AS listPrice,o.discount,o.price,o.status,o.created,o.refund_due AS refundDue,l.full_name AS leadName FROM crm2_orders o JOIN crm2_leads l ON l.id=o.lead_id WHERE o.tenant=? AND (?=1 OR l.owner=?) ORDER BY o.created DESC LIMIT 200',
+        'SELECT o.id,o.code,o.lead_id AS leadId,o.hold_id AS holdId,o.product_code AS productCode,o.product_name AS productName,o.limited,o.list_price AS listPrice,o.discount,o.price,o.status,o.created,o.refund_due AS refundDue,l.full_name AS leadName FROM crm2_orders o JOIN crm2_leads l ON l.id=o.lead_id AND l.tenant=o.tenant WHERE o.tenant=? AND (?=1 OR l.owner=?) ORDER BY o.created DESC LIMIT 200',
       )
       .bind(c.tenant, mgr ? 1 : 0, c.userId)
       .all<OrderRow & { leadName: string }>()

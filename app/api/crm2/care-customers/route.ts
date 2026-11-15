@@ -12,9 +12,19 @@ const id = z.string().min(1).max(100);
 const actions = z.discriminatedUnion('action', [
   z
     .object({
+      action: z.literal('customer-create'),
+      name: z.string().trim().min(2).max(100),
+      phone: z.string().trim().min(8).max(30),
+      email: z.string().trim().max(200).optional(),
+      birthday: z.string().trim().max(20).optional(),
+      note: z.string().trim().max(500).optional(),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('birthday-set'),
       customerId: id,
-      birthday: z.string().regex(/^(\d{4}-[01]\d-[0-3]\d|[01]\d-[0-3]\d|)$/),
+      birthday: z.string().regex(/^(\d{4}-[01]\d-[0-3]\d|[01]\d-[0-3]\d|[0-3]\d\/[01]\d\/\d{4}|)$/),
     })
     .strict(),
   z.object({ action: z.literal('consent-set'), customerId: id, consent: z.boolean() }).strict(),

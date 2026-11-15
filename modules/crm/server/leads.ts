@@ -1120,7 +1120,7 @@ export async function workDesk(c: Ctx): Promise<Result> {
                 COALESCE(l.phone, '') AS phone,
                 COALESCE(l.target_service, '') AS targetService
          FROM crm2_appointments a
-         LEFT JOIN crm2_leads l ON l.id = a.lead_id
+         LEFT JOIN crm2_leads l ON l.id = a.lead_id AND l.tenant = a.tenant
          WHERE a.tenant=? AND a.at >= ? AND a.at <= ? AND (?=1 OR a.owner=?)
          ORDER BY a.at ASC LIMIT 50`,
       )
@@ -1144,7 +1144,7 @@ export async function workDesk(c: Ctx): Promise<Result> {
                 COALESCE(l.phone, cust.phone, '') AS phone,
                 COALESCE(l.target_service, '') AS targetService
          FROM crm2_tasks t
-         LEFT JOIN crm2_leads l ON l.id = t.lead_id
+         LEFT JOIN crm2_leads l ON l.id = t.lead_id AND l.tenant = t.tenant
          LEFT JOIN customers cust ON cust.tenant=t.tenant AND cust.id=t.customer_id
          WHERE t.tenant=? AND t.done_at IS NULL AND (?=1 OR t.assignee=? OR t.assignee IS NULL)
            AND (t.type='CARE' OR t.type='FOLLOW_UP' OR t.customer_id IS NOT NULL)
@@ -1184,14 +1184,12 @@ export async function listTasks(c: Ctx, scope: 'mine' | 'all', showDone: boolean
     await db()
       .prepare(
         `SELECT t.id,t.lead_id AS leadId,l.full_name AS leadName,t.title,t.type,t.due_at AS dueAt,t.done_at AS doneAt,t.assignee,t.created_by AS createdBy
-         FROM crm2_tasks t LEFT JOIN crm2_leads l ON l.id=t.lead_id
-         WHERE t.tenant=? AND t.customer_id IS NULL AND (?=1 OR t.assignee=?) AND (?=1 OR t.assignee=?) AND (t.done_at IS NULL OR (?=1 AND t.done_at>?))
+         FROM crm2_tasks t LEFT JOIN crm2_leads l ON l.id=t.lead_id AND l.tenant=t.tenant
+         WHERE t.tenant=? AND t.customer_id IS NULL AND (?=1 OR t.assignee=?) AND (t.done_at IS NULL OR (?=1 AND t.done_at>?))
          ORDER BY t.done_at IS NOT NULL, t.due_at LIMIT 300`,
       )
       .bind(
         c.tenant,
-        mgr && scope === 'all' ? 1 : 0,
-        c.userId,
         mgr && scope === 'all' ? 1 : 0,
         c.userId,
         showDone ? 1 : 0,

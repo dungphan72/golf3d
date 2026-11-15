@@ -114,13 +114,13 @@ export async function customerDetail(c: Ctx, phone: string): Promise<Result> {
       .all(),
     d
       .prepare(
-        'SELECT o.id,o.code,o.product_name AS productName,o.price,o.status,o.created FROM crm2_orders o JOIN crm2_leads l ON l.id=o.lead_id WHERE o.tenant=? AND l.phone_norm=? ORDER BY o.created DESC',
+        'SELECT o.id,o.code,o.product_name AS productName,o.price,o.status,o.created FROM crm2_orders o JOIN crm2_leads l ON l.id=o.lead_id AND l.tenant=o.tenant WHERE o.tenant=? AND l.phone_norm=? ORDER BY o.created DESC',
       )
       .bind(c.tenant, norm)
       .all(),
     d
       .prepare(
-        'SELECT a.id,a.at,a.status,a.service FROM crm2_appointments a JOIN crm2_leads l ON l.id=a.lead_id WHERE a.tenant=? AND l.phone_norm=? ORDER BY a.at DESC',
+        'SELECT a.id,a.at,a.status,a.service FROM crm2_appointments a JOIN crm2_leads l ON l.id=a.lead_id AND l.tenant=a.tenant WHERE a.tenant=? AND l.phone_norm=? ORDER BY a.at DESC',
       )
       .bind(c.tenant, norm)
       .all(),

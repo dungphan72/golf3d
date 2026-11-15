@@ -1,5 +1,7 @@
 # Kiểm kê ảnh thiết kế tham chiếu
 
+> **Cập nhật 15/11/2026:** kiểm kê dưới đây là của ngày 14/11 và đã lỗi thời. Trạng thái hiện tại và danh sách file đã duyệt nằm ở `docs/UI_DESIGN_BASELINE.md`. Từ 14/11 đã có thêm ảnh: `admin.png`, `admin1.png`, `caidat.png` (trước là `superadmin.png`), `dang-nhap.png`, `Luồng POS…`, `Bảng điều khiển CRM…-1`, `CRM di động…-2`, `Luồng giải đấu…`, `Quy trình giải đấu…`. CRM, hội viên, POS mobile, trang chủ mobile đã làm; các mục "Chưa làm" bên dưới không còn đúng.
+
 Thư mục: `hinh-anh/thiet-ke` (8 ảnh, tất cả đọc được). Ngày kiểm kê: 14/11/2026.
 Nhánh làm việc: `ui-redesign` (checkpoint `a26d93a` trước khi bắt đầu đợt này).
 

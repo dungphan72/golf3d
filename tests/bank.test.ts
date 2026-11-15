@@ -4,6 +4,7 @@ import {
   paymentCode,
   extractCode,
   vietQrUrl,
+  sepayQrUrl,
   sepayPayload,
   parseSepayTime,
   bankInput,
@@ -29,6 +30,18 @@ test('VietQR URL carries bin, account, amount and note', () => {
   assert.ok(url.includes('amount=650000'));
   assert.ok(url.includes('addInfo=SGG3F2A9C1E'));
   assert.ok(url.includes('accountName=SAIGON+GOLF'));
+  const sepayUrl = sepayQrUrl({
+    bin: '970422',
+    account: '0877834888',
+    holder: 'SAIGON GOLF',
+    amount: 450000,
+    note: 'SGG3F2A9C1E',
+  });
+  assert.ok(sepayUrl.startsWith('https://qr.sepay.vn/img?'));
+  assert.ok(sepayUrl.includes('acc=0877834888'));
+  assert.ok(sepayUrl.includes('bank=MBBank'));
+  assert.ok(sepayUrl.includes('amount=450000'));
+  assert.ok(sepayUrl.includes('des=SGG3F2A9C1E'));
 });
 test('SePay payload parsing accepts the documented fields', () => {
   const ok = sepayPayload.safeParse({
@@ -55,4 +68,11 @@ test('bank admin actions require a long key', () => {
   assert.ok(bankInput.safeParse({ action: 'set-key', key: 'k'.repeat(24) }).success);
   assert.ok(bankInput.safeParse({ action: 'ignore', id: 'x' }).success);
   assert.ok(!bankInput.safeParse({ action: 'ignore', id: 'x', tenant: 't' }).success);
+  assert.ok(
+    bankInput.safeParse({
+      action: 'simulate-tx',
+      amount: 450000,
+      content: 'SGG3F2A9C1E test',
+    }).success,
+  );
 });

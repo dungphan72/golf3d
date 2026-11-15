@@ -51,6 +51,8 @@ import {
 import type { Config } from '../../lib/club';
 import type { Data } from './shared';
 import { PackageCatalogManager } from './PackageEditor';
+import { SepaySettings } from './SepaySettings';
+import { SEPAY_BANKS, sepayQrUrl } from '../../lib/bank';
 import '../system-settings.css';
 
 export type SettingsCardId =
@@ -370,8 +372,8 @@ const DEFAULT_GROUPS: GroupDef[] = [
     cards: [
       {
         id: 'payment_methods',
-        title: 'Phương thức thanh toán',
-        subtitle: 'Tiền mặt, chuyển khoản, ví điện tử, QR',
+        title: 'Cổng thanh toán SePay & Ngân hàng',
+        subtitle: 'Tích hợp my.sepay.vn, mã QR động, Webhook báo có tự động & tiền mặt',
         iconName: 'CreditCard',
         iconBg: 'ar-icon-emerald',
         categoryGroup: 'Thanh toán & tích hợp',
@@ -853,6 +855,62 @@ export function SystemSettingsHub({
             onChanged={onChanged}
             onNotify={showToast}
           />
+        </section>
+      )}
+
+      {/* Inline SePay Payment Gateway Panel when activeSub === 'payment' */}
+      {activeSub === 'payment' && (
+        <section
+          className="ar-settings-group"
+          style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 24,
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 10,
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="ar-card-icon ar-icon-emerald" style={{ width: 40, height: 40 }}>
+                <CreditCard />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                  Cổng thanh toán tự động SePay (https://my.sepay.vn)
+                </h3>
+                <p style={{ margin: 0, fontSize: 12.5, color: '#64748b' }}>
+                  Cấu hình tài khoản nhận tiền, khóa Webhook API Key và đối soát báo có tự động theo thời gian thực
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ar-btn-secondary"
+              onClick={() => {
+                for (const g of groups) {
+                  const found = g.cards.find((c) => c.id === 'payment_methods');
+                  if (found) {
+                    setOpenCard(found);
+                    return;
+                  }
+                }
+              }}
+            >
+              Đổi số tài khoản ngân hàng
+            </button>
+          </div>
+          <SepaySettings />
         </section>
       )}
 
@@ -1514,7 +1572,11 @@ function SettingsCardModal({
     <div className="ar-settings-modal-backdrop" onClick={onClose}>
       <div
         className="ar-settings-modal"
-        style={cardId === 'hour_packages' ? { maxWidth: 1060, width: '96%' } : undefined}
+        style={
+          cardId === 'hour_packages' || cardId === 'payment_methods'
+            ? { maxWidth: 1060, width: '96%' }
+            : undefined
+        }
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -2374,7 +2436,29 @@ function SettingsCardModal({
             <div>
               <div className="ar-form-grid">
                 <div className="ar-field">
-                  <label>Mã ngân hàng (BIN VietQR)</label>
+                  <label>Ngân hàng thụ hưởng (Liên kết SePay / NAPAS)</label>
+                  <select
+                    value={
+                      SEPAY_BANKS.some((b) => b.bin === formPayment.bankBin)
+                        ? formPayment.bankBin
+                        : 'custom'
+                    }
+                    onChange={(e) => {
+                      if (e.target.value !== 'custom') {
+                        setFormPayment({ ...formPayment, bankBin: e.target.value });
+                      }
+                    }}
+                  >
+                    {SEPAY_BANKS.map((b) => (
+                      <option key={b.bin} value={b.bin}>
+                        {b.code} · {b.name} (BIN {b.bin})
+                      </option>
+                    ))}
+                    <option value="custom">Ngân hàng khác (Tự nhập BIN)</option>
+                  </select>
+                </div>
+                <div className="ar-field">
+                  <label>Mã BIN ngân hàng (6 số)</label>
                   <input
                     value={formPayment.bankBin}
                     onChange={(e) => setFormPayment({ ...formPayment, bankBin: e.target.value })}
@@ -2382,22 +2466,84 @@ function SettingsCardModal({
                   />
                 </div>
                 <div className="ar-field">
-                  <label>Số tài khoản thụ hưởng</label>
+                  <label>Số tài khoản thụ hưởng (Đã thêm trên my.sepay.vn)</label>
                   <input
                     value={formPayment.bankAccount}
                     onChange={(e) => setFormPayment({ ...formPayment, bankAccount: e.target.value })}
                     placeholder="0877834888"
                   />
                 </div>
-                <div className="ar-field ar-form-grid-full">
+                <div className="ar-field">
                   <label>Tên chủ tài khoản (In hoa không dấu)</label>
                   <input
                     value={formPayment.bankHolder}
-                    onChange={(e) => setFormPayment({ ...formPayment, bankHolder: e.target.value })}
+                    onChange={(e) =>
+                      setFormPayment({ ...formPayment, bankHolder: e.target.value.toUpperCase() })
+                    }
                     placeholder="SAIGON INDOOR GOLF CLUB"
                   />
                 </div>
               </div>
+
+              {formPayment.bankBin && formPayment.bankAccount && (
+                <div
+                  style={{
+                    marginTop: 16,
+                    padding: 16,
+                    borderRadius: 12,
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 18,
+                    flexWrap: 'wrap',
+                  }}
+                >
+                  <div
+                    style={{
+                      background: '#fff',
+                      padding: 8,
+                      borderRadius: 10,
+                      border: '1px solid #e2e8f0',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <img
+                      alt="Mã QR SePay kiểm tra"
+                      width={130}
+                      height={130}
+                      src={sepayQrUrl({
+                        bin: formPayment.bankBin,
+                        account: formPayment.bankAccount,
+                        holder: formPayment.bankHolder || 'SAIGON INDOOR GOLF CLUB',
+                        amount: 50000,
+                        note: 'SGGTESTQR',
+                      })}
+                      style={{ display: 'block', borderRadius: 6 }}
+                    />
+                    <small style={{ fontSize: 10.5, color: '#64748b' }}>QR SePay mẫu (50.000₫)</small>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 220, fontSize: 13 }}>
+                    <strong style={{ color: '#059669', fontSize: 14, display: 'block', marginBottom: 4 }}>
+                      ✓ Đã đồng bộ cấu hình tạo mã QR động SePay (qr.sepay.vn)
+                    </strong>
+                    <p style={{ margin: '0 0 6px', color: '#334155' }}>
+                      Ngân hàng:{' '}
+                      <strong>
+                        {SEPAY_BANKS.find((b) => b.bin === formPayment.bankBin)?.name ||
+                          `BIN ${formPayment.bankBin}`}
+                      </strong>{' '}
+                      · STK: <code>{formPayment.bankAccount}</code> · Chủ TK:{' '}
+                      <strong>{formPayment.bankHolder}</strong>
+                    </p>
+                    <small style={{ color: '#64748b' }}>
+                      Nhớ bấm &ldquo;Lưu thay đổi&rdquo; ở góc dưới sau khi đổi số tài khoản ngân hàng.
+                    </small>
+                  </div>
+                </div>
+              )}
+
+              <SepaySettings />
             </div>
           )}
 

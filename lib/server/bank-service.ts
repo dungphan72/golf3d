@@ -87,7 +87,7 @@ export async function bankOverview(tenant: string, bookingId: string | null): Pr
       const bill = await db()
         .prepare(
           `SELECT b.amount-COALESCE((SELECT r.covered FROM package_redemptions r WHERE r.tenant=b.tenant AND r.booking_id=b.id),0) AS due
-           FROM bookings b WHERE b.tenant=? AND b.id=? AND b.status='finished'`,
+           FROM bookings b WHERE b.tenant=? AND b.id=?`,
         )
         .bind(tenant, bookingId)
         .first<{ due: number | null }>();
@@ -118,6 +118,26 @@ export async function applyBank(tenant: string, input: BankInput): Promise<R> {
     if (input.action === 'clear-key') {
       await db().prepare(CLEAR_INTEGRATION_SQL).bind(tenant, 'sepay').run();
       return reply({ ok: true });
+    }
+    if (input.action === 'simulate-tx') {
+      const now = Date.now();
+      const txId = crypto.randomUUID();
+      await db()
+        .prepare(INSERT_BANK_TX_SQL)
+        .bind(
+          txId,
+          tenant,
+          'SEPAY-SIM-' + now,
+          input.amount,
+          input.content,
+          input.account,
+          'SEPAY.MY.' + String(now).slice(-6),
+          now,
+          extractCode(input.content),
+          now,
+        )
+        .run();
+      return reply({ ok: true, id: txId, code: extractCode(input.content) });
     }
     const r = await db().prepare(IGNORE_BANK_TX_SQL).bind(tenant, input.id).run();
     return r.meta.changes ? reply({ ok: true }) : error('Giao dịch đã được xử lý', 409);

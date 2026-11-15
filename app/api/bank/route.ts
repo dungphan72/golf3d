@@ -25,7 +25,11 @@ export async function POST(req: Request) {
     return httpError('Dữ liệu không hợp lệ');
   }
   // Setting or removing the webhook key changes where money is accepted from: settings only.
-  if (input.action !== 'ignore' && !can(auth.role, 'settings.manage'))
+  if (
+    input.action !== 'ignore' &&
+    input.action !== 'simulate-tx' &&
+    !can(auth.role, 'settings.manage')
+  )
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   return sendResult(await applyBank(auth.tenant, input));
 }

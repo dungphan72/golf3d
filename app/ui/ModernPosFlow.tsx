@@ -631,7 +631,7 @@ export function ModernPosFlow({
     }
   }
 
-  async function handleConfirmPayment() {
+  async function handleConfirmPayment(bankTxId?: string) {
     if (!b || saving) return;
     setSaving(true);
     setNotice('');
@@ -643,6 +643,7 @@ export function ModernPosFlow({
         method: payMethod,
         requestId: payKey.current,
         expectedAmount: total,
+        ...(bankTxId ? { bankTxId } : {}),
       });
       if (ok || true) {
         if (payMethod === 'cash') {
@@ -1506,7 +1507,7 @@ export function ModernPosFlow({
                 ))}
               </div>
 
-              {/* QR Code view */}
+              {/* QR Code view (SePay Gateway) */}
               {payMethod === 'transfer' && (
                 <TransferPanel
                   booking={activeBooking}
@@ -1515,8 +1516,9 @@ export function ModernPosFlow({
                     account: data.config?.bankAccount ?? '0877834888',
                     holder: data.config?.bankHolder ?? 'SAIGON INDOOR GOLF',
                   }}
+                  fallbackAmount={total}
                   busy={saving}
-                  onUse={() => handleConfirmPayment()}
+                  onUse={(txId) => handleConfirmPayment(txId)}
                 />
               )}
 
@@ -1575,7 +1577,7 @@ export function ModernPosFlow({
                 <button
                   type="button"
                   className="pos-btn-confirm-pay"
-                  onClick={handleConfirmPayment}
+                  onClick={() => handleConfirmPayment()}
                   disabled={saving || !canPayNow}
                 >
                   {saving ? 'Đang ghi nhận…' : 'Xác nhận thanh toán'}

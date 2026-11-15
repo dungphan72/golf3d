@@ -33,6 +33,7 @@ const NEEDED: Record<string, Permission> = {
   'wallet-pay': 'finance.operate',
   'wallet-topup': 'member.sell',
   'type-save': 'member.adjust',
+  'type-delete': 'member.adjust',
   'types-seed': 'member.adjust',
   'account-verify': 'member.sell',
   'order-reject': 'member.sell',

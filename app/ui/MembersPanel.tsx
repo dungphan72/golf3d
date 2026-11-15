@@ -12,7 +12,7 @@ import {
   clubDay,
 } from '../../lib/card-term';
 import { memberCode, TIER_LABEL, type Rank, type Tier } from '../../lib/member-card';
-import { PackageEditor } from './PackageEditor';
+import { PackageCatalogManager } from './PackageEditor';
 import { MemberCard } from './MemberCard';
 import { WalletPanel, type WalletEntry } from './WalletPanel';
 import {
@@ -41,6 +41,7 @@ import {
   FileText,
   BadgeAlert,
   KeyRound,
+  Settings,
 } from 'lucide-react';
 
 type Customer = {
@@ -124,12 +125,14 @@ export function MembersPanel({
   initialPhone,
   initialTab = 'members',
   onStartSession,
+  onOpenPackageSettings,
 }: {
   permissions: string[];
   initialCustomer?: string | null;
   initialPhone?: string | null;
   initialTab?: 'members' | 'catalog';
   onStartSession?: (customer: { name: string; phone: string }) => void;
+  onOpenPackageSettings?: () => void;
 }) {
   const canSell = permissions.includes('member.sell');
   const canAdjust = permissions.includes('member.adjust');
@@ -314,6 +317,20 @@ export function MembersPanel({
             <span className="stat-label">Gói đang bán:</span>
             <span className="stat-num">{activeTypes.length}</span>
           </div>
+          {canAdjust && (
+            <button
+              type="button"
+              className="hero-stat-pill clickable"
+              onClick={() => {
+                if (onOpenPackageSettings) onOpenPackageSettings();
+                else setTab(tab === 'catalog' ? 'members' : 'catalog');
+              }}
+              title="Mở Cài đặt hệ thống -> Quản lý Gói giờ & Thẻ chi tiết"
+            >
+              <Settings size={15} className="text-emerald" />
+              <span className="stat-label">Cài đặt Gói giờ & Thẻ</span>
+            </button>
+          )}
           {pendingAccountCount > 0 && (
             <button
               type="button"
@@ -345,15 +362,17 @@ export function MembersPanel({
         </div>
       </div>
 
-      {/* Sub tabs */}
-      <PageTabs
-        value={tab}
-        onChange={(v) => setTab(v as 'members' | 'catalog')}
-        tabs={[
-          { key: 'members', label: 'Hội viên & Thẻ số' },
-          { key: 'catalog', label: `Danh mục Gói giờ & Thẻ (${data?.types.length ?? 0})` },
-        ]}
-      />
+      {/* Sub tabs only if standalone without unified settings callback */}
+      {!onOpenPackageSettings && (
+        <PageTabs
+          value={tab}
+          onChange={(v) => setTab(v as 'members' | 'catalog')}
+          tabs={[
+            { key: 'members', label: 'Hội viên & Thẻ số' },
+            { key: 'catalog', label: `Danh mục Gói giờ & Thẻ (${data?.types.length ?? 0})` },
+          ]}
+        />
+      )}
 
       {tab === 'members' && (
         <div className="members-grid members-dual-view">
@@ -1107,7 +1126,22 @@ export function MembersPanel({
                     >
                       <div className="sell-inputs-row">
                         <label className="sell-field">
-                          <span className="field-label">Gói</span>
+                          <span
+                            className="field-label"
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+                          >
+                            <span>Gói</span>
+                            {canAdjust && onOpenPackageSettings && (
+                              <button
+                                type="button"
+                                className="link-btn"
+                                style={{ fontSize: 11.5 }}
+                                onClick={onOpenPackageSettings}
+                              >
+                                Cài đặt gói →
+                              </button>
+                            )}
+                          </span>
                           <select
                             value={typeId}
                             onChange={(e) => setTypeId(e.target.value)}
@@ -1251,195 +1285,13 @@ export function MembersPanel({
         </div>
       )}
 
-      {/* CATALOG TAB */}
+      {/* CATALOG TAB (Synchronized with System Settings Hub) */}
       {tab === 'catalog' && (
-        <div className="members-catalog-view">
-          {canAdjust && (
-            <div className="catalog-info-banner">
-              <Sparkles size={16} className="text-emerald" />
-              <p className="form-note">
-                Giá và quyền lợi ở đây hiện trực tiếp trên trang <a href="/bang-gia">/bang-gia</a> và
-                trang chủ. Giá theo giờ, theo lượt sửa ở Cài đặt cơ sở → bảng giá.
-              </p>
-            </div>
-          )}
-
-          <div className="mod-toolbar" style={{ marginBottom: 14 }}>
-            <div className="mod-chip-group">
-              {[
-                { key: 'all', label: 'Tất cả gói', count: data?.types.length ?? 0 },
-                {
-                  key: 'standard',
-                  label: 'Line Tiêu chuẩn',
-                  count: (data?.types ?? []).filter((t) => t.room !== 'vip').length,
-                },
-                {
-                  key: 'vip',
-                  label: 'Phòng VIP',
-                  count: (data?.types ?? []).filter((t) => t.room === 'vip').length,
-                },
-              ].map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  className={`mod-filter-chip ${pkgRoomFilter === opt.key ? 'active' : ''}`}
-                  onClick={() => setPkgRoomFilter(opt.key as 'all' | 'standard' | 'vip')}
-                >
-                  <span>{opt.label}</span>
-                  <span className="mod-chip-count">{opt.count}</span>
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {canAdjust && !editing && (
-                <button
-                  className="mod-btn-primary"
-                  disabled={busy}
-                  onClick={() => setEditing('new')}
-                >
-                  <Package size={15} /> Thêm gói mới
-                </button>
-              )}
-              {canAdjust && data && !data.types.length && (
-                <button
-                  className="mod-btn-outline"
-                  disabled={busy}
-                  onClick={() =>
-                    act(
-                      () => post({ action: 'types-seed' }),
-                      'Đã nạp danh mục gói theo bảng giá chính thức',
-                    )
-                  }
-                >
-                  Nạp danh mục theo bảng giá chính thức
-                </button>
-              )}
-            </div>
-          </div>
-
-          {canAdjust && editing && (
-            <div className="catalog-editor-wrapper animate-fade-in">
-              <PackageEditor
-                key={editing === 'new' ? 'new' : editing.id}
-                initial={editing === 'new' ? null : editing}
-                busy={busy}
-                onCancel={() => setEditing(null)}
-                onSave={(body) =>
-                  act(
-                    () => post({ action: 'type-save', requestId: operationKey(), ...body }),
-                    body.id ? 'Đã lưu gói' : 'Đã thêm gói',
-                  ).then(() => setEditing(null))
-                }
-              />
-            </div>
-          )}
-
-          <div className="catalog-table-wrap">
-            <DataTable
-              columns={[
-                {
-                  key: 'name',
-                  header: 'Gói hội viên',
-                  cell: (t: PackageType) => (
-                    <div className="pkg-type-name-cell">
-                      <strong>{t.name}</strong>
-                      {t.section && <span className="section-tag">{t.section}</span>}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'price',
-                  header: 'Giá bán',
-                  cell: (t) => <strong className="text-emerald">{money(t.price)}</strong>,
-                },
-                {
-                  key: 'grants',
-                  header: 'Quyền lợi',
-                  cell: (t) => (
-                    <div className="grants-cell">
-                      <span>{grantsText(t.grants)}</span>
-                      {t.perks && <small className="text-muted block">· {t.perks}</small>}
-                    </div>
-                  ),
-                },
-                {
-                  key: 'room',
-                  header: 'Phòng áp dụng',
-                  cell: (t) => (
-                    <span className="room-badge">
-                      {t.room === 'standard' ? 'Tiêu chuẩn' : t.room === 'vip' ? 'Phòng VIP' : 'Tất cả'}
-                    </span>
-                  ),
-                },
-                { key: 'days', header: 'Hiệu lực', cell: (t) => `${t.valid_days} ngày` },
-                {
-                  key: 'status',
-                  header: 'Trạng thái',
-                  cell: (t) => (
-                    <span className={`status-pill ${t.active ? 'active' : 'inactive'}`}>
-                      {t.active ? 'Đang bán' : 'Ngừng bán'}
-                    </span>
-                  ),
-                },
-                ...(canAdjust
-                  ? [
-                      {
-                        key: 'actions',
-                        header: 'Thao tác',
-                        cell: (t: PackageType) => (
-                          <div className="table-actions">
-                            <button
-                              type="button"
-                              className="secondary btn-xs"
-                              disabled={busy}
-                              onClick={() => setEditing(t)}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary btn-xs"
-                              disabled={busy}
-                              onClick={() =>
-                                act(
-                                  () =>
-                                    post({
-                                      action: 'type-save',
-                                      id: t.id,
-                                      requestId: operationKey(),
-                                      name: t.name,
-                                      price: t.price,
-                                      grants: JSON.parse(t.grants),
-                                      validDays: t.valid_days,
-                                      perks: t.perks,
-                                      section: t.section ?? '',
-                                      room: t.room ?? 'any',
-                                      active: !t.active,
-                                    }),
-                                  'Đã cập nhật gói',
-                                )
-                              }
-                            >
-                              {t.active ? 'Ngừng bán' : 'Bán lại'}
-                            </button>
-                          </div>
-                        ),
-                      },
-                    ]
-                  : []),
-              ]}
-              rows={(data?.types ?? []).filter((t) =>
-                pkgRoomFilter === 'all'
-                  ? true
-                  : pkgRoomFilter === 'vip'
-                    ? t.room === 'vip'
-                    : t.room !== 'vip',
-              )}
-              rowKey={(t) => t.id}
-              empty="Chưa có gói hội viên"
-            />
-          </div>
-        </div>
+        <PackageCatalogManager
+          canAdjust={canAdjust}
+          initialTypes={data?.types}
+          onChanged={() => load()}
+        />
       )}
     </section>
   );

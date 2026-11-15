@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import type { Config } from '../../lib/club';
 import type { Data } from './shared';
+import { PackageCatalogManager } from './PackageEditor';
 import '../system-settings.css';
 
 export type SettingsCardId =
@@ -202,8 +203,8 @@ const DEFAULT_GROUPS: GroupDef[] = [
       },
       {
         id: 'hour_packages',
-        title: 'Gói giờ',
-        subtitle: 'Tạo và quản lý gói giờ (nạp, tặng, thời hạn)',
+        title: 'Gói giờ & Thẻ chi tiết',
+        subtitle: 'Thêm, sửa, xóa gói giờ chơi, thẻ tháng, quyền lợi & đồng bộ bảng giá',
         iconName: 'Layers',
         iconBg: 'ar-icon-blue',
         categoryGroup: 'Giá, gói & hội viên',
@@ -459,6 +460,8 @@ export function SystemSettingsHub({
   data,
   activeSub,
   onSelectSub,
+  initialOpenCardId,
+  onClearInitialOpenCard,
   onSave,
   onGo,
   onChanged,
@@ -468,6 +471,8 @@ export function SystemSettingsHub({
   data: Data | null;
   activeSub?: string;
   onSelectSub?: (sub: string) => void;
+  initialOpenCardId?: SettingsCardId | null;
+  onClearInitialOpenCard?: () => void;
   onSave: (val: Partial<Config>) => Promise<boolean> | void;
   onGo?: (v: string) => void;
   onChanged?: () => void;
@@ -501,6 +506,29 @@ export function SystemSettingsHub({
     }
   }, [groups]);
 
+  useEffect(() => {
+    if (!initialOpenCardId) return;
+    for (const g of groups) {
+      const found = g.cards.find((c) => c.id === initialOpenCardId);
+      if (found) {
+        setOpenCard(found);
+        onClearInitialOpenCard?.();
+        return;
+      }
+    }
+    const fallback: CardDef = {
+      id: initialOpenCardId,
+      title: getCardTitle(initialOpenCardId),
+      subtitle: getCardSubtitle(initialOpenCardId),
+      iconName: 'Layers',
+      iconBg: 'ar-icon-blue',
+      categoryGroup: 'Giá, gói & hội viên',
+      tab: 'business',
+    };
+    setOpenCard(fallback);
+    onClearInitialOpenCard?.();
+  }, [initialOpenCardId, groups, onClearInitialOpenCard]);
+
   // Modal for Adding or Editing a Function Card on the Hub
   const [cardEditor, setCardEditor] = useState<{
     mode: 'add' | 'edit';
@@ -522,6 +550,7 @@ export function SystemSettingsHub({
     if (activeSub === 'facility') return 'operation';
     if (activeSub === 'hours') return 'operation';
     if (activeSub === 'pricing') return 'business';
+    if (activeSub === 'packages') return 'business';
     if (activeSub === 'payment') return 'system';
     if (activeSub === 'staff') return 'system';
     if (activeSub === 'integration') return 'system';
@@ -774,6 +803,58 @@ export function SystemSettingsHub({
           </button>
         )}
       </div>
+
+      {/* Inline Unified Package & Card Catalog when activeSub === 'packages' */}
+      {activeSub === 'packages' && (
+        <section
+          className="ar-settings-group"
+          style={{
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 16,
+            padding: 20,
+            marginBottom: 24,
+            boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 14,
+              flexWrap: 'wrap',
+              gap: 10,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div className="ar-card-icon ar-icon-blue" style={{ width: 40, height: 40 }}>
+                <Layers />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
+                  Quản lý Gói giờ & Thẻ chi tiết (Đồng bộ toàn hệ thống)
+                </h3>
+                <p style={{ margin: 0, fontSize: 12.5, color: '#64748b' }}>
+                  Thêm, sửa, xóa gói giờ chơi, thẻ tháng, quyền lợi VIP — cập nhật trực tiếp lên POS, Hội viên và /bang-gia
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="ar-btn-secondary"
+              onClick={() => onSelectSub?.('all')}
+            >
+              Xem tất cả danh mục cài đặt
+            </button>
+          </div>
+          <PackageCatalogManager
+            canAdjust
+            onChanged={onChanged}
+            onNotify={showToast}
+          />
+        </section>
+      )}
 
       {/* 7 Category Groups Grid */}
       {filteredGroups.length === 0 ? (
@@ -1037,6 +1118,7 @@ export function SystemSettingsHub({
           onSave={handleSaveConfig}
           onShowToast={showToast}
           onGo={onGo}
+          onChanged={onChanged}
         />
       )}
     </div>
@@ -1228,6 +1310,7 @@ function SettingsCardModal({
   onSave,
   onShowToast,
   onGo,
+  onChanged,
 }: {
   card: CardDef;
   config: Config;
@@ -1237,6 +1320,7 @@ function SettingsCardModal({
   onSave: (patch: Partial<Config>) => Promise<void> | void;
   onShowToast: (msg: string) => void;
   onGo?: (v: string) => void;
+  onChanged?: () => void;
 }) {
   const cardId = card.id;
   // Local states per modal type
@@ -1430,6 +1514,7 @@ function SettingsCardModal({
     <div className="ar-settings-modal-backdrop" onClick={onClose}>
       <div
         className="ar-settings-modal"
+        style={cardId === 'hour_packages' ? { maxWidth: 1060, width: '96%' } : undefined}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -1707,38 +1792,11 @@ function SettingsCardModal({
           )}
 
           {cardId === 'hour_packages' && (
-            <div>
-              <EditableCrudList
-                storageKey="hour_packages"
-                description="Thêm, sửa, xóa các gói giờ hội viên nạp trước (cấu hình giờ tặng & thời hạn)."
-                onNotify={onShowToast}
-                columns={[
-                  { key: 'name', label: 'Tên gói giờ', placeholder: 'VD: Gói Trải Nghiệm 10h' },
-                  { key: 'h', label: 'Giờ chính', placeholder: 'VD: 10h' },
-                  { key: 'bonus', label: 'Tặng kèm', placeholder: 'VD: +2h', badge: 'success' },
-                  { key: 'price', label: 'Đơn giá (VNĐ)', placeholder: 'VD: 3.200.000' },
-                  { key: 'days', label: 'Hạn dùng', placeholder: 'VD: 60 ngày' },
-                ]}
-                initialRows={[
-                  { name: 'Gói Trải Nghiệm 10h', h: '10h', bonus: '+1h', price: '3.200.000', days: '60 ngày' },
-                  { name: 'Gói Tiêu Chuẩn 25h', h: '25h', bonus: '+3h', price: '7.500.000', days: '90 ngày' },
-                  { name: 'Gói Golfer Thân Thiết 50h', h: '50h', bonus: '+8h', price: '14.000.000', days: '180 ngày' },
-                  { name: 'Gói VIP Không Giới Hạn', h: '100h', bonus: '+20h', price: '26.000.000', days: '365 ngày' },
-                ]}
-              />
-              <div style={{ marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  className="ar-btn-secondary"
-                  onClick={() => {
-                    onClose();
-                    onGo?.('packages');
-                  }}
-                >
-                  Mở trang Gói giờ & Thẻ chuyên sâu &rarr;
-                </button>
-              </div>
-            </div>
+            <PackageCatalogManager
+              canAdjust
+              onChanged={onChanged}
+              onNotify={onShowToast}
+            />
           )}
 
           {cardId === 'membership_tiers' && (

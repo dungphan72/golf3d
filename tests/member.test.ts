@@ -17,12 +17,36 @@ test('phone normalisation matches the SQL rules', () => {
   assert.ok(validPhone('0912345678'));
   assert.ok(!validPhone('912345678'));
   assert.ok(!validPhone('abc'));
+  assert.ok(
+    memberInput.safeParse({
+      action: 'type-delete',
+      id: 'pkg-type-1',
+    }).success,
+  );
+  assert.ok(
+    !memberInput.safeParse({
+      action: 'type-delete',
+      id: '',
+    }).success,
+  );
 });
 test('service maps to the package kind it consumes', () => {
   assert.equal(kindForService('9'), 'holes9');
   assert.equal(kindForService('18'), 'holes18');
   assert.equal(kindForService('gdr'), 'gdr');
   assert.equal(kindForService('x'), null);
+  assert.ok(
+    memberInput.safeParse({
+      action: 'type-delete',
+      id: 'pkg-type-1',
+    }).success,
+  );
+  assert.ok(
+    !memberInput.safeParse({
+      action: 'type-delete',
+      id: '',
+    }).success,
+  );
 });
 test('official packages match the price list', () => {
   const byKey = Object.fromEntries(OFFICIAL_PACKAGES.map((p) => [p.key, p]));
@@ -33,6 +57,18 @@ test('official packages match the price list', () => {
   assert.equal(byKey['month-1'].validDays, 30);
   assert.equal(byKey['month-6'].grants[0].qty, UNLIMITED);
   for (const p of OFFICIAL_PACKAGES) assert.ok(p.price > 0 && p.validDays > 0 && p.grants.length);
+  assert.ok(
+    memberInput.safeParse({
+      action: 'type-delete',
+      id: 'pkg-type-1',
+    }).success,
+  );
+  assert.ok(
+    !memberInput.safeParse({
+      action: 'type-delete',
+      id: '',
+    }).success,
+  );
 });
 test('member input rejects unknown fields and bad values', () => {
   const key = 'abcdefghijklmnop1234';
@@ -72,6 +108,18 @@ test('member input rejects unknown fields and bad values', () => {
       kind: 'gdr',
       delta: 0,
       note: 'lý do',
+    }).success,
+  );
+  assert.ok(
+    memberInput.safeParse({
+      action: 'type-delete',
+      id: 'pkg-type-1',
+    }).success,
+  );
+  assert.ok(
+    !memberInput.safeParse({
+      action: 'type-delete',
+      id: '',
     }).success,
   );
 });

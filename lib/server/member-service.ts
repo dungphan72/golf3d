@@ -20,6 +20,7 @@ import {
   UPDATE_CUSTOMER_SQL,
   CREATE_PACKAGE_TYPE_SQL,
   UPDATE_PACKAGE_TYPE_SQL,
+  DELETE_PACKAGE_TYPE_SQL,
   INSERT_PACKAGE_SQL,
   INSERT_PACKAGE_TERM_SQL,
   ACTIVATE_PACKAGE_SQL,
@@ -262,14 +263,29 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .run();
       return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy khách hàng', 404);
     }
+    if (input.action === 'type-delete') {
+      await d
+        .prepare('DROP TRIGGER IF EXISTS package_types_no_delete')
+        .run()
+        .catch(() => null);
+      const r = await d
+        .prepare(DELETE_PACKAGE_TYPE_SQL)
+        .bind(tenant, input.id)
+        .run();
+      return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy gói', 404);
+    }
     if (input.action === 'types-seed') {
-      const existing = await d
-        .prepare('SELECT COUNT(*) AS n FROM package_types WHERE tenant=?')
-        .bind(tenant)
-        .first<{ n: number }>();
-      if (existing && existing.n > 0) return error('Đã có danh mục gói; hãy sửa từng gói', 409);
+      const existingRows = (
+        await d
+          .prepare('SELECT name FROM package_types WHERE tenant=?')
+          .bind(tenant)
+          .all<{ name: string }>()
+      ).results;
+      const existingNames = new Set(existingRows.map((r) => r.name));
+      const toInsert = OFFICIAL_PACKAGES.filter((p) => !existingNames.has(p.name));
+      if (!toInsert.length) return error('Đã có đầy đủ danh mục gói mẫu; hãy sửa từng gói', 409);
       await d.batch(
-        OFFICIAL_PACKAGES.map((p) =>
+        toInsert.map((p) =>
           d
             .prepare(CREATE_PACKAGE_TYPE_SQL)
             .bind(
@@ -287,7 +303,7 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
             ),
         ),
       );
-      return reply({ ok: true, created: OFFICIAL_PACKAGES.length });
+      return reply({ ok: true, created: toInsert.length });
     }
     if (input.action === 'type-save') {
       const grants = JSON.stringify(input.grants);

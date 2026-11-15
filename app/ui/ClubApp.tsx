@@ -57,7 +57,12 @@ export default function ClubApp() {
     [leads] = useState<{ overdue: number; waiting: number; queued: number } | undefined>(),
     [crm2, setCrm2] = useState<{ newUnhandled: number; overdueTasks: number } | undefined>(),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('facility'),
-    [settingsSub, setSettingsSub] = useState<string>('all'),
+    [settingsSub, setSettingsSub] = useState<string>(
+      deepLink.view === 'packages' ? 'packages' : 'all',
+    ),
+    [settingsOpenCard, setSettingsOpenCard] = useState<'hour_packages' | null>(
+      deepLink.view === 'packages' ? 'hour_packages' : null,
+    ),
     [crmSub, setCrmSub] = useState<string>('customers');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
@@ -178,6 +183,12 @@ export default function ClubApp() {
     setAuthState('login');
   }
   function go(v: string) {
+    if (v === 'packages' && allowed('settings')) {
+      setSettingsSub('packages');
+      setSettingsOpenCard('hour_packages');
+      setView('settings');
+      return;
+    }
     setView(ADMIN_VIEWS.has(v) && allowed(v) ? v : 'dashboard');
   }
   const chosen = selected ? (b.find((x) => x.id === selected.id) ?? selected) : null;
@@ -297,26 +308,30 @@ export default function ClubApp() {
               {view === 'coaching' && allowed('coaching') && (
                 <CoachingPanel permissions={data?.permissions ?? []} />
               )}
-              {view === 'settings' && allowed('settings') && (
-                <SystemSettingsHub
-                  config={c}
-                  busy={busy}
-                  data={data}
-                  activeSub={settingsSub}
-                  onSelectSub={setSettingsSub}
-                  onSave={(v) => mutate({ action: 'settings', value: v })}
-                  onGo={go}
-                  onChanged={load}
-                />
-              )}
+              {(view === 'settings' || (view === 'packages' && allowed('settings'))) &&
+                allowed('settings') && (
+                  <SystemSettingsHub
+                    config={c}
+                    busy={busy}
+                    data={data}
+                    activeSub={settingsSub}
+                    onSelectSub={setSettingsSub}
+                    initialOpenCardId={settingsOpenCard}
+                    onClearInitialOpenCard={() => setSettingsOpenCard(null)}
+                    onSave={(v) => mutate({ action: 'settings', value: v })}
+                    onGo={go}
+                    onChanged={load}
+                  />
+                )}
               {view === 'reports' && allowed('reports') && <ReportsPanel />}
-              {(view === 'members' || view === 'packages') && allowed('members') && (
+              {view === 'members' && allowed('members') && (
                 <MembersPanel
                   key={view}
                   permissions={data?.permissions ?? []}
                   initialCustomer={memberTarget?.id}
                   initialPhone={memberTarget?.phone}
-                  initialTab={view === 'packages' ? 'catalog' : 'members'}
+                  initialTab="members"
+                  onOpenPackageSettings={() => go('packages')}
                   onStartSession={(cust) => {
                     setBookingCustomer({ name: cust.name, phone: cust.phone });
                     setBookingRoom('line-1');

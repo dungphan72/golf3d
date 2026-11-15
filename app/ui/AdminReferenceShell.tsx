@@ -35,7 +35,6 @@ export const ADMIN_NAV = [
   { key: 'rooms', label: 'POS & Bán hàng', icon: Store },
   { key: 'crmx', label: 'Khách hàng (CRM)', icon: Users },
   { key: 'members', label: 'Hội viên', icon: Crown },
-  { key: 'packages', label: 'Gói giờ & Thẻ', icon: Layers },
   { key: 'content', label: 'Giải đấu', icon: Trophy },
   { key: 'coaching', label: 'Huấn luyện', icon: GraduationCap },
   { key: 'fnb', label: 'Sản phẩm & Dịch vụ', icon: Package },
@@ -48,6 +47,7 @@ export const SETTINGS_SUBNAV = [
   { key: 'facility', label: 'Cơ sở & Khu vực' },
   { key: 'hours', label: 'Giờ hoạt động' },
   { key: 'pricing', label: 'Giá & Thuế' },
+  { key: 'packages', label: 'Gói giờ & Thẻ' },
   { key: 'payment', label: 'Thanh toán' },
   { key: 'staff', label: 'Tài khoản & Phân quyền' },
   { key: 'integration', label: 'Tích hợp' },
@@ -65,6 +65,7 @@ export const CRM_SUBNAV: { key: string; label: string; badge?: number }[] = [
 
 export const ADMIN_VIEWS = new Set([
   ...ADMIN_NAV.map((n) => n.key),
+  'packages',
   'online',
   'marketing',
 ]);

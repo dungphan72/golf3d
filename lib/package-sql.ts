@@ -5,6 +5,7 @@ export const CREATE_CUSTOMER_SQL = `INSERT INTO customers(id,tenant,name,phone,n
 export const UPDATE_CUSTOMER_SQL = `UPDATE customers SET name=?,note=? WHERE tenant=? AND id=?`;
 export const CREATE_PACKAGE_TYPE_SQL = `INSERT INTO package_types(id,tenant,name,price,grants,valid_days,perks,active,created,section,room) VALUES (?,?,?,?,?,?,?,?,?,?,?)`;
 export const UPDATE_PACKAGE_TYPE_SQL = `UPDATE package_types SET name=?,price=?,grants=?,valid_days=?,perks=?,active=?,section=?,room=? WHERE tenant=? AND id=?`;
+export const DELETE_PACKAGE_TYPE_SQL = `DELETE FROM package_types WHERE tenant=? AND id=?`;
 export const INSERT_PACKAGE_SQL = `INSERT INTO customer_packages(id,tenant,customer_id,type_id,name,source,price_paid,grants,perks,purchased,expires,actor,room) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_LEDGER_SQL = `INSERT INTO package_ledger(id,tenant,package_id,kind,delta,reason,booking_id,actor,note,created) VALUES (?,?,?,?,?,?,?,?,?,?)`;
 export const INSERT_PACKAGE_SALE_ENTRY_SQL = `INSERT INTO finance_entries(id,tenant,shift_id,kind,method,amount,booking_id,request_id,note,actor,created,package_id) VALUES (?,?,?,'payment',?,?,NULL,?,?,?,?,?)`;

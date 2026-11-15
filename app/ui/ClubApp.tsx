@@ -56,7 +56,8 @@ export default function ClubApp() {
     [leads] = useState<{ overdue: number; waiting: number; queued: number } | undefined>(),
     [crm2, setCrm2] = useState<{ newUnhandled: number; overdueTasks: number } | undefined>(),
     [settingsTab, setSettingsTab] = useState<SettingsTab>('facility'),
-    [settingsSub, setSettingsSub] = useState<string>('all');
+    [settingsSub, setSettingsSub] = useState<string>('all'),
+    [crmSub, setCrmSub] = useState<string>('customers');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   async function load() {
     try {
@@ -217,11 +218,28 @@ export default function ClubApp() {
           setSettingsSub(sub);
           go('settings');
         }}
+        crmSub={view === 'marketing' ? 'marketing' : crmSub}
+        onSelectCrmSub={(sub) => {
+          setCrmSub(sub);
+          go('crmx');
+        }}
         onGo={go}
         onSelect={setSelected}
         onLogout={signOut}
       >
-        <div className={view === 'dashboard' ? 'ar-content' : (view === 'settings' ? 'ar-settings-wrap' : (view === 'rooms' ? 'ar-pos-wrap' : 'ds-root ar-legacy-content'))}>
+        <div
+          className={
+            view === 'dashboard'
+              ? 'ar-content'
+              : view === 'settings'
+                ? 'ar-settings-wrap'
+                : view === 'rooms'
+                  ? 'ar-pos-wrap'
+                  : view === 'crmx' || view === 'marketing'
+                    ? 'ar-crm-wrap'
+                    : 'ds-root ar-legacy-content'
+          }
+        >
           {error && (
             <div className="error-box" role="alert">
               {error}
@@ -301,8 +319,9 @@ export default function ClubApp() {
                   key={view}
                   permissions={data?.permissions ?? []}
                   initialTab={
-                    view === 'marketing' ? 'marketing' : deepCustomer ? 'files' : 'overview'
+                    view === 'marketing' ? 'marketing' : deepCustomer ? 'customers' : crmSub
                   }
+                  onFlowChange={(page) => setCrmSub(page)}
                   onNavigate={handleCrmNavigate}
                 />
               )}

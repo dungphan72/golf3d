@@ -54,6 +54,15 @@ export const SETTINGS_SUBNAV = [
   { key: 'security', label: 'Sao lưu & Bảo mật' },
 ];
 
+export const CRM_SUBNAV: { key: string; label: string; badge?: number }[] = [
+  { key: 'customers', label: 'CRM Khách hàng' },
+  { key: 'leads', label: 'Lead tiềm năng', badge: 12 },
+  { key: 'opportunities', label: 'Cơ hội & Bán hàng' },
+  { key: 'appointments', label: 'Đặt sân & Lịch hẹn' },
+  { key: 'marketing', label: 'Marketing' },
+  { key: 'tasks', label: 'Công việc' },
+];
+
 export const ADMIN_VIEWS = new Set([
   ...ADMIN_NAV.map((n) => n.key),
   'online',
@@ -68,6 +77,8 @@ export function AdminReferenceShell({
   error,
   settingsSub = 'all',
   onSelectSettingsSub,
+  crmSub = 'customers',
+  onSelectCrmSub,
   onSelect,
   onLogout,
   children,
@@ -79,6 +90,8 @@ export function AdminReferenceShell({
   error: string;
   settingsSub?: string;
   onSelectSettingsSub?: (sub: string) => void;
+  crmSub?: string;
+  onSelectCrmSub?: (sub: string) => void;
   onSelect: (b: Booking) => void;
   onLogout: () => void;
   children: ReactNode;
@@ -88,7 +101,7 @@ export function AdminReferenceShell({
     [bell, setBell] = useState(false),
     [profile, setProfile] = useState(false),
     [search, setSearch] = useState('');
-  const active = view === 'online' ? 'bookings' : view;
+  const active = view === 'online' ? 'bookings' : view === 'marketing' ? 'crmx' : view;
   const nav = ADMIN_NAV.filter((n) => visible(n.key));
   const hits = search.trim()
     ? (data?.bookings
@@ -142,6 +155,25 @@ export function AdminReferenceShell({
                 <I />
                 <span>{label}</span>
               </button>
+              {key === 'crmx' && active === 'crmx' && (
+                <div className="ar-sidebar-submenu">
+                  {CRM_SUBNAV.map((sub) => (
+                    <button
+                      key={sub.key}
+                      type="button"
+                      className={`ar-sidebar-subitem ${crmSub === sub.key ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectCrmSub?.(sub.key);
+                      }}
+                    >
+                      <span className="ar-bullet">•</span>
+                      <span>{sub.label}</span>
+                      {sub.badge && <span className="ar-sidebar-badge">{sub.badge}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               {key === 'settings' && active === 'settings' && (
                 <div className="ar-sidebar-submenu">
                   {SETTINGS_SUBNAV.map((sub) => (
@@ -167,7 +199,7 @@ export function AdminReferenceShell({
           <img src={BRAND.logo} alt="" className="ar-footer-logo" />
           <div className="ar-footer-text">
             <strong>Saigon Indoor Golf Club</strong>
-            <small>Phiên bản v1.0.0</small>
+            <small>250 Lương Định Của, P. Bình Trưng, TP.HCM</small>
           </div>
         </div>
       </aside>

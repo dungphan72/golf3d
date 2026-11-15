@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
+  AlertTriangle,
   ArrowLeft,
   CalendarDays,
   Check,
@@ -30,9 +31,13 @@ import {
   ShoppingBag,
   Coffee,
   Sparkles,
+  Tag,
+  Banknote,
+  Percent,
 } from 'lucide-react';
 import { rooms, money, sessionQuote, type Booking, type Segment } from '../../lib/club';
 import { operationKey } from '../../lib/finance';
+import { discountFromPercent } from '../../lib/billing';
 import type { Bill, Service } from '../../lib/pricing';
 import type { FoodLine } from '../../lib/fnb';
 import type { Data } from './shared';
@@ -54,6 +59,7 @@ type DesktopStep = 'map' | 'order' | 'pay' | 'done';
 type ViewMode = 'desktop' | 'mobile' | 'overview';
 type PayMethod = 'cash' | 'card' | 'transfer';
 type CatalogCategory = 'fnb' | 'service' | 'accessory' | 'combo';
+type ShiftModalType = 'open' | 'close' | 'cash-in' | 'cash-out' | null;
 
 interface CatalogItem {
   id: string;
@@ -137,7 +143,7 @@ export function ModernPosFlow({
   // Local items added in this session before checkout
   const [extraItems, setExtraItems] = useState<{ id: string; name: string; qty: number; price: number }[]>([]);
 
-  // Modals
+  // Modals & State
   const [walkInModal, setWalkInModal] = useState<string | null>(null);
   const [walkInName, setWalkInName] = useState('');
   const [walkInPhone, setWalkInPhone] = useState('');
@@ -145,6 +151,24 @@ export function ModernPosFlow({
   const [editCustomerModal, setEditCustomerModal] = useState(false);
   const [custNameInput, setCustNameInput] = useState('');
   const [custPhoneInput, setCustPhoneInput] = useState('');
+
+  // Shift modals & state (P0)
+  const [shiftModal, setShiftModal] = useState<ShiftModalType>(null);
+  const [shiftNameInput, setShiftNameInput] = useState('Ca sáng (06:00 - 14:00)');
+  const [shiftCashInput, setShiftCashInput] = useState('1000000');
+  const [cashEntryAmount, setCashEntryAmount] = useState('');
+  const [cashEntryNote, setCashEntryNote] = useState('');
+  const [closeCountedCash, setCloseCountedCash] = useState('');
+  const [closeCountedTransfer, setCloseCountedTransfer] = useState('');
+  const [closeCountedCard, setCloseCountedCard] = useState('');
+  const [closeNote, setCloseNote] = useState('');
+
+  // Discount & Voucher modal & state (P0)
+  const [discountModal, setDiscountModal] = useState(false);
+  const [customDiscount, setCustomDiscount] = useState<{ amount: number; reason: string } | null>(null);
+  const [voucherCodeInput, setVoucherCodeInput] = useState('');
+  const [discountValInput, setDiscountValInput] = useState('');
+  const [discountReasonInput, setDiscountReasonInput] = useState('Khách quen');
 
   // Payment state
   const [payMethod, setPayMethod] = useState<PayMethod>('cash');
@@ -220,7 +244,7 @@ export function ModernPosFlow({
   const extraTotal = extraItems.reduce((acc, item) => acc + item.price * item.qty, 0);
   const golfBaseTotal = q.total > 0 ? q.total : 350000;
   const subtotal = golfBaseTotal + servedFood + extraTotal;
-  const discountAmount = bill?.discount?.amount ?? 0;
+  const discountAmount = (bill?.discount?.amount ?? 0) || (customDiscount?.amount ?? 0);
   const total = Math.max(0, subtotal - discountAmount);
 
   const finished = b?.status === 'finished';
@@ -244,6 +268,7 @@ export function ModernPosFlow({
     setPaid(null);
     setPayMethod('cash');
     setExtraItems([]);
+    setCustomDiscount(null);
     setStep(to);
   }
 
@@ -318,9 +343,141 @@ export function ModernPosFlow({
     }
   }
 
+  // Switch Service between Hourly, 9-hole, 18-hole (P0)
+  async function handleSwitchService(target: 'gdr' | '9' | '18') {
+    if (!b || saving || b.service === target) return;
+    setSaving(true);
+    try {
+      await onMutate({ action: 'switch-service', id: b.id, service: target });
+      await onRefresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Discount & Voucher Application (P0)
+  async function handleApplyDiscount(amount: number, reason: string) {
+    if (!b || saving || amount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/billing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'discount',
+          bookingId: b.id,
+          amount,
+          reason: reason.trim() || 'Ưu đãi quầy POS',
+        }),
+      });
+      if (res.ok) {
+        setCustomDiscount({ amount, reason });
+        await bill?.discount;
+        await onRefresh();
+        setDiscountModal(false);
+      } else {
+        // Fallback locally
+        setCustomDiscount({ amount, reason });
+        setDiscountModal(false);
+      }
+    } catch {
+      setCustomDiscount({ amount, reason });
+      setDiscountModal(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Shift Operations (P0)
+  async function handleOpenShift() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'open',
+          requestId: operationKey(),
+          name: shiftNameInput.trim() || 'Ca sáng',
+          openingCash: Number(shiftCashInput.replace(/\D/g, '')) || 0,
+        }),
+      });
+      if (res.ok) {
+        setShiftModal(null);
+        await onRefresh();
+      } else {
+        const d = (await res.json()) as { error?: string };
+        setNotice(d.error || 'Chưa mở được ca');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleCloseShift() {
+    if (!data.activeShift || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'close',
+          shiftId: data.activeShift.id,
+          expectedVersion: 0,
+          countedCash: Number(closeCountedCash.replace(/\D/g, '')) || 0,
+          countedTransfer: Number(closeCountedTransfer.replace(/\D/g, '')) || 0,
+          countedCard: Number(closeCountedCard.replace(/\D/g, '')) || 0,
+          note: closeNote.trim() || 'Bàn giao ca thành công',
+        }),
+      });
+      if (res.ok) {
+        setShiftModal(null);
+        await onRefresh();
+      } else {
+        const d = (await res.json()) as { error?: string };
+        setNotice(d.error || 'Chưa đóng được ca');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleCashEntry(kind: 'in' | 'out') {
+    if (!data.activeShift || saving) return;
+    const amount = Number(cashEntryAmount.replace(/\D/g, '')) || 0;
+    if (amount <= 0) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/finance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cash-entry',
+          requestId: operationKey(),
+          shiftId: data.activeShift.id,
+          kind,
+          amount,
+          note: cashEntryNote.trim() || (kind === 'in' ? 'Nạp tiền vào quỹ ca' : 'Rút chi tiền mặt từ ca'),
+        }),
+      });
+      if (res.ok) {
+        setShiftModal(null);
+        setCashEntryAmount('');
+        setCashEntryNote('');
+        await onRefresh();
+      } else {
+        const d = (await res.json()) as { error?: string };
+        setNotice(d.error || 'Chưa ghi nhận quỹ');
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   // Adding an item from the 4-column catalog
   async function handleAddCatalogItem(item: CatalogItem) {
-    // If the database has matching item, create and serve order
     const menuItem = food.data?.menu.find(
       (m) => m.name.toLowerCase() === item.name.toLowerCase() && m.active,
     );
@@ -344,11 +501,10 @@ export function ModernPosFlow({
           return;
         }
       } catch {
-        // Fallback to local extra items
+        // Fallback
       }
     }
 
-    // Fallback: Add to local extra items list
     setExtraItems((prev) => {
       const exist = prev.find((x) => x.name === item.name);
       if (exist) {
@@ -358,7 +514,6 @@ export function ModernPosFlow({
     });
   }
 
-  // Remove an item
   async function handleRemoveExtraItem(itemName: string) {
     setExtraItems((prev) => prev.filter((x) => x.name !== itemName));
   }
@@ -456,7 +611,6 @@ export function ModernPosFlow({
     });
   }
 
-  // Filter catalog items
   const filteredCatalog = useMemo(() => {
     return CATALOG_ITEMS.filter((item) => {
       const matchCat = item.category === catalogCat;
@@ -473,7 +627,6 @@ export function ModernPosFlow({
     year: 'numeric',
   });
 
-  // Fallback booking object if testing flow standalone
   const activeBooking: Booking = b ?? {
     id: 'demo-booking-1',
     tenant: 'demo',
@@ -566,6 +719,64 @@ export function ModernPosFlow({
           </button>
         </div>
       </header>
+
+      {/* =====================================================================
+          SHIFT STATUS RIBBON (P0: Cảnh báo & Mở ca nhanh)
+          ===================================================================== */}
+      {!data.activeShift ? (
+        <div className="pos-shift-warning-banner">
+          <div className="pos-shift-warning-left">
+            <AlertTriangle size={18} />
+            <span>Chưa có ca thu ngân đang mở. Hãy mở ca để ghi nhận sổ quỹ và thu tiền bán hàng.</span>
+          </div>
+          <button
+            type="button"
+            className="pos-btn-open-shift"
+            onClick={() => setShiftModal('open')}
+          >
+            Mở ca thu ngân ngay
+          </button>
+        </div>
+      ) : (
+        <div className="pos-shift-active-ribbon">
+          <div className="pos-shift-active-left">
+            <span className="pos-shift-status-dot" />
+            <span>
+              Ca làm việc: <strong>{data.activeShift.name}</strong> (Mở lúc{' '}
+              {new Date(data.activeShift.opened_at).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              )
+            </span>
+          </div>
+          <div className="pos-shift-active-actions">
+            <button
+              type="button"
+              className="pos-shift-btn-tool"
+              onClick={() => setShiftModal('cash-in')}
+              title="Ghi nhận nạp thêm tiền lẻ vào két"
+            >
+              + Nạp quỹ
+            </button>
+            <button
+              type="button"
+              className="pos-shift-btn-tool"
+              onClick={() => setShiftModal('cash-out')}
+              title="Rút tiền mặt chi trả nhanh"
+            >
+              − Rút quỹ
+            </button>
+            <button
+              type="button"
+              className="pos-shift-btn-tool pos-btn-danger"
+              onClick={() => setShiftModal('close')}
+            >
+              Đóng & Bàn giao ca
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Stepper bar for Desktop flow */}
       {viewMode === 'desktop' && (
@@ -810,6 +1021,29 @@ export function ModernPosFlow({
                       <span>|</span>
                       <span>Dự kiến: {time(activeBooking.end)}</span>
                     </div>
+
+                    {/* Service Switcher (P0: Chuyển đổi linh hoạt giữa giờ & game) */}
+                    <div className="pos-service-switcher">
+                      <span className="pos-service-switch-label">Hình thức tính cước:</span>
+                      <div className="pos-service-pills">
+                        {[
+                          { key: 'gdr', label: 'Tập theo giờ' },
+                          { key: '9', label: 'Game 9 hố' },
+                          { key: '18', label: 'Game 18 hố' },
+                        ].map((s) => (
+                          <button
+                            key={s.key}
+                            type="button"
+                            className={`pos-service-pill ${activeBooking.service === s.key ? 'active' : ''}`}
+                            disabled={saving || activeBooking.status === 'finished'}
+                            onClick={() => handleSwitchService(s.key as 'gdr' | '9' | '18')}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <div className="pos-timer-actions">
                       <button
                         type="button"
@@ -864,7 +1098,9 @@ export function ModernPosFlow({
                         <span className="pos-bill-item-name">
                           {SERVICE_LABEL[activeBooking.service] ?? 'Chơi golf (giờ)'}
                         </span>
-                        <span className="pos-bill-item-qty">1 giờ</span>
+                        <span className="pos-bill-item-qty">
+                          {activeBooking.service === 'gdr' ? '1 giờ' : '1 lượt'}
+                        </span>
                         <span className="pos-bill-item-price">{money(golfBaseTotal)}</span>
                         <button
                           type="button"
@@ -911,6 +1147,20 @@ export function ModernPosFlow({
                       ))}
                     </div>
 
+                    {/* Voucher / Discount Button (P0) */}
+                    <button
+                      type="button"
+                      className="pos-btn-discount"
+                      onClick={() => setDiscountModal(true)}
+                    >
+                      <Tag size={14} />
+                      <span>
+                        {customDiscount
+                          ? `Giảm giá: −${money(customDiscount.amount)} (${customDiscount.reason})`
+                          : '+ Thêm giảm giá / Voucher'}
+                      </span>
+                    </button>
+
                     <div className="pos-bill-summary">
                       <div className="pos-summary-line">
                         <span>Tạm tính</span>
@@ -918,7 +1168,9 @@ export function ModernPosFlow({
                       </div>
                       <div className="pos-summary-line">
                         <span>Giảm giá</span>
-                        <span>{money(discountAmount)}</span>
+                        <span style={{ color: discountAmount > 0 ? '#16a34a' : 'inherit' }}>
+                          {discountAmount > 0 ? `−${money(discountAmount)}` : money(0)}
+                        </span>
                       </div>
                       <div className="pos-summary-total">
                         <span>Tổng thanh toán</span>
@@ -1204,6 +1456,7 @@ export function ModernPosFlow({
                   onClick={() => {
                     setActiveId(null);
                     setExtraItems([]);
+                    setCustomDiscount(null);
                     setStep('map');
                   }}
                 >
@@ -2144,6 +2397,308 @@ export function ModernPosFlow({
                 }}
               >
                 Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Open / Close / Cash In-Out Modal (P0) */}
+      {shiftModal && (
+        <div className="ar-settings-modal-backdrop" onClick={() => setShiftModal(null)}>
+          <div
+            className="ar-settings-modal"
+            style={{ maxWidth: '440px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ar-modal-header">
+              <div className="ar-modal-header-left">
+                <Banknote size={20} color="#16a34a" />
+                <h3 className="ar-modal-header-title">
+                  {shiftModal === 'open'
+                    ? 'Mở ca thu ngân mới'
+                    : shiftModal === 'close'
+                      ? 'Đóng & Bàn giao ca'
+                      : shiftModal === 'cash-in'
+                        ? 'Nạp tiền vào quỹ ca'
+                        : 'Rút chi tiền mặt từ ca'}
+                </h3>
+              </div>
+              <button className="ar-modal-close-btn" onClick={() => setShiftModal(null)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="ar-modal-body">
+              {shiftModal === 'open' && (
+                <>
+                  <div className="ar-field">
+                    <label>Tên ca làm việc</label>
+                    <input
+                      value={shiftNameInput}
+                      onChange={(e) => setShiftNameInput(e.target.value)}
+                      placeholder="VD: Ca sáng (06:00 - 14:00)"
+                    />
+                  </div>
+                  <div className="ar-field">
+                    <label>Tiền thối ban đầu trong két (₫)</label>
+                    <input
+                      inputMode="numeric"
+                      value={shiftCashInput}
+                      onChange={(e) => setShiftCashInput(e.target.value)}
+                      placeholder="1.000.000"
+                    />
+                  </div>
+                  <div className="pos-discount-chips" style={{ marginTop: '6px' }}>
+                    {['500000', '1000000', '2000000'].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        className={`pos-discount-chip ${shiftCashInput === amt ? 'active' : ''}`}
+                        onClick={() => setShiftCashInput(amt)}
+                      >
+                        {money(Number(amt))}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {shiftModal === 'close' && (
+                <>
+                  <div className="ar-field">
+                    <label>Tiền mặt thực đếm trong két (₫)</label>
+                    <input
+                      inputMode="numeric"
+                      value={closeCountedCash}
+                      onChange={(e) => setCloseCountedCash(e.target.value)}
+                      placeholder="Nhập tổng tiền mặt thực tế"
+                    />
+                  </div>
+                  <div className="ar-field">
+                    <label>Tiền chuyển khoản thực nhận (₫)</label>
+                    <input
+                      inputMode="numeric"
+                      value={closeCountedTransfer}
+                      onChange={(e) => setCloseCountedTransfer(e.target.value)}
+                      placeholder="Theo sao kê tài khoản ngân hàng"
+                    />
+                  </div>
+                  <div className="ar-field">
+                    <label>Tiền cà thẻ POS thực nhận (₫)</label>
+                    <input
+                      inputMode="numeric"
+                      value={closeCountedCard}
+                      onChange={(e) => setCloseCountedCard(e.target.value)}
+                      placeholder="Theo bill tổng kết máy cà thẻ"
+                    />
+                  </div>
+                  <div className="ar-field">
+                    <label>Ghi chú bàn giao</label>
+                    <input
+                      value={closeNote}
+                      onChange={(e) => setCloseNote(e.target.value)}
+                      placeholder="Ghi chú thừa/thiếu tiền (nếu có)"
+                    />
+                  </div>
+                </>
+              )}
+
+              {(shiftModal === 'cash-in' || shiftModal === 'cash-out') && (
+                <>
+                  <div className="ar-field">
+                    <label>Số tiền (₫)</label>
+                    <input
+                      inputMode="numeric"
+                      value={cashEntryAmount}
+                      onChange={(e) => setCashEntryAmount(e.target.value)}
+                      placeholder="VD: 200.000"
+                    />
+                  </div>
+                  <div className="ar-field">
+                    <label>Lý do {shiftModal === 'cash-in' ? 'nạp tiền' : 'rút tiền'}</label>
+                    <input
+                      value={cashEntryNote}
+                      onChange={(e) => setCashEntryNote(e.target.value)}
+                      placeholder={
+                        shiftModal === 'cash-in'
+                          ? 'Đổi tiền lẻ nạp thêm vào két'
+                          : 'Chi mua đá lạnh, văn phòng phẩm...'
+                      }
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="ar-modal-footer">
+              <button type="button" className="ar-btn-secondary" onClick={() => setShiftModal(null)}>
+                Hủy
+              </button>
+              {shiftModal === 'open' && (
+                <button type="button" className="ar-btn-primary" onClick={handleOpenShift} disabled={saving}>
+                  Xác nhận Mở ca
+                </button>
+              )}
+              {shiftModal === 'close' && (
+                <button
+                  type="button"
+                  className="ar-btn-primary"
+                  style={{ background: '#dc2626' }}
+                  onClick={handleCloseShift}
+                  disabled={saving}
+                >
+                  Xác nhận Đóng ca & Bàn giao
+                </button>
+              )}
+              {(shiftModal === 'cash-in' || shiftModal === 'cash-out') && (
+                <button
+                  type="button"
+                  className="ar-btn-primary"
+                  onClick={() => handleCashEntry(shiftModal === 'cash-in' ? 'in' : 'out')}
+                  disabled={saving}
+                >
+                  Ghi nhận quỹ
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Discount & Voucher Modal (P0) */}
+      {discountModal && (
+        <div className="ar-settings-modal-backdrop" onClick={() => setDiscountModal(false)}>
+          <div
+            className="ar-settings-modal"
+            style={{ maxWidth: '420px' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="ar-modal-header">
+              <div className="ar-modal-header-left">
+                <Tag size={20} color="#0284c7" />
+                <h3 className="ar-modal-header-title">Áp dụng Giảm giá / Voucher</h3>
+              </div>
+              <button className="ar-modal-close-btn" onClick={() => setDiscountModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="ar-modal-body">
+              <div className="ar-field">
+                <label>Mã Voucher / Coupon</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    value={voucherCodeInput}
+                    onChange={(e) => setVoucherCodeInput(e.target.value.toUpperCase())}
+                    placeholder="VD: GOLF10, VIPGOLF, KHAI_TRUONG"
+                  />
+                  <button
+                    type="button"
+                    className="ar-btn-secondary"
+                    style={{ whiteSpace: 'nowrap' }}
+                    onClick={() => {
+                      if (voucherCodeInput === 'VIPGOLF' || voucherCodeInput === 'GOLF10') {
+                        const disc = discountFromPercent(subtotal, 10);
+                        setDiscountValInput(String(disc));
+                        setDiscountReasonInput(`Voucher ${voucherCodeInput} (−10%)`);
+                      } else if (voucherCodeInput === 'KHAI_TRUONG' || voucherCodeInput === 'GOLF20') {
+                        const disc = discountFromPercent(subtotal, 20);
+                        setDiscountValInput(String(disc));
+                        setDiscountReasonInput(`Voucher ${voucherCodeInput} (−20%)`);
+                      } else {
+                        setDiscountValInput('50000');
+                        setDiscountReasonInput(`Voucher ${voucherCodeInput || 'Ưu đãi'}`);
+                      }
+                    }}
+                  >
+                    Kiểm tra
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ margin: '10px 0' }}>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#475569', display: 'block', marginBottom: '6px' }}>
+                  Chọn nhanh mức giảm giá (% hoặc ₫):
+                </label>
+                <div className="pos-discount-chips">
+                  {[5, 10, 15, 20].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      className="pos-discount-chip"
+                      onClick={() => {
+                        const amt = discountFromPercent(subtotal, pct);
+                        setDiscountValInput(String(amt));
+                        setDiscountReasonInput(`Giảm ${pct}% tổng bill`);
+                      }}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                  {['50000', '100000', '200000'].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      className="pos-discount-chip"
+                      onClick={() => {
+                        setDiscountValInput(amt);
+                        setDiscountReasonInput(`Giảm ${money(Number(amt))}`);
+                      }}
+                    >
+                      −{money(Number(amt))}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="ar-field">
+                <label>Số tiền giảm thực tế (₫)</label>
+                <input
+                  inputMode="numeric"
+                  value={discountValInput}
+                  onChange={(e) => setDiscountValInput(e.target.value)}
+                  placeholder="VD: 50.000"
+                />
+              </div>
+
+              <div className="ar-field">
+                <label>Lý do giảm giá</label>
+                <input
+                  value={discountReasonInput}
+                  onChange={(e) => setDiscountReasonInput(e.target.value)}
+                  placeholder="Khách VIP / Khai trương / Người quen"
+                />
+              </div>
+            </div>
+
+            <div className="ar-modal-footer">
+              {customDiscount && (
+                <button
+                  type="button"
+                  className="ar-btn-secondary"
+                  style={{ color: '#dc2626', marginRight: 'auto' }}
+                  onClick={() => {
+                    setCustomDiscount(null);
+                    setDiscountModal(false);
+                  }}
+                >
+                  Hủy giảm giá
+                </button>
+              )}
+              <button type="button" className="ar-btn-secondary" onClick={() => setDiscountModal(false)}>
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="ar-btn-primary"
+                onClick={() => {
+                  const amt = Number(discountValInput.replace(/\D/g, '')) || 0;
+                  handleApplyDiscount(amt, discountReasonInput);
+                }}
+                disabled={saving}
+              >
+                Áp dụng
               </button>
             </div>
           </div>

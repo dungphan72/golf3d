@@ -3,6 +3,7 @@ import {
   quote,
   wholeQuote,
   sessionQuote,
+  minChargeOffer,
   packageLine,
   clipSegments,
   serviceName,
@@ -57,6 +58,7 @@ export const clubInput = z.object({
     'reschedule',
     'extend',
     'switch-service',
+    'round-min',
     'walkin',
     'maintenance',
     'clean-test-data',
@@ -525,6 +527,20 @@ export async function runClubAction(
       .run();
     if (!ended.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
     await audit(tenant, 'Kết thúc', b.id);
+    return ok();
+  } else if (input.action === 'round-min') {
+    // Staff confirmed, at payment, raising a short hourly session to the minimum charge.
+    const offer = minChargeOffer(b);
+    if (!offer) return fail('Phiếu này không áp dụng hoặc đã làm tròn tối thiểu', 409);
+    const next = { ...snap, minCharge: { from: offer.golf, to: offer.to, at: now, actor: 'staff' } };
+    const raised = await db()
+      .prepare(
+        "UPDATE bookings SET golf_amount=?,amount=?+food_total,price=? WHERE tenant=? AND id=? AND status='finished' AND price=? AND golf_amount=?",
+      )
+      .bind(offer.to, offer.to, JSON.stringify(next), tenant, b.id, b.price, offer.golf)
+      .run();
+    if (!raised.meta.changes) return fail('Phiếu vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    await audit(tenant, 'Làm tròn tối thiểu', `${b.id} ${offer.golf} → ${offer.to}`);
     return ok();
   } else if (input.action === 'pay') {
     return fail('Thanh toán phải được ghi vào sổ ca tại màn hình mới. Hãy tải lại ứng dụng.', 409);

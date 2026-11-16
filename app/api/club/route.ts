@@ -24,6 +24,7 @@ const ACTION_PERMISSION: Record<string, Permission> = {
   reschedule: 'booking.create',
   extend: 'session.operate',
   'switch-service': 'session.operate',
+  'round-min': 'finance.operate',
   walkin: 'session.operate',
   maintenance: 'session.operate',
   'request-update': 'support.handle',

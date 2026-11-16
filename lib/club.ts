@@ -230,7 +230,7 @@ export function clipSegments(segments: Segment[], from: number): Segment[] {
  * Bill of a session. Without a switch it is the plain hourly or whole-round quote. After switching
  * between practice and a game, each finished stretch stays on the bill and the current one adds to it.
  */
-export function sessionQuote(
+function baseSessionQuote(
   service: Service,
   segments: Segment[],
   snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number },
@@ -267,6 +267,65 @@ export function sessionQuote(
       : (all.find((s) => snap.config.feeServices!.includes(s)) ?? service);
   return { lines, parts, ...billTotals(subtotal, snap.config, feeService) };
 }
+/**
+ * Minimum charge of a plain hourly session. When the staff confirm it at payment, the golf part of a
+ * finished hourly session that came to less is raised to this amount. It is recorded on the booking
+ * (`price.minCharge`) so the bill and the receipt show it. It never applies once a session has been
+ * switched between practice and a game.
+ */
+export const MIN_HOURLY_CHARGE = 100_000;
+export type MinCharge = { from: number; to: number; at: number; actor: string };
+
+export function sessionQuote(
+  service: Service,
+  segments: Segment[],
+  snap: {
+    config: Config;
+    vip?: boolean;
+    base: number;
+    promo?: { name: string } | null;
+    prior?: PriorPart[];
+    phaseFrom?: number;
+    minCharge?: MinCharge;
+  },
+): Bill & { parts?: BillPart[] } {
+  const bill = baseSessionQuote(service, segments, snap);
+  const m = snap.minCharge;
+  if (!m || service !== 'gdr' || (snap.prior?.length ?? 0) > 0 || bill.total >= m.to) return bill;
+  // The raise is its own line, so lines + service fee + VAT still add up to the new total.
+  return {
+    ...bill,
+    lines: [
+      ...bill.lines,
+      {
+        date: '',
+        label: `Làm tròn tối thiểu ${money(m.to)}`,
+        minutes: 0,
+        rate: 0,
+        amount: m.to - bill.total,
+        package: true,
+      },
+    ],
+    total: m.to,
+  };
+}
+
+/** The raise to offer at payment, or null when it does not apply (not hourly, switched, already done, nothing owed). */
+export function minChargeOffer(
+  b: Pick<Booking, 'status' | 'service' | 'price' | 'golf_amount'>,
+): { golf: number; to: number } | null {
+  if (b.status !== 'finished' || b.service !== 'gdr' || b.golf_amount == null) return null;
+  let snap: { prior?: unknown[]; minCharge?: unknown };
+  try {
+    snap = JSON.parse(b.price);
+  } catch {
+    return null;
+  }
+  if (snap.prior?.length || snap.minCharge) return null;
+  if (b.golf_amount <= 0 || b.golf_amount >= MIN_HOURLY_CHARGE) return null;
+  return { golf: b.golf_amount, to: MIN_HOURLY_CHARGE };
+}
+
 export function ready(c: Config) {
   return (
     !!c.open &&

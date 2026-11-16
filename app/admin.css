@@ -11688,3 +11688,11 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .booking-unmet {
   list-style: disc;
 }
+
+/* Confirm/prompt dialogs fit their content (they were stretching to the full window height). */
+dialog.native-dialog.ds-ask {
+  min-height: 0 !important;
+  height: fit-content !important;
+  margin: auto;
+  max-height: calc(100dvh - 32px);
+}

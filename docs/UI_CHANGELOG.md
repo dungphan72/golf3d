@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Làm tròn tối thiểu 100.000 khi thanh toán giờ chơi; xác nhận khi chuyển tập luyện ↔ chơi hố (nhánh `fix/p0-data-integrity`)
+- **Lý do:** (1) khách tập theo giờ mà tiền chơi chưa đến 100.000 ₫ thì nhân viên cần được hỏi có làm tròn lên 100.000 ₫ không; (2) chuyển giữa tập luyện và chơi hố cần xác nhận, và trường hợp này không làm tròn.
+- **Quy tắc:** chỉ áp dụng cho phiên tập theo giờ đã kết thúc, chưa thu tiền, chưa từng chuyển hình thức, tiền chơi (đã gồm phí dịch vụ và VAT) trên 0 và dưới 100.000 ₫. Làm tròn nâng tiền chơi lên đúng 100.000 ₫; tiền đồ ăn thức uống không đổi. Phiên đã chuyển giữa tập luyện và chơi hố không bao giờ được đề nghị làm tròn; máy chủ từ chối (409).
+- **File:** `lib/club.ts` (`MIN_HOURLY_CHARGE`, `minChargeOffer`, `sessionQuote` thêm dòng "Làm tròn tối thiểu" để hóa đơn và phiếu in cộng khớp), `lib/server/club-service.ts` (hành động `round-min`, ghi nhật ký), `app/api/club/route.ts` (quyền `finance.operate`), `app/ui/ModernPosFlow.tsx` (hộp hỏi ở màn thanh toán; xác nhận trước khi chuyển, nêu tiền tập được giữ, giá lượt và việc không làm tròn), `app/ui/SessionPanel.tsx` (cùng xác nhận chuyển), `app/pos-flow.css`, `app/admin.css` (hộp xác nhận chung vừa nội dung, trước đây kéo dài hết chiều cao màn hình), `tests/session-quote.test.ts`.
+- **Hành vi:** "Giữ nguyên" thu đúng số tiền thật; "Làm tròn" ghi vào phiếu (`price.minCharge`), phiếu in và Zalo có dòng làm tròn.
+- **Kiểm thử:** `tsc`, `eslint`, `pnpm test`; trình duyệt: giữ nguyên (98 ₫), làm tròn (100.000 ₫, thu tiền mặt 100.000 ₫ qua sổ ca), chuyển sang 9 hố có hộp xác nhận rồi kết thúc 340.711 ₫ và máy chủ từ chối làm tròn.
+- **Chưa làm:** mức tối thiểu 100.000 là hằng số trong mã, chưa chỉnh được trong Cài đặt; màn thanh toán cũ trong `SessionPanel` chưa có hộp hỏi làm tròn.
+
 ## 2026-11-16 — Trang bảng giá thiết kế như poster, tự cập nhật theo cài đặt (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu trang `/bang-gia` có bố cục như poster "Bảng giá" và tự đổi nội dung khi đổi giá trong Cài đặt.
 - **Ảnh tham chiếu:** poster "BẢNG GIÁ" do chủ hệ thống gửi trong phiên (chưa có file trong `hinh-anh/thiet-ke/`; nên lưu vào thư mục này).

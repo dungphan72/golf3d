@@ -56,7 +56,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { rooms, money, sessionQuote, type Booking, type BillPart, type Segment } from '../../lib/club';
+import { rooms, money, sessionQuote, minChargeOffer, MIN_HOURLY_CHARGE, type Booking, type BillPart, type Segment } from '../../lib/club';
 import {
   operationKey,
   shiftTotals,
@@ -65,7 +65,8 @@ import {
   type Entry,
 } from '../../lib/finance';
 import { discountFromPercent, changeDue, type BillInfo } from '../../lib/billing';
-import { selectRule, type Bill, type Service } from '../../lib/pricing';
+import { packagePrice, selectRule, type Bill, type Service } from '../../lib/pricing';
+import { askConfirm } from './kit';
 import { foodLabels, type FoodLine, type MenuItem, type FoodOrder } from '../../lib/fnb';
 import type { Data } from './shared';
 import { time, date } from './shared';
@@ -158,7 +159,7 @@ function GolfFeeRows({
           <strong>Phí chơi Golf ({SERVICE_LABEL[service] || service})</strong>
           <small>
             {bill.lines.length > 0
-              ? bill.lines.map((l) => `${l.label} (${Math.round(l.minutes)}p)`).join(' · ')
+              ? bill.lines.map((l) => (l.package ? l.label : `${l.label} (${Math.round(l.minutes)}p)`)).join(' · ')
               : fallback}
           </small>
         </div>
@@ -292,6 +293,8 @@ export function ModernPosFlow({
 
   // Payment state (M07 & M08)
   const [payMethod, setPayMethod] = useState<PayMethod>('cash');
+  // Bookings whose short hourly charge staff chose to keep as it is (no raise to the minimum).
+  const [keepShort, setKeepShort] = useState<Set<string>>(new Set());
   const [tendered, setTendered] = useState('');
   const [vatInvoice, setVatInvoice] = useState(false);
   const [vatCompany, setVatCompany] = useState('');
@@ -1091,9 +1094,40 @@ export function ModernPosFlow({
 
   async function handleSwitchService(target: 'gdr' | '9' | '18') {
     if (!activeBooking || saving || activeBooking.service === target) return;
+    const from = activeBooking.service;
+    // Practice <-> game: ask first. The hours already played stay on the bill and no minimum applies.
+    if (from === 'gdr' || target === 'gdr') {
+      let snap: { vip?: boolean; base?: number } = {};
+      try {
+        snap = JSON.parse(activeBooking.price);
+      } catch {
+        /* the dialog just leaves out the amounts */
+      }
+      let detail = '';
+      if (activeBooking.status === 'booked') {
+        detail = 'Phiên chưa bắt đầu: chỉ đổi hình thức đã đặt.';
+      } else if (from === 'gdr') {
+        let gamePrice = '';
+        try {
+          gamePrice = `, cộng với giá ${SERVICE_LABEL[target]} (${activeBooking.people} người) ${money(
+            packagePrice(Date.now(), data.config, target as '9' | '18', !!snap.vip, activeBooking.people).base,
+          )} (chưa gồm phí dịch vụ và VAT)`;
+        } catch {
+          gamePrice = `, cộng với giá ${SERVICE_LABEL[target]}`;
+        }
+        detail = `Tiền tập theo giờ đến lúc này được giữ lại${gamePrice}. Không áp dụng làm tròn tối thiểu ${money(MIN_HOURLY_CHARGE)}.`;
+      } else {
+        detail = `Giá lượt ${SERVICE_LABEL[from]} đã chơi${snap.base ? ` (${money(snap.base)})` : ''} được giữ lại; tiền tập theo giờ tính từ lúc chuyển. Không áp dụng làm tròn tối thiểu ${money(MIN_HOURLY_CHARGE)}.`;
+      }
+      const yes = await askConfirm({
+        title: `Chuyển từ ${SERVICE_LABEL[from] || from} sang ${SERVICE_LABEL[target]}?`,
+        message: detail,
+        confirmLabel: 'Chuyển',
+      });
+      if (!yes) return;
+    }
     setSaving(true);
     try {
-      const from = activeBooking.service;
       const ok = await onMutate({ action: 'switch-service', id: activeBooking.id, service: target });
       if (ok) {
         const name = SERVICE_LABEL[target] || target;
@@ -2107,6 +2141,54 @@ export function ModernPosFlow({
         <div className="pos-m3-empty-box">
           <CreditCard size={36} />
           <p>Hãy chọn một line đang hoạt động hoặc đơn chờ thanh toán.</p>
+        </div>
+      );
+    }
+
+    const roundOffer = minChargeOffer(activeBooking);
+    if (roundOffer && !keepShort.has(activeBooking.id)) {
+      const add = roundOffer.to - roundOffer.golf;
+      return (
+        <div className="pos-m3-pay-section">
+          <div className="pos-m3-pay-total-banner">
+            <span>Tổng thanh toán ({selectedRoomObj.name})</span>
+            <strong>{money(payableTotal)}</strong>
+            <small>Khách: {activeBooking.customer}</small>
+          </div>
+          <div className="pos-m3-roundup" role="alertdialog" aria-labelledby="pos-roundup-title">
+            <h4 id="pos-roundup-title">Làm tròn lên {money(roundOffer.to)}?</h4>
+            <p>
+              Khách chơi theo giờ, tiền chơi chỉ <strong>{money(roundOffer.golf)}</strong>, chưa đến{' '}
+              {money(MIN_HOURLY_CHARGE)}. Làm tròn tiền chơi lên {money(roundOffer.to)} (cộng thêm{' '}
+              {money(add)})?
+            </p>
+            <div className="pos-m3-roundup-actions">
+              <button
+                type="button"
+                className="pos-m3-btn-primary pos-m3-btn-lg"
+                disabled={saving}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    const ok = await onMutate({ action: 'round-min', id: activeBooking.id });
+                    if (ok) setNotice(`Đã làm tròn tiền chơi lên ${money(roundOffer.to)}`);
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
+              >
+                Làm tròn lên {money(roundOffer.to)}
+              </button>
+              <button
+                type="button"
+                className="pos-m3-btn-outline pos-m3-btn-lg"
+                disabled={saving}
+                onClick={() => setKeepShort((cur) => new Set(cur).add(activeBooking.id))}
+              >
+                Giữ nguyên {money(roundOffer.golf)}
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

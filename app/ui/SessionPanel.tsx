@@ -1,4 +1,5 @@
 'use client';
+import { askConfirm } from './kit';
 import { useFood, SessionOrdering } from './SessionFood';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -248,7 +249,19 @@ export function SessionPanel({
                 aria-checked={b.service === value}
                 className={b.service === value ? 'on' : ''}
                 disabled={busy || b.service === value}
-                onClick={() => onAction('switch-service', { service: value })}
+                onClick={async () => {
+                  // Practice <-> game: confirm first; the hours played stay on the bill, no minimum applies.
+                  if (b.service === 'gdr' || value === 'gdr') {
+                    const yes = await askConfirm({
+                      title: `Chuyển sang ${label}?`,
+                      message:
+                        'Phần đã chơi được giữ lại trên cùng một phiếu và cộng với hình thức mới. Không áp dụng làm tròn tối thiểu 100.000 ₫.',
+                      confirmLabel: 'Chuyển',
+                    });
+                    if (!yes) return;
+                  }
+                  onAction('switch-service', { service: value });
+                }}
               >
                 {label}
               </button>

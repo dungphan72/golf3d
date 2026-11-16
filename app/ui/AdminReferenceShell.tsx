@@ -56,7 +56,7 @@ export const SETTINGS_SUBNAV = [
 
 export const CRM_SUBNAV: { key: string; label: string; badge?: number }[] = [
   { key: 'customers', label: 'CRM Khách hàng' },
-  { key: 'leads', label: 'Lead tiềm năng', badge: 12 },
+  { key: 'leads', label: 'Lead tiềm năng' },
   { key: 'opportunities', label: 'Cơ hội & Bán hàng' },
   { key: 'appointments', label: 'Đặt sân & Lịch hẹn' },
   { key: 'marketing', label: 'Marketing' },

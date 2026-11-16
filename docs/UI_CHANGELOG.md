@@ -2,6 +2,15 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — CRM: xóa toàn bộ dữ liệu giả (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu xóa hết dữ liệu giả. Màn CRM chứa 8 khách mẫu, 4 lead, 3 chiến dịch, 3 lịch hẹn mẫu, số đếm viết cứng (1.248, 368, 176, 58, 32, 156 trang, huy hiệu lead 12/17) và nhiều giá trị bịa khi đồng bộ khách thật (email `@gmail.com`, ngày sinh 10/05/1988, 38 tuổi, hạn thẻ, ưu đãi %, hệ số điểm, % tăng trưởng, chi tiêu mặc định 350.000đ).
+- **File:** `modules/crm/ui/CrmApp.tsx`, `app/ui/AdminReferenceShell.tsx` (bỏ huy hiệu số 12).
+- **Thay đổi:** danh sách khách, lead, chiến dịch, lịch hẹn bắt đầu rỗng và chỉ lấy từ dữ liệu thật (khách/hội viên/đặt sân/lead qua API). Số đếm và phân trang tính từ dữ liệu đã tải. Trường không có dữ liệu thì ẩn (email, ngày sinh, giới tính, địa chỉ, thời hạn thẻ, ưu đãi). Bỏ chọn khoảng thời gian 30/90 ngày vì số liệu 90 ngày/năm chỉ là nhân hệ số giả. Trang Marketing đọc và gửi qua dịch vụ chiến dịch thật (`/api/crm2/campaigns`, Zalo/Email, chỉ khách đã đồng ý nhận tin) thay vì thêm dòng giả. Trang Đặt sân & Lịch hẹn lấy từ đặt sân thật.
+- **Không đổi:** cơ sở dữ liệu và dữ liệu đang chạy trên VPS.
+- **Screenshot:** chụp trong phiên (khách thật duy nhất, trang Marketing rỗng); chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `eslint` 0 lỗi, build đạt, không có lỗi JS trang khi duyệt 6 trang CRM.
+- **Chưa làm:** hạng thẻ/ưu đãi thật của hội viên chưa nối vào hồ sơ CRM (đang hiện "Chưa có"/ẩn); cơ hội bán hàng và công việc chỉ lưu trong phiên (chưa lưu máy chủ).
+
 ## 2026-11-16 — CRM Khách hàng: sửa chữ xếp dọc và ảnh đại diện lỗi (nhánh `fix/p0-data-integrity`)
 - **Lý do:** ở màn hồ sơ khách hàng, khung "Thông tin cơ bản" bị ép hẹp nên SĐT, email, địa chỉ xếp từng ký tự theo chiều dọc; ảnh đại diện (ảnh stock ngoài) không tải được nên hiện ảnh vỡ.
 - **Ảnh tham chiếu:** ảnh chụp lỗi do chủ hệ thống gửi trong phiên.

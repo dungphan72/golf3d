@@ -46,6 +46,7 @@ import {
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { call, dateOnly, errText } from './api';
+import { CAMPAIGN_CHANNELS, SEGMENTS, SEGMENT_NAMES, type CampaignChannel, type CampaignSegment } from '../core/campaigns';
 import '../../../app/crm-flow.css';
 
 export type CrmFlowPage =
@@ -112,7 +113,7 @@ interface CustomerRecord {
   code: string;
   memberCode: string;
   name: string;
-  gender: 'Nam' | 'Nữ';
+  gender: 'Nam' | 'Nữ' | '';
   phone: string;
   email: string;
   birthday: string;
@@ -149,514 +150,8 @@ interface CustomerRecord {
   opportunities: CustomerOpportunity[];
 }
 
-const INITIAL_CUSTOMERS: CustomerRecord[] = [
-  {
-    id: 'cust-1',
-    code: 'KH000168',
-    memberCode: 'HV-GD-0023',
-    name: 'Nguyễn Hoàng Long',
-    gender: 'Nam',
-    phone: '0877 834 888',
-    email: 'long.nguyen@gmail.com',
-    birthday: '15/03/1985',
-    age: 40,
-    address: '250 Lương Định Của, P. Bình Trưng, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
-    tier: 'gold',
-    status: 'active',
-    segment: ['member', 'vip'],
-    source: 'Giới thiệu',
-    lastDate: 'Hôm nay',
-    lastAction: 'Đặt sân',
-    memberDaysLeft: 42,
-    memberStart: '01/10/2026',
-    memberEnd: '30/12/2026',
-    memberProgress: 68,
-    discountPercent: 15,
-    pointMultiplier: 'x1.5',
-    stats: {
-      bookings: 12,
-      bookingsDelta: '+20%',
-      hours: '18,5 giờ',
-      hoursDelta: '+15%',
-      spend: 8450000,
-      spendDelta: '+28%',
-      points: 2860,
-    },
-    tags: ['Golfer thường xuyên', 'Quan tâm huấn luyện', 'Thích thi đấu', 'Nhóm doanh nhân'],
-    internalNote: 'Khách hàng thân thiết, thường chơi cuối tuần. Đang quan tâm gói huấn luyện nâng cao.',
-    timeline: [
-      {
-        id: 'tl-1',
-        kind: 'booking',
-        timeLabel: 'Hôm nay, 14:30',
-        statusBadge: 'Hoàn tất',
-        title: 'Đặt sân thành công',
-        desc: 'Line L3 – 18:00 – 20:00 (2 giờ)',
-      },
-      {
-        id: 'tl-2',
-        kind: 'call',
-        timeLabel: 'Hôm qua, 10:15',
-        title: 'Gọi điện tư vấn',
-        desc: 'Tư vấn gói Gold và lịch giải đấu tháng 12.',
-      },
-      {
-        id: 'tl-3',
-        kind: 'email',
-        timeLabel: '12/11, 16:40',
-        title: 'Gửi email',
-        desc: 'Thông tin ưu đãi gia hạn hội viên Gold.',
-      },
-      {
-        id: 'tl-4',
-        kind: 'note',
-        timeLabel: '10/11, 09:20',
-        title: 'Ghi chú',
-        desc: 'Khách quan tâm khóa huấn luyện driver.',
-      },
-    ],
-    tasks: [
-      { id: 'tk-1', title: 'Gọi nhắc gia hạn hội viên', dueDate: '25/11/2026', done: false },
-      { id: 'tk-2', title: 'Gửi thông tin giải đấu tháng 12', dueDate: '20/11/2026', done: false },
-      { id: 'tk-3', title: 'Tư vấn gói huấn luyện', dueDate: '12/11/2026', done: true },
-    ],
-    bookingHistory: [
-      {
-        id: 'bk-1',
-        date: '15/11/2026',
-        time: '18:00 – 20:00',
-        line: 'Line L3',
-        service: 'Chơi golf (giờ) GDR',
-        duration: '2 giờ',
-        amount: 700000,
-        status: 'Đang đặt',
-      },
-      {
-        id: 'bk-2',
-        date: '10/11/2026',
-        time: '19:00 – 21:00',
-        line: 'Phòng VIP1',
-        service: 'Game 18 hố',
-        duration: '2 giờ',
-        amount: 1450000,
-        status: 'Hoàn tất',
-      },
-      {
-        id: 'bk-3',
-        date: '04/11/2026',
-        time: '17:30 – 19:00',
-        line: 'Line L5',
-        service: 'Chơi golf (giờ) GDR',
-        duration: '1,5 giờ',
-        amount: 525000,
-        status: 'Hoàn tất',
-      },
-    ],
-    transactions: [
-      {
-        id: 'tx-1',
-        code: 'HD26879',
-        date: '10/11/2026 21:05',
-        description: 'Thanh toán Phòng VIP1 (18 hố + F&B)',
-        method: 'VietQR',
-        amount: 1450000,
-      },
-      {
-        id: 'tx-2',
-        code: 'HD26412',
-        date: '04/11/2026 19:10',
-        description: 'Thanh toán Line L5 (1.5 giờ + Nước suối)',
-        method: 'Tiền mặt',
-        amount: 565000,
-      },
-      {
-        id: 'tx-3',
-        code: 'HD25100',
-        date: '01/10/2026 10:00',
-        description: 'Mua gói Hội viên Gold (3 tháng)',
-        method: 'Thẻ ngân hàng',
-        amount: 6435000,
-      },
-    ],
-    opportunities: [
-      {
-        id: 'op-1',
-        title: 'Gia hạn thẻ Hội viên Gold (6 tháng)',
-        stage: 'Báo giá',
-        value: 12000000,
-        probability: 80,
-        expectedClose: '28/11/2026',
-        owner: 'Minh Tâm (Sale)',
-      },
-      {
-        id: 'op-2',
-        title: 'Gói Huấn luyện Pro Driver 10 buổi',
-        stage: 'Đã tư vấn',
-        value: 8500000,
-        probability: 60,
-        expectedClose: '05/12/2026',
-        owner: 'HLV Quốc Tuấn',
-      },
-    ],
-  },
-  {
-    id: 'cust-2',
-    code: 'KH000169',
-    memberCode: 'HV-PL-0008',
-    name: 'Trần Minh Anh',
-    gender: 'Nữ',
-    phone: '0932 456 789',
-    email: 'minhanh.tran@gmail.com',
-    birthday: '22/08/1990',
-    age: 36,
-    address: '88 Nguyễn Cơ Thạch, KĐT Sala, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=160&auto=format&fit=crop&q=80',
-    tier: 'platinum',
-    status: 'active',
-    segment: ['member', 'vip'],
-    source: 'Website',
-    lastDate: 'Hôm qua',
-    lastAction: 'Chơi golf',
-    memberDaysLeft: 115,
-    memberStart: '01/09/2026',
-    memberEnd: '01/03/2027',
-    memberProgress: 42,
-    discountPercent: 20,
-    pointMultiplier: 'x2.0',
-    stats: {
-      bookings: 18,
-      bookingsDelta: '+35%',
-      hours: '29,0 giờ',
-      hoursDelta: '+22%',
-      spend: 15800000,
-      spendDelta: '+40%',
-      points: 5420,
-    },
-    tags: ['Hội viên Platinum', 'Chơi buổi sáng', 'Khách VIP'],
-    internalNote: 'Ưu tiên đặt Line L1 hoặc Phòng VIP1 khung giờ 08:00 - 10:00 sáng.',
-    timeline: [
-      {
-        id: 'tl-201',
-        kind: 'booking',
-        timeLabel: 'Hôm qua, 09:30',
-        statusBadge: 'Hoàn tất',
-        title: 'Hoàn tất buổi chơi 18 hố',
-        desc: 'Phòng VIP1 – 08:00 – 10:00 (2 giờ)',
-      },
-      {
-        id: 'tl-202',
-        kind: 'zalo',
-        timeLabel: '11/11, 15:00',
-        title: 'Nhắn Zalo CSKH',
-        desc: 'Gửi lời mời tham dự giải Saigon Ladies Golf Cup.',
-      },
-    ],
-    tasks: [
-      { id: 'tk-201', title: 'Xác nhận đăng ký giải Ladies Cup', dueDate: '19/11/2026', done: false },
-    ],
-    bookingHistory: [
-      {
-        id: 'bk-201',
-        date: '14/11/2026',
-        time: '08:00 – 10:00',
-        line: 'Phòng VIP1',
-        service: 'Game 18 hố',
-        duration: '2 giờ',
-        amount: 1200000,
-        status: 'Hoàn tất',
-      },
-    ],
-    transactions: [
-      {
-        id: 'tx-201',
-        code: 'HD26810',
-        date: '14/11/2026 10:05',
-        description: 'Thanh toán Phòng VIP1 (Trừ gói Platinum + F&B)',
-        method: 'VietQR',
-        amount: 240000,
-      },
-    ],
-    opportunities: [],
-  },
-  {
-    id: 'cust-3',
-    code: 'KH000170',
-    memberCode: 'HV-SV-0054',
-    name: 'Lê Quốc Bảo',
-    gender: 'Nam',
-    phone: '0901 234 567',
-    email: 'quocbao.le@company.vn',
-    birthday: '10/11/1982',
-    age: 44,
-    address: '12 Thảo Điền, TP. Thủ Đức, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    tier: 'silver',
-    status: 'active',
-    segment: ['member', 'corp'],
-    source: 'Facebook',
-    lastDate: '12/11',
-    lastAction: 'Gia hạn gói',
-    memberDaysLeft: 85,
-    memberStart: '12/11/2026',
-    memberEnd: '12/02/2027',
-    memberProgress: 12,
-    discountPercent: 10,
-    pointMultiplier: 'x1.2',
-    stats: {
-      bookings: 8,
-      bookingsDelta: '+10%',
-      hours: '12,0 giờ',
-      hoursDelta: '+8%',
-      spend: 5200000,
-      spendDelta: '+12%',
-      points: 1450,
-    },
-    tags: ['Khách doanh nghiệp', 'Tiếp khách cuối tuần'],
-    internalNote: 'Hay đi theo nhóm 4 người, thường gọi combo đồ uống và thuê gậy tiêu chuẩn.',
-    timeline: [
-      {
-        id: 'tl-301',
-        kind: 'booking',
-        timeLabel: '12/11, 11:20',
-        statusBadge: 'Hoàn tất',
-        title: 'Gia hạn gói Silver 3 tháng',
-        desc: 'Thanh toán qua chuyển khoản VietQR 4.500.000 ₫',
-      },
-    ],
-    tasks: [
-      { id: 'tk-301', title: 'Gửi hóa đơn VAT cho công ty khách', dueDate: '18/11/2026', done: false },
-    ],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [],
-  },
-  {
-    id: 'cust-4',
-    code: 'KH000171',
-    memberCode: 'Chưa cấp thẻ',
-    name: 'Phạm Thu Hà',
-    gender: 'Nữ',
-    phone: '0988 765 432',
-    email: 'thuha.pham@gmail.com',
-    birthday: '05/06/1995',
-    age: 31,
-    address: '45 Nguyễn Thị Minh Khai, Quận 1, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=160&auto=format&fit=crop&q=80',
-    tier: 'none',
-    status: 'active',
-    segment: ['lead'],
-    source: 'Zalo OA',
-    lastDate: '12/11',
-    lastAction: 'Tư vấn gói',
-    memberDaysLeft: 0,
-    memberStart: '—',
-    memberEnd: '—',
-    memberProgress: 0,
-    discountPercent: 0,
-    pointMultiplier: 'x1.0',
-    stats: {
-      bookings: 2,
-      bookingsDelta: '+100%',
-      hours: '3,0 giờ',
-      hoursDelta: '+100%',
-      spend: 950000,
-      spendDelta: '+100%',
-      points: 190,
-    },
-    tags: ['Người mới bắt đầu', 'Quan tâm học HLV'],
-    internalNote: 'Khách mới tập chơi, đang tìm hiểu gói học cơ bản 1-kèm-1 với HLV.',
-    timeline: [
-      {
-        id: 'tl-401',
-        kind: 'call',
-        timeLabel: '12/11, 14:00',
-        title: 'Tư vấn gói học cơ bản',
-        desc: 'Khách hẹn cuối tuần đến trải nghiệm thử 1 giờ.',
-      },
-    ],
-    tasks: [
-      { id: 'tk-401', title: 'Đặt lịch học thử cùng HLV', dueDate: '17/11/2026', done: false },
-    ],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [
-      {
-        id: 'op-401',
-        title: 'Gói Học Golf Cơ Bản (12 buổi)',
-        stage: 'Trải nghiệm sân',
-        value: 9600000,
-        probability: 70,
-        expectedClose: '22/11/2026',
-        owner: 'Minh Tâm (Sale)',
-      },
-    ],
-  },
-  {
-    id: 'cust-5',
-    code: 'KH000172',
-    memberCode: 'HV-GD-0031',
-    name: 'Vũ Đức Thành',
-    gender: 'Nam',
-    phone: '0903 678 999',
-    email: 'ducthanh.vu@gmail.com',
-    birthday: '19/01/1979',
-    age: 47,
-    address: '102 Võ Văn Tần, Quận 3, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    tier: 'gold',
-    status: 'active',
-    segment: ['member', 'corp'],
-    source: 'Walk-in',
-    lastDate: '11/11',
-    lastAction: 'Đặt sân',
-    memberDaysLeft: 56,
-    memberStart: '15/09/2026',
-    memberEnd: '15/01/2027',
-    memberProgress: 55,
-    discountPercent: 15,
-    pointMultiplier: 'x1.5',
-    stats: {
-      bookings: 14,
-      bookingsDelta: '+18%',
-      hours: '22,0 giờ',
-      hoursDelta: '+14%',
-      spend: 9800000,
-      spendDelta: '+20%',
-      points: 3120,
-    },
-    tags: ['Golfer HDC Single', 'Thích thi đấu'],
-    internalNote: 'Đánh bóng tốc độ cao, yêu cầu line có cảm biến camera tốc độ cao.',
-    timeline: [],
-    tasks: [],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [],
-  },
-  {
-    id: 'cust-6',
-    code: 'KH000173',
-    memberCode: 'HV-SV-0082',
-    name: 'Hoàng Thị Mai',
-    gender: 'Nữ',
-    phone: '0912 345 678',
-    email: 'mai.hoang@gmail.com',
-    birthday: '28/04/1992',
-    age: 34,
-    address: 'Khu biệt thự Thảo Điền, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
-    tier: 'silver',
-    status: 'active',
-    segment: ['member'],
-    source: 'Facebook',
-    lastDate: '10/11',
-    lastAction: 'Mua gói giờ',
-    memberDaysLeft: 74,
-    memberStart: '10/11/2026',
-    memberEnd: '10/02/2027',
-    memberProgress: 18,
-    discountPercent: 10,
-    pointMultiplier: 'x1.2',
-    stats: {
-      bookings: 6,
-      bookingsDelta: '+15%',
-      hours: '9,5 giờ',
-      hoursDelta: '+12%',
-      spend: 4200000,
-      spendDelta: '+15%',
-      points: 980,
-    },
-    tags: ['Gói 20 giờ', 'Luyện tập chiều'],
-    internalNote: 'Thường đặt Line L6 hoặc L7 từ 15:00 - 17:00.',
-    timeline: [],
-    tasks: [],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [],
-  },
-  {
-    id: 'cust-7',
-    code: 'KH000174',
-    memberCode: 'HV-VIP-0003',
-    name: 'Kim Min Joon',
-    gender: 'Nam',
-    phone: '+82 10 1234 5678',
-    email: 'minjoon.kim@korcham.kr',
-    birthday: '03/12/1980',
-    age: 46,
-    address: 'The River Thủ Thiêm, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
-    tier: 'vip',
-    status: 'active',
-    segment: ['member', 'vip', 'corp'],
-    source: 'Giới thiệu',
-    lastDate: '09/11',
-    lastAction: 'Đặt sân',
-    memberDaysLeft: 210,
-    memberStart: '01/06/2026',
-    memberEnd: '01/06/2027',
-    memberProgress: 45,
-    discountPercent: 25,
-    pointMultiplier: 'x2.5',
-    stats: {
-      bookings: 28,
-      bookingsDelta: '+42%',
-      hours: '54,0 giờ',
-      hoursDelta: '+38%',
-      spend: 32500000,
-      spendDelta: '+45%',
-      points: 9850,
-    },
-    tags: ['Hội viên VIP', 'Khách Hàn Quốc', 'Phòng VIP2'],
-    internalNote: 'Khách VIP thường đặt cố định Phòng VIP2 tối thứ 4 và thứ 6 hàng tuần.',
-    timeline: [],
-    tasks: [],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [],
-  },
-  {
-    id: 'cust-8',
-    code: 'KH000175',
-    memberCode: 'Chưa cấp thẻ',
-    name: 'Nguyễn Văn Hùng',
-    gender: 'Nam',
-    phone: '0977 111 222',
-    email: 'hung.nguyen@outlook.com',
-    birthday: '14/07/1988',
-    age: 38,
-    address: '72 Lê Thánh Tôn, Quận 1, TP.HCM',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=160&auto=format&fit=crop&q=80',
-    tier: 'none',
-    status: 'active',
-    segment: ['lead'],
-    source: 'Website',
-    lastDate: '08/11',
-    lastAction: 'Tư vấn',
-    memberDaysLeft: 0,
-    memberStart: '—',
-    memberEnd: '—',
-    memberProgress: 0,
-    discountPercent: 0,
-    pointMultiplier: 'x1.0',
-    stats: {
-      bookings: 1,
-      bookingsDelta: '+100%',
-      hours: '1,5 giờ',
-      hoursDelta: '+100%',
-      spend: 525000,
-      spendDelta: '+100%',
-      points: 105,
-    },
-    tags: ['Khách tiềm năng', 'Quan tâm gói giờ'],
-    internalNote: 'Đã chơi thử 1 buổi, đang cân nhắc gói 10 giờ chơi GDR.',
-    timeline: [],
-    tasks: [],
-    bookingHistory: [],
-    transactions: [],
-    opportunities: [],
-  },
-];
+/** No sample customers: the list is filled only from the club's own data (members, bookings, care list). */
+const INITIAL_CUSTOMERS: CustomerRecord[] = [];
 
 function renderTierBadge(tier: TierKind) {
   switch (tier) {
@@ -765,8 +260,8 @@ export function CrmModule({
     onFlowChange?.(next);
   }
   const [customers, setCustomers] = useState<CustomerRecord[]>(INITIAL_CUSTOMERS);
-  const [selectedId, setSelectedId] = useState<string>(INITIAL_CUSTOMERS[0].id);
-  const [checkedIds, setCheckedIds] = useState<string[]>([INITIAL_CUSTOMERS[0].id]);
+  const [selectedId, setSelectedId] = useState<string>('');
+  const [checkedIds, setCheckedIds] = useState<string[]>([]);
 
   // Filters on Customer List
   const [segmentFilter, setSegmentFilter] = useState<SegmentFilter>('all');
@@ -779,7 +274,6 @@ export function CrmModule({
 
   // Center Column State
   const [profileSubTab, setProfileSubTab] = useState<ProfileSubTab>('info');
-  const [activityRange, setActivityRange] = useState<'30d' | '90d' | 'year'>('30d');
 
   // Right Column State
   const [tlFilter, setTlFilter] = useState<InteractionType>('all');
@@ -824,7 +318,7 @@ export function CrmModule({
     phone: '',
     email: '',
     gender: 'Nam' as 'Nam' | 'Nữ',
-    birthday: '01/01/1990',
+    birthday: '',
     address: '',
     tier: 'none' as TierKind,
     source: 'Walk-in',
@@ -834,7 +328,7 @@ export function CrmModule({
     phone: '',
     email: '',
     birthday: '',
-    gender: 'Nam' as 'Nam' | 'Nữ',
+    gender: 'Nam' as 'Nam' | 'Nữ' | '',
     address: '',
   });
 
@@ -845,14 +339,14 @@ export function CrmModule({
 
   const [newTaskForm, setNewTaskForm] = useState({
     title: '',
-    dueDate: '25/11/2026',
+    dueDate: '',
   });
 
   const [newDealForm, setNewDealForm] = useState({
     title: '',
-    value: '12000000',
+    value: '',
     stage: 'Báo giá' as CustomerOpportunity['stage'],
-    expectedClose: '30/11/2026',
+    expectedClose: '',
   });
 
   // Leads state (synced with /api/crm2/leads)
@@ -868,52 +362,7 @@ export function CrmModule({
       notes: string;
       created: string;
     }[]
-  >([
-    {
-      id: 'ld-1',
-      fullName: 'Đặng Hoàng Nam',
-      phone: '0908 112 334',
-      email: 'nam.dang@gmail.com',
-      source: 'Facebook Ads',
-      targetService: 'Thẻ Hội viên Gold',
-      stage: 'Mới tiếp nhận',
-      notes: 'Quan tâm ưu đãi chơi giờ chiều tối và cuối tuần.',
-      created: 'Hôm nay, 15:20',
-    },
-    {
-      id: 'ld-2',
-      fullName: 'Lê Thanh Thảo',
-      phone: '0938 998 776',
-      email: 'thaole.golf@gmail.com',
-      source: 'Zalo OA',
-      targetService: 'Gói học HLV cơ bản',
-      stage: 'Đang tư vấn',
-      notes: 'Muốn đăng ký học thử 1 buổi cùng HLV vào sáng Chủ nhật.',
-      created: 'Hôm nay, 11:10',
-    },
-    {
-      id: 'ld-3',
-      fullName: 'Park Sung Hoon',
-      phone: '0919 445 667',
-      email: 'sh.park@samsung.com',
-      source: 'Website',
-      targetService: 'Thẻ VIP & Phòng VIP',
-      stage: 'Đã hẹn trải nghiệm',
-      notes: 'Đặt lịch tham quan phòng VIP1 & VIP2 lúc 18:00 ngày mai.',
-      created: 'Hôm qua, 17:45',
-    },
-    {
-      id: 'ld-4',
-      fullName: 'Trương Quốc Khánh',
-      phone: '0972 334 556',
-      email: 'khanh.truong@corp.vn',
-      source: 'Giới thiệu',
-      targetService: 'Sự kiện Golf Doanh nghiệp',
-      stage: 'Báo giá',
-      notes: 'Cần thuê trọn 6 line + tiệc nhẹ cho 24 khách công ty.',
-      created: '13/11/2026',
-    },
-  ]);
+  >([]);
 
   const [newLeadForm, setNewLeadForm] = useState({
     fullName: '',
@@ -925,45 +374,66 @@ export function CrmModule({
   });
 
   // Campaigns state
-  const [campaigns, setCampaigns] = useState([
+  // Marketing campaigns come from the real campaign service (/api/crm2/campaigns).
+  const [campaigns, setCampaigns] = useState<
     {
-      id: 'cmp-1',
-      name: 'Ưu đãi Gia hạn Thẻ Gold & Platinum Tháng 11',
-      channel: 'Zalo OA & Email',
-      segment: 'Hội viên (368)',
-      sent: 368,
-      opened: 294,
-      converted: 42,
-      status: 'Đang chạy',
-    },
-    {
-      id: 'cmp-2',
-      name: 'Mời tham dự Giải Saigon Indoor Golf Championship',
-      channel: 'Zalo OA',
-      segment: 'Khách VIP (58)',
-      sent: 58,
-      opened: 54,
-      converted: 28,
-      status: 'Hoàn tất',
-    },
-    {
-      id: 'cmp-3',
-      name: 'Tặng 1 giờ trải nghiệm miễn phí cho Khách mới',
-      channel: 'SMS & Email',
-      segment: 'Khách tiềm năng (176)',
-      sent: 176,
-      opened: 132,
-      converted: 31,
-      status: 'Đang chạy',
-    },
-  ]);
-
+      id: string;
+      name: string;
+      channel: string;
+      segment: string;
+      queued: number;
+      skipped: number;
+      cancelled: number;
+      stats: Record<string, number>;
+    }[]
+  >([]);
   const [newCampaignForm, setNewCampaignForm] = useState({
     name: '',
-    channel: 'Zalo OA',
-    segment: 'Hội viên (368)',
-    message: 'Chào {ten}, Saigon Indoor Golf Club gửi tặng Quý khách ưu đãi giảm 15% khi gia hạn thẻ hội viên trong tháng này!',
+    channel: 'zalo' as CampaignChannel,
+    segment: 'all' as CampaignSegment,
+    subject: '',
+    message: '',
   });
+  const [campaignBusy, setCampaignBusy] = useState(false);
+  async function loadCampaigns() {
+    try {
+      const r = await call<{ campaigns?: typeof campaigns }>('/api/crm2/campaigns');
+      setCampaigns(r.campaigns ?? []);
+    } catch {
+      setCampaigns([]);
+    }
+  }
+  async function sendCampaign() {
+    if (!requirePerm(canManage, 'Gửi chiến dịch Marketing')) return;
+    setCampaignBusy(true);
+    try {
+      await call('/api/crm2/campaigns', {
+        action: 'send',
+        name: newCampaignForm.name,
+        channel: newCampaignForm.channel,
+        segment: newCampaignForm.segment,
+        subject: newCampaignForm.subject,
+        body: newCampaignForm.message,
+      });
+      setShowCreateCampaignModal(false);
+      setNewCampaignForm({ name: '', channel: 'zalo', segment: 'all', subject: '', message: '' });
+      notify('Đã đưa chiến dịch vào hàng đợi gửi.');
+      await loadCampaigns();
+    } catch (e) {
+      notify(errText(e));
+    } finally {
+      setCampaignBusy(false);
+    }
+  }
+  useEffect(() => {
+    if (flowPage === 'marketing') void loadCampaigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowPage]);
+
+  // Bookings from the club (single source of truth), shown on the appointments page.
+  const [appts, setAppts] = useState<
+    { id: string; room: string; customer: string; phone: string; service: string; start: number; end: number; status: string }[]
+  >([]);
 
   // Merge live customers, members, bookings & leads from Single Source of Truth APIs
   useEffect(() => {
@@ -1014,6 +484,7 @@ export function CrmModule({
         const platTh = clubRes.config?.tierThresholds?.platinum ?? 50_000_000;
         const diaTh = clubRes.config?.tierThresholds?.diamond ?? 100_000_000;
         const allBookings = clubRes.bookings ?? [];
+        setAppts(allBookings);
 
         const mergedRaw = new Map<
           string,
@@ -1072,7 +543,7 @@ export function CrmModule({
                 line: b.room.toUpperCase(),
                 service: b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`,
                 duration: `${durHrs} giờ`,
-                amount: b.amount ?? 350000,
+                amount: b.amount ?? 0,
                 status:
                   b.status === 'cancelled'
                     ? 'Đã hủy'
@@ -1113,38 +584,38 @@ export function CrmModule({
               extra.push({
                 id: raw.id,
                 code: `KH${raw.id.slice(-6).toUpperCase()}`,
-                memberCode: tier !== 'none' ? `HV-${tier.slice(0, 2).toUpperCase()}-${raw.id.slice(-4).toUpperCase()}` : 'Chưa cấp thẻ',
+                memberCode: 'Chưa cấp thẻ',
                 name: raw.name,
-                gender: 'Nam',
+                gender: '',
                 phone: raw.phone,
-                email: raw.email || `${raw.name.toLowerCase().replace(/\s+/g, '.')}@gmail.com`,
-                birthday: raw.birthday || '10/05/1988',
-                age: 38,
-                address: 'TP. Hồ Chí Minh',
-                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80',
+                email: raw.email || '',
+                birthday: raw.birthday || '',
+                age: 0,
+                address: '',
+                avatar: '',
                 tier,
                 status: 'active',
                 segment: tier !== 'none' ? ['member'] : ['lead'],
                 source: 'POS / Đặt sân',
-                lastDate: 'Gần đây',
-                lastAction: custBookings.length ? 'Đặt sân / Chơi golf' : 'Hồ sơ hệ thống',
-                memberDaysLeft: tier !== 'none' ? 60 : 0,
-                memberStart: '01/10/2026',
-                memberEnd: '31/12/2026',
-                memberProgress: tier !== 'none' ? 50 : 0,
-                discountPercent: tier === 'vip' ? 25 : tier === 'platinum' ? 20 : tier === 'gold' ? 15 : tier === 'silver' ? 10 : 0,
-                pointMultiplier: tier === 'vip' ? 'x2.5' : tier === 'platinum' ? 'x2.0' : tier === 'gold' ? 'x1.5' : 'x1.0',
+                lastDate: custBookings.length ? new Date(Math.max(...custBookings.map((b) => b.start))).toLocaleDateString('vi-VN') : '',
+                lastAction: custBookings.length ? 'Đặt sân / Chơi golf' : '',
+                memberDaysLeft: 0,
+                memberStart: '',
+                memberEnd: '',
+                memberProgress: 0,
+                discountPercent: 0,
+                pointMultiplier: '',
                 stats: {
-                  bookings: raw.visits || custBookings.length || 1,
-                  bookingsDelta: '+10%',
-                  hours: `${((raw.visits || custBookings.length || 1) * 1.5).toFixed(1).replace('.', ',')} giờ`,
-                  hoursDelta: '+10%',
-                  spend: calcSpend || 350000,
-                  spendDelta: '+15%',
-                  points: raw.points || Math.round((calcSpend || 350000) / 10000),
+                  bookings: custBookings.length,
+                  bookingsDelta: '',
+                  hours: `${(custBookings.reduce((h, b) => h + (b.end - b.start) / 3600000, 0)).toFixed(1).replace('.', ',')} giờ`,
+                  hoursDelta: '',
+                  spend: calcSpend,
+                  spendDelta: '',
+                  points: raw.points ?? 0,
                 },
-                tags: ['Khách hàng hệ thống'],
-                internalNote: raw.note || 'Đồng bộ tự động từ cơ sở dữ liệu Hội viên, Đặt sân & POS.',
+                tags: [],
+                internalNote: raw.note || '',
                 timeline: [],
                 tasks: [],
                 bookingHistory: custBookings.slice(0, 15).map((b) => {
@@ -1158,7 +629,7 @@ export function CrmModule({
                     line: b.room.toUpperCase(),
                     service: b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`,
                     duration: `${durHrs} giờ`,
-                    amount: b.amount ?? 350000,
+                    amount: b.amount ?? 0,
                     status:
                       b.status === 'cancelled'
                         ? 'Đã hủy'
@@ -1197,13 +668,13 @@ export function CrmModule({
               .map((l) => ({
                 id: l.id,
                 fullName: l.fullName,
-                phone: l.phone || 'Chưa có SĐT',
+                phone: l.phone || '',
                 email: l.email || '',
-                source: l.source || 'Website',
-                targetService: l.targetService || 'Thẻ Hội viên Gold',
+                source: l.source || '',
+                targetService: l.targetService || '',
                 stage: l.stage === 'WON' ? 'Đã chốt' : 'Mới tiếp nhận',
-                notes: l.notes || 'Tiếp nhận từ hệ thống',
-                created: 'Hôm nay',
+                notes: l.notes || '',
+                created: '',
               }));
             return extra.length ? [...extra, ...prev] : prev;
           });
@@ -1246,6 +717,19 @@ export function CrmModule({
     return filteredCustomers.slice(start, start + PAGE_SIZE);
   }, [filteredCustomers, currentPage]);
 
+  const pageCount = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE));
+  // Counts come from the customers actually loaded, never typed in.
+  const segmentTabs = useMemo(() => {
+    const n = (k: Exclude<SegmentFilter, 'all'>) => customers.filter((c) => c.segment.includes(k)).length;
+    return [
+      { key: 'all', label: `Tất cả khách hàng (${customers.length})` },
+      { key: 'member', label: `Hội viên (${n('member')})` },
+      { key: 'lead', label: `Khách tiềm năng (${n('lead')})` },
+      { key: 'corp', label: `Khách doanh nghiệp (${n('corp')})` },
+      { key: 'vip', label: `Khách VIP (${n('vip')})` },
+    ];
+  }, [customers]);
+
   const activeCustomer = useMemo(
     () =>
       filteredCustomers.find((c) => c.id === selectedId) ??
@@ -1268,21 +752,8 @@ export function CrmModule({
         points: 0,
       };
     }
-    const base = activeCustomer.stats;
-    if (activityRange === '30d') return base;
-    const mult = activityRange === '90d' ? 2.8 : 9.5;
-    const numHours = parseFloat(base.hours.replace(',', '.')) || 0;
-    const scaledHours = (numHours * mult).toFixed(1).replace('.', ',');
-    return {
-      bookings: Math.round(base.bookings * mult),
-      bookingsDelta: activityRange === '90d' ? '+24%' : '+38%',
-      hours: `${scaledHours} giờ`,
-      hoursDelta: activityRange === '90d' ? '+19%' : '+32%',
-      spend: Math.round((base.spend * mult) / 1000) * 1000,
-      spendDelta: activityRange === '90d' ? '+31%' : '+45%',
-      points: base.points,
-    };
-  }, [activeCustomer, activityRange]);
+    return activeCustomer.stats;
+  }, [activeCustomer]);
 
   const filteredTimeline = useMemo(() => {
     if (!activeCustomer) return [];
@@ -1458,7 +929,7 @@ export function CrmModule({
       notify('Vui lòng nhập tiêu đề công việc (tối thiểu 2 ký tự)!');
       return;
     }
-    const due = newTaskForm.dueDate.trim() || '25/11/2026';
+    const due = newTaskForm.dueDate.trim();
     if (!isValidDateStr(due)) {
       notify('Ngày hạn thực hiện cần đúng định dạng DD/MM/YYYY!');
       return;
@@ -1484,7 +955,7 @@ export function CrmModule({
     } catch {
       /* local task added */
     }
-    setNewTaskForm({ title: '', dueDate: '25/11/2026' });
+    setNewTaskForm({ title: '', dueDate: '' });
     setShowAddTaskModal(false);
     notify('Đã tạo công việc & lịch hẹn mới!');
   }
@@ -1494,7 +965,7 @@ export function CrmModule({
     const cleanName = newCustForm.name.trim().slice(0, 100);
     const cleanPhone = newCustForm.phone.trim();
     const cleanEmail = newCustForm.email.trim();
-    const cleanBday = newCustForm.birthday.trim() || '01/01/1990';
+    const cleanBday = newCustForm.birthday.trim();
     if (cleanName.length < 2) {
       notify('Vui lòng nhập họ và tên khách hàng (tối thiểu 2 ký tự)!');
       return;
@@ -1507,7 +978,7 @@ export function CrmModule({
       notify('Địa chỉ Email không đúng định dạng!');
       return;
     }
-    if (!isValidDateStr(cleanBday)) {
+    if (cleanBday && !isValidDateStr(cleanBday)) {
       notify('Ngày sinh cần đúng định dạng DD/MM/YYYY!');
       return;
     }
@@ -1542,41 +1013,38 @@ export function CrmModule({
     const created: CustomerRecord = {
       id,
       code,
-      memberCode:
-        newCustForm.tier !== 'none'
-          ? `HV-${newCustForm.tier.toUpperCase().slice(0, 2)}-0099`
-          : 'Chưa cấp thẻ',
+      memberCode: 'Chưa cấp thẻ',
       name: cleanName,
       gender: newCustForm.gender,
       phone: cleanPhone,
-      email: cleanEmail || 'khachhang@sigolf.vn',
+      email: cleanEmail,
       birthday: cleanBday,
-      age: 36,
-      address: newCustForm.address.trim().slice(0, 250) || 'TP. Hồ Chí Minh',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+      age: 0,
+      address: newCustForm.address.trim().slice(0, 250),
+      avatar: '',
       tier: newCustForm.tier,
       status: 'active',
       segment: newCustForm.tier !== 'none' ? ['member'] : ['lead'],
       source: newCustForm.source,
       lastDate: 'Hôm nay',
       lastAction: 'Tạo mới',
-      memberDaysLeft: newCustForm.tier !== 'none' ? 90 : 0,
-      memberStart: '15/11/2026',
-      memberEnd: '15/02/2027',
-      memberProgress: 100,
-      discountPercent: newCustForm.tier === 'gold' ? 15 : newCustForm.tier === 'platinum' ? 20 : 10,
-      pointMultiplier: newCustForm.tier === 'gold' ? 'x1.5' : 'x1.0',
+      memberDaysLeft: 0,
+      memberStart: '',
+      memberEnd: '',
+      memberProgress: 0,
+      discountPercent: 0,
+      pointMultiplier: '',
       stats: {
         bookings: 0,
-        bookingsDelta: '+0%',
+        bookingsDelta: '',
         hours: '0 giờ',
-        hoursDelta: '+0%',
+        hoursDelta: '',
         spend: 0,
-        spendDelta: '+0%',
+        spendDelta: '',
         points: 0,
       },
-      tags: ['Khách hàng mới'],
-      internalNote: 'Khách hàng mới tạo trên hệ thống CRM.',
+      tags: [],
+      internalNote: '',
       timeline: [
         {
           id: uid('tl-init'),
@@ -1599,7 +1067,7 @@ export function CrmModule({
       phone: '',
       email: '',
       gender: 'Nam',
-      birthday: '01/01/1990',
+      birthday: '',
       address: '',
       tier: 'none',
       source: 'Walk-in',
@@ -1727,46 +1195,45 @@ export function CrmModule({
     const newCust: CustomerRecord = {
       id,
       code: 'KH00' + Math.floor(2000 + Math.random() * 7000),
-      memberCode: 'HV-GD-0095',
+      memberCode: 'Chưa cấp thẻ',
       name: ld.fullName,
-      gender: 'Nam',
+      gender: '',
       phone: ld.phone,
-      email: ld.email || 'golfer@sigolf.vn',
-      birthday: '12/06/1988',
-      age: 38,
-      address: 'TP. Hồ Chí Minh',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-      tier: 'gold',
+      email: ld.email,
+      birthday: '',
+      age: 0,
+      address: '',
+      avatar: '',
+      tier: 'none',
       status: 'active',
       segment: ['member', 'lead'],
       source: ld.source,
       lastDate: 'Hôm nay',
       lastAction: 'Chuyển đổi Lead',
-      memberDaysLeft: 90,
-      memberStart: '15/11/2026',
-      memberEnd: '15/02/2027',
-      memberProgress: 100,
-      discountPercent: 15,
-      pointMultiplier: 'x1.5',
+      memberDaysLeft: 0,
+      memberStart: '',
+      memberEnd: '',
+      memberProgress: 0,
+      discountPercent: 0,
+      pointMultiplier: '',
       stats: {
-        bookings: 1,
-        bookingsDelta: '+100%',
-        hours: '2,0 giờ',
-        hoursDelta: '+100%',
-        spend: 6435000,
-        spendDelta: '+100%',
-        points: 640,
+        bookings: 0,
+        bookingsDelta: '',
+        hours: '0 giờ',
+        hoursDelta: '',
+        spend: 0,
+        spendDelta: '',
+        points: 0,
       },
-      tags: ['Chuyển đổi từ Lead', ld.targetService],
+      tags: ld.targetService ? ['Chuyển đổi từ Lead', ld.targetService] : ['Chuyển đổi từ Lead'],
       internalNote: ld.notes,
       timeline: [
         {
           id: uid('tl-conv'),
-          kind: 'booking',
+          kind: 'note',
           timeLabel: 'Vừa xong',
-          statusBadge: 'Hoàn tất',
           title: 'Chuyển đổi từ Lead tiềm năng',
-          desc: `Đăng ký dịch vụ: ${ld.targetService}`,
+          desc: ld.targetService ? `Dịch vụ quan tâm: ${ld.targetService}` : `Nguồn: ${ld.source}`,
         },
       ],
       tasks: [],
@@ -1813,9 +1280,9 @@ export function CrmModule({
     setShowCreateDealModal(false);
     setNewDealForm({
       title: '',
-      value: '12000000',
+      value: '',
       stage: 'Báo giá',
-      expectedClose: '30/11/2026',
+      expectedClose: '',
     });
     notify('Đã tạo cơ hội bán hàng mới!');
   }
@@ -1881,7 +1348,7 @@ export function CrmModule({
           >
             <Target size={15} />
             <span>Lead tiềm năng</span>
-            <span className="crm2-flow-badge">{leadsList.length + 8}</span>
+            {leadsList.length > 0 && <span className="crm2-flow-badge">{leadsList.length}</span>}
           </button>
           <button
             type="button"
@@ -1992,13 +1459,7 @@ export function CrmModule({
 
             {/* 5 Segment Filter Pills (1:1 with reference image) */}
             <div className="crm2-segment-bar">
-              {[
-                { key: 'all', label: 'Tất cả khách hàng (1.248)' },
-                { key: 'member', label: 'Hội viên (368)' },
-                { key: 'lead', label: 'Khách tiềm năng (176)' },
-                { key: 'corp', label: 'Khách doanh nghiệp (32)' },
-                { key: 'vip', label: 'Khách VIP (58)' },
-              ].map((seg) => (
+              {segmentTabs.map((seg) => (
                 <button
                   key={seg.key}
                   type="button"
@@ -2135,7 +1596,9 @@ export function CrmModule({
                 })}
                 {filteredCustomers.length === 0 && (
                   <div style={{ padding: 28, textAlign: 'center', color: '#64748b', fontSize: 13 }}>
-                    Không tìm thấy khách hàng phù hợp bộ lọc.
+                    {customers.length === 0
+                      ? 'Chưa có khách hàng nào. Khách sẽ xuất hiện khi có đặt sân, hội viên hoặc được tạo mới.'
+                      : 'Không tìm thấy khách hàng phù hợp bộ lọc.'}
                   </div>
                 )}
               </div>
@@ -2143,7 +1606,7 @@ export function CrmModule({
               <div className="crm2-list-footer">
                 <span>
                   Hiển thị {filteredCustomers.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–
-                  {Math.min(currentPage * PAGE_SIZE, filteredCustomers.length)} trong 1.248
+                  {Math.min(currentPage * PAGE_SIZE, filteredCustomers.length)} trong {filteredCustomers.length}
                 </span>
                 <div className="crm2-pagination">
                   <button
@@ -2154,28 +1617,25 @@ export function CrmModule({
                   >
                     <ChevronLeft size={14} />
                   </button>
-                  {[1, 2, 3].map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className={`crm2-page-btn ${currentPage === p ? 'active' : ''}`}
-                      onClick={() => setCurrentPage(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                  <span style={{ padding: '0 4px' }}>...</span>
-                  <button
-                    type="button"
-                    className={`crm2-page-btn ${currentPage === 156 ? 'active' : ''}`}
-                    onClick={() => setCurrentPage(156)}
-                  >
-                    156
-                  </button>
+                  {Array.from({ length: pageCount }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === pageCount || Math.abs(p - currentPage) <= 1)
+                    .map((p, i, arr) => (
+                      <span key={p} style={{ display: 'contents' }}>
+                        {i > 0 && p - arr[i - 1] > 1 && <span style={{ padding: '0 4px' }}>...</span>}
+                        <button
+                          type="button"
+                          className={`crm2-page-btn ${currentPage === p ? 'active' : ''}`}
+                          onClick={() => setCurrentPage(p)}
+                        >
+                          {p}
+                        </button>
+                      </span>
+                    ))}
                   <button
                     type="button"
                     className="crm2-page-btn"
-                    onClick={() => setCurrentPage((p) => Math.min(156, p + 1))}
+                    disabled={currentPage >= pageCount}
+                    onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
                   >
                     <ChevronRight size={14} />
                   </button>
@@ -2186,6 +1646,11 @@ export function CrmModule({
             {/* ---------------------------------------------------------------
                 CENTER COLUMN: HỒ SƠ KHÁCH HÀNG 360°
                 --------------------------------------------------------------- */}
+            {!activeCustomer && (
+              <div className="crm2-card crm2-profile-card" style={{ padding: 28, color: '#64748b' }}>
+                Chọn hoặc tạo một khách hàng để xem hồ sơ.
+              </div>
+            )}
             {activeCustomer && (
               <div className="crm2-card crm2-profile-card">
                 {/* Profile Header */}
@@ -2197,9 +1662,11 @@ export function CrmModule({
                     <div>
                       <div className="crm2-profile-name-row">
                         <h2>{activeCustomer.name}</h2>
-                        <span className="crm2-gender-icon">
-                          {activeCustomer.gender === 'Nam' ? '♂' : '♀'}
-                        </span>
+                        {activeCustomer.gender && (
+                          <span className="crm2-gender-icon">
+                            {activeCustomer.gender === 'Nam' ? '♂' : '♀'}
+                          </span>
+                        )}
                       </div>
                       <div className="crm2-profile-codes">
                         <span>
@@ -2316,32 +1783,40 @@ export function CrmModule({
                               </button>
                             </span>
                           </div>
+                          {activeCustomer.email && (
                           <div className="crm2-field-item">
                             <span className="crm2-field-label">
                               <Mail size={14} /> Email
                             </span>
                             <span className="crm2-field-val">{activeCustomer.email}</span>
                           </div>
+                          )}
+                          {activeCustomer.birthday && (
                           <div className="crm2-field-item">
                             <span className="crm2-field-label">
                               <Calendar size={14} /> Ngày sinh
                             </span>
                             <span className="crm2-field-val">
-                              {activeCustomer.birthday} ({activeCustomer.age} tuổi)
+                              {activeCustomer.birthday}{activeCustomer.age > 0 ? ` (${activeCustomer.age} tuổi)` : ''}
                             </span>
                           </div>
+                          )}
+                          {activeCustomer.gender && (
                           <div className="crm2-field-item">
                             <span className="crm2-field-label">
                               <User size={14} /> Giới tính
                             </span>
                             <span className="crm2-field-val">{activeCustomer.gender}</span>
                           </div>
+                          )}
+                          {activeCustomer.address && (
                           <div className="crm2-field-item">
                             <span className="crm2-field-label">
                               <MapPin size={14} /> Địa chỉ
                             </span>
                             <span className="crm2-field-val">{activeCustomer.address}</span>
                           </div>
+                          )}
                         </div>
                       </div>
 
@@ -2361,17 +1836,22 @@ export function CrmModule({
                             </span>
                           </div>
 
-                          <div className="crm2-mem-dates">
-                            Thời hạn: {activeCustomer.memberStart} – {activeCustomer.memberEnd}
-                          </div>
+                          {activeCustomer.memberStart && (
+                            <>
+                              <div className="crm2-mem-dates">
+                                Thời hạn: {activeCustomer.memberStart} – {activeCustomer.memberEnd}
+                              </div>
 
-                          <div className="crm2-progress-track">
-                            <div
-                              className="crm2-progress-fill"
-                              style={{ width: `${activeCustomer.memberProgress}%` }}
-                            />
-                          </div>
+                              <div className="crm2-progress-track">
+                                <div
+                                  className="crm2-progress-fill"
+                                  style={{ width: `${activeCustomer.memberProgress}%` }}
+                                />
+                              </div>
+                            </>
+                          )}
 
+                          {(activeCustomer.discountPercent > 0 || activeCustomer.pointMultiplier) && (
                           <div className="crm2-perks-grid">
                             <div className="crm2-perk-item">
                               <Percent size={15} color="#d97706" />
@@ -2394,6 +1874,7 @@ export function CrmModule({
                               <strong style={{ color: '#1e293b', fontSize: 11 }}>riêng</strong>
                             </div>
                           </div>
+                          )}
                         </div>
 
                         <div className="crm2-mem-actions">
@@ -2419,16 +1900,6 @@ export function CrmModule({
                     <div className="crm2-activity-section">
                       <div className="crm2-box-head">
                         <h3>Tổng quan hoạt động</h3>
-                        <select
-                          className="crm2-select"
-                          value={activityRange}
-                          onChange={(e) => setActivityRange(e.target.value as '30d' | '90d' | 'year')}
-                          aria-label="Khoảng thời gian hoạt động"
-                        >
-                          <option value="30d">30 ngày qua</option>
-                          <option value="90d">90 ngày qua</option>
-                          <option value="year">Năm 2026</option>
-                        </select>
                       </div>
 
                       <div className="crm2-kpi-grid">
@@ -2442,7 +1913,9 @@ export function CrmModule({
                           <span className="crm2-kpi-label">Số lần đặt sân</span>
                           <div className="crm2-kpi-val-row">
                             <span className="crm2-kpi-val">{displayedStats.bookings}</span>
-                            <span className="crm2-kpi-delta">↑ {displayedStats.bookingsDelta}</span>
+                            {displayedStats.bookingsDelta && (
+                              <span className="crm2-kpi-delta">↑ {displayedStats.bookingsDelta}</span>
+                            )}
                           </div>
                         </div>
 
@@ -2456,7 +1929,9 @@ export function CrmModule({
                           <span className="crm2-kpi-label">Tổng giờ chơi</span>
                           <div className="crm2-kpi-val-row">
                             <span className="crm2-kpi-val">{displayedStats.hours}</span>
-                            <span className="crm2-kpi-delta">↑ {displayedStats.hoursDelta}</span>
+                            {displayedStats.hoursDelta && (
+                              <span className="crm2-kpi-delta">↑ {displayedStats.hoursDelta}</span>
+                            )}
                           </div>
                         </div>
 
@@ -2470,7 +1945,9 @@ export function CrmModule({
                           <span className="crm2-kpi-label">Chi tiêu</span>
                           <div className="crm2-kpi-val-row">
                             <span className="crm2-kpi-val">{money(displayedStats.spend)}</span>
-                            <span className="crm2-kpi-delta">↑ {displayedStats.spendDelta}</span>
+                            {displayedStats.spendDelta && (
+                              <span className="crm2-kpi-delta">↑ {displayedStats.spendDelta}</span>
+                            )}
                           </div>
                         </div>
 
@@ -2999,6 +2476,13 @@ export function CrmModule({
                   </td>
                 </tr>
               ))}
+              {leadsList.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: '#64748b', padding: 24 }}>
+                    Chưa có lead nào.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -3138,45 +2622,42 @@ export function CrmModule({
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>
-                  <strong>Nguyễn Hoàng Long</strong>
-                  <div style={{ fontSize: 11.5, color: '#64748b' }}>0877 834 888</div>
-                </td>
-                <td>{renderTierBadge('gold')}</td>
-                <td>Hôm nay · 18:00 – 20:00</td>
-                <td>Line L3</td>
-                <td>Chơi golf theo giờ (GDR) + Tư vấn gia hạn thẻ Gold</td>
-                <td>
-                  <span className="crm2-status-active">Đã xác nhận</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Park Sung Hoon</strong>
-                  <div style={{ fontSize: 11.5, color: '#64748b' }}>0919 445 667</div>
-                </td>
-                <td>{renderTierBadge('vip')}</td>
-                <td>Ngày mai · 18:00 – 19:30</td>
-                <td>Phòng VIP1</td>
-                <td>Tham quan & Đánh thử cảm biến 3D Phòng VIP</td>
-                <td>
-                  <span className="crm2-tl-done-badge">Hẹn trải nghiệm</span>
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <strong>Phạm Thu Hà</strong>
-                  <div style={{ fontSize: 11.5, color: '#64748b' }}>0988 765 432</div>
-                </td>
-                <td>{renderTierBadge('none')}</td>
-                <td>17/11/2026 · 09:30 – 10:30</td>
-                <td>Line L8</td>
-                <td>Buổi học thử 1-kèm-1 cùng HLV Quốc Tuấn</td>
-                <td>
-                  <span className="crm2-tl-done-badge">Chờ đón khách</span>
-                </td>
-              </tr>
+              {appts
+                .filter((b) => b.status !== 'cancelled' && b.end >= Date.now())
+                .sort((a, b) => a.start - b.start)
+                .slice(0, 50)
+                .map((b) => {
+                  const d = new Date(b.start);
+                  const e = new Date(b.end);
+                  return (
+                    <tr key={b.id}>
+                      <td>
+                        <strong>{b.customer || 'Khách lẻ'}</strong>
+                        <div style={{ fontSize: 11.5, color: '#64748b' }}>{b.phone}</div>
+                      </td>
+                      <td>{customers.find((c) => c.phone.replace(/\D+/g, '') === (b.phone || '').replace(/\D+/g, ''))
+                        ? renderTierBadge(
+                            customers.find((c) => c.phone.replace(/\D+/g, '') === (b.phone || '').replace(/\D+/g, ''))!.tier,
+                          )
+                        : renderTierBadge('none')}</td>
+                      <td>
+                        {d.toLocaleDateString('vi-VN')} · {d.toTimeString().slice(0, 5)} – {e.toTimeString().slice(0, 5)}
+                      </td>
+                      <td>{b.room.toUpperCase()}</td>
+                      <td>{b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`}</td>
+                      <td>
+                        <span className="crm2-tl-done-badge">{b.status}</span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              {appts.filter((b) => b.status !== 'cancelled' && b.end >= Date.now()).length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', color: '#64748b', padding: 24 }}>
+                    Chưa có lịch đặt sắp tới.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -3274,7 +2755,7 @@ export function CrmModule({
               </div>
               <div>
                 <h1>Chiến dịch Marketing & Chăm sóc tự động</h1>
-                <p>Gửi thông báo ưu đãi gia hạn, mời giải đấu qua Zalo OA, Email và SMS theo phân nhóm</p>
+                <p>Gửi thông báo ưu đãi gia hạn, mời giải đấu qua Zalo OA và Email theo nhóm khách</p>
               </div>
             </div>
             <button
@@ -3293,10 +2774,10 @@ export function CrmModule({
                 <th>Tên chiến dịch</th>
                 <th>Kênh gửi</th>
                 <th>Nhóm đối tượng</th>
+                <th>Xếp hàng gửi</th>
                 <th>Đã gửi</th>
-                <th>Đã mở xem</th>
-                <th>Chuyển đổi đặt sân</th>
-                <th>Trạng thái</th>
+                <th>Lỗi</th>
+                <th>Bỏ qua</th>
               </tr>
             </thead>
             <tbody>
@@ -3305,20 +2786,25 @@ export function CrmModule({
                   <td>
                     <strong>{cmp.name}</strong>
                   </td>
-                  <td>{cmp.channel}</td>
+                  <td>{cmp.channel === 'zalo' ? 'Zalo OA' : cmp.channel === 'email' ? 'Email' : cmp.channel}</td>
                   <td>
-                    <span className="crm2-tag-chip">{cmp.segment}</span>
+                    <span className="crm2-tag-chip">
+                      {SEGMENT_NAMES[cmp.segment as CampaignSegment] ?? cmp.segment}
+                    </span>
                   </td>
-                  <td>{cmp.sent}</td>
-                  <td>{cmp.opened}</td>
-                  <td>
-                    <strong style={{ color: '#16a34a' }}>{cmp.converted} khách</strong>
-                  </td>
-                  <td>
-                    <span className="crm2-status-active">{cmp.status}</span>
-                  </td>
+                  <td>{cmp.queued}</td>
+                  <td>{cmp.stats.sent ?? 0}</td>
+                  <td>{cmp.stats.failed ?? 0}</td>
+                  <td>{cmp.skipped}</td>
                 </tr>
               ))}
+              {campaigns.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', color: '#64748b', padding: 24 }}>
+                    Chưa có chiến dịch nào được gửi.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -3840,30 +3326,41 @@ export function CrmModule({
                   <select
                     value={newCampaignForm.channel}
                     onChange={(e) =>
-                      setNewCampaignForm({ ...newCampaignForm, channel: e.target.value })
+                      setNewCampaignForm({ ...newCampaignForm, channel: e.target.value as CampaignChannel })
                     }
                   >
-                    <option value="Zalo OA">Zalo OA</option>
-                    <option value="Email">Email</option>
-                    <option value="Zalo OA & Email">Zalo OA & Email</option>
-                    <option value="SMS">SMS Brandname</option>
+                    {CAMPAIGN_CHANNELS.map((c) => (
+                      <option key={c} value={c}>
+                        {c === 'zalo' ? 'Zalo OA' : 'Email'}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="crm2-form-group">
-                  <label>Phân nhóm nhận tin</label>
+                  <label>Nhóm nhận tin</label>
                   <select
                     value={newCampaignForm.segment}
                     onChange={(e) =>
-                      setNewCampaignForm({ ...newCampaignForm, segment: e.target.value })
+                      setNewCampaignForm({ ...newCampaignForm, segment: e.target.value as CampaignSegment })
                     }
                   >
-                    <option value="Tất cả khách hàng (1.248)">Tất cả khách hàng (1.248)</option>
-                    <option value="Hội viên (368)">Hội viên (368)</option>
-                    <option value="Khách tiềm năng (176)">Khách tiềm năng (176)</option>
-                    <option value="Khách VIP (58)">Khách VIP (58)</option>
+                    {SEGMENTS.map((k) => (
+                      <option key={k} value={k}>
+                        {SEGMENT_NAMES[k]}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
+              {newCampaignForm.channel === 'email' && (
+                <div className="crm2-form-group">
+                  <label>Tiêu đề email</label>
+                  <input
+                    value={newCampaignForm.subject}
+                    onChange={(e) => setNewCampaignForm({ ...newCampaignForm, subject: e.target.value })}
+                  />
+                </div>
+              )}
               <div className="crm2-form-group">
                 <label>Nội dung thông điệp</label>
                 <textarea
@@ -3874,6 +3371,9 @@ export function CrmModule({
                   }
                 />
               </div>
+              <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
+                Chỉ gửi cho khách đã đồng ý nhận tin và có thông tin liên hệ của kênh đã chọn.
+              </p>
             </div>
             <div className="crm2-modal-foot">
               <button
@@ -3886,28 +3386,8 @@ export function CrmModule({
               <button
                 type="button"
                 className="crm2-btn-primary"
-                onClick={() => {
-                  if (!requirePerm(canManage, 'Phát hành chiến dịch Marketing')) return;
-                  if (!newCampaignForm.name.trim()) {
-                    notify('Vui lòng nhập tên chiến dịch!');
-                    return;
-                  }
-                  setCampaigns((prev) => [
-                    {
-                      id: uid('cmp'),
-                      name: newCampaignForm.name.trim(),
-                      channel: newCampaignForm.channel,
-                      segment: newCampaignForm.segment,
-                      sent: 120,
-                      opened: 0,
-                      converted: 0,
-                      status: 'Đang chạy',
-                    },
-                    ...prev,
-                  ]);
-                  setShowCreateCampaignModal(false);
-                  notify('Đã phát hành chiến dịch Marketing mới!');
-                }}
+                disabled={campaignBusy}
+                onClick={() => void sendCampaign()}
               >
                 Kích hoạt gửi
               </button>

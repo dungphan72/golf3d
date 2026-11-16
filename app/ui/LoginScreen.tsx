@@ -43,10 +43,12 @@ export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: s
         <p>Đăng nhập để vào không gian làm việc</p>
         {notice && <p className="form-note">{notice}</p>}
         <label>
-          Email
+          Email hoặc số điện thoại
           <input
-            type="email"
+            type="text"
+            inputMode="email"
             autoComplete="username"
+            placeholder="email@... hoặc 09xx xxx xxx"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required

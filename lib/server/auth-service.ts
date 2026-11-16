@@ -12,6 +12,8 @@ import {
 } from '../auth/password';
 import { isRole, canAssignRole, type Role } from '../auth/permissions';
 import { noteAttempt, recentAttempts } from './throttle';
+import { loginIdentifier } from '../auth/identifier';
+import { normalizePhone, validPhone } from '../member';
 
 export type AuthUser = {
   userId: string;
@@ -34,7 +36,7 @@ const LOCK_MS = 15 * 60_000;
 // Verifying against a fixed hash keeps response time similar for unknown emails.
 const DUMMY_HASH =
   'pbkdf2$100000$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=';
-const BAD_LOGIN = 'Email hoặc mật khẩu không đúng';
+const BAD_LOGIN = 'Email, số điện thoại hoặc mật khẩu không đúng';
 
 type UserRow = {
   id: string;
@@ -66,7 +68,9 @@ export async function login(
       ok: false,
       result: fail('Đăng nhập sai quá nhiều lần từ thiết bị này. Thử lại sau ít phút.', 429),
     };
-  const email = normalizeEmail(emailInput);
+  const ident = loginIdentifier(emailInput);
+  // The throttle key is the typed identifier, so email and phone attempts are counted per account name.
+  const email = ident ? ident.value : normalizeEmail(emailInput);
   if (
     ip !== 'unknown' &&
     (await recentAttempts('staff_acct_fail', ip, LOGIN_WINDOW_MS, email)) >=
@@ -76,9 +80,12 @@ export async function login(
       ok: false,
       result: fail('Đăng nhập sai quá nhiều lần. Thử lại sau ít phút.', 429),
     };
-  const row = validEmail(email)
-    ? await db().prepare('SELECT * FROM users WHERE email=?').bind(email).first<UserRow>()
-    : null;
+  const row =
+    ident?.kind === 'email' && validEmail(email)
+      ? await db().prepare('SELECT * FROM users WHERE email=?').bind(email).first<UserRow>()
+      : ident?.kind === 'phone'
+        ? await db().prepare("SELECT * FROM users WHERE phone=? AND phone<>''").bind(email).first<UserRow>()
+        : null;
   const now = Date.now();
   if (!row || !row.active) {
     await verifyPassword(password, DUMMY_HASH);
@@ -254,13 +261,14 @@ export type StaffRow = {
   role: Role;
   active: boolean;
   created: number;
+  phone: string;
 };
 
 export async function listStaff(tenant: string): Promise<StaffRow[]> {
   const rows = (
     await db()
       .prepare(
-        `SELECT u.id,u.email,u.name,u.active,u.created,m.role FROM memberships m
+        `SELECT u.id,u.email,u.phone,u.name,u.active,u.created,m.role FROM memberships m
          JOIN users u ON u.id=m.user_id WHERE m.tenant=? ORDER BY m.created LIMIT 200`,
       )
       .bind(tenant)
@@ -270,6 +278,7 @@ export async function listStaff(tenant: string): Promise<StaffRow[]> {
         name: string;
         active: number;
         created: number;
+        phone: string;
         role: string;
       }>()
   ).results;
@@ -289,10 +298,14 @@ async function target(tenant: string, userId: string) {
 
 export async function createStaff(
   actor: AuthUser,
-  input: { email: string; name: string; role: string },
+  input: { email: string; name: string; role: string; phone?: string },
 ): Promise<ServiceResult> {
   const email = normalizeEmail(input.email);
   if (!validEmail(email)) return fail('Email không hợp lệ');
+  const phone = normalizePhone(input.phone ?? '');
+  if (phone && !validPhone(phone)) return fail('Số điện thoại không hợp lệ');
+  if (phone && (await db().prepare('SELECT id FROM users WHERE phone=?').bind(phone).first()))
+    return fail('Số điện thoại đã được dùng cho tài khoản khác', 409);
   if (input.name.trim().length < 2) return fail('Vui lòng nhập tên nhân viên');
   if (!isRole(input.role) || !canAssignRole(actor.role, input.role))
     return fail('Không đủ quyền gán vai trò này', 403);
@@ -310,9 +323,9 @@ export async function createStaff(
   await db().batch([
     db()
       .prepare(
-        'INSERT INTO users(id,email,name,password_hash,must_change,created) VALUES (?,?,?,?,1,?)',
+        'INSERT INTO users(id,email,phone,name,password_hash,must_change,created) VALUES (?,?,?,?,?,1,?)',
       )
-      .bind(id, email, input.name.trim().slice(0, 100), await hashPassword(password), now),
+      .bind(id, email, phone, input.name.trim().slice(0, 100), await hashPassword(password), now),
     db()
       .prepare('INSERT INTO memberships(user_id,tenant,role,created) VALUES (?,?,?,?)')
       .bind(id, actor.tenant, input.role, now),
@@ -322,7 +335,7 @@ export async function createStaff(
 
 export async function updateStaff(
   actor: AuthUser,
-  input: { userId: string; name?: string; role?: string; active?: boolean },
+  input: { userId: string; name?: string; role?: string; active?: boolean; phone?: string },
 ): Promise<ServiceResult> {
   const t = await target(actor.tenant, input.userId);
   if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
@@ -332,6 +345,16 @@ export async function updateStaff(
     (input.active === false || (input.role && input.role !== t.role))
   )
     return fail('Không thể tự khóa hoặc tự đổi vai trò của mình', 409);
+  if (input.phone !== undefined) {
+    const phone = normalizePhone(input.phone);
+    if (phone && !validPhone(phone)) return fail('Số điện thoại không hợp lệ');
+    if (
+      phone &&
+      (await db().prepare('SELECT id FROM users WHERE phone=? AND id<>?').bind(phone, input.userId).first())
+    )
+      return fail('Số điện thoại đã được dùng cho tài khoản khác', 409);
+    await db().prepare('UPDATE users SET phone=? WHERE id=?').bind(phone, input.userId).run();
+  }
   if (input.name !== undefined && input.name.trim().length >= 2) {
     await db()
       .prepare('UPDATE users SET name=? WHERE id=?')

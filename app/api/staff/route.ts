@@ -13,6 +13,7 @@ const input = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('create'),
     email: z.string().max(200),
+    phone: z.string().max(30).optional(),
     name: z.string().max(100),
     role: z.string().max(20),
   }),
@@ -22,6 +23,7 @@ const input = z.discriminatedUnion('action', [
     name: z.string().max(100).optional(),
     role: z.string().max(20).optional(),
     active: z.boolean().optional(),
+    phone: z.string().max(30).optional(),
   }),
   z.object({ action: z.literal('reset'), userId: z.string().max(100) }),
   z.object({ action: z.literal('delete'), userId: z.string().max(100) }),

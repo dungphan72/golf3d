@@ -196,6 +196,8 @@ export const users = sqliteTable(
   {
     id: text('id').primaryKey(),
     email: text('email').notNull(),
+    // Optional second login name for staff (normalised like customer phones); '' when not set.
+    phone: text('phone').notNull().default(''),
     name: text('name').notNull(),
     passwordHash: text('password_hash').notNull(),
     mustChange: integer('must_change').notNull().default(0),
@@ -204,7 +206,10 @@ export const users = sqliteTable(
     active: integer('active').notNull().default(1),
     created: integer('created').notNull(),
   },
-  (t) => [uniqueIndex('users_email').on(t.email)],
+  (t) => [
+    uniqueIndex('users_email').on(t.email),
+    uniqueIndex('users_phone').on(t.phone).where(sql`${t.phone} <> ''`),
+  ],
 );
 export const memberships = sqliteTable(
   'memberships',

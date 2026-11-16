@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Nhân viên đăng nhập bằng email hoặc số điện thoại (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu tài khoản nhân viên đăng nhập được bằng email hoặc số điện thoại.
+- **File:** `drizzle/0032_staff_phone.sql` (cột `users.phone`, chỉ mục duy nhất khi có số), `db/schema.ts`, `lib/auth/identifier.ts`, `lib/server/auth-service.ts`, `app/api/staff/route.ts`, `app/ui/LoginScreen.tsx` (ô "Email hoặc số điện thoại"), `app/ui/StaffPanel.tsx` (nhập/sửa SĐT), `tests/login-identifier.test.ts`.
+- **Hành vi:** SĐT được chuẩn hóa như SĐT khách (`0912 345 678`, `+84912345678` đều về `0912345678`) và không được trùng giữa các nhân viên. Giới hạn đăng nhập sai áp dụng theo tên đăng nhập đã nhập. Thông báo sai chung, không tiết lộ tài khoản tồn tại. Tài khoản cũ chưa có SĐT vẫn đăng nhập bằng email.
+- **Screenshot:** không chụp (chỉ đổi nhãn ô nhập).
+- **Kiểm thử:** `tsc` sạch, `pnpm test` đạt (thêm 3 test), e2e thủ công trên bản build: tạo nhân viên có SĐT, đăng nhập bằng email, email viết hoa, 3 dạng SĐT đều 200; SĐT lạ và sai mật khẩu 401; SĐT trùng 409; SĐT sai định dạng 400.
+- **Cần lưu ý khi deploy:** có migration `0032` (thêm cột `users.phone`); cần sao lưu cơ sở dữ liệu trước theo `docs/DEPLOY-VPS.md`.
+
 ## 2026-11-16 — CRM: xóa toàn bộ dữ liệu giả (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu xóa hết dữ liệu giả. Màn CRM chứa 8 khách mẫu, 4 lead, 3 chiến dịch, 3 lịch hẹn mẫu, số đếm viết cứng (1.248, 368, 176, 58, 32, 156 trang, huy hiệu lead 12/17) và nhiều giá trị bịa khi đồng bộ khách thật (email `@gmail.com`, ngày sinh 10/05/1988, 38 tuổi, hạn thẻ, ưu đãi %, hệ số điểm, % tăng trưởng, chi tiêu mặc định 350.000đ).
 - **File:** `modules/crm/ui/CrmApp.tsx`, `app/ui/AdminReferenceShell.tsx` (bỏ huy hiệu số 12).

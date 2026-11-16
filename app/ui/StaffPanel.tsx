@@ -12,7 +12,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
-type Staff = { id: string; email: string; name: string; role: Role; active: boolean };
+type Staff = { id: string; email: string; phone?: string; name: string; role: Role; active: boolean };
 
 async function call(body: unknown) {
   const r = await fetch('/api/staff', {
@@ -30,6 +30,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
   const [error, setError] = useState('');
   const [secret, setSecret] = useState<{ who: string; password: string } | null>(null);
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<Role>('cashier');
   const [busy, setBusy] = useState(false);
@@ -192,11 +193,26 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
             columns={[
               {
                 key: 'name',
-                header: 'Họ tên & Email',
+                header: 'Họ tên, email & SĐT',
                 cell: (s) => (
                   <div className="staff-user-cell">
                     <strong>{s.name}</strong>
                     <small className="text-muted">{s.email}</small>
+                    <small className="text-muted">
+                      {s.phone || 'Chưa có số điện thoại'}{' '}
+                      <button
+                        type="button"
+                        className="link-btn"
+                        disabled={busy}
+                        onClick={() => {
+                          const v = window.prompt(`Số điện thoại đăng nhập của ${s.name} (để trống để xóa)`, s.phone ?? '');
+                          if (v === null) return;
+                          void act(() => call({ action: 'update', userId: s.id, phone: v }));
+                        }}
+                      >
+                        Sửa
+                      </button>
+                    </small>
                   </div>
                 ),
               },
@@ -301,8 +317,9 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
             onSubmit={(e) => {
               e.preventDefault();
               act(async () => {
-                const result = await call({ action: 'create', email, name, role });
+                const result = await call({ action: 'create', email, phone, name, role });
                 setEmail('');
+                setPhone('');
                 setName('');
                 setShowCreateModal(false);
                 return result;
@@ -327,6 +344,15 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="VD: an.nguyen@golf3d.vn"
                 required
+              />
+            </label>
+            <label>
+              Số điện thoại đăng nhập (không bắt buộc)
+              <input
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="VD: 0912 345 678"
               />
             </label>
             <label>

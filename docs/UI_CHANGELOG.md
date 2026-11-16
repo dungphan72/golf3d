@@ -2,6 +2,13 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Sửa thanh điều hướng dưới trên điện thoại (nhánh `fix/p0-data-integrity`)
+- **Lý do:** trên điện thoại icon và nhãn ở thanh điều hướng dưới bị tối (gần như đen trên nền navy) và chạm vào không điều hướng.
+- **Nguyên nhân:** (1) quy tắc màu dùng biến `--hd-*` chỉ có bên trong trang chủ, trong khi thanh này nằm cạnh trang chủ, nên biến không tồn tại; (2) `next/link` của vinext hủy thao tác bấm rồi điều hướng phía trình duyệt bị lỗi trên thiết bị cảm ứng (ghi nhận lỗi `RSC prefetch setup error` chỉ ở ngữ cảnh cảm ứng), nên không có gì xảy ra.
+- **File:** `app/ui/MobileAppNavBar.tsx` (dùng liên kết `<a>` thường; mục "Đặt sân" cuộn tới form đặt nhanh `#dat-cho-nhanh` thay vì form đầy đủ ẩn), `app/home-dark.css` (màu viết trực tiếp), `app/ds-global.css` (`touch-action: manipulation`, bỏ vệt sáng khi chạm, vùng chạm tối thiểu 44px trên thiết bị cảm ứng).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), build; trên trình duyệt giả lập điện thoại cảm ứng: chạm Giải đấu → `/tin-tuc`, Tài khoản → `/tai-khoan`, Đặt sân cuộn tới form đặt nhanh, nút hero → `/bang-gia`.
+- **Còn tồn tại:** lỗi `RSC prefetch setup error` của vinext vẫn nằm ở các `Link` khác (AdminShell, PosShell là công cụ phụ); chưa thử trên điện thoại thật.
+
 ## 2026-11-16 — Trang chủ Dark Premium Golf (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu thiết kế lại toàn bộ trang chủ theo ảnh tham chiếu Dark Premium Golf (nền navy, nhấn emerald, vàng nhẹ), thay trang chủ sáng đã duyệt ngày 15/11 (`home-desk.png`, `home-mobile.png`). Đây là thay đổi theo yêu cầu trực tiếp; hai ảnh cũ chỉ còn là lịch sử.
 - **Ảnh tham chiếu:** ảnh Dark Premium Golf do chủ hệ thống gửi trong phiên (độ phân giải rất thấp, nên cần lưu bản rõ vào `hinh-anh/thiet-ke/`).

@@ -935,22 +935,26 @@ body:has(.hd-home) {
   .hd-footer-grid {
     grid-template-columns: 1fr;
   }
+  /* The bar sits next to .hd-home, not inside it, so it cannot use the page's colour variables. */
   .hd-home ~ .mnav {
     background: #0b162b;
-    border-top: 1px solid var(--hd-line);
+    border-top: 1px solid rgba(148, 170, 205, 0.22);
   }
   .hd-home ~ .mnav a {
-    color: var(--hd-muted);
+    color: #b4c3da;
+  }
+  .hd-home ~ .mnav a .mnav-ic svg {
+    color: inherit;
   }
   .hd-home ~ .mnav a.on {
-    color: var(--hd-em);
+    color: #34d399;
   }
   .hd-home ~ .mnav a.on .mnav-ic {
-    background: rgba(52, 211, 153, 0.14);
-    color: var(--hd-em);
+    background: rgba(52, 211, 153, 0.16);
+    color: #34d399;
   }
   .hd-home ~ .mnav a.cta .mnav-ic {
-    background: var(--hd-gold);
+    background: #e6c46a;
     color: #08101f;
   }
 }

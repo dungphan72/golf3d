@@ -1,6 +1,5 @@
 'use client';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
 import { Icon, type IconName } from './Icon';
 import { CalendarDays, Home, Trophy, UserRound, UsersRound } from 'lucide-react';
 
@@ -15,7 +14,7 @@ const TABS: {
 }[] = [
   { href: '/', label: 'Trang chủ', icon: 'home', match: (p: string) => p === '/' || p === '' },
   {
-    href: '/#dat-cho',
+    href: '/#dat-cho-nhanh',
     label: 'Đặt line',
     icon: 'event',
     match: (p: string) => p.startsWith('/book'),
@@ -58,17 +57,18 @@ export default function MobileAppNavBar() {
         const HomeIcon = HOME_ICONS[index];
         const community = onHome && index === 3;
         return (
-          <Link
+          // Plain anchors: on touch phones the framework Link swallowed the tap (it cancels the click, then
+          // its client-side navigation failed), so the bar did nothing. A normal link always works.
+          <a
             key={t.href}
             href={community ? '/tai-khoan' : t.href}
             className={`${t.cta ? 'cta' : ''} ${t.match(pathname) ? 'on' : ''}`.trim()}
             aria-current={t.match(pathname) ? 'page' : undefined}
             onClick={(e) => {
               if (t.cta && onHome) {
-                const el = document.getElementById('dat-cho');
+                const el = document.getElementById('dat-cho-nhanh');
                 if (el) {
                   e.preventDefault();
-                  window.location.hash = 'dat-cho';
                   el.scrollIntoView({ behavior: 'smooth' });
                 }
               }
@@ -82,7 +82,7 @@ export default function MobileAppNavBar() {
               )}
             </span>
             {community ? 'Cộng đồng' : onHome && index === 1 ? 'Đặt sân' : t.label}
-          </Link>
+          </a>
         );
       })}
     </nav>

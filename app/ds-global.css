@@ -100,3 +100,22 @@ video {
   height: 0 !important;
   background: transparent !important;
 }
+
+/* Touch: no 300ms tap delay or grey flash, and a tap target of at least 44px on phones. */
+a,
+button,
+[role='button'],
+input,
+select,
+textarea,
+summary,
+label {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+@media (pointer: coarse) {
+  .hd-actions .hd-btn,
+  .hd-btn {
+    min-height: 44px;
+  }
+}

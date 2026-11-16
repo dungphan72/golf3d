@@ -1,0 +1,302 @@
+/* Customer account (login / register / portal) and the member app: Dark Premium Golf, same palette as the home page.
+   Style only. Scoped to `.hd-inner` so nothing else changes. Loaded from SiteChrome after site-dark.css. */
+body:has(.hd-inner .auth-page),
+html body:has(.hd-inner .auth-page),
+body:has(.hd-inner .mps) {
+  background: #08101f !important;
+}
+.hd-inner:has(.auth-page),
+.hd-inner:has(.mps) {
+  background: #08101f;
+}
+/* The app shell is its own navigation (sidebar, search, notifications): no site header or footer around it. */
+.hd-inner:has(.mps) > :is(.hd-header, .hd-footer) {
+  display: none;
+}
+
+/* ── Login / register ─────────────────────────────────────────────── */
+.hd-inner .auth-header {
+  display: none;
+}
+.hd-inner .auth-page {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: var(--hd-text);
+}
+.hd-inner .auth-stage {
+  background: radial-gradient(900px 520px at 80% 20%, rgba(16, 185, 129, 0.16), transparent 70%), #08101f;
+  min-height: calc(100dvh - var(--hd-header));
+}
+.hd-inner .auth-art::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(8, 16, 31, 0.25) 60%, rgba(8, 16, 31, 0.95));
+}
+.hd-inner .auth-card,
+.hd-inner .auth-page section.auth-card {
+  background: var(--hd-surface);
+  border: 1px solid var(--hd-line);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  color: var(--hd-text);
+}
+.hd-inner .auth-identity h2,
+.hd-inner .auth-intro h1,
+.hd-inner .auth-join strong {
+  color: var(--hd-text);
+}
+.hd-inner .auth-intro p,
+.hd-inner .auth-join small,
+.hd-inner .auth-social > p,
+.hd-inner .auth-options > label {
+  color: var(--hd-muted);
+}
+.hd-inner .auth-tabs {
+  background: var(--hd-surface2);
+  box-shadow: none;
+  border: 1px solid var(--hd-line);
+}
+.hd-inner .auth-tabs button {
+  background: transparent;
+  color: var(--hd-muted);
+}
+.hd-inner .auth-tabs button[aria-selected='true'] {
+  background: var(--hd-em2);
+  color: #04130d;
+  box-shadow: none;
+}
+.hd-inner .auth-page label.auth-field,
+.hd-inner .auth-field {
+  background: var(--hd-surface2);
+  border: 1px solid var(--hd-line);
+  color: var(--hd-muted);
+  box-shadow: none;
+}
+.hd-inner .auth-field:focus-within {
+  border-color: var(--hd-em);
+  box-shadow: none;
+}
+.hd-inner .auth-page label.auth-field > input,
+.hd-inner .auth-field input {
+  color: var(--hd-text);
+}
+.hd-inner .auth-field > svg,
+.hd-inner .auth-field button {
+  color: var(--hd-muted);
+}
+.hd-inner .auth-options a {
+  color: var(--hd-em);
+}
+.hd-inner .auth-submit {
+  background: var(--hd-em2);
+  color: #04130d;
+  box-shadow: none;
+  border-radius: 5px;
+}
+.hd-inner .auth-submit:hover {
+  background: var(--hd-em);
+}
+.hd-inner .auth-error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.hd-inner .auth-social > p:before,
+.hd-inner .auth-social > p:after {
+  background: var(--hd-line);
+}
+.hd-inner .auth-social > p span {
+  background: var(--hd-surface);
+}
+.hd-inner .auth-social button {
+  background: var(--hd-surface2);
+  border: 1px solid var(--hd-line);
+  box-shadow: none;
+  color: var(--hd-text);
+}
+.hd-inner .auth-join {
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid var(--hd-line);
+  color: var(--hd-text);
+}
+.hd-inner .auth-join > svg {
+  color: var(--hd-muted);
+}
+
+/* ── Account portal (mp-*, pending / signed in) ──────────────────── */
+.hd-inner .mp {
+  background: transparent;
+  color: var(--hd-text);
+}
+.hd-inner .mp :is(.mp-auth-card, .mp-pro-head, .mp-card, .mp-pro-tile, .mp-support-box, .mp-pack) {
+  background: var(--hd-surface);
+  border-color: var(--hd-line);
+}
+.hd-inner .mp :is(.mp-auth-submit, .mp-btn-action.primary, .mp-btn-save, .mp-catalog-btn, .mp-tab-item.active) {
+  background: var(--hd-em2);
+  color: #04130d;
+}
+.hd-inner .mp .mp-golfer-avatar {
+  background: var(--hd-em2);
+}
+.hd-inner .mp .mp-bar-fill,
+.hd-inner .mp .mp-bar-fill.gold {
+  background: var(--hd-em);
+}
+
+/* ── Member app (mps / mph / mr) ─────────────────────────────────── */
+.hd-inner .mps {
+  --sg-ink: var(--hd-text);
+  --sg-ink-2: var(--hd-muted);
+  --sg-turf: var(--hd-em);
+  --sg-line: var(--hd-line);
+  background: var(--hd-bg);
+  color: var(--hd-text);
+}
+.hd-inner .mps :is(h1, h2, h3, h4, strong, b) {
+  color: var(--hd-text);
+}
+.hd-inner .mps :is(p, small, li, label, dd, dt) {
+  color: var(--hd-muted);
+}
+.hd-inner .mps :is(.mps-top, .mps-side, .mps-tabs, .mps-pop) {
+  background: rgba(11, 23, 48, 0.94);
+  border-color: var(--hd-line);
+  box-shadow: none;
+}
+.hd-inner .mps :is(
+    .mph-panel, .mph-stats, .mph-next, .mph-rank, .mph-bookings li, .mph-shortcuts > *, .mph-offer button,
+    .mr-panel, .mr-stats, .mr-qr, .mr-shortcuts a, .mr-catalog article,
+    .mps-qr, .mps-offers li, .mps-pop li button,
+    .mp-tab-view :is(.mp-card, .mp-pro-tile, .mp-pack, .mp-list-item, .mp-support-box, .mp-sub-section)
+  ) {
+  background: var(--hd-surface);
+  border-color: var(--hd-line);
+  box-shadow: none;
+  color: var(--hd-text);
+}
+.hd-inner .mps :is(.mph-rank.now, .mr-catalog article.featured) {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.45);
+}
+.hd-inner .mps :is(input, select, textarea, .mps-search, .mps-search input) {
+  background: var(--hd-surface2);
+  border-color: var(--hd-line);
+  color: var(--hd-text);
+}
+.hd-inner .mps .mps-nav {
+  color: var(--hd-muted);
+}
+.hd-inner .mps .mps-nav:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--hd-text);
+}
+.hd-inner .mps .mps-nav.on {
+  background: rgba(52, 211, 153, 0.16);
+  color: var(--hd-em);
+}
+.hd-inner .mps .mps-tabs button {
+  color: var(--hd-muted);
+}
+.hd-inner .mps .mps-tabs button.on {
+  color: var(--hd-em);
+}
+.hd-inner .mps :is(.mps-icon, .mps-burger, .mps-back, .mps-user) {
+  color: var(--hd-text);
+  background: transparent;
+}
+.hd-inner .mps .mps-avatar {
+  background: var(--hd-em2);
+  color: #04130d;
+}
+
+/* Second pass */
+.hd-inner.sg-page:has(.auth-page),
+.sg-page.hd-inner:has(.auth-page) {
+  background: #08101f;
+}
+.hd-inner .auth-page label.auth-field > input {
+  background: transparent !important;
+  border: 0 !important;
+}
+.hd-inner.sg-page .mp {
+  background: transparent;
+  min-height: 0;
+}
+.hd-inner .mps .mr-shortcuts :is(button, a) {
+  background: var(--hd-surface);
+  border-color: var(--hd-line);
+  color: var(--hd-text);
+  box-shadow: none;
+}
+.hd-inner .mps .mr-shortcuts button.primary {
+  background: var(--hd-em2);
+  color: #04130d;
+}
+.hd-inner .mps :is(.mr-panel, .mr-catalog article, .mr-stats) :is(a, button.mr-link, .mr-more) {
+  color: var(--hd-em);
+}
+.hd-inner .mps .mr-offer small {
+  color: #0b3b1c;
+}
+.hd-inner .mps :is(.mr-tier-pill, .mps-card-pill) {
+  background: #fcb000;
+  color: #1b1500;
+}
+.hd-inner .mps .mr-heading button {
+  color: var(--hd-em);
+}
+.hd-inner .mps .mr-heading button svg {
+  color: inherit;
+}
+.hd-inner .mps :is(.mr-panel, .mr-stats) header a,
+.hd-inner .mps .mr-panel header button {
+  color: var(--hd-em);
+  opacity: 1;
+}
+
+/* Phone layout of the member app */
+.hd-inner .mps :is(.mps-body, .mps-main, .mr-home, .mr-columns, .mr-left, .mr-right, .mr-info, .mr-greeting) {
+  background: transparent;
+}
+.hd-inner .mps :is(.mr-benefits li, .mr-activity-icon, .mr-date, .mr-points button) {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--hd-text);
+}
+.hd-inner .mps .mr-status {
+  background: rgba(52, 211, 153, 0.16);
+  color: var(--hd-em);
+}
+.hd-inner .mps .mr-status.pending {
+  background: rgba(230, 196, 106, 0.16);
+  color: var(--hd-gold);
+}
+.hd-inner .mps .mr-progress {
+  background: rgba(148, 170, 205, 0.2);
+}
+.hd-inner .mps .mr-catalog article button {
+  background: var(--hd-em2);
+  color: #04130d;
+  border-color: transparent;
+}
+.hd-inner .mps .mr-catalog article :is(h3, h4, strong, span, small, li, p) {
+  color: var(--hd-text);
+}
+.hd-inner .mps .mr-benefits li :is(span, p, small, svg) {
+  color: var(--hd-text);
+}
+
+.hd-inner .mps .mps-top {
+  background: linear-gradient(120deg, #0b1730, #0f3d2f) !important;
+}
+.hd-inner .mps .mps-tabs :is(button, a) {
+  color: #b4c3da;
+  opacity: 1;
+}
+.hd-inner .mps .mps-tabs :is(button, a).on {
+  color: var(--hd-em);
+}

@@ -8,6 +8,7 @@ import '../member-reference.css';
 import MemberPortal, { type Overview } from '../ui/MemberPortal';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { BRAND } from '../../lib/brand';
+import { SiteFooter, SiteHeader } from '../ui/SiteChrome';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'Hội viên — SaiGon Indoor Golf Club',
@@ -42,12 +43,14 @@ export default async function MembershipPage() {
     booking: { enabled: true, vip: true, services: ['gdr'], days: pricing.days || 28 },
   };
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
+      <SiteHeader active="/thanh-vien" />
       <div className="mp">
         <main>
           <MemberPortal publicOverview={overview} />
         </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

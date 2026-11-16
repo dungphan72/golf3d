@@ -2,7 +2,8 @@
 body:has(.hd-home) {
   background: #08101f;
 }
-.hd-home {
+.hd-home,
+.hd-inner {
   --hd-bg: #08101f;
   --hd-bg2: #0b1730;
   --hd-surface: #101c36;

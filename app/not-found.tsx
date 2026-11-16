@@ -7,9 +7,9 @@ export const metadata = { title: 'Không tìm thấy trang — ' + BRAND.name, r
 
 export default function NotFound() {
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
+      <SiteHeader />
       <main className="sg-lost">
         <span className="sg-plate">
           <b>404</b>

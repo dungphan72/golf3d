@@ -8,9 +8,9 @@ export const metadata = { title: 'Đặt line — SaiGon Indoor Golf Club', robo
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref="#dat-cho" bookLabel="Đặt line" />
+      <SiteHeader />
       <main className="sg-solo" id="dat-cho">
         <div className="sg-form">
           <BookingPage slug={slug} />

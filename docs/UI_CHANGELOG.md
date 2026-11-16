@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Luồng khách hàng theo phong cách trang chủ Dark Premium Golf (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu đồng bộ phong cách toàn bộ luồng khách hàng với trang chủ mới; chỉ đổi giao diện, không đổi nghiệp vụ, API, dữ liệu.
+- **Ảnh tham chiếu:** trang chủ Dark Premium Golf (chưa lưu file ảnh vào `hinh-anh/thiet-ke/`). Thay hoàn toàn các thiết kế sáng cũ: poster Bảng giá nền kem, đăng nhập/đăng ký nền trắng, app hội viên nền sáng, trang tin tức/đặt sân.
+- **File:** `app/ui/SiteChrome.tsx` (header/footer dùng chung với trang chủ, tên/logo/địa chỉ/hotline lấy từ cài đặt), `app/site-dark.css` (mới), `app/member-dark.css` (mới), `app/home-dark.css`, `app/bang-gia/page.tsx`, `app/tin-tuc/page.tsx`, `app/tin-tuc/[id]/page.tsx`, `app/book/[slug]/page.tsx`, `app/not-found.tsx`, `app/tai-khoan/page.tsx`, `app/thanh-vien/page.tsx`.
+- **Ghi chú thiết kế:** màn đăng nhập dùng header chung (header riêng của màn này ẩn). App hội viên (có sidebar) giữ thanh trên riêng của app, không thêm header/footer của website.
+- **Screenshot:** chụp trong phiên bằng Playwright (desktop 1440, mobile 390 cảm ứng) cho Bảng giá, Hội viên, Tin tức, Chi tiết tin + đăng ký sự kiện, Đặt sân, Đăng nhập, Đăng ký, Tài khoản chờ xác nhận; chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `eslint` 0 lỗi, `pnpm test` đạt, build đạt. Chưa kiểm tra riêng tablet 820 và 1920 cho các trang này; chưa chụp màn app hội viên khi đã được xác nhận và có gói.
+
 ## 2026-11-16 — Sửa thanh điều hướng dưới trên điện thoại (nhánh `fix/p0-data-integrity`)
 - **Lý do:** trên điện thoại icon và nhãn ở thanh điều hướng dưới bị tối (gần như đen trên nền navy) và chạm vào không điều hướng.
 - **Nguyên nhân:** (1) quy tắc màu dùng biến `--hd-*` chỉ có bên trong trang chủ, trong khi thanh này nằm cạnh trang chủ, nên biến không tồn tại; (2) `next/link` của vinext hủy thao tác bấm rồi điều hướng phía trình duyệt bị lỗi trên thiết bị cảm ứng (ghi nhận lỗi `RSC prefetch setup error` chỉ ở ngữ cảnh cảm ứng), nên không có gì xảy ra.

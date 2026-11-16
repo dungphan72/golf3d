@@ -20,9 +20,9 @@ export default async function NewsPage() {
   const c = tenant ? await publicContent(tenant) : { news: [], upcoming: [], past: [] };
   const empty = !c.news.length && !c.upcoming.length && !c.past.length;
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
+      <SiteHeader active="/tin-tuc" />
       <main id="top">
         <section className="sg-pagehead">
           <p className="sg-kicker">Tin tức &amp; sự kiện</p>

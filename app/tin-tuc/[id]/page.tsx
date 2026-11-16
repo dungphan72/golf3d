@@ -35,9 +35,9 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
     .map((t) => t.trim())
     .filter(Boolean);
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref="/#dat-cho" bookLabel="Đặt line" />
+      <SiteHeader />
       <main id="top">
         <article className="sg-in sg-block sg-article">
           <a className="sg-link" href="/tin-tuc">

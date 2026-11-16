@@ -106,9 +106,9 @@ export default async function PricingPage() {
   );
 
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader bookHref={bookHref} bookLabel={bookLabel} />
+      <SiteHeader active="/bang-gia" />
       <main id="top" className="pg">
         <header className="pg-head">
           {/* eslint-disable-next-line @next/next/no-img-element */}

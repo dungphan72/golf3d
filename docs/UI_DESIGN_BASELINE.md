@@ -16,8 +16,9 @@ Cập nhật: 15/11/2026. Mốc phục hồi: tag `ui-approved-2026-11-15` (comm
 | Màn hình | Ảnh tham chiếu (`hinh-anh/thiet-ke/`) | File chính |
 |---|---|---|
 | Trang chủ (desktop/mobile), Dark Premium Golf từ 16/11/2026 (thay `home-desk.png`, `home-mobile.png`) | ảnh Dark Premium Golf (chưa lưu file) | `app/page.tsx`, `app/home-dark.css` |
-| Đăng nhập / đăng ký | `dang-nhap.png` | `app/ui/MemberAuth.tsx`, `app/auth-reference.css` |
-| App hội viên | `hoi-vien.png`, `hoi-vien-mobile.png` | `MemberShell/MemberHome/MemberPortal.tsx`, `app/member-reference.css` |
+| Đăng nhập / đăng ký, Dark Premium Golf từ 16/11/2026 (thay `dang-nhap.png`) | theo phong cách trang chủ | `app/ui/MemberAuth.tsx`, `app/auth-reference.css`, `app/member-dark.css` |
+| App hội viên, Dark Premium Golf từ 16/11/2026 (thay `hoi-vien.png`, `hoi-vien-mobile.png`) | theo phong cách trang chủ | `MemberShell/MemberHome/MemberPortal.tsx`, `app/member-reference.css`, `app/member-dark.css` |
+| Trang khách hàng chung: header/footer tối, Bảng giá, Tin tức, Đặt sân (`/book`), 404 (từ 16/11/2026; Bảng giá thay poster nền kem) | theo phong cách trang chủ | `app/ui/SiteChrome.tsx`, `app/site-dark.css`, `app/bang-gia/*`, `app/tin-tuc/*`, `app/book/*` |
 | Khung quản trị | `admin.png`, `admin1.png` | `app/ui/AdminReferenceShell.tsx`, `app/admin-reference.css` |
 | Tổng quan quản trị | `admin.png`, `admin1.png` | `app/ui/AdminOverview.tsx` |
 | POS 4 bước (desktop/mobile) | `Luồng POS Saigon Indoor Golf Club.png`, `POS.png`, `POS-mobile.png` | `app/ui/ModernPosFlow.tsx`, `app/pos-flow.css` |
@@ -33,7 +34,8 @@ Cập nhật: 15/11/2026. Mốc phục hồi: tag `ui-approved-2026-11-15` (comm
 ## Chưa đối chiếu hoặc còn lệch ảnh
 - `Luồng giải đấu trên ứng dụng di động.png` và `Quy trình giải đấu….png`: chưa đối chiếu từng màn.
 - POS: thẻ món chưa có ảnh sản phẩm (hệ thống chưa lưu ảnh); tab Dịch vụ/Phụ kiện/Combo và giá thuê gậy chưa có dữ liệu nên không hiển thị; màn hoàn tất hiển thị mã phiên thay cho mã `HD…`.
-- Thanh toán thẻ, chuyển khoản/QR, in hóa đơn, Zalo, thêm món qua bếp, gia hạn: chưa kiểm thử bằng trình duyệt.
+- Thanh toán thẻ, chuyển khoản/QR, in hóa đơn, Zalo, thêm món qua bếp, gia hạn: chưa kiểm thử bằng trình duyệt.
+
 
 ## Quy chuẩn toàn hệ thống (từ 16/11/2026)
 Khai báo tập trung trong `app/ds-global.css`: (1) logo chỉ dùng file trong `/public`, không vẽ lại; (2) font Be Vietnam Pro; (3) Material Design 3; (4) placeholder `#9aa5a0`; (5) chữ dài tự xuống dòng, không ép một dòng, không cắt `…`; (6) ẩn thanh cuộn nhưng vẫn cuộn được; (7) bo góc `--radius: 5px` (giữ hình tròn cho avatar, chấm trạng thái, thanh tiến độ).

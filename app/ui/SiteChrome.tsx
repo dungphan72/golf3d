@@ -1,94 +1,124 @@
+/* eslint-disable @next/next/no-img-element, @next/next/no-html-link-for-pages */
+import { Globe, MapPin, Phone, UserRound } from 'lucide-react';
 import { BRAND } from '../../lib/brand';
-import '../chrome.css';
-import { Icon } from './Icon';
+import { publicPricing } from '../../lib/server/pricing-service';
+import '../home-dark.css';
+import '../site-dark.css';
+import '../member-dark.css';
 
-/** Shared top bar and footer (same look on the home page and the inner pages). */
-export function SiteHeader({ bookHref, bookLabel }: { bookHref: string; bookLabel: string }) {
-  const nav = [
-    ['/#phong', 'Chỗ chơi'],
-    ['/#tien-ich', 'Một buổi chơi'],
-    ['/bang-gia', 'Bảng giá'],
-    ['/thanh-vien', 'Thẻ hội viên'],
-    ['/#lien-he', 'Liên hệ'],
-    ['/tai-khoan', 'Tài khoản'],
-  ];
+/**
+ * Shared header and footer of every customer page: the same dark premium look as the home page.
+ * Club name, logo, address and hotline come from the club's own settings (fallback: brand file).
+ * The page wrapper must carry the classes "hd-home hd-inner" (colour tokens and the phone bottom bar).
+ */
+const NAV: [string, string][] = [
+  ['Trang chủ', '/'],
+  ['Dịch vụ', '/#dich-vu'],
+  ['Đặt sân', '/#dat-cho-nhanh'],
+  ['Giải đấu', '/#giai-dau'],
+  ['Hội viên', '/thanh-vien'],
+  ['Bảng giá', '/bang-gia'],
+  ['Tin tức', '/tin-tuc'],
+];
+
+async function club() {
+  const p = await publicPricing();
+  return {
+    name: p.clubName || BRAND.name,
+    logo: p.logo || BRAND.logo,
+    address: p.clubAddress || BRAND.address,
+    hotline: p.hotline || BRAND.hotline,
+  };
+}
+
+export async function SiteHeader({ active }: { active?: string }) {
+  const c = await club();
   return (
-    <header className="sg-bar">
-      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-      <a className="sg-brand" href="/">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={BRAND.logo} alt="" width={40} height={40} />
-        <b>
-          {BRAND.name.slice(0, BRAND.name.lastIndexOf(' '))}
-          <br />
-          {BRAND.name.slice(BRAND.name.lastIndexOf(' ') + 1)}
-        </b>
+    <header className="hd-header">
+      <a className="hd-brand" href="/" aria-label={`${c.name}: Trang chủ`}>
+        <img src={c.logo} alt="" width="44" height="44" />
+        <span>
+          <strong>{c.name}</strong>
+          <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
+        </span>
       </a>
-      <nav aria-label="Điều hướng">
-        {nav.map(([href, label]) => (
-          <a key={href} href={href}>
+      <nav className="hd-nav" aria-label="Điều hướng chính">
+        {NAV.map(([label, href]) => (
+          <a key={label} href={href} className={href === active ? 'on' : ''} aria-current={href === active ? 'page' : undefined}>
             {label}
           </a>
         ))}
       </nav>
-      <a className="sg-phone" href={`tel:${BRAND.hotline}`} aria-label={`Gọi hotline ${BRAND.hotline}`}>
-        <Icon name="phone" size={20} />
-        <b>{BRAND.hotline}</b>
-      </a>
-      <a className="sg-btn" href={bookHref}>
-        {bookLabel}
-      </a>
+      <div className="hd-actions">
+        <a className="hd-btn ghost" href="/tai-khoan">
+          <UserRound size={17} />
+          <span>Đăng nhập</span>
+        </a>
+        <a className="hd-btn solid" href="/tai-khoan?dang-ky">
+          Đăng ký
+        </a>
+      </div>
     </header>
   );
 }
 
-export function SiteFooter() {
+export async function SiteFooter() {
+  const c = await club();
   return (
-    <footer className="sg-foot" id="chan-trang">
-      <div className="sg-foot-in">
+    <footer className="hd-footer" id="lien-he">
+      <div className="hd-footer-grid">
         <div>
-          <p className="sg-foot-brand">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={BRAND.logo} alt="" width={36} height={36} />
-            <b>{BRAND.name}</b>
-          </p>
-          <p>Phòng golf 3D với radar Foresight GC3: 10 line tiêu chuẩn và 2 phòng VIP riêng.</p>
-        </div>
-        <div>
-          <h4>Liên hệ</h4>
-          <p>{BRAND.address}</p>
-          <p>
-            Hotline: <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>
-          </p>
-          <p>
-            <a href={BRAND.zalo || `https://zalo.me/${BRAND.hotline}`} target="_blank" rel="noopener noreferrer">
-              <Icon name="chat" size={18} />
-              Nhắn Zalo
-            </a>
-          </p>
-        </div>
-        <div>
-          <h4>Trang</h4>
-          <a href="/bang-gia">Bảng giá</a>
-          <a href="/thanh-vien">Thẻ hội viên</a>
-          <a href="/tai-khoan">Tài khoản</a>
-          <a href="/quan-ly">Nhân viên</a>
-        </div>
-        <div>
-          <h4>Đặt chỗ</h4>
-          <p>Gửi yêu cầu, nhân viên gọi xác nhận. Không cần trả trước.</p>
-          {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
-          <a className="sg-btn" href="/#dat-cho">
-            Đặt line
+          <a className="hd-brand" href="/">
+            <img src={c.logo} alt="" width="44" height="44" />
+            <span>
+              <strong>{c.name}</strong>
+              <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
+            </span>
           </a>
+          <p>
+            Phòng tập Golf 3D hiện đại với công nghệ Foresight GC3, không gian chuyên nghiệp và dịch vụ đa dạng tại TP.HCM.
+          </p>
+          <div className="hd-social">
+            <a href={BRAND.zalo || `https://zalo.me/${c.hotline}`} aria-label="Liên hệ qua Zalo">
+              Zalo
+            </a>
+            <a href={`tel:${c.hotline}`} aria-label="Gọi câu lạc bộ">
+              <Phone size={18} />
+            </a>
+          </div>
         </div>
+        <nav aria-label="Về chúng tôi">
+          <h3>Về chúng tôi</h3>
+          <a href="/#tien-ich">Không gian &amp; tiện ích</a>
+          <a href="/bang-gia">Bảng giá</a>
+          <a href="/tin-tuc">Tin tức</a>
+        </nav>
+        <nav aria-label="Dịch vụ">
+          <h3>Dịch vụ</h3>
+          <a href="/#dat-cho-nhanh">Đặt sân Golf 3D</a>
+          <a href="/thanh-vien">Thẻ hội viên</a>
+          <a href="/#giai-dau">Giải đấu &amp; Sự kiện</a>
+          <a href="/tai-khoan">Tài khoản</a>
+        </nav>
+        <address>
+          <h3>Liên hệ</h3>
+          <p>
+            <MapPin size={18} />
+            {c.address}
+          </p>
+          <a href={`tel:${c.hotline}`}>
+            <Phone size={18} />
+            <strong>{c.hotline}</strong>
+          </a>
+          <a href={`https://${BRAND.website}`}>
+            <Globe size={18} />
+            {BRAND.website}
+          </a>
+        </address>
       </div>
-      <div className="sg-foot-bar">
-        <span>
-          © {new Date().getFullYear()} {BRAND.name}
-        </span>
-        <span>{BRAND.website}</span>
-      </div>
+      <p className="hd-copy">
+        © {new Date().getFullYear()} {c.name}. Mọi quyền được bảo lưu.
+      </p>
     </footer>
   );
 }

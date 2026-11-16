@@ -5,7 +5,7 @@ import './portal.css';
 import './portal-theme.css';
 import '../member-app.css';
 import MemberPortal from '../ui/MemberPortal';
-import { FONT_URL } from '../ui/SiteChrome';
+import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,13 +21,15 @@ export default async function AccountPage({
 }) {
   const sp = await searchParams;
   return (
-    <div className="sg-page">
+    <div className="sg-page hd-home hd-inner">
       <link rel="stylesheet" href={FONT_URL} />
+      <SiteHeader />
       <div className="mp">
         <main>
           <MemberPortal registerFirst={sp['dang-ky'] !== undefined} />
         </main>
       </div>
+      <SiteFooter />
     </div>
   );
 }

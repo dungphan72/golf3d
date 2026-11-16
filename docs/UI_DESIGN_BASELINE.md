@@ -15,7 +15,7 @@ Cập nhật: 15/11/2026. Mốc phục hồi: tag `ui-approved-2026-11-15` (comm
 ## Màn hình đã duyệt, ảnh tham chiếu và file sở hữu
 | Màn hình | Ảnh tham chiếu (`hinh-anh/thiet-ke/`) | File chính |
 |---|---|---|
-| Trang chủ (desktop/mobile) | `home-desk.png`, `home-mobile.png` | `app/page.tsx`, `app/home-reference.css` |
+| Trang chủ (desktop/mobile), Dark Premium Golf từ 16/11/2026 (thay `home-desk.png`, `home-mobile.png`) | ảnh Dark Premium Golf (chưa lưu file) | `app/page.tsx`, `app/home-dark.css` |
 | Đăng nhập / đăng ký | `dang-nhap.png` | `app/ui/MemberAuth.tsx`, `app/auth-reference.css` |
 | App hội viên | `hoi-vien.png`, `hoi-vien-mobile.png` | `MemberShell/MemberHome/MemberPortal.tsx`, `app/member-reference.css` |
 | Khung quản trị | `admin.png`, `admin1.png` | `app/ui/AdminReferenceShell.tsx`, `app/admin-reference.css` |

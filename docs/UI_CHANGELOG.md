@@ -2,6 +2,16 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Trang chủ Dark Premium Golf (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu thiết kế lại toàn bộ trang chủ theo ảnh tham chiếu Dark Premium Golf (nền navy, nhấn emerald, vàng nhẹ), thay trang chủ sáng đã duyệt ngày 15/11 (`home-desk.png`, `home-mobile.png`). Đây là thay đổi theo yêu cầu trực tiếp; hai ảnh cũ chỉ còn là lịch sử.
+- **Ảnh tham chiếu:** ảnh Dark Premium Golf do chủ hệ thống gửi trong phiên (độ phân giải rất thấp, nên cần lưu bản rõ vào `hinh-anh/thiet-ke/`).
+- **File:** `app/page.tsx` (viết lại), `app/home-dark.css` (mới). Giữ `app/home-reference.css` vì phần đặt sân nhúng (`BookingPage`) dùng kiểu của nó.
+- **Bố cục:** Header (logo, menu, Đăng nhập, Đăng ký) → Hero cao 100dvh trừ header (ảnh thật của câu lạc bộ, tiêu đề, nút Đặt sân ngay, Xem bảng giá) → thanh tiện ích → Dịch vụ nổi bật (4 thẻ) → Đặt sân nhanh → Giải đấu & Sự kiện (3 thẻ) → Gói hội viên (3 gói) → Không gian & tiện ích → Chân trang. Mobile dạng app: header gọn, hàng thẻ vuốt ngang, thanh điều hướng dưới màu tối.
+- **Dữ liệu thật, không viết cứng:** số line và phòng VIP lấy từ danh sách phòng; giá "từ X đ/giờ" lấy từ bảng giá; giờ mở cửa, giờ vàng, hotline, địa chỉ, tên và logo lấy từ cài đặt; giải đấu lấy từ bài viết loại sự kiện (trạng thái theo ngày thi đấu); gói hội viên và quyền lợi lấy từ danh mục gói và cài đặt quyền lợi; đặt sân nhanh dùng lại `QuickBook` và form đặt sân có sẵn.
+- **Bỏ khỏi trang:** khối "Lịch đặt sân của tôi", hai ảnh banner hội viên có chữ in sẵn (giá và quyền lợi nằm trong ảnh), chuyển ngôn ngữ (chưa có đa ngôn ngữ), nút xem video (chưa có video), bảng xếp hạng (chưa có dữ liệu).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`, build; chụp 1920, 1440, 820 và 390px; kiểm tra tự động 4 kích thước: font Be Vietnam Pro, bo góc 5px, không chữ bị cắt, không tràn ngang, một `h1`, mọi ảnh có chú thích; form đặt sân mở đúng khi chọn khung giờ.
+- **Chưa làm:** form đặt sân đầy đủ vẫn là bảng sáng trong trang tối (chưa chuyển giao diện tối); ô "số người" trong đặt nhanh chưa có vì form có sẵn không nhận; `home-reference.css` còn nhiều quy tắc cũ không dùng.
+
 ## 2026-11-16 — Chuẩn hóa 7 quy chuẩn UI toàn hệ thống và thiết kế lại Quản trị giải đấu (nhánh `fix/p0-data-integrity`)
 - **Lý do:** yêu cầu chuẩn hóa toàn bộ giao diện theo 7 quy chuẩn (logo thật, font Be Vietnam Pro, Material Design 3, placeholder xám nhạt, chữ dài tự xuống dòng, ẩn thanh cuộn, bo góc 5px) và thiết kế lại trang Quản trị giải đấu theo mẫu đã duyệt.
 - **Ảnh tham chiếu:** mẫu "Quản trị giải đấu" do chủ hệ thống gửi trong phiên (nên lưu vào `hinh-anh/thiet-ke/`).

@@ -2,434 +2,537 @@
 import type { Metadata } from 'next';
 import {
   ArrowRight,
-  Bell,
   CalendarDays,
   CarFront,
+  Check,
+  Clock,
   Coffee,
   Crown,
   Flag,
   Globe,
-  Grid2X2,
-  Layers,
+  GraduationCap,
   MapPin,
   Phone,
-  Search,
-  ShoppingBag,
+  Target,
   Trophy,
   UserRound,
   UsersRound,
 } from 'lucide-react';
 import { BRAND } from '../lib/brand';
+import { rooms } from '../lib/club';
+import { packageBullets, type PackageItem, type PriceRow } from '../lib/price-table';
+import { STATUS_LABEL, tournamentStatus } from '../lib/tournament';
 import { publicPricing } from '../lib/server/pricing-service';
 import { bookingSlug } from '../lib/server/online-service';
-import { publicContent } from '../lib/server/content-service';
+import { publicContent, type Post } from '../lib/server/content-service';
 import { publicTenant } from '../lib/server/member-account-service';
 import BookingPage from './ui/BookingPage';
 import QuickBook from './ui/QuickBook';
 import './home-reference.css';
-
-const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
-/** Same table as /bang-gia: hourly price, then the per-person 9 and 18 hole prices when set. */
-function priceCell(r: { gdr: number | null; h9: number | null; h18: number | null }) {
-  const holes = [r.h9 != null && `9 hố ${vnd(r.h9)}`, r.h18 != null && `18 hố ${vnd(r.h18)}`].filter(Boolean);
-  return (
-    <>
-      {r.gdr == null ? 'Liên hệ' : `${vnd(r.gdr)} đ/giờ`}
-      {holes.length > 0 && <small>{holes.join(' · ')} đ/người</small>}
-    </>
-  );
-}
+import './home-dark.css';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
   title: 'SaiGon Indoor Golf Club — Golf 3D Foresight GC3',
   description:
     'Golf 3D · Tập luyện · Giải đấu · Cộng đồng. Đặt sân tại SaiGon Indoor Golf Club, 250 Lương Định Của, TP.HCM.',
+  openGraph: {
+    title: 'SaiGon Indoor Golf Club — Golf 3D Foresight GC3',
+    type: 'website',
+    locale: 'vi_VN',
+    images: [{ url: '/og.jpg', width: 1200, height: 628 }],
+  },
 };
-const img = (name: string) => `/img/home/${name}.webp`;
-const services = [
-  {
-    image: 'service-book',
-    icon: CalendarDays,
-    title: 'Đặt sân Golf 3D',
-    text: 'Linh hoạt, tiện lợi',
-    href: '#dat-cho',
-  },
-  {
-    image: 'service-coach',
-    icon: Flag,
-    title: 'Huấn luyện Golf',
-    text: 'Cá nhân hoá lộ trình',
-    href: '#huan-luyen',
-  },
-  {
-    image: 'service-event',
-    icon: Trophy,
-    title: 'Giải đấu & Sự kiện',
-    text: 'Giao lưu – Kết nối – Thi đấu',
-    href: '/tin-tuc',
-  },
-  {
-    image: 'service-member',
-    icon: UsersRound,
-    title: 'Gói giờ & Hội viên',
-    text: 'Ưu đãi hấp dẫn',
-    href: '/thanh-vien',
-  },
-];
-const shortcuts = [
-  { icon: CalendarDays, label: 'Đặt sân', href: '#dat-cho' },
-  { icon: Layers, label: 'Mua gói giờ', href: '/thanh-vien', gold: true },
-  { icon: Crown, label: 'Hội viên', href: '/thanh-vien', gold: true },
-  { icon: Trophy, label: 'Giải đấu', href: '/tin-tuc', gold: true },
-  { icon: Flag, label: 'Huấn luyện', href: '#huan-luyen' },
-  { icon: UsersRound, label: 'Tìm bạn chơi', href: '/tai-khoan' },
-  { icon: ShoppingBag, label: 'Cửa hàng', href: '#dich-vu' },
-  { icon: Grid2X2, label: 'Khác', href: '#tien-ich' },
-];
-const facilities = [
-  ['facility-lines', 'Khu Line tiêu chuẩn', '(10 Line)'],
-  ['facility-vip', 'Phòng VIP riêng tư', '(2 Phòng)'],
-  ['facility-parking', 'Bãi đậu xe rộng', '(1.500 m²)'],
-  ['facility-food', 'Dịch vụ F&B', 'Đa dạng, tiện lợi'],
-  ['facility-locker', 'Tiện ích khác', 'Tủ đồ, nghỉ ngơi, thư giãn'],
-];
-function Heading({
+
+const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
+const photo = (name: string) => `/img/${name}.webp`;
+/** Lowest hourly price of a price table ("từ X đ/giờ"); null when no hourly price is set. */
+const fromHourly = (rows: PriceRow[] | undefined) => {
+  const v = (rows ?? []).map((r) => r.gdr).filter((n): n is number => n != null);
+  return v.length ? Math.min(...v) : null;
+};
+const dateText = (ms: number | null) =>
+  ms == null
+    ? ''
+    : new Date(ms).toLocaleDateString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+const timeText = (ms: number | null) =>
+  ms == null
+    ? ''
+    : new Date(ms).toLocaleTimeString('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+/** A package name without the section prefix ("Thẻ tháng · 1 tháng" -> "1 tháng"). */
+const shortName = (p: PackageItem, section: string) =>
+  p.name.startsWith(`${section} · `) ? p.name.slice(section.length + 3) : p.name;
+
+/** Drops repeated lines (same text ignoring case and spacing), keeping the first. */
+const uniqueLines = (lines: string[]) => {
+  const seen = new Set<string>();
+  return lines.filter((l) => {
+    const k = l.toLocaleLowerCase('vi').replace(/\s+/g, ' ').trim();
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+};
+
+function SectionHead({
+  kicker,
   title,
+  text,
   href,
-  more = 'Xem tất cả',
+  more,
 }: {
+  kicker: string;
   title: string;
+  text?: string;
   href?: string;
   more?: string;
 }) {
   return (
-    <div className="ref-heading">
-      <h2>{title}</h2>
+    <header className="hd-head">
+      <div>
+        <p className="hd-kicker">{kicker}</p>
+        <h2>{title}</h2>
+        {text && <p className="hd-lead">{text}</p>}
+      </div>
       {href && (
-        <a href={href}>
-          {more}
+        <a className="hd-more" href={href}>
+          {more ?? 'Xem tất cả'}
           <ArrowRight size={16} />
         </a>
       )}
-    </div>
+    </header>
   );
 }
+
 export default async function LandingPage() {
-  const [slug, pricing, tenant] = await Promise.all([
-    bookingSlug(),
-    publicPricing(),
-    publicTenant(),
-  ]);
+  const [slug, pricing, tenant] = await Promise.all([bookingSlug(), publicPricing(), publicTenant()]);
   const content = tenant ? await publicContent(tenant) : { news: [], upcoming: [], past: [] };
-  const event = content.upcoming[0];
-  const bookHref = '#dat-cho';
   const clubName = pricing.clubName || BRAND.name;
   const clubAddress = pricing.clubAddress || BRAND.address;
   const clubHotline = pricing.hotline || BRAND.hotline;
   const clubLogo = pricing.logo || BRAND.logo;
-  const strength = [
-    { icon: Flag, title: '10 Line', text: 'Tiêu chuẩn' },
-    { icon: Crown, title: '2 Phòng VIP', text: 'Riêng tư' },
-    { icon: Flag, title: 'Line tay trái', text: 'Cho golfer thuận tay trái' },
-    { icon: UsersRound, title: 'Huấn luyện viên', text: 'Chuyên nghiệp' },
-    { icon: Coffee, title: 'Dịch vụ F&B', text: 'Đa dạng' },
-    { icon: CarFront, title: 'Bãi đậu xe', text: '1.500 m²' },
+
+  // Facts shown on the page come from the club's own set-up, never typed into the page.
+  const standardLines = rooms.filter((r) => !r.vip).length;
+  const vipRooms = rooms.filter((r) => r.vip).length;
+  const leftLines = rooms.filter((r) => r.left).length;
+  const standardFrom = fromHourly(pricing.standard.rows);
+  const vipFrom = fromHourly((pricing.vip ?? pricing.standard).rows);
+  const goldRow = pricing.standard.rows.find((r) => r.gold && r.gdr != null);
+
+  const events: Post[] = [...content.upcoming, ...content.past].slice(0, 3);
+
+  // Membership plans = the packages the club sells now: the cheapest three of the first section.
+  const planGroup = pricing.groups.find((g) => /thẻ tháng/i.test(g.title)) ?? pricing.groups[0];
+  const plans = planGroup ? planGroup.items.slice(0, 3) : [];
+
+  const utility = [
+    { icon: Target, title: `${standardLines} line tiêu chuẩn`, text: 'Công nghệ Foresight GC3' },
+    vipRooms > 0 && { icon: Crown, title: `${vipRooms} phòng VIP`, text: 'Riêng tư, đẳng cấp' },
+    leftLines > 0 && { icon: Flag, title: 'Line tay trái', text: 'Dành cho golfer thuận tay trái' },
+    { icon: CarFront, title: 'Bãi đậu xe', text: 'Ngay tại câu lạc bộ' },
+    { icon: Coffee, title: 'Dịch vụ F&B', text: 'Đa dạng, tiện lợi' },
+    { icon: Trophy, title: 'Giải đấu & Sự kiện', text: 'Thường xuyên, chuyên nghiệp' },
+  ].filter(Boolean) as { icon: typeof Target; title: string; text: string }[];
+
+  const services = [
+    {
+      image: 'album-line-hall',
+      title: 'Simulator tiêu chuẩn',
+      text: `${standardLines} line Foresight GC3, phân tích cú đánh chi tiết.`,
+      price: standardFrom,
+      href: '#dat-cho-nhanh',
+      cta: 'Đặt line',
+    },
+    vipRooms > 0 && {
+      image: 'album-vip-bay',
+      title: 'Phòng VIP riêng tư',
+      text: `${vipRooms} phòng riêng cho nhóm bạn và khách hàng.`,
+      price: vipFrom,
+      href: '#dat-cho-nhanh',
+      cta: 'Đặt phòng VIP',
+    },
+    {
+      image: 'album-golfers-playing',
+      title: 'Huấn luyện 1-1',
+      text: 'Lộ trình cá nhân cùng huấn luyện viên.',
+      price: null,
+      href: `tel:${clubHotline}`,
+      cta: 'Liên hệ tư vấn',
+      id: 'huan-luyen',
+    },
+    {
+      image: 'album-bar-counter',
+      title: 'Quầy bar & khu nghỉ',
+      text: 'Đồ uống, đồ ăn nhẹ và không gian giao lưu.',
+      price: null,
+      href: '#tien-ich',
+      cta: 'Khám phá',
+    },
+  ].filter(Boolean) as {
+    image: string;
+    title: string;
+    text: string;
+    price: number | null;
+    href: string;
+    cta: string;
+    id?: string;
+  }[];
+
+  const nav: [string, string][] = [
+    ['Trang chủ', '/'],
+    ['Dịch vụ', '#dich-vu'],
+    ['Đặt sân', '#dat-cho-nhanh'],
+    ['Giải đấu', '#giai-dau'],
+    ['Hội viên', '#hoi-vien'],
+    ['Bảng giá', '/bang-gia'],
+    ['Tin tức', '/tin-tuc'],
   ];
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsActivityLocation',
+    name: clubName,
+    address: clubAddress,
+    telephone: clubHotline,
+    url: `https://${BRAND.website}`,
+    image: `https://${BRAND.website}/og.jpg`,
+    openingHours: `Mo-Su ${pricing.open}-${pricing.close}`,
+  };
+
   return (
-    <div className="ref-home">
-      <header className="ref-header">
-        <a className="ref-brand" href="/" aria-label="SaiGon Indoor Golf Club — Trang chủ">
-          <img src={clubLogo} alt="" width="52" height="52" />
+    <div className="hd-home">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <header className="hd-header">
+        <a className="hd-brand" href="/" aria-label={`${clubName}: Trang chủ`}>
+          <img src={clubLogo} alt="" width="44" height="44" />
           <span>
             <strong>{clubName}</strong>
             <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
           </span>
         </a>
-        <nav className="ref-desktop-nav" aria-label="Điều hướng chính">
-          <a className="active" href="/">
-            Trang chủ
-          </a>
-          <a href="#tien-ich">Giới thiệu</a>
-          <a href="#dich-vu">Dịch vụ⌄</a>
-          <a href="/bang-gia">Bảng giá</a>
-          <a href="#huan-luyen">Huấn luyện</a>
-          <a href="/tin-tuc">Giải đấu</a>
-          <a href="/tin-tuc">Tin tức</a>
+        <nav className="hd-nav" aria-label="Điều hướng chính">
+          {nav.map(([label, href], i) => (
+            <a key={label} href={href} className={i === 0 ? 'on' : ''} aria-current={i === 0 ? 'page' : undefined}>
+              {label}
+            </a>
+          ))}
         </nav>
-        <div className="ref-header-actions">
-          <a className="ref-search" href="/tin-tuc" aria-label="Tìm tin tức">
-            <Search size={18} />
-          </a>
-          <a className="ref-notifications" href="/tai-khoan" aria-label="Thông báo">
-            <Bell />
-          </a>
-          <a className="ref-login" href="/tai-khoan">
-            <UserRound size={18} />
+        <div className="hd-actions">
+          <a className="hd-btn ghost" href="/tai-khoan">
+            <UserRound size={17} />
             <span>Đăng nhập</span>
           </a>
-          <a className="ref-button ref-header-book" href={bookHref}>
-            <CalendarDays size={15} />
-            Đặt sân ngay
+          <a className="hd-btn solid" href="/tai-khoan?dang-ky">
+            Đăng ký
           </a>
         </div>
       </header>
+
       <main>
-        <section className="ref-hero" aria-label="Trải nghiệm Golf 3D đẳng cấp">
-          <h1 className="ref-sr">Trải nghiệm Golf 3D đẳng cấp — Công nghệ Foresight GC3</h1>
-          <picture>
-            <source media="(max-width: 700px)" srcSet={img('hero-mobile')} />
-            <img
-              src={img('hero-desktop')}
-              alt="Không gian tập luyện golf 3D cao cấp với công nghệ Foresight GC3"
-              fetchPriority="high"
-            />
-          </picture>
-        </section>
-        <div className="ref-quick ref-container">
-          <QuickBook open={pricing.open} close={pricing.close} hasVip={!!pricing.vip} />
-        </div>
-        <div className="ref-shortcuts ref-container" aria-label="Dịch vụ nhanh">
-          {shortcuts.map(({ icon: I, label, href, gold }) => (
-            <a href={href} key={label} className={gold ? 'gold' : ''}>
-              {label === 'Huấn luyện' ? (
-                <img className="ref-golfer" src={img('golfer')} alt="" />
-              ) : (
-                <I strokeWidth={1.9} />
-              )}
-              <span>{label}</span>
-            </a>
-          ))}
-        </div>
-        <section className="ref-strengths">
-          <div className="ref-container">
-            {strength.map(({ title, text }, index) => (
-              <div key={title}>
-                <span className="ref-icon-box">
-                  <img src={img(`strength-${index}`)} alt="" width="40" height="37" />
-                </span>
-                <p>
+        <section className="hd-hero" aria-labelledby="hd-hero-title">
+          <img
+            className="hd-hero-img"
+            src={photo('album-bays-panoramic')}
+            alt="Khu line golf 3D Foresight GC3 tại câu lạc bộ"
+            fetchPriority="high"
+            width="1600"
+            height="1200"
+          />
+          <div className="hd-hero-shade" aria-hidden="true" />
+          <div className="hd-hero-body">
+            <p className="hd-eyebrow">{clubName.toLocaleUpperCase('vi-VN')}</p>
+            <h1 id="hd-hero-title">
+              Trải nghiệm
+              <span> Golf 3D đỉnh cao</span>
+            </h1>
+            <p className="hd-hero-text">
+              Công nghệ Foresight GC3 hiện đại, không gian đẳng cấp, luyện tập – thi đấu – giải trí
+              trong nhà, bất chấp thời tiết.
+            </p>
+            <ul className="hd-chips">
+              <li>
+                <Target size={20} strokeWidth={1.5} />
+                Luyện tập
+              </li>
+              <li>
+                <Trophy size={20} strokeWidth={1.5} />
+                Thi đấu &amp; Giải đấu
+              </li>
+              <li>
+                <GraduationCap size={20} strokeWidth={1.5} />
+                Huấn luyện
+              </li>
+              <li>
+                <UsersRound size={20} strokeWidth={1.5} />
+                Cộng đồng golfer
+              </li>
+            </ul>
+            <div className="hd-cta">
+              <a className="hd-btn solid lg" href="#dat-cho-nhanh">
+                <CalendarDays size={19} />
+                Đặt sân ngay
+                <ArrowRight size={18} />
+              </a>
+              <a className="hd-btn ghost lg" href="/bang-gia">
+                Xem bảng giá
+              </a>
+            </div>
+          </div>
+          <ul className="hd-utility" aria-label="Tiện ích câu lạc bộ">
+            {utility.map(({ icon: Icon, title, text }) => (
+              <li key={title}>
+                <Icon size={26} strokeWidth={1.4} aria-hidden="true" />
+                <span>
                   <strong>{title}</strong>
                   <small>{text}</small>
-                </p>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </section>
-        <a className="ref-mobile-member ref-container" href="/thanh-vien">
-          <img
-            src={img('member-mobile')}
-            alt="Hội viên Gold — Ưu đãi đến 10% phí tập luyện. Nâng cấp ngay"
+
+        <section className="hd-section" id="dich-vu" aria-labelledby="hd-services">
+          <SectionHead
+            kicker="Dịch vụ nổi bật"
+            title="Không gian luyện tập & thi đấu độc bản"
+            text="Từ line tiêu chuẩn đến phòng VIP riêng tư, mọi trải nghiệm được thiết kế cho golfer."
+            href="/bang-gia"
+            more="Xem bảng giá"
           />
-        </a>
-        <section className="ref-my-bookings ref-container">
-          <Heading title="Lịch đặt sân của tôi" href="/tai-khoan" />
-          <a className="ref-booking-login" href="/tai-khoan">
-            <CalendarDays />
-            <span>Đăng nhập để xem lịch đặt sân của bạn</span>
-            <ArrowRight />
-          </a>
-        </section>
-        <section className="ref-services ref-container" id="dich-vu">
-          <Heading title="Dịch vụ nổi bật" href="#dich-vu" more="Xem tất cả dịch vụ" />
-          <div className="ref-service-grid">
-            {services.map(({ image, icon: I, title, text, href }) => (
-              <a className="ref-service" key={title} href={href}>
-                <img src={img(image)} alt="" width="466" height="206" />
-                <div>
-                  <I />
-                  <span>
-                    <h3>{title}</h3>
-                    <p>{text}</p>
-                  </span>
-                  <ArrowRight className="ref-service-arrow" />
-                </div>
-              </a>
-            ))}
-          </div>
-        </section>
-        <div className="ref-price-member ref-container">
-          <section id="bang-gia">
-            <Heading title="Bảng giá tập luyện" href="/bang-gia" more="Xem bảng giá chi tiết" />
-            <div className="ref-price-panel">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Thời gian</th>
-                    <th>Line tiêu chuẩn</th>
-                    <th>Phòng VIP</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pricing.standard.rows.map((row) => {
-                    const vip = pricing.vip?.rows.find((v) => v.key === row.key);
-                    return (
-                      <tr key={row.key}>
-                        <td>
-                          <strong>{row.days}</strong>
-                          <small>
-                            {row.from} – {row.to}
-                          </small>
-                        </td>
-                        <td>{priceCell(row)}</td>
-                        <td>{priceCell(vip ?? row)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <div className="ref-price-actions">
-                <a href="/bang-gia">Xem đầy đủ bảng giá</a>
-                <a className="ref-button" href={bookHref}>
-                  Đặt sân ngay
-                  <ArrowRight size={16} />
+          <h2 id="hd-services" className="hd-sr">
+            Dịch vụ
+          </h2>
+          <ul className="hd-cards hd-cards--4">
+            {services.map((s) => (
+              <li key={s.title} id={s.id}>
+                <a className="hd-card" href={s.href}>
+                  <img src={photo(s.image)} alt="" width="640" height="420" loading="lazy" />
+                  <div>
+                    <h3>{s.title}</h3>
+                    <p>{s.text}</p>
+                    <footer>
+                      <span className="hd-price">
+                        {s.price != null ? (
+                          <>
+                            Từ <strong>{vnd(s.price)}đ</strong>/giờ
+                          </>
+                        ) : (
+                          <small>Liên hệ để biết giá</small>
+                        )}
+                      </span>
+                      <b>
+                        {s.cta} <ArrowRight size={15} />
+                      </b>
+                    </footer>
+                  </div>
                 </a>
-              </div>
-            </div>
-          </section>
-          <a className="ref-desktop-member" href="/thanh-vien">
-            <img
-              src={img('member-desktop')}
-              alt="Hội viên SaiGon Golf — Tập luyện thỏa thích, ưu đãi vượt trội. Đăng ký hội viên ngay"
-              width="459"
-              height="223"
-            />
-          </a>
-        </div>
-        <section className="ref-facilities ref-container" id="tien-ich">
-          <Heading title="Không gian & Tiện ích" />
-          <div>
-            {facilities.map(([image, title, text]) => (
-              <figure key={image}>
-                <img src={img(image)} alt={title} loading="lazy" />
-                <figcaption>
-                  <strong>{title}</strong>
-                  <span>{text}</span>
-                </figcaption>
-              </figure>
+              </li>
             ))}
+          </ul>
+        </section>
+
+        <section className="hd-section hd-book" id="dat-cho-nhanh" aria-labelledby="hd-book-title">
+          <div className="hd-book-copy">
+            <p className="hd-kicker">Đặt sân nhanh</p>
+            <h2 id="hd-book-title">Khởi đầu cú swing hoàn hảo ngay hôm nay</h2>
+            <p className="hd-lead">
+              Chọn ngày, giờ và loại chỗ. Nhân viên xác nhận lịch của bạn, không cần trả trước.
+            </p>
+            <ul className="hd-checks">
+              <li>
+                <Clock size={18} />
+                Mở cửa {pricing.open} – {pricing.close} mỗi ngày
+              </li>
+              {goldRow && goldRow.gdr != null && (
+                <li>
+                  <Check size={18} />
+                  Giờ vàng {goldRow.from} – {goldRow.to} từ {vnd(goldRow.gdr)}đ/giờ
+                </li>
+              )}
+              <li>
+                <Phone size={18} />
+                Cần hỗ trợ đặt lịch: <a href={`tel:${clubHotline}`}>{clubHotline}</a>
+              </li>
+            </ul>
+          </div>
+          <div className="hd-quick">
+            <QuickBook open={pricing.open} close={pricing.close} hasVip={!!pricing.vip} />
           </div>
         </section>
-        <div className="ref-updates ref-container">
-          <section>
-            <Heading title="Giải đấu & Sự kiện" href="/tin-tuc" />
-            {event ? (
-              <a className="ref-event" href={`/tin-tuc/${event.id}`}>
-                <img src={event.image || img('event')} alt="" />
-                <div>
-                  <span>Sắp diễn ra</span>
-                  <h3>{event.title}</h3>
-                  <p>{event.summary}</p>
-                  <small>
-                    <CalendarDays size={14} />
-                    {event.event_at
-                      ? new Date(event.event_at).toLocaleDateString('vi-VN', {
-                          timeZone: 'Asia/Ho_Chi_Minh',
-                        })
-                      : ''}
-                  </small>
-                  <b>
-                    Đăng ký tham gia <ArrowRight size={17} />
-                  </b>
-                </div>
-              </a>
-            ) : (
-              <a className="ref-event ref-event-empty" href="/tin-tuc">
-                <div>
-                  <span>Giải đấu tại SaiGon Golf</span>
-                  <h3>Kết nối cùng đam mê</h3>
-                  <p>Theo dõi lịch giải đấu và sự kiện mới nhất của câu lạc bộ.</p>
-                  <b>
-                    Xem các sự kiện <ArrowRight size={17} />
-                  </b>
-                </div>
-              </a>
-            )}
-          </section>
-          <section>
-            <Heading title="Tin tức & Cập nhật" href="/tin-tuc" />
-            <div className="ref-news">
-              {content.news.length ? (
-                content.news.slice(0, 3).map((post) => (
-                  <a href={`/tin-tuc/${post.id}`} key={post.id}>
-                    <img src={post.image || img('service-book')} alt="" />
-                    <span>
-                      <strong>{post.title}</strong>
-                      <small>
-                        <CalendarDays size={13} />
-                        {new Date(post.created).toLocaleDateString('vi-VN', {
-                          timeZone: 'Asia/Ho_Chi_Minh',
-                        })}
-                      </small>
-                    </span>
-                  </a>
-                ))
-              ) : (
-                <>
-                  <a href="#tien-ich">
-                    <img src={img('facility-vip')} alt="" />
-                    <span>
-                      <strong>Khám phá không gian Golf 3D & Phòng VIP</strong>
-                      <small>Trải nghiệm tại SaiGon Indoor Golf Club</small>
-                    </span>
-                  </a>
-                  <a href="#huan-luyen">
-                    <img src={img('service-coach')} alt="" />
-                    <span>
-                      <strong>Huấn luyện Golf theo lộ trình cá nhân</strong>
-                      <small>Tìm hiểu chương trình huấn luyện</small>
-                    </span>
-                  </a>
-                  <a href="/thanh-vien">
-                    <img src={img('service-member')} alt="" />
-                    <span>
-                      <strong>Gói giờ & Quyền lợi hội viên</strong>
-                      <small>Khám phá các gói tập luyện</small>
-                    </span>
-                  </a>
-                </>
-              )}
-            </div>
-          </section>
-        </div>
-        <section className="ref-coaching ref-container" id="huan-luyen">
-          <Heading title="Huấn luyện Golf" />
-          <p>Cá nhân hoá lộ trình cùng huấn luyện viên chuyên nghiệp.</p>
-          <a className="ref-button" href={`tel:${BRAND.hotline}`}>
-            Liên hệ tư vấn <Phone size={16} />
-          </a>
+
+        <section className="hd-section" id="giai-dau" aria-labelledby="hd-events-title">
+          <SectionHead
+            kicker="Giải đấu & Sự kiện"
+            title="Giải đấu & Sự kiện Indoor Golf thường niên"
+            href="/tin-tuc"
+          />
+          <h2 id="hd-events-title" className="hd-sr">
+            Giải đấu và sự kiện
+          </h2>
+          {events.length ? (
+            <ul className="hd-cards hd-cards--3">
+              {events.map((p) => {
+                const st = tournamentStatus(p);
+                const open = st === 'live' || st === 'upcoming';
+                return (
+                  <li key={p.id}>
+                    <a className="hd-card hd-event" href={`/tin-tuc/${p.id}`}>
+                      <img src={p.image || photo('album-hall-wide')} alt="" width="640" height="360" loading="lazy" />
+                      <div>
+                        <span className={`hd-tag ${st}`}>{STATUS_LABEL[st]}</span>
+                        <h3>{p.title}</h3>
+                        {p.summary && <p>{p.summary}</p>}
+                        <ul className="hd-meta">
+                          <li>
+                            <CalendarDays size={15} />
+                            {dateText(p.event_at)} · {timeText(p.event_at)}
+                          </li>
+                          {p.place && (
+                            <li>
+                              <MapPin size={15} />
+                              {p.place}
+                            </li>
+                          )}
+                        </ul>
+                        <footer>
+                          <b>
+                            {open ? 'Đăng ký tham gia' : 'Xem chi tiết'} <ArrowRight size={15} />
+                          </b>
+                        </footer>
+                      </div>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="hd-empty">
+              Chưa có giải đấu nào được công bố. Theo dõi <a href="/tin-tuc">trang tin tức</a> để nhận
+              thông tin mới nhất.
+            </p>
+          )}
         </section>
-        <section className="ref-book-section ref-container" id="dat-cho">
-          <Heading title="Đặt sân Golf 3D" />
+
+        <section className="hd-section hd-members" id="hoi-vien" aria-labelledby="hd-members-title">
+          <SectionHead
+            kicker="Hội viên"
+            title={`Gói hội viên ${clubName}`}
+            text="Quyền lợi và mức giá lấy trực tiếp từ danh mục gói đang bán tại câu lạc bộ."
+            href="/thanh-vien"
+            more="Xem thẻ hội viên"
+          />
+          <h2 id="hd-members-title" className="hd-sr">
+            Gói hội viên
+          </h2>
+          {plans.length ? (
+            <ul className={`hd-plans n${plans.length}`}>
+              {plans.map((p, i) => (
+                <li key={p.id} className={plans.length === 3 && i === 1 ? 'feature' : ''}>
+                  <h3>{planGroup ? shortName(p, planGroup.title) : p.name}</h3>
+                  <p className="hd-plan-price">
+                    <strong>{vnd(p.price)}đ</strong>
+                  </p>
+                  <ul>
+                    {uniqueLines(packageBullets(p))
+                      .slice(0, 5)
+                      .map((b) => (
+                        <li key={b}>
+                          <Check size={16} />
+                          {b}
+                        </li>
+                      ))}
+                  </ul>
+                  <a className="hd-btn solid block" href="/thanh-vien">
+                    Đăng ký hội viên
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="hd-empty">Danh mục gói hội viên đang được cập nhật. Liên hệ {clubHotline} để được tư vấn.</p>
+          )}
+          {pricing.benefits.length > 0 && (
+            <ul className="hd-benefits" aria-label="Quyền lợi hội viên">
+              {pricing.benefits.slice(0, 6).map((b) => {
+                // "Tiêu đề | Nội dung" -> a bold title and a muted line.
+                const [title, ...rest] = b.split('|').map((t) => t.trim());
+                return (
+                  <li key={b}>
+                    <Check size={16} />
+                    <span>
+                      <strong>{title}</strong>
+                      {rest.length > 0 && <small>{rest.join(' · ')}</small>}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        {/* Shown when a time is chosen in the quick form (#dat-cho:target), as before. */}
+        <section className="hd-section ref-book-section hd-form" id="dat-cho" aria-label="Đặt sân Golf 3D">
+          <SectionHead kicker="Giữ chỗ" title="Đặt sân Golf 3D" />
           {slug ? (
             <BookingPage slug={slug} embedded />
           ) : (
             <p>
-              Liên hệ câu lạc bộ để chọn khung giờ và giữ chỗ.{' '}
-              <a className="ref-button" href={`tel:${BRAND.hotline}`}>
+              Liên hệ câu lạc bộ để chọn khung giờ và giữ chỗ:{' '}
+              <a className="hd-btn solid" href={`tel:${clubHotline}`}>
                 <Phone size={16} />
-                0877 834 888
+                {clubHotline}
               </a>
             </p>
           )}
         </section>
+
+        <section className="hd-section" id="tien-ich" aria-labelledby="hd-space-title">
+          <SectionHead kicker="Không gian" title="Không gian & tiện ích" />
+          <h2 id="hd-space-title" className="hd-sr">
+            Không gian
+          </h2>
+          <ul className="hd-gallery">
+            {[
+              ['album-bays-panoramic', 'Khu line tiêu chuẩn'],
+              ['album-vip-lounge', 'Khu nghỉ VIP'],
+              ['album-bar-to-bays', 'Quầy bar và khu line'],
+              ['album-club-lounge', 'Khu nghỉ câu lạc bộ'],
+            ].map(([name, alt]) => (
+              <li key={name}>
+                <img src={photo(name)} alt={alt} width="640" height="420" loading="lazy" />
+                <span>{alt}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
-      <footer className="ref-footer">
-        <div className="ref-container">
-          <div className="ref-footer-brand">
-            <a className="ref-brand" href="/">
-              <img src={clubLogo} alt="" width="50" height="50" />
+
+      <footer className="hd-footer" id="lien-he">
+        <div className="hd-footer-grid">
+          <div>
+            <a className="hd-brand" href="/">
+              <img src={clubLogo} alt="" width="44" height="44" />
               <span>
                 <strong>{clubName}</strong>
                 <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
               </span>
             </a>
             <p>
-              Hệ thống phòng tập Golf 3D hiện đại với công nghệ Foresight GC3, không gian chuyên
-              nghiệp, dịch vụ đa dạng tại TP.HCM.
+              Phòng tập Golf 3D hiện đại với công nghệ Foresight GC3, không gian chuyên nghiệp và dịch
+              vụ đa dạng tại TP.HCM.
             </p>
-            <div className="ref-social">
-              <a href={BRAND.zalo} aria-label="Liên hệ Zalo">
+            <div className="hd-social">
+              <a href={BRAND.zalo} aria-label="Liên hệ qua Zalo">
                 Zalo
               </a>
               <a href={`tel:${clubHotline}`} aria-label="Gọi câu lạc bộ">
@@ -437,39 +540,38 @@ export default async function LandingPage() {
               </a>
             </div>
           </div>
-          <div>
+          <nav aria-label="Về chúng tôi">
             <h3>Về chúng tôi</h3>
-            <a href="#tien-ich">Giới thiệu</a>
-            <a href="#tien-ich">Cơ sở vật chất</a>
-            <a href="#huan-luyen">Đội ngũ huấn luyện</a>
-          </div>
-          <div>
+            <a href="#tien-ich">Không gian & tiện ích</a>
+            <a href="/bang-gia">Bảng giá</a>
+            <a href="/tin-tuc">Tin tức</a>
+          </nav>
+          <nav aria-label="Dịch vụ">
             <h3>Dịch vụ</h3>
-            <a href={bookHref}>Đặt sân Golf 3D</a>
+            <a href="#dat-cho-nhanh">Đặt sân Golf 3D</a>
             <a href="#huan-luyen">Huấn luyện Golf</a>
-            <a href="/tin-tuc">Giải đấu & Sự kiện</a>
-            <a href="/thanh-vien">Gói giờ & Hội viên</a>
-          </div>
-          <div>
-            <h3>Hỗ trợ</h3>
-            <a href={bookHref}>Hướng dẫn đặt sân</a>
-            <a href="/tai-khoan">Tài khoản của tôi</a>
-            <a href={`tel:${clubHotline}`}>Liên hệ</a>
-          </div>
+            <a href="#giai-dau">Giải đấu & Sự kiện</a>
+            <a href="#hoi-vien">Gói hội viên</a>
+          </nav>
           <address>
+            <h3>Liên hệ</h3>
             <p>
-              <MapPin size={22} />
+              <MapPin size={18} />
               {clubAddress}
             </p>
             <a href={`tel:${clubHotline}`}>
-              <Phone size={21} />
+              <Phone size={18} />
               <strong>{clubHotline}</strong>
             </a>
-            <a href="https://sigolf.vn">
-              <Globe size={21} /> <span>sigolf.vn</span>
+            <a href={`https://${BRAND.website}`}>
+              <Globe size={18} />
+              {BRAND.website}
             </a>
           </address>
         </div>
+        <p className="hd-copy">
+          © {new Date().getFullYear()} {clubName}. Mọi quyền được bảo lưu.
+        </p>
       </footer>
     </div>
   );

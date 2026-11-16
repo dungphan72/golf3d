@@ -294,7 +294,7 @@ export function MembersPanel({
           <div>
             <h2>
               {tab === 'catalog'
-                ? 'Danh mục Gói giờ & Thẻ trả trước'
+                ? 'Danh mục Gói trả trước & Thẻ trả trước'
                 : 'Quản lý Hội viên & Thẻ số'}
             </h2>
             <p>
@@ -325,10 +325,10 @@ export function MembersPanel({
                 if (onOpenPackageSettings) onOpenPackageSettings();
                 else setTab(tab === 'catalog' ? 'members' : 'catalog');
               }}
-              title="Mở Cài đặt hệ thống -> Quản lý Gói giờ & Thẻ chi tiết"
+              title="Mở Cài đặt hệ thống -> Quản lý Gói trả trước & Thẻ chi tiết"
             >
               <Settings size={15} className="text-emerald" />
-              <span className="stat-label">Cài đặt Gói giờ & Thẻ</span>
+              <span className="stat-label">Cài đặt Gói trả trước & Thẻ</span>
             </button>
           )}
           {pendingAccountCount > 0 && (
@@ -369,7 +369,7 @@ export function MembersPanel({
           onChange={(v) => setTab(v as 'members' | 'catalog')}
           tabs={[
             { key: 'members', label: 'Hội viên & Thẻ số' },
-            { key: 'catalog', label: `Danh mục Gói giờ & Thẻ (${data?.types.length ?? 0})` },
+            { key: 'catalog', label: `Danh mục Gói trả trước & Thẻ (${data?.types.length ?? 0})` },
           ]}
         />
       )}

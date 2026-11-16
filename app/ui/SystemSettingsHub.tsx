@@ -213,8 +213,8 @@ const DEFAULT_GROUPS: GroupDef[] = [
       },
       {
         id: 'hour_packages',
-        title: 'Gói giờ & Thẻ chi tiết',
-        subtitle: 'Thêm, sửa, xóa gói giờ chơi, thẻ tháng, quyền lợi & đồng bộ bảng giá',
+        title: 'Gói trả trước & Thẻ',
+        subtitle: 'Thêm, sửa, xóa gói trả trước, thẻ tháng và quyền lợi; đồng bộ bảng giá công khai',
         iconName: 'Layers',
         iconBg: 'ar-icon-blue',
         categoryGroup: 'Giá, gói & hội viên',
@@ -879,7 +879,7 @@ export function SystemSettingsHub({
               </div>
               <div>
                 <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: '#0f172a' }}>
-                  Quản lý Gói giờ & Thẻ chi tiết (Đồng bộ toàn hệ thống)
+                  Quản lý Gói trả trước & Thẻ (Đồng bộ toàn hệ thống)
                 </h3>
                 <p style={{ margin: 0, fontSize: 12.5, color: '#64748b' }}>
                   Thêm, sửa, xóa gói giờ chơi, thẻ tháng, quyền lợi VIP — cập nhật trực tiếp lên POS, Hội viên và /bang-gia
@@ -3315,7 +3315,7 @@ function getCardTitle(id: SettingsCardId, fallback?: string): string {
     operating_hours: 'Cài đặt Giờ hoạt động & Ngày lễ',
     facility_layout: 'Cài đặt Sơ đồ cơ sở trên POS',
     pricing_rates: 'Cấu hình Bảng giá',
-    hour_packages: 'Quản lý Gói giờ & Thẻ',
+    hour_packages: 'Quản lý Gói trả trước & Thẻ',
     membership_tiers: 'Cài đặt Hạng hội viên & Quyền lợi',
     promotions_vouchers: 'Quản lý Ưu đãi & Mã giảm giá',
     fnb_menu: 'Quản lý Thực đơn F&B',
@@ -3349,7 +3349,7 @@ function getCardSubtitle(id: SettingsCardId, fallback?: string): string {
     operating_hours: 'Quy định giờ mở cửa, đóng cửa, thời gian dọn line và ngày nghỉ lễ',
     facility_layout: 'Sắp xếp thứ tự các line và vị trí trực quan trên màn hình POS',
     pricing_rates: 'Khung giá theo line/VIP, ngày, giờ và số người; thêm, sửa, xóa',
-    hour_packages: 'Thiết lập các gói giờ ưu đãi nạp trước cho hội viên',
+    hour_packages: 'Gói trả trước và thẻ tháng cho hội viên',
     membership_tiers: 'Quy định mốc tích lũy lên hạng và chính sách giảm giá riêng',
     promotions_vouchers: 'Tạo mã voucher giảm giá, ưu đãi khai trương và combo',
     fnb_menu: 'Cập nhật danh mục đồ ăn, nước uống và combo phục vụ khách',

@@ -47,7 +47,7 @@ export const SETTINGS_SUBNAV = [
   { key: 'facility', label: 'Cơ sở & Khu vực' },
   { key: 'hours', label: 'Giờ hoạt động' },
   { key: 'pricing', label: 'Giá & Thuế' },
-  { key: 'packages', label: 'Gói giờ & Thẻ' },
+  { key: 'packages', label: 'Gói trả trước & Thẻ' },
   { key: 'payment', label: 'Thanh toán' },
   { key: 'staff', label: 'Tài khoản & Phân quyền' },
   { key: 'integration', label: 'Tích hợp' },

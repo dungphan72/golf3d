@@ -35,6 +35,7 @@ const NEEDED: Record<string, Permission> = {
   'type-save': 'member.adjust',
   'type-delete': 'member.adjust',
   'types-seed': 'member.adjust',
+  'types-official': 'member.adjust',
   'account-verify': 'member.sell',
   'order-reject': 'member.sell',
   activate: 'member.sell',

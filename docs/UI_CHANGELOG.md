@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Gói trả trước đồng bộ danh mục chính thức (nhánh `fix/p0-data-integrity`)
+- **Lý do:** danh mục gói đang bán (14 gói: gói giờ 10/20 giờ, thẻ 1–2 giờ/ngày theo 1/6/12 tháng) khác danh mục chính thức 11/2026 (3 thẻ tháng 5/14/25 triệu; thẻ giờ đã bỏ, thay bằng ưu đãi nạp ví); nút "Khôi phục gói mẫu" chỉ thêm mà không gỡ gói cũ; thao tác "Xóa" gói gỡ trigger bảo vệ `package_types_no_delete` rồi xóa cứng, kể cả gói đã có khách mua.
+- **File:** `lib/server/member-service.ts` (`types-official`: gói ngoài danh mục chính thức chuyển sang ngừng bán, gói chính thức được tạo hoặc khôi phục đúng giá trị; `type-delete`: gói đã có khách mua thì ngừng bán, gói chưa ai mua thì xóa thật trong một giao dịch và giữ nguyên trigger), `lib/member.ts`, `app/api/members/route.ts`, `app/ui/PackageEditor.tsx` (nút "Dùng danh mục chính thức 11/2026" có bước xác nhận, chữ xác nhận xóa), `app/ui/SystemSettingsHub.tsx`, `app/ui/MembersPanel.tsx`, `app/ui/AdminReferenceShell.tsx` (đổi tên "Gói trả trước & Thẻ"), `app/bang-gia/page.tsx` (thêm dòng ưu đãi nạp ví lấy từ `WALLET_TIERS`, cùng hằng số dùng khi cộng tiền thưởng).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi); máy chủ kiểm thử: áp dụng danh mục chính thức (thêm 3, ngừng bán 1), tạo rồi xóa một gói chưa bán; ba lệnh gỡ trigger/xóa/tạo lại kiểm riêng trên SQLite (trigger còn, xóa trực tiếp vẫn bị chặn). DB kiểm thử không có trigger nên chưa kiểm được ở đó.
+- **Chưa làm:** chưa áp dụng vào dữ liệu thật; ưu đãi nạp ví vẫn là hằng số trong mã (chưa sửa được trong Cài đặt).
+
 ## 2026-11-16 — Bảng giá trang chủ đồng bộ với Cài đặt (nhánh `fix/p0-data-integrity`)
 - **Lý do:** bảng giá trang chủ chỉ lấy 3 khung đầu (khung giá thêm sau không hiện), không có giá 9/18 hố và ghi sai đơn vị ("100.000 ₫ đ/giờ"); bảng mặc định bỏ qua giá VIP riêng.
 - **Ảnh tham chiếu:** `hinh-anh/thiet-ke/home-desk.png` (giữ nguyên bố cục bảng 3 cột Thời gian · Line tiêu chuẩn · Phòng VIP).

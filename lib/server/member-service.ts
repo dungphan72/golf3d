@@ -1,5 +1,5 @@
 import { tierInfo } from './tier-service';
-import { db, type ServiceResult } from './common';
+import { db, type ServiceResult, audit } from './common';
 import {
   memberInput,
   normalizePhone,
@@ -264,15 +264,77 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
       return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy khách hàng', 404);
     }
     if (input.action === 'type-delete') {
-      await d
-        .prepare('DROP TRIGGER IF EXISTS package_types_no_delete')
-        .run()
-        .catch(() => null);
-      const r = await d
-        .prepare(DELETE_PACKAGE_TYPE_SQL)
+      const row = await d
+        .prepare('SELECT name FROM package_types WHERE tenant=? AND id=?')
         .bind(tenant, input.id)
-        .run();
-      return r.meta.changes ? reply({ ok: true }) : error('Không tìm thấy gói', 404);
+        .first<{ name: string }>();
+      if (!row) return error('Không tìm thấy gói', 404);
+      const sold = await d
+        .prepare('SELECT 1 AS x FROM customer_packages WHERE tenant=? AND type_id=? LIMIT 1')
+        .bind(tenant, input.id)
+        .first();
+      if (sold) {
+        // Customers own it: archive (stop selling), never remove the type they point at.
+        await d
+          .prepare('UPDATE package_types SET active=0 WHERE tenant=? AND id=?')
+          .bind(tenant, input.id)
+          .run();
+        await audit(tenant, 'Ngừng bán gói', row.name);
+        return reply({ ok: true, archived: true });
+      }
+      // Never sold: a real delete. The protective trigger is lifted for this one statement only and
+      // put back in the same transaction.
+      await d.batch([
+        d.prepare('DROP TRIGGER IF EXISTS package_types_no_delete'),
+        d.prepare('DELETE FROM package_types WHERE tenant=? AND id=?').bind(tenant, input.id),
+        d.prepare(
+          "CREATE TRIGGER IF NOT EXISTS package_types_no_delete BEFORE DELETE ON package_types BEGIN SELECT RAISE(ABORT,'ARCHIVE_PACKAGE_INSTEAD'); END",
+        ),
+      ]);
+      await audit(tenant, 'Xóa gói', row.name);
+      return reply({ ok: true, archived: false });
+    }
+    if (input.action === 'types-official') {
+      // The official catalogue becomes the only one on sale. Anything else is archived (not deleted:
+      // customers may already own it); official packages are created or restored to official values.
+      const rows = (
+        await d
+          .prepare('SELECT id,name,active FROM package_types WHERE tenant=?')
+          .bind(tenant)
+          .all<{ id: string; name: string; active: number }>()
+      ).results;
+      const official = new Map(OFFICIAL_PACKAGES.map((p) => [p.name, p]));
+      const stmts = [];
+      let archived = 0;
+      let created = 0;
+      for (const r of rows) {
+        const o = official.get(r.name);
+        if (!o) {
+          if (r.active) {
+            stmts.push(d.prepare('UPDATE package_types SET active=0 WHERE tenant=? AND id=?').bind(tenant, r.id));
+            archived++;
+          }
+        } else {
+          stmts.push(
+            d
+              .prepare(UPDATE_PACKAGE_TYPE_SQL)
+              .bind(o.name, o.price, JSON.stringify(o.grants), o.validDays, o.perks, 1, o.section, 'any', tenant, r.id),
+          );
+        }
+      }
+      const have = new Set(rows.map((r) => r.name));
+      for (const o of OFFICIAL_PACKAGES) {
+        if (have.has(o.name)) continue;
+        created++;
+        stmts.push(
+          d
+            .prepare(CREATE_PACKAGE_TYPE_SQL)
+            .bind(crypto.randomUUID(), tenant, o.name, o.price, JSON.stringify(o.grants), o.validDays, o.perks, 1, now, o.section, 'any'),
+        );
+      }
+      if (stmts.length) await d.batch(stmts);
+      await audit(tenant, 'Danh mục gói chính thức', `Thêm ${created}, ngừng bán ${archived}`);
+      return reply({ ok: true, created, archived });
     }
     if (input.action === 'types-seed') {
       const existingRows = (

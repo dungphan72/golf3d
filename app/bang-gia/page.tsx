@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import '../home2.css';
 import '../sub.css';
 import { BRAND } from '../../lib/brand';
+import { money } from '../../lib/club';
+import { WALLET_TIERS } from '../../lib/wallet';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
 import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
@@ -106,6 +108,10 @@ export default async function PricingPage() {
           <p className="sg-note">
             Đăng ký tại quầy hoặc gọi <a href={`tel:${hotline}`}>{hotline}</a>. Xem thêm{' '}
             <a href="/thanh-vien">thẻ hội viên</a>.
+          </p>
+          <p className="sg-note">
+            Nạp ví trả trước:{' '}
+            {WALLET_TIERS.map((t) => `nạp ${money(t.amount)} được tặng ${money(t.bonus)}`).join(' · ')}.
           </p>
           <nav className="sg-chips" aria-label="Nhóm gói">
             {pricing.groups.map((g) => (

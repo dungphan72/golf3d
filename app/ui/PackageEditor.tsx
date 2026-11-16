@@ -467,6 +467,7 @@ export function PackageCatalogManager({
   const [editing, setEditing] = useState<EditablePackage | 'new' | null>(null);
   const [roomFilter, setRoomFilter] = useState<'all' | 'standard' | 'vip' | 'active' | 'inactive'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmOfficial, setConfirmOfficial] = useState(false);
 
   async function loadCatalog() {
     try {
@@ -578,7 +579,7 @@ export function PackageCatalogManager({
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Sparkles size={18} style={{ color: '#059669', flexShrink: 0 }} />
           <p className="form-note" style={{ margin: 0, fontSize: 13, color: '#065f46' }}>
-            <strong>Trung tâm Cài đặt Gói giờ & Thẻ duy nhất:</strong> Mọi thay đổi (Thêm / Sửa / Xóa) tại
+            <strong>Trung tâm Cài đặt Gói trả trước & Thẻ duy nhất:</strong> Mọi thay đổi (Thêm / Sửa / Xóa) tại
             đây được đồng bộ tức thì sang màn hình <strong>Hội viên</strong>, <strong>POS Bán hàng</strong>,{' '}
             <strong>Cổng Hội viên (/tai-khoan)</strong> và{' '}
             <a
@@ -712,20 +713,40 @@ export function PackageCatalogManager({
 
           {canAdjust && (
             <>
-              <button
-                type="button"
-                className="ar-btn-secondary"
-                disabled={busy}
-                onClick={() =>
-                  postMemberApi(
-                    { action: 'types-seed' },
-                    'Đã bổ sung danh mục gói mẫu theo bảng giá chính thức',
-                  )
-                }
-                title="Bổ sung các gói mẫu chuẩn nếu chưa có"
-              >
-                <RotateCcw size={14} /> Khôi phục gói mẫu
-              </button>
+              {!confirmOfficial ? (
+                <button
+                  type="button"
+                  className="ar-btn-secondary"
+                  disabled={busy}
+                  onClick={() => setConfirmOfficial(true)}
+                  title="Chỉ bán các gói trong bảng giá chính thức 11/2026"
+                >
+                  <RotateCcw size={14} /> Dùng danh mục chính thức 11/2026
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>
+                    Ngừng bán mọi gói ngoài danh mục chính thức và thêm các gói chính thức còn thiếu?
+                  </span>
+                  <button
+                    type="button"
+                    className="ar-btn-primary"
+                    disabled={busy}
+                    onClick={async () => {
+                      setConfirmOfficial(false);
+                      await postMemberApi(
+                        { action: 'types-official' },
+                        'Đã áp dụng danh mục gói chính thức 11/2026',
+                      );
+                    }}
+                  >
+                    Áp dụng
+                  </button>
+                  <button type="button" className="ar-btn-secondary" onClick={() => setConfirmOfficial(false)}>
+                    Giữ nguyên
+                  </button>
+                </>
+              )}
               {!editing && (
                 <button
                   type="button"
@@ -764,7 +785,7 @@ export function PackageCatalogManager({
       <div className="catalog-table-wrap">
         {loading ? (
           <div style={{ padding: 24, textAlign: 'center', color: '#64748b' }}>
-            Đang tải danh mục Gói giờ & Thẻ...
+            Đang tải danh mục Gói trả trước & Thẻ...
           </div>
         ) : (
           <DataTable
@@ -898,7 +919,7 @@ export function PackageCatalogManager({
                             style={{ color: '#dc2626', borderColor: '#fecaca' }}
                             onClick={async () => {
                               const confirmed = await askConfirm(
-                                `Xác nhận xóa vĩnh viễn gói "${t.name}" khỏi danh mục hệ thống? (Các thẻ khách đã mua trước đó vẫn giữ nguyên hiệu lực)`,
+                                `Xóa gói "${t.name}"? Gói chưa ai mua sẽ bị xóa; gói đã có khách mua sẽ chuyển sang ngừng bán. Thẻ khách đã mua vẫn giữ nguyên hiệu lực.`,
                               );
                               if (!confirmed) return;
                               if (editing && editing !== 'new' && editing.id === t.id) {
@@ -906,7 +927,7 @@ export function PackageCatalogManager({
                               }
                               await postMemberApi(
                                 { action: 'type-delete', id: t.id },
-                                `Đã xóa gói "${t.name}" khỏi hệ thống`,
+                                `Đã xử lý gói "${t.name}" (gói đã có khách mua chỉ bị ngừng bán)`,
                               );
                             }}
                             title="Xóa gói khỏi danh mục"

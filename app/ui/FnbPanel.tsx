@@ -580,7 +580,7 @@ function ItemEditor({
               name="price"
               min="1"
               max="100000000"
-              step="1000"
+              step="1"
               required
               defaultValue={item?.price ?? ''}
               placeholder="VD: 35000"

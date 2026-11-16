@@ -13,6 +13,11 @@ export type Config = {
   holidays?: string[];
   feeMode?: 'percent' | 'fixed';
   feeServices?: Service[];
+  /**
+   * Hourly play (practice) shorter than this many minutes is billed as this many minutes.
+   * 0 turns it off; unset (sessions started before this setting existed) = off. Set in Settings.
+   */
+  minBillMinutes?: number;
   pricingRevision?: string;
   name: string;
   address: string;
@@ -230,16 +235,46 @@ export function clipSegments(segments: Segment[], from: number): Segment[] {
  * Bill of a session. Without a switch it is the plain hourly or whole-round quote. After switching
  * between practice and a game, each finished stretch stays on the bill and the current one adds to it.
  */
+/**
+ * Hourly play shorter than the minimum is billed as the minimum: the missing minutes are added after the
+ * last segment, at the price that applies to those minutes. A session that never ran (no time) stays free.
+ */
+export function padToMinimum(
+  segments: Segment[],
+  minMinutes: number,
+): { segments: Segment[]; added: number } {
+  const min = Math.floor(minMinutes) * 60_000;
+  if (!(min > 0) || !segments.length) return { segments, added: 0 };
+  const played = segments.reduce((s, x) => s + (x.end - x.start), 0);
+  if (played <= 0 || played >= min) return { segments, added: 0 };
+  const deficit = min - played;
+  const last = segments[segments.length - 1];
+  return {
+    segments: [...segments.slice(0, -1), { ...last, end: last.end + deficit }],
+    added: deficit,
+  };
+}
+
 function baseSessionQuote(
   service: Service,
   segments: Segment[],
   snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number },
 ): Bill & { parts?: BillPart[] } {
   const prior = snap.prior ?? [];
-  if (!prior.length)
-    return service === 'gdr'
-      ? quote(segments, snap.config, snap.vip)
-      : wholeQuote(snap.base, snap.config, service);
+  if (!prior.length) {
+    if (service !== 'gdr') return wholeQuote(snap.base, snap.config, service);
+    const padded = padToMinimum(segments, snap.config.minBillMinutes ?? 0);
+    const q = quote(padded.segments, snap.config, snap.vip);
+    if (!padded.added || !q.lines.length) return q;
+    // Say on the bill why more minutes than were played are charged.
+    const last = q.lines.length - 1;
+    return {
+      ...q,
+      lines: q.lines.map((l, i) =>
+        i === last ? { ...l, label: `${l.label} · tối thiểu ${snap.config.minBillMinutes} phút` } : l,
+      ),
+    };
+  }
   const lines: PriceLine[] = prior.flatMap((p) => p.lines);
   const parts: BillPart[] = prior.map((p) => ({
     service: p.service,

@@ -55,6 +55,7 @@ export const configSchema = z
       .array(z.enum(['gdr', '9', '18']))
       .max(3)
       .default(['gdr', '9', '18']),
+    minBillMinutes: z.number().int().min(0).max(240).default(60),
     capacity,
     vipCapacity: capacity,
     rate: money,

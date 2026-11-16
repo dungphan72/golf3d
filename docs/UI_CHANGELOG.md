@@ -2,6 +2,16 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Tính tiền tối thiểu khi chơi theo giờ, quy định trong Cài đặt (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu khách chơi theo giờ (luyện tập) mà chưa đến 1 giờ thì tự tính thành 1 giờ, số phút quy định trong Cài đặt.
+- **File:** `lib/club.ts` (`minBillMinutes`, `padToMinimum`, tính tiền), `lib/pricing.ts` (mặc định 60 phút), `lib/config.ts` (kiểm tra 0–240), `app/ui/SystemSettingsHub.tsx` (ô mới), `tests/min-bill.test.ts`.
+- **Cài đặt:** Cài đặt hệ thống › Giờ hoạt động › "Thời gian tính tiền tối thiểu khi chơi theo giờ (phút)". Mặc định 60; nhập 0 để tắt.
+- **Cách tính:** phần phút còn thiếu được cộng vào cuối phiên và tính theo khung giá đang áp dụng ở những phút đó (kể cả khuyến mãi tự động); dòng cuối trên hóa đơn ghi "· tối thiểu N phút". Phí dịch vụ và VAT tính trên số tiền đã nâng. Phiên chưa chạy phút nào vẫn 0 đồng. Không áp dụng cho phiên đã chuyển giữa tập luyện và chơi hố, và không áp dụng cho gói 9/18 hố.
+- **Phạm vi:** áp dụng cho phiên bắt đầu sau khi lưu (cấu hình được chụp lại khi bắt đầu phiên); phiên đang chạy trước đó giữ cách tính cũ. Hỏi làm tròn tối thiểu 100.000 đ khi thanh toán vẫn giữ nguyên và chỉ còn hiện khi tiền giờ chơi vẫn dưới mức đó.
+- **Screenshot:** chụp trong phiên (thanh toán, ô cài đặt); chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `pnpm test` đạt (thêm 6 test); chạy thật trên bản build: chơi 3 giây tính 170.100 đ (= 150.000 đ + phí dịch vụ 5% + VAT 8%), lưu cài đặt về 30 phút đọc lại đúng.
+- **Lưu ý khi deploy:** cấu hình cũ trên VPS chưa có giá trị này nên sẽ nhận mặc định 60 phút ngay khi cập nhật.
+
 ## 2026-11-16 — Kiểm tra và sửa lỗi POS (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu kiểm tra lại lỗi POS và sửa. Chạy thử toàn luồng trên bản build: mở ca, nhận khách, bắt đầu chơi, thêm dịch vụ, kết thúc, thanh toán tiền mặt, in/Zalo, lịch sử giao dịch, và màn tổng quan trên điện thoại.
 - **Lỗi đã sửa:** (1) bảng Quản lý ca / Lịch sử giao dịch không đóng bằng phím Esc, nút đóng không có nhãn; (2) thanh trên cùng POS bị xuống dòng chữ ("Quản lý ca", "Lịch sử giao dịch", "Két tiền (F4)", trạng thái ca), nay một dòng và địa chỉ cơ sở tự rút gọn; (3) sau khi thanh toán, line hiện "Đang chơi" trong vài phút dọn line, nay hiện "Đang dọn line" (xám); (4) phiếu đã thanh toán hiện "Đặt trước", thời gian chơi 00:00:00 và "Tiền tạm tính", nay hiện "Đã thanh toán", đúng thời gian chơi và số tiền đã thu; (5) giờ bắt đầu của phiên đã kết thúc ghi "Hẹn 20:54", nay chỉ phiên đặt trước mới ghi "Hẹn"; (6) danh sách chọn line ghi "Bảo trì" cho line chờ thu; (7) "Hoạt động gần đây" ở tổng quan và Nhật ký hoạt động hiển thị JSON thô và mã nội bộ, nay là câu đọc được (vd. "Thu tiền tiền mặt · 262 ₫ · phiếu #99D74D").

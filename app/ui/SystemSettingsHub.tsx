@@ -1828,6 +1828,7 @@ function SettingsCardModal({
     vipClean: config.vipClean || 15,
     grace: config.grace || 15,
     buffer: config.buffer || 5,
+    minBillMinutes: config.minBillMinutes ?? 60,
     holidays: [...(config.holidays || [])],
   });
 
@@ -1937,6 +1938,7 @@ function SettingsCardModal({
         vipClean: Number(formHours.vipClean),
         grace: Number(formHours.grace),
         buffer: Number(formHours.buffer),
+        minBillMinutes: Math.max(0, Math.round(Number(formHours.minBillMinutes) || 0)),
         holidays: formHours.holidays,
       });
       return;
@@ -2172,6 +2174,24 @@ function SettingsCardModal({
                     value={formHours.buffer}
                     onChange={(e) => setFormHours({ ...formHours, buffer: Number(e.target.value) })}
                   />
+                </div>
+                <div className="ar-field ar-form-grid-full">
+                  <label>Thời gian tính tiền tối thiểu khi chơi theo giờ (phút)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={240}
+                    step={1}
+                    value={formHours.minBillMinutes}
+                    onChange={(e) =>
+                      setFormHours({ ...formHours, minBillMinutes: Number(e.target.value) })
+                    }
+                  />
+                  <small style={{ color: '#64748b' }}>
+                    Khách chơi theo giờ (luyện tập) ít hơn số phút này vẫn tính đủ số phút này theo khung giá đang áp
+                    dụng. Ví dụ 60 = chơi chưa đến 1 giờ tính thành 1 giờ. Nhập 0 để tắt. Áp dụng cho phiên bắt đầu
+                    sau khi lưu.
+                  </small>
                 </div>
               </div>
 

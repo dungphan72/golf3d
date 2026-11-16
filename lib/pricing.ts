@@ -365,6 +365,8 @@ export function upgradeConfig(value: Partial<Config>, fallback: Config): Config 
     promotions: c.promotions ?? [],
     feeMode: c.feeMode ?? 'percent',
     feeServices: c.feeServices ?? ['gdr', '9', '18'],
+    // Hourly play under an hour is billed as an hour unless the owner changes it in Settings.
+    minBillMinutes: c.minBillMinutes ?? 60,
     pricingRevision: c.pricingRevision ?? 'v01-upgrade',
   };
 }

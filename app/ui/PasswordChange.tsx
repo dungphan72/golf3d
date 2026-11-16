@@ -95,11 +95,14 @@ export function PasswordChange({
   onSubmit,
   onCancel,
   note,
+  compact = false,
 }: {
   /** Must reject with an Error whose message is shown to the user. */
   onSubmit: (current: string, next: string) => Promise<void>;
   onCancel?: () => void;
   note?: string;
+  /** Inside a dialog: no illustration, one column. */
+  compact?: boolean;
 }) {
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');
@@ -133,9 +136,9 @@ export function PasswordChange({
   }
 
   return (
-    <section className="pwc" aria-labelledby="pwc-title">
+    <section className={'pwc' + (compact ? ' pwc--compact' : '')} aria-labelledby="pwc-title">
       <div className="pwc-main">
-        <Illustration />
+        {!compact && <Illustration />}
         <header className="pwc-head">
           <span className="pwc-lock" aria-hidden="true">
             <Lock size={22} />

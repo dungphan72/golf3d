@@ -1,5 +1,6 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
+import { auditDetailText } from '../../lib/audit-text';
 import { PasswordChange } from './PasswordChange';
 import { useState, useMemo, useEffect } from 'react';
 import {
@@ -1628,31 +1629,16 @@ function EditableCrudList({
   onSyncTable?: (key: string, nextRows: Record<string, string>[]) => Promise<void> | void;
   onNotify: (msg: string) => void;
 }) {
-  const [rows, setRows] = useState<Record<string, string>[]>(() => {
-    if (savedRows && Array.isArray(savedRows) && savedRows.length > 0) return savedRows;
-    if (typeof window === 'undefined') return initialRows;
-    try {
-      const raw = window.localStorage.getItem('sigolf_crud_' + storageKey);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {
-      /* ignore */
-    }
-    return initialRows;
-  });
+  // The saved (server) table is the only source; nothing is pre-filled with sample rows.
+  const [rows, setRows] = useState<Record<string, string>[]>(() =>
+    Array.isArray(savedRows) ? savedRows : initialRows,
+  );
 
   const [editingIndex, setEditingIndex] = useState<number | 'new' | null>(null);
   const [draftRow, setDraftRow] = useState<Record<string, string>>({});
 
   const persist = (next: Record<string, string>[]) => {
     setRows(next);
-    try {
-      window.localStorage.setItem('sigolf_crud_' + storageKey, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
     onSyncTable?.(storageKey, next);
   };
 
@@ -2037,6 +2023,7 @@ function SettingsCardModal({
   };
 
   return (
+    <div className="ds-root ar-dialog-root">
     <div className="ar-settings-modal-backdrop" onClick={onClose}>
       <div
         className="ar-settings-modal"
@@ -2274,10 +2261,7 @@ function SettingsCardModal({
                 { key: 'cols', label: 'Bố cục cột POS', placeholder: 'VD: Lưới 5 cột' },
                 { key: 'status', label: 'Hiển thị', placeholder: 'Đang bật', badge: 'success' },
               ]}
-              initialRows={[
-                { zone: 'Tầng 1 - Khu tập Tiêu chuẩn', lines: 'L1, L2, L3, L4, L5, L6, L7, L8, L9, L10', cols: 'Lưới 4 cột', status: 'Đang bật' },
-                { zone: 'Tầng 2 - Khu Phòng VIP Private', lines: 'VIP1 (Suite), VIP2 (President)', cols: 'Lưới 2 cột lớn', status: 'Đang bật' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2500,11 +2484,7 @@ function SettingsCardModal({
                 { key: 'exp', label: 'Thời hạn', placeholder: 'VD: 31/12/2026' },
                 { key: 'st', label: 'Trạng thái', placeholder: 'Đang chạy / Tạm dừng', badge: 'info' },
               ]}
-              initialRows={[
-                { code: 'GOLFNEW20', name: 'Khách hàng mới trải nghiệm', val: 'Giảm 20%', exp: '31/12/2026', st: 'Đang chạy' },
-                { code: 'HAPPYMORNING', name: 'Giờ vàng sáng 6h-11h', val: 'Đồng giá 250k', exp: 'Không giới hạn', st: 'Đang chạy' },
-                { code: 'VIPCOMBO', name: 'Combo VIP 2 người', val: 'Giảm 150.000₫', exp: '30/11/2026', st: 'Đang chạy' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2551,11 +2531,7 @@ function SettingsCardModal({
                 { key: 'autoDeduct', label: 'Tự động trừ kho POS', placeholder: 'Bật / Tắt', badge: 'success' },
                 { key: 'warehouse', label: 'Kho lưu trữ', placeholder: 'Kho Quầy Bar Tầng 1' },
               ]}
-              initialRows={[
-                { group: 'Nước khoáng & Nước giải khát', minQty: '24 chai', autoDeduct: 'Bật', warehouse: 'Kho Quầy Bar Tầng 1' },
-                { group: 'Nguyên liệu Pha chế (Hạt cà phê, Sữa)', minQty: '5 kg', autoDeduct: 'Bật', warehouse: 'Kho Bếp Trung tâm' },
-                { group: 'Bóng Golf 3D & Phụ kiện cảm biến', minQty: '50 quả', autoDeduct: 'Tắt', warehouse: 'Kho Kỹ thuật' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2572,11 +2548,7 @@ function SettingsCardModal({
                 { key: 'phone', label: 'Hotline liên hệ', placeholder: 'VD: 0903112233' },
                 { key: 'debt', label: 'Công nợ hiện tại', placeholder: 'VD: 0₫', badge: 'warning' },
               ]}
-              initialRows={[
-                { name: 'Công ty Nước Giải Khát Tân Hiệp', item: 'Nước khoáng, Nước tăng lực', phone: '0903112233', debt: '2.500.000₫' },
-                { name: 'Foresight Golf Việt Nam', item: 'Sensor, Bóng golf chuyên dụng', phone: '0918776655', debt: '0₫' },
-                { name: 'Xưởng Cà Phê Cầu Đất', item: 'Hạt Arabica & Robusta rang mộc', phone: '0988445566', debt: '1.200.000₫' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2593,13 +2565,7 @@ function SettingsCardModal({
                 { key: 'autoAssign', label: 'Phân bổ Sale', placeholder: 'Chia vòng tròn (Round-robin)' },
                 { key: 'status', label: 'Trạng thái', placeholder: 'Đang bật', badge: 'success' },
               ]}
-              initialRows={[
-                { source: 'Website Đặt sân trực tuyến', channel: 'Online', autoAssign: 'Tự động (Round-robin)', status: 'Đang bật' },
-                { source: 'Fanpage Facebook / Messenger', channel: 'Social', autoAssign: 'Tự động (Round-robin)', status: 'Đang bật' },
-                { source: 'Zalo Official Account (OA)', channel: 'Social', autoAssign: 'CSKH Trực ca', status: 'Đang bật' },
-                { source: 'Khách vãng lai đến trực tiếp (Walk-in)', channel: 'Offline', autoAssign: 'Lễ tân quầy', status: 'Đang bật' },
-                { source: 'Hội viên giới thiệu (Referral)', channel: 'Referral', autoAssign: 'Chuyên viên VIP', status: 'Đang bật' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2615,13 +2581,7 @@ function SettingsCardModal({
                 { key: 'desc', label: 'Quy trình xử lý chuẩn', placeholder: 'Mô tả hành động của Sale/CSKH' },
                 { key: 'sla', label: 'Cam kết SLA', placeholder: 'VD: Phản hồi trong 15 phút', badge: 'info' },
               ]}
-              initialRows={[
-                { step: '1. Mới tiếp cận', desc: 'Khách để lại thông tin hoặc đặt lịch trực tuyến', sla: '15 phút' },
-                { step: '2. Đã tư vấn', desc: 'Nhân viên CSKH gọi xác nhận nhu cầu và báo giá', sla: '2 giờ' },
-                { step: '3. Trải nghiệm sân', desc: 'Khách đến chơi thử buổi đầu tiên tại CLB', sla: '3 ngày' },
-                { step: '4. Báo giá', desc: 'Gửi đề xuất gói giờ 25h/50h/100h hoặc thẻ VIP', sla: '24 giờ' },
-                { step: '5. Chốt thành công', desc: 'Khách thanh toán gói giờ hoặc mở thẻ hội viên', sla: 'Hoàn tất' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2638,12 +2598,7 @@ function SettingsCardModal({
                 { key: 'channel', label: 'Kênh gửi', placeholder: 'Zalo ZNS / SMS / Email', badge: 'info' },
                 { key: 'status', label: 'Trạng thái', placeholder: 'Đang chạy', badge: 'success' },
               ]}
-              initialRows={[
-                { name: 'Xác nhận đặt sân tức thì', trigger: 'Ngay khi tạo Booking', channel: 'Zalo ZNS', status: 'Đang chạy' },
-                { name: 'Nhắc lịch hẹn trước giờ chơi', trigger: 'Trước giờ chơi 2 tiếng', channel: 'Zalo ZNS & SMS', status: 'Đang chạy' },
-                { name: 'Chúc mừng sinh nhật + Tặng 1h chơi', trigger: '08:00 sáng ngày sinh nhật', channel: 'Zalo OA & Email', status: 'Đang chạy' },
-                { name: 'Nhắc gia hạn thẻ hội viên sắp hết hạn', trigger: 'Trước ngày hết hạn 7 ngày', channel: 'Zalo OA & Gọi điện', status: 'Đang chạy' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -2659,13 +2614,7 @@ function SettingsCardModal({
                 { key: 'group', label: 'Nhóm đối tượng', placeholder: 'VD: Hội viên / VIP / Học viên' },
                 { key: 'perk', label: 'Chính sách chăm sóc', placeholder: 'VD: Ưu tiên giữ Line VIP', badge: 'success' },
               ]}
-              initialRows={[
-                { tag: 'Golfer thường xuyên', group: 'Hội viên', perk: 'Ưu tiên đặt sân cuối tuần' },
-                { tag: 'Quan tâm huấn luyện', group: 'Học viên Academy', perk: 'Tặng buổi kiểm tra Swing' },
-                { tag: 'Thích thi đấu', group: 'Tournament', perk: 'Mời tham dự giải CLB hàng tháng' },
-                { tag: 'Nhóm doanh nhân', group: 'Khách VIP / Doanh nghiệp', perk: 'Phục vụ phòng VIP & Xì gà' },
-                { tag: 'Golfer Tay Trái', group: 'Đặc thù kỹ thuật', perk: 'Ưu tiên xếp Line 10 / Phòng VIP' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -3067,12 +3016,7 @@ function SettingsCardModal({
                 { key: 'endpoint', label: 'Địa chỉ IP / Cổng kết nối', placeholder: 'VD: 192.168.1.200:9100' },
                 { key: 'status', label: 'Trạng thái', placeholder: 'Đã kết nối', badge: 'success' },
               ]}
-              initialRows={[
-                { device: 'Máy in nhiệt hóa đơn khổ 80mm', endpoint: 'LAN 192.168.1.200:9100', status: 'Đã kết nối' },
-                { device: 'Cảm biến Foresight GC3 / Golfzon Vision', endpoint: 'Local Sync Bridge v2.4', status: 'Đang hoạt động' },
-                { device: 'Zalo Cloud ZNS Brandname', endpoint: 'OA ID: 198273645019', status: 'Đã xác thực' },
-                { device: 'Cổng gạch nợ tự động VietQR SePay', endpoint: 'Webhook /api/webhooks/sepay', status: 'Đang hoạt động' },
-              ]}
+              initialRows={[]}
             />
           )}
 
@@ -3171,6 +3115,7 @@ function SettingsCardModal({
           {cardId === 'security_backup' && (
             <div>
               <PasswordChange
+                compact
                 onSubmit={async (current, next) => {
                   const r = await fetch('/api/auth/password', {
                     method: 'POST',
@@ -3216,8 +3161,8 @@ function SettingsCardModal({
             <div>
               {data?.audit && data.audit.length > 0 && (
                 <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 13, color: '#059669', fontWeight: 600, marginBottom: 8 }}>
-                    ✓ Nhật ký thao tác thời gian thực từ cơ sở dữ liệu hệ thống ({data.audit.length} bản ghi mới nhất):
+                  <p style={{ fontSize: 13, color: '#475569', marginBottom: 8 }}>
+                    {Math.min(15, data.audit.length)} hoạt động gần nhất. Xem đầy đủ và tìm kiếm trong mục Nhật ký hoạt động.
                   </p>
                   <table className="ar-modal-table">
                     <thead>
@@ -3232,30 +3177,16 @@ function SettingsCardModal({
                         <tr key={a.id}>
                           <td>{new Date(a.created).toLocaleString('vi-VN')}</td>
                           <td><span className="ar-status-badge ar-badge-info">{a.action}</span></td>
-                          <td>{a.detail}</td>
+                          <td>{auditDetailText(a.detail)}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
-              <EditableCrudList
-                storageKey="audit_logs"
-                savedRows={config.customTables?.audit_logs}
-                onSyncTable={onSyncTable}
-                description="Ghi chú kiểm toán bổ sung của Quản trị viên (đồng bộ cơ sở dữ liệu)."
-                onNotify={onShowToast}
-                columns={[
-                  { key: 'time', label: 'Thời gian', placeholder: 'VD: 14:20 Hôm nay' },
-                  { key: 'user', label: 'Tài khoản', placeholder: 'VD: Admin' },
-                  { key: 'act', label: 'Hành động', placeholder: 'VD: Lưu cấu hình', badge: 'info' },
-                  { key: 'det', label: 'Chi tiết thao tác', placeholder: 'Mô tả chi tiết' },
-                ]}
-                initialRows={[
-                  { time: '10:45:12 Hôm nay', user: 'Admin', act: 'Lưu cấu hình', det: 'Cập nhật giờ hoạt động 06:00 - 23:00' },
-                  { time: '09:30:00 Hôm nay', user: 'manager', act: 'Check-in Line', det: 'Bắt đầu line VIP 01 cho khách VIP' },
-                ]}
-              />
+              {!(data?.audit && data.audit.length > 0) && (
+                <p style={{ fontSize: 13, color: '#64748b' }}>Chưa có hoạt động nào được ghi lại.</p>
+              )}
             </div>
           )}
 
@@ -3273,9 +3204,7 @@ function SettingsCardModal({
                 { key: 'note', label: 'Ghi chú vận hành', placeholder: 'VD: Miễn phí cho hạng Diamond' },
                 { key: 'status', label: 'Trạng thái', placeholder: 'Đang áp dụng', badge: 'success' },
               ]}
-              initialRows={[
-                { param: 'Trạng thái kích hoạt', value: 'Đang bật', note: 'Áp dụng trên toàn bộ cơ sở', status: 'Đang áp dụng' },
-              ]}
+              initialRows={[]}
             />
           )}
         </div>
@@ -3296,6 +3225,7 @@ function SettingsCardModal({
           </button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

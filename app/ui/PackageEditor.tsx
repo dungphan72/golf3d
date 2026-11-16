@@ -220,59 +220,24 @@ export function PackageEditor({
   }
 
   return (
-    <form
-      className="package-editor info-strip"
-      onSubmit={submit}
-      style={{
-        background: '#f8fafc',
-        border: '1px solid #cbd5e1',
-        borderRadius: 5,
-        padding: 18,
-        marginBottom: 16,
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 12,
-          marginBottom: 14,
-          flexWrap: 'wrap',
-        }}
-      >
-        <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
-          {initial ? `Chỉnh sửa chi tiết: ${initial.name}` : 'Thêm Gói giờ / Thẻ hội viên mới'}
-        </h3>
+    <form className="pkg-form" onSubmit={submit}>
+      <header className="pkg-form-head">
+        <h3>{initial ? `Chỉnh sửa chi tiết: ${initial.name}` : 'Thêm gói giờ / thẻ hội viên mới'}</h3>
         {!initial && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Mẫu nhanh:</span>
+          <div className="pkg-templates" role="group" aria-label="Mẫu nhanh">
+            <span>Mẫu nhanh:</span>
             {QUICK_TEMPLATES.map((tpl) => (
-              <button
-                key={tpl.label}
-                type="button"
-                onClick={() => applyTemplate(tpl)}
-                style={{
-                  fontSize: 11.5,
-                  padding: '4px 9px',
-                  borderRadius: 5,
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#0f172a',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                }}
-              >
+              <button key={tpl.label} type="button" onClick={() => applyTemplate(tpl)}>
                 + {tpl.label}
               </button>
             ))}
           </div>
         )}
-      </div>
+      </header>
 
-      <div className="form-grid" style={{ gap: 12 }}>
-        <label>
-          Tên gói giờ / Thẻ hội viên *
+      <div className="pkg-grid">
+        <label className="pkg-wide">
+          <span>Tên gói giờ / thẻ hội viên *</span>
           <input
             value={name}
             maxLength={100}
@@ -281,11 +246,12 @@ export function PackageEditor({
             required
           />
         </label>
+
         <label>
-          Giá bán niêm yết (VNĐ) *{' '}
-          {Number(price) > 0 && (
-            <span style={{ color: '#059669', fontWeight: 700 }}>({money(Number(price))})</span>
-          )}
+          <span>
+            Giá bán niêm yết (VNĐ) *
+            {Number(price) > 0 && <b className="pkg-money">{money(Number(price))}</b>}
+          </span>
           <input
             inputMode="numeric"
             placeholder="VD: 7500000"
@@ -294,73 +260,59 @@ export function PackageEditor({
             required
           />
         </label>
-        <label>
-          Thời hạn sử dụng (ngày) *
-          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            <input
-              inputMode="numeric"
-              value={days}
-              onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))}
-              required
-              style={{ flex: 1 }}
-            />
+
+        <div className="pkg-field">
+          <label htmlFor="pkg-days">Thời hạn sử dụng (ngày) *</label>
+          <input
+            id="pkg-days"
+            inputMode="numeric"
+            value={days}
+            onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))}
+            required
+          />
+          <div className="pkg-chips" role="group" aria-label="Chọn nhanh thời hạn">
             {[30, 60, 90, 180, 365].map((d) => (
               <button
                 key={d}
                 type="button"
+                className={Number(days) === d ? 'on' : ''}
                 onClick={() => setDays(String(d))}
-                style={{
-                  padding: '6px 8px',
-                  fontSize: 11.5,
-                  borderRadius: 5,
-                  border: Number(days) === d ? '1px solid #059669' : '1px solid #cbd5e1',
-                  background: Number(days) === d ? '#ecfdf5' : '#ffffff',
-                  color: Number(days) === d ? '#047857' : '#475569',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
               >
-                {d}n
+                {d} ngày
               </button>
             ))}
           </div>
-        </label>
-        <label>
-          Nhóm hiển thị trên bảng giá
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              value={section}
-              maxLength={60}
-              placeholder="VD: Gói giờ chơi / Thẻ tháng / Thẻ VIP"
-              onChange={(e) => setSection(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <select
-              aria-label="Chọn nhanh nhóm hiển thị"
-              value=""
-              onChange={(e) => {
-                if (e.target.value) setSection(e.target.value);
-              }}
-              style={{ width: 120 }}
-            >
-              <option value="">Chọn mẫu...</option>
-              <option value="Gói giờ chơi">Gói giờ chơi</option>
-              <option value="Thẻ tháng">Thẻ tháng</option>
-              <option value="Gói lượt 9/18 hố">Gói lượt 9/18 hố</option>
-              <option value="Thẻ VIP">Thẻ VIP</option>
-            </select>
+        </div>
+
+        <div className="pkg-field">
+          <label htmlFor="pkg-section">Nhóm hiển thị trên bảng giá</label>
+          <input
+            id="pkg-section"
+            value={section}
+            maxLength={60}
+            placeholder="VD: Gói giờ chơi / Thẻ tháng / Thẻ VIP"
+            onChange={(e) => setSection(e.target.value)}
+          />
+          <div className="pkg-chips" role="group" aria-label="Chọn nhanh nhóm hiển thị">
+            {['Gói giờ chơi', 'Thẻ tháng', 'Gói lượt 9/18 hố', 'Thẻ VIP'].map((g) => (
+              <button key={g} type="button" className={section === g ? 'on' : ''} onClick={() => setSection(g)}>
+                {g}
+              </button>
+            ))}
           </div>
-        </label>
+        </div>
+
         <label>
-          Phạm vi Phòng / Line áp dụng
+          <span>Phạm vi phòng / line áp dụng</span>
           <select value={room} onChange={(e) => setRoom(e.target.value as typeof room)}>
-            <option value="any">Tất cả phòng (Line Tiêu chuẩn & VIP)</option>
+            <option value="any">Tất cả phòng (Line Tiêu chuẩn &amp; VIP)</option>
             <option value="standard">Chỉ Line Tiêu chuẩn (L1 - L10)</option>
             <option value="vip">Phòng VIP (dùng được cả Line Tiêu chuẩn)</option>
           </select>
         </label>
-        <label>
-          Quyền lợi & Ưu đãi đi kèm (cách nhau bằng dấu “·”)
+
+        <label className="pkg-wide">
+          <span>Quyền lợi &amp; ưu đãi đi kèm (cách nhau bằng dấu “·”)</span>
           <input
             value={perks}
             maxLength={300}
@@ -370,13 +322,11 @@ export function PackageEditor({
         </label>
       </div>
 
-      <fieldset style={{ marginTop: 12, borderRadius: 5, border: '1px solid #cbd5e1', padding: 12 }}>
-        <legend style={{ fontSize: 12.5, fontWeight: 700, color: '#334155', padding: '0 6px' }}>
-          Định mức Giờ chơi & Số lượt trong gói
-        </legend>
+      <fieldset className="pkg-grants">
+        <legend>Định mức giờ chơi &amp; số lượt trong gói</legend>
         {GRANT_KINDS.map((kind) => (
-          <div key={kind} className="grant-row" style={{ marginBottom: 6 }}>
-            <label style={{ fontWeight: 600 }}>
+          <div key={kind} className={'pkg-grant' + (grants[kind].on ? ' on' : '')}>
+            <label className="pkg-check">
               <input
                 type="checkbox"
                 checked={grants[kind].on}
@@ -384,11 +334,12 @@ export function PackageEditor({
                   setGrants({ ...grants, [kind]: { ...grants[kind], on: e.target.checked } })
                 }
               />
-              {KIND_LABELS[kind]}
+              <span>{KIND_LABELS[kind]}</span>
             </label>
-            {grants[kind].on && (
+            {grants[kind].on ? (
               <>
                 <input
+                  className="pkg-qty"
                   aria-label={`Số ${KIND_LABELS[kind]}`}
                   inputMode="numeric"
                   placeholder="Số lượng (VD: 25)"
@@ -401,7 +352,7 @@ export function PackageEditor({
                     })
                   }
                 />
-                <label>
+                <label className="pkg-check">
                   <input
                     type="checkbox"
                     checked={grants[kind].unlimited}
@@ -412,36 +363,39 @@ export function PackageEditor({
                       })
                     }
                   />
-                  Không giới hạn (Thẻ kỳ hạn)
+                  <span>Không giới hạn (thẻ kỳ hạn)</span>
                 </label>
               </>
+            ) : (
+              <span className="pkg-off">Không có trong gói</span>
             )}
           </div>
         ))}
       </fieldset>
 
-      <label className="check-row" style={{ marginTop: 10, fontWeight: 600 }}>
+      <label className="pkg-check pkg-active">
         <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
-        Đang mở bán (hiển thị trên POS, Hội viên và trang /bang-gia)
+        <span>Đang mở bán (hiển thị trên POS, Hội viên và trang /bang-gia)</span>
       </label>
 
       {error && (
-        <div className="error-box" role="alert" style={{ marginTop: 10 }}>
+        <div className="error-box" role="alert">
           {error}
         </div>
       )}
 
-      <div className="form-footer" style={{ marginTop: 14, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-        <button type="button" className="secondary" onClick={onCancel} disabled={busy}>
+      <div className="pkg-foot">
+        <button type="button" className="pkg-cancel" onClick={onCancel} disabled={busy}>
           Hủy
         </button>
-        <button type="submit" className="primary" disabled={busy}>
+        <button type="submit" className="pkg-submit" disabled={busy}>
           <Save size={15} /> {initial ? 'Lưu cập nhật gói' : 'Tạo gói mới'}
         </button>
       </div>
     </form>
   );
 }
+
 
 /**
  * Unified Package & Card Catalog Manager (Single Source of Truth)
@@ -707,6 +661,7 @@ export function PackageCatalogManager({
                 border: '1px solid #cbd5e1',
                 fontSize: 13,
                 minWidth: 190,
+                minHeight: 38,
               }}
             />
           </div>

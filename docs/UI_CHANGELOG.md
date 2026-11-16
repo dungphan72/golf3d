@@ -2,6 +2,17 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Làm gọn toàn bộ màn hình Cài đặt hệ thống (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu chỉnh tất cả màn hình trong Cài đặt cho gọn gàng, ngăn nắp, sạch sẽ. Ảnh lỗi: form "Thêm gói giờ / thẻ hội viên" bị bóp nát (chữ "30n/60n" xếp dọc, ô tích to bất thường).
+- **Ảnh tham chiếu:** ảnh lỗi do chủ hệ thống gửi trong phiên; giữ phong cách Material xanh lá đã duyệt, bo góc 5px.
+- **File:** `app/system-settings.css`, `app/ui/PackageEditor.tsx` (viết lại form gói), `app/ui/SystemSettingsHub.tsx`, `app/ui/PasswordChange.tsx`, `app/password-change.css`.
+- **Đã sửa:** (1) form Gói trả trước & Thẻ: lưới 2 cột rõ ràng, nút chọn nhanh thời hạn/nhóm hiển thị xuống hàng, định mức giờ chơi/lượt thành từng dòng gọn (ô tích 18px, ô số lượng, "Không giới hạn"); (2) bảng trong các hộp thoại tự rộng ra và xuống dòng thay vì bị cắt cột bên phải (Khu vực & Line, Sơ đồ, Ưu đãi, Nhà cung cấp, Kịch bản…); (3) Tài khoản & Phân quyền: ba thẻ thống kê và bảng nhân viên hiện đúng kiểu thay vì chữ xếp dọc; (4) Bảo mật: form đổi mật khẩu gọn một cột, không hình minh họa; (5) nút luôn nằm một dòng, thanh công cụ tự xuống hàng; (6) điện thoại: hộp thoại tràn màn hình kiểu bảng trượt từ dưới, che thanh điều hướng nên nút Lưu luôn thấy được, bảng cuộn ngang không bẻ chữ từng ký tự.
+- **Xóa dữ liệu giả trong Cài đặt:** 11 danh sách tùy biến (nguồn lead, pipeline, kịch bản chăm sóc, nhóm khách, nhà cung cấp, kho, ưu đãi, tích hợp, dịch vụ bổ sung, F&B, nhật ký ghi chú) trước đây tự điền dòng mẫu (vd. "GOLFNEW20", "Máy in nhiệt 192.168.1.200", "Công ty Nước Giải Khát Tân Hiệp", dòng nhật ký "Admin lưu cấu hình") và đọc thêm bản lưu trong từng trình duyệt; nay chỉ đọc dữ liệu đã lưu trên máy chủ và để trống nếu chưa có. Nhật ký hoạt động trong Cài đặt chỉ hiện dữ liệu thật, đọc được.
+- **Không đổi:** dữ liệu và cách lưu của bảng giá, gói, nhân viên, đổi mật khẩu.
+- **Screenshot:** chụp trong phiên cho toàn bộ 28 thẻ ở 1440 và các thẻ chính ở 390; chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `eslint` 0 lỗi, build đạt; xem ảnh từng thẻ trước/sau.
+- **Chưa làm:** các danh sách tùy biến (nguồn lead, pipeline, kịch bản…) hiện chỉ lưu danh sách, chưa gắn vào chức năng CRM tương ứng; cần quyết định riêng nếu muốn nối thật hoặc ẩn đi.
+
 ## 2026-11-16 — Nhập bill cũ, nhân viên nhập thì chủ cơ sở duyệt (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu cho phép chủ cơ sở hoặc nhân viên nhập lại bill cũ (trước khi dùng hệ thống); bill do nhân viên nhập phải được chủ cơ sở duyệt. Quyết định đã chốt: bill đã duyệt cộng vào báo cáo doanh thu và nhập chi tiết từng dòng.
 - **File:** `drizzle/0033_legacy_bills.sql` (bảng `legacy_bills`), `db/schema.ts`, `lib/legacy-bill.ts`, `lib/server/legacy-bill-service.ts`, `app/api/legacy-bills/route.ts`, `lib/auth/permissions.ts` (quyền `legacy.enter`, `legacy.approve`), `lib/report-sql.ts`, `lib/report-merge.ts`, `lib/server/report-service.ts`, `app/ui/LegacyBillsPanel.tsx`, `app/legacy-bills.css`, `app/ui/ReportsPanel.tsx` (tab "Bill cũ", cột "Từ bill cũ"), tests `legacy-bill`, `report-merge`, `auth`.

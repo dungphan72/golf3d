@@ -29,6 +29,9 @@ export function PriceEditor({
   const [editing, setEditing] = useState<string | null>(null);
   const [confirmDel, setConfirmDel] = useState<string | null>(null);
   const [folded, setFolded] = useState<Set<string>>(new Set());
+  // Rows ticked for a bulk delete.
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
 
   const toggle = (k: string) =>
     setFolded((f) => {
@@ -43,6 +46,28 @@ export function PriceEditor({
       (service === 'all' || r.service === service) &&
       (day === 'all' || r.day === day),
   );
+
+  const selectedIds = rules.filter((r) => selected.has(r.id)).map((r) => r.id);
+  const visibleIds = visible.map((r) => r.id);
+  const setMany = (ids: string[], on: boolean) => {
+    setConfirmBulk(false);
+    setSelected((cur) => {
+      const n = new Set(cur);
+      for (const id of ids) {
+        if (on) n.add(id);
+        else n.delete(id);
+      }
+      return n;
+    });
+  };
+  function removeSelected() {
+    const drop = new Set(selectedIds);
+    onChange(rules.filter((r) => !drop.has(r.id)));
+    if (editing && drop.has(editing)) setEditing(null);
+    setSelected(new Set());
+    setConfirmBulk(false);
+    setConfirmDel(null);
+  }
 
   let issue = '';
   try {
@@ -95,6 +120,11 @@ export function PriceEditor({
 
   function remove(id: string) {
     onChange(rules.filter((x) => x.id !== id));
+    setSelected((cur) => {
+      const n = new Set(cur);
+      n.delete(id);
+      return n;
+    });
     setConfirmDel(null);
     if (editing === id) setEditing(null);
   }
@@ -179,6 +209,55 @@ export function PriceEditor({
         </div>
       )}
 
+      {visibleIds.length > 0 && (
+        <div
+          className="pt-bulk"
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            gap: '10px',
+            margin: '14px 0 0',
+            padding: '8px 12px',
+            border: '1px solid #e2e8f0',
+            borderRadius: 5,
+            background: selectedIds.length ? '#fef2f2' : '#f8fafc',
+          }}
+        >
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+            <input
+              type="checkbox"
+              checked={visibleIds.length > 0 && visibleIds.every((id) => selected.has(id))}
+              onChange={(e) => setMany(visibleIds, e.target.checked)}
+            />
+            Chọn tất cả ({visibleIds.length} khung đang hiển thị)
+          </label>
+          {selectedIds.length > 0 && (
+            <>
+              <strong style={{ fontSize: 13 }}>Đã chọn {selectedIds.length} khung giá</strong>
+              {!confirmBulk ? (
+                <button type="button" className="secondary pt-del" onClick={() => setConfirmBulk(true)}>
+                  <Trash2 size={14} /> Xóa đã chọn
+                </button>
+              ) : (
+                <>
+                  <span style={{ fontSize: 13, fontWeight: 600 }}>Xóa {selectedIds.length} khung giá đã chọn?</span>
+                  <button type="button" className="pt-danger" onClick={removeSelected}>
+                    Xác nhận xóa
+                  </button>
+                  <button type="button" className="secondary" onClick={() => setConfirmBulk(false)}>
+                    Hủy
+                  </button>
+                </>
+              )}
+              <button type="button" className="secondary" onClick={() => setMany(selectedIds, false)}>
+                Bỏ chọn
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {!groups.length && (
         <p className="muted" style={{ padding: '24px 0', textAlign: 'center' }}>
           Chưa có khung giá phù hợp bộ lọc. Dịch vụ chưa có giá sẽ không thể mở phiên hoặc đặt lịch.
@@ -205,6 +284,14 @@ export function PriceEditor({
             <table className="pt-table">
               <thead>
                 <tr>
+                  <th style={{ width: 32 }}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Chọn tất cả khung giá ${rooms[g.key]}`}
+                      checked={g.rows.length > 0 && g.rows.every((r) => selected.has(r.id))}
+                      onChange={(e) => setMany(g.rows.map((r) => r.id), e.target.checked)}
+                    />
+                  </th>
                   <th>Tên khung giá</th>
                   <th>Số người</th>
                   <th>Ngày</th>
@@ -222,27 +309,39 @@ export function PriceEditor({
                     <Fragment key={r.id}>
                       {(i === 0 || g.rows[i - 1].service !== r.service) && (
                         <tr className="pt-sub">
-                          <td colSpan={7}>
-                            <button
-                              type="button"
-                              className="secondary"
-                              style={{ float: 'right' }}
-                              disabled={rules.length >= 300}
-                              onClick={() => add({ room: g.key as 'standard' | 'vip', service: r.service })}
-                            >
-                              <Plus size={13} /> Thêm
-                            </button>
-                            <button
-                              type="button"
-                              aria-expanded={!folded.has(gk)}
-                              onClick={() => toggle(gk)}
-                            >
-                              <ChevronDown size={14} className={folded.has(gk) ? 'shut' : ''} />
-                              {services[r.service]}
-                              <span>
-                                {g.rows.filter((x) => x.service === r.service).length} khung giá
-                              </span>
-                            </button>
+                          <td colSpan={8}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <input
+                                type="checkbox"
+                                aria-label={`Chọn tất cả ${services[r.service]}`}
+                                checked={g.rows.filter((x) => x.service === r.service).every((x) => selected.has(x.id))}
+                                onChange={(e) =>
+                                  setMany(
+                                    g.rows.filter((x) => x.service === r.service).map((x) => x.id),
+                                    e.target.checked,
+                                  )
+                                }
+                              />
+                              <button
+                                type="button"
+                                aria-expanded={!folded.has(gk)}
+                                onClick={() => toggle(gk)}
+                              >
+                                <ChevronDown size={14} className={folded.has(gk) ? 'shut' : ''} />
+                                {services[r.service]}
+                                <span>
+                                  {g.rows.filter((x) => x.service === r.service).length} khung giá
+                                </span>
+                              </button>
+                              <button
+                                type="button"
+                                className="secondary pt-sub-add"
+                                disabled={rules.length >= 300}
+                                onClick={() => add({ room: g.key as 'standard' | 'vip', service: r.service })}
+                              >
+                                <Plus size={13} /> Thêm
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       )}
@@ -250,6 +349,14 @@ export function PriceEditor({
                         hidden={shut}
                         className={(r.enabled ? '' : 'off ') + (editing === r.id ? 'open' : '')}
                       >
+                        <td>
+                          <input
+                            type="checkbox"
+                            aria-label={`Chọn ${r.label}`}
+                            checked={selected.has(r.id)}
+                            onChange={(e) => setMany([r.id], e.target.checked)}
+                          />
+                        </td>
                         <td>
                           <strong>{r.label}</strong>
                         </td>
@@ -311,7 +418,7 @@ export function PriceEditor({
                       </tr>
                       {editing === r.id && (
                         <tr className="pt-edit" id={`pt-edit-${r.id}`}>
-                          <td colSpan={7}>
+                          <td colSpan={8}>
                             <div className="pt-fields">
                               <label>
                                 Tên khung giá

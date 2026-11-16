@@ -828,3 +828,37 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Price table tick boxes: small and aligned (the modal's generic input style would stretch them). */
+.ar-settings-modal .price-editor input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  flex: none;
+  display: inline-block;
+  vertical-align: middle;
+  accent-color: #0a5c1e;
+}
+.ar-settings-modal .price-editor .pt-bulk label {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.pt-table tr.pt-sub button[aria-expanded] {
+  flex: 1;
+  width: auto;
+}
+.pt-table tr.pt-sub button.pt-sub-add {
+  flex: none;
+  width: auto;
+  margin: 0 10px 0 auto;
+  padding: 4px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  background: #ffffff;
+  color: #0a5c1e;
+}

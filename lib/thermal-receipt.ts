@@ -109,12 +109,18 @@ export function generateK80Html({
   bill,
   roomName,
   food,
+  logoSrc,
+  now = new Date(),
 }: {
   booking: Booking;
   quote: Bill;
   bill?: BillInfo | null;
   roomName: string;
   food?: FoodData | null;
+  /** Logo address; a data URL when the bill is turned into a picture. */
+  logoSrc?: string;
+  /** The moment shown on the parking voucher (the system date). */
+  now?: Date;
 }): string {
   const code = '#' + booking.id.slice(-6).toUpperCase();
   const startTime = new Date(booking.started || booking.start).toLocaleTimeString('vi-VN', {
@@ -130,6 +136,17 @@ export function generateK80Html({
   });
 
   const total = booking.amount ?? q.total + (booking.food_total ?? 0);
+  const logo =
+    logoSrc ?? (typeof window !== 'undefined' ? window.location.origin : '') + BRAND.logo;
+  // Parking voucher date: the system date in Vietnam, "dd / mm / yyyy".
+  const dateParts = new Intl.DateTimeFormat('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh',
+  }).formatToParts(now);
+  const part = (t: string) => dateParts.find((x) => x.type === t)?.value ?? '';
+  const voucherDate = `${part('day')} / ${part('month')} / ${part('year')}`;
 
   const paymentLabel =
     booking.payment === 'cash'
@@ -204,10 +221,29 @@ export function generateK80Html({
     .status-row { display: flex; justify-content: space-between; font-size: 11px; margin-top: 2px; }
     .footer { text-align: center; margin-top: 8px; font-size: 10px; color: #333; }
     .footer-thanks { font-weight: 700; font-size: 11px; margin-bottom: 2px; }
+    html { background: #fff; }
+    body { position: relative; }
+    .sheet { position: relative; z-index: 1; }
+    .logo { display: block; width: 22mm; height: 22mm; margin: 0 auto 3px; object-fit: contain; }
+    .watermark {
+      position: absolute; left: 50%; top: 50%; z-index: 0; width: 60mm; height: 60mm;
+      transform: translate(-50%, -50%);
+      background: url('${logo}') center / contain no-repeat;
+      opacity: 0.07; pointer-events: none;
+    }
+    .park { border: 3px solid #1b7f4b; border-radius: 10px; padding: 3px; margin-top: 10px; }
+    .park-in { border: 1.5px solid #1b7f4b; border-radius: 7px; padding: 6px 4px 7px; text-align: center; color: #1b7f4b; background: #fff; }
+    .park-club { font-weight: 800; font-size: 11px; padding-bottom: 3px; border-bottom: 1.5px solid #1b7f4b; }
+    .park-title { font-weight: 900; font-size: 19px; line-height: 1.15; margin: 5px 0 3px; }
+    .park-date { font-size: 12px; margin-bottom: 3px; }
+    .park-note { font-size: 9.5px; }
   </style>
 </head>
 <body>
+  <div class="watermark" aria-hidden="true"></div>
+  <div class="sheet">
   <div class="header">
+    <img class="logo" src="${logo}" alt="">
     <div class="club-title">${BRAND.name}</div>
     <div class="club-sub">Hotline: ${BRAND.hotline} · www.${BRAND.website}</div>
     <div class="club-sub">${BRAND.address}</div>
@@ -317,6 +353,16 @@ export function generateK80Html({
     <div class="footer-thanks">Cảm ơn Quý khách & Hẹn gặp lại!</div>
     <div>Hệ thống Golf 3D Foresight GC3 USA</div>
   </div>
+
+  <div class="park">
+    <div class="park-in">
+      <div class="park-club">${BRAND.name.toUpperCase()}</div>
+      <div class="park-title">MIỄN PHÍ GỬI XE</div>
+      <div class="park-date">Ngày: ${voucherDate}</div>
+      <div class="park-note">Chỉ áp dụng cho khách sử dụng dịch vụ Golf</div>
+    </div>
+  </div>
+  </div>
 </body>
 </html>`;
 }
@@ -348,14 +394,24 @@ export function printK80Receipt(html: string) {
   doc.write(html);
   doc.close();
 
-  setTimeout(() => {
+  // Print once the logo has loaded (at most 1.5 s), otherwise the bill would print without it.
+  const loaded = Promise.all(
+    Array.from(doc.images).map((im) =>
+      im.complete
+        ? Promise.resolve()
+        : new Promise<void>((r) => {
+            im.onload = im.onerror = () => r();
+          }),
+    ),
+  );
+  Promise.race([loaded, new Promise((r) => setTimeout(r, 1500))]).then(() => {
     try {
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
     } catch {
       window.print();
     }
-  }, 200);
+  });
 }
 
 export async function sendBillToZalo({
@@ -398,6 +454,136 @@ export async function sendBillToZalo({
 
   if (onNotify) {
     onNotify('Đã sao chép hóa đơn! Khi cửa sổ Zalo mở ra, bạn chỉ cần bấm Ctrl+V để gửi cho khách.');
+  }
+}
+
+/**
+ * Turns a self-contained bill page (images must be data URLs) into a PNG.
+ * No libraries: the page is laid out in a hidden frame, wrapped in an SVG foreignObject and drawn on a canvas.
+ */
+export async function htmlToPngBlob(html: string, widthPx = 300, scale = 3): Promise<Blob> {
+  const frame = document.createElement('iframe');
+  frame.style.cssText = `position:fixed;left:-10000px;top:0;width:${widthPx}px;height:10px;border:0;visibility:hidden`;
+  document.body.appendChild(frame);
+  try {
+    const doc = frame.contentDocument!;
+    doc.open();
+    doc.write(html);
+    doc.close();
+    await Promise.race([
+      Promise.all(
+        Array.from(doc.images).map((im) =>
+          im.complete
+            ? Promise.resolve()
+            : new Promise<void>((r) => {
+                im.onload = im.onerror = () => r();
+              }),
+        ),
+      ),
+      new Promise((r) => setTimeout(r, 3000)),
+    ]);
+    const height = Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight)) + 8;
+    const xhtml = new XMLSerializer().serializeToString(doc.documentElement);
+    const svg =
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${widthPx}" height="${height}">` +
+      `<foreignObject width="100%" height="100%">${xhtml}</foreignObject></svg>`;
+    const img = new Image();
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Không dựng được ảnh hóa đơn'));
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = widthPx * scale;
+    canvas.height = height * scale;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return await new Promise<Blob>((resolve, reject) =>
+      canvas.toBlob(
+        (b) => (b ? resolve(b) : reject(new Error('Không tạo được ảnh hóa đơn'))),
+        'image/png',
+      ),
+    );
+  } finally {
+    frame.remove();
+  }
+}
+
+async function logoDataUrl(): Promise<string> {
+  const res = await fetch(BRAND.logo);
+  const blob = await res.blob();
+  return await new Promise<string>((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(fr.error);
+    fr.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Sends the bill to the customer on Zalo as a picture.
+ * Phones: the share sheet (pick Zalo). Computers: the picture is copied and the customer's Zalo chat opens,
+ * staff press Ctrl+V. If neither works the picture is saved as a file.
+ */
+export async function sendBillImageToZalo({
+  phone,
+  bill,
+  fileName,
+  onNotify,
+}: {
+  phone?: string;
+  bill: Parameters<typeof generateK80Html>[0];
+  fileName: string;
+  onNotify?: (msg: string) => void;
+}) {
+  let target = (phone || '').replace(/[^0-9]/g, '');
+  if (!target) {
+    const input = window.prompt('Nhập số điện thoại Zalo của khách:', '');
+    if (!input) return;
+    target = input.replace(/[^0-9]/g, '');
+  }
+  if (target.length < 9) {
+    alert('Số điện thoại không hợp lệ. Vui lòng kiểm tra lại!');
+    return;
+  }
+  if (target.startsWith('84') && target.length >= 10) target = '0' + target.slice(2);
+
+  // Open the chat window now (inside the click) so the browser does not block it after the picture is made.
+  const canShare = typeof navigator.canShare === 'function';
+  const win = canShare ? null : window.open('about:blank', '_blank');
+  try {
+    const blob = await htmlToPngBlob(generateK80Html({ ...bill, logoSrc: await logoDataUrl() }));
+    const file = new File([blob], fileName, { type: 'image/png' });
+    if (canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Hóa đơn ' + BRAND.name });
+      onNotify?.('Đã mở danh sách chia sẻ: chọn Zalo và gửi cho khách.');
+      return;
+    }
+    let copied = false;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      copied = true;
+    } catch {
+      copied = false;
+    }
+    if (win) win.location.href = `https://zalo.me/${target}`;
+    else window.open(`https://zalo.me/${target}`, '_blank');
+    if (copied) {
+      onNotify?.('Đã sao chép ảnh hóa đơn! Khi cửa sổ Zalo mở ra, bấm Ctrl+V rồi Gửi cho khách.');
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+      onNotify?.('Đã tải ảnh hóa đơn về máy. Kéo ảnh vào khung chat Zalo để gửi cho khách.');
+    }
+  } catch (e) {
+    win?.close();
+    if (e instanceof DOMException && e.name === 'AbortError') return; // the share sheet was closed
+    onNotify?.(e instanceof Error ? e.message : 'Không gửi được ảnh hóa đơn');
   }
 }
 

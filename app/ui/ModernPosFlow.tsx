@@ -83,8 +83,7 @@ import {
   generateShiftZReportHtml,
   kickCashDrawer,
   printK80Receipt,
-  formatBillZaloText,
-  sendBillToZalo,
+  sendBillImageToZalo,
 } from '../../lib/thermal-receipt';
 import '../pos-flow.css';
 
@@ -1324,15 +1323,10 @@ export function ModernPosFlow({
     const bTarget = targetBooking ?? activeBooking;
     if (!bTarget) return;
     const rName = rooms.find((r) => r.id === bTarget.room)?.name ?? bTarget.room;
-    await sendBillToZalo({
+    await sendBillImageToZalo({
       phone: bTarget.phone,
-      billText: formatBillZaloText({
-        booking: bTarget,
-        quote: sessionBill,
-        bill,
-        roomName: rName,
-        food: food.data,
-      }),
+      bill: { booking: bTarget, quote: sessionBill, bill, roomName: rName, food: food.data },
+      fileName: `hoa-don-${bTarget.id.slice(-6)}.png`,
       onNotify: (msg) => setNotice(msg),
     });
   }

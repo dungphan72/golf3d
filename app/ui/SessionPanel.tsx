@@ -31,7 +31,7 @@ import { PackageRedeem } from './session/PackageRedeem';
 import { type Bank, TransferPanel } from './session/TransferPanel';
 import { SplitPay } from './session/SplitPay';
 import { clock, playedMs } from './PosBoard';
-import { generateK80Html, printK80Receipt, formatBillZaloText, sendBillToZalo } from '../../lib/thermal-receipt';
+import { generateK80Html, printK80Receipt, sendBillImageToZalo } from '../../lib/thermal-receipt';
 
 const SERVICE_LABEL: Record<string, string> = { gdr: 'Luyện tập theo giờ', '9': 'Game 9 hố', '18': 'Game 18 hố' };
 const PAY_LABEL: Record<string, string> = {
@@ -145,10 +145,10 @@ export function SessionPanel({
   const handlePrint = () =>
     printK80Receipt(generateK80Html({ booking: b, quote: q, bill, roomName, food: food.data }));
   const handleZalo = async () => {
-    const text = formatBillZaloText({ booking: b, quote: q, bill, roomName, food: food.data });
-    await sendBillToZalo({
+    await sendBillImageToZalo({
       phone: b.phone,
-      billText: text,
+      bill: { booking: b, quote: q, bill, roomName, food: food.data },
+      fileName: `hoa-don-${b.id.slice(-6)}.png`,
       onNotify: (msg) => {
         setZaloNotice(msg);
         setTimeout(() => setZaloNotice(''), 6000);

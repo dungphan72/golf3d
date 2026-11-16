@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Phiếu thanh toán: logo, logo chìm, mẫu miễn phí gửi xe, gửi Zalo bằng ảnh (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu chèn logo đầu hóa đơn, logo chìm giữa hóa đơn, mẫu "Miễn phí gửi xe" cuối hóa đơn (ngày tự điền theo ngày hệ thống) và gửi bill qua Zalo bằng hình ảnh.
+- **Ảnh tham chiếu:** logo SaiGon Indoor Golf Club và mẫu "MIỄN PHÍ GỬI XE" do chủ hệ thống gửi trong phiên (chưa lưu file vào `hinh-anh/thiet-ke/`). Logo dùng file thật `public/logo.webp`.
+- **File:** `lib/thermal-receipt.ts` (phiếu K80: logo đầu phiếu, logo chìm mờ 7%, khung gửi xe xanh lá với ngày `dd / mm / yyyy` theo giờ Việt Nam; in chờ logo tải xong; `htmlToPngBlob`, `sendBillImageToZalo`), `app/ui/SessionPanel.tsx`, `app/ui/ModernPosFlow.tsx` (nút Gửi Zalo dùng ảnh).
+- **Gửi Zalo:** điện thoại: mở bảng chia sẻ, chọn Zalo; máy tính: sao chép ảnh và mở chat Zalo của khách, nhân viên bấm Ctrl+V rồi Gửi; nếu trình duyệt không cho sao chép thì tải ảnh về máy. Chưa gửi tự động qua Zalo OA vì cần khách đã theo dõi OA và liên kết tài khoản.
+- **Screenshot:** ảnh phiếu dựng thử trong phiên; chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch; dựng ảnh phiếu thật bằng trình duyệt tự động (PNG 3x, đủ logo, logo chìm, khung gửi xe, ngày hôm nay). Chưa thử in thật trên máy in K80 và chưa thử bảng chia sẻ trên điện thoại.
+
 ## 2026-11-16 — Nhân viên đăng nhập bằng email hoặc số điện thoại (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu tài khoản nhân viên đăng nhập được bằng email hoặc số điện thoại.
 - **File:** `drizzle/0032_staff_phone.sql` (cột `users.phone`, chỉ mục duy nhất khi có số), `db/schema.ts`, `lib/auth/identifier.ts`, `lib/server/auth-service.ts`, `app/api/staff/route.ts`, `app/ui/LoginScreen.tsx` (ô "Email hoặc số điện thoại"), `app/ui/StaffPanel.tsx` (nhập/sửa SĐT), `tests/login-identifier.test.ts`.

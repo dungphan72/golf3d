@@ -1,3 +1,4 @@
+import { mockChannels } from './providers';
 import { db, type ServiceResult } from './common';
 import { tokenId } from '../auth/password';
 import {
@@ -120,6 +121,8 @@ export async function applyBank(tenant: string, input: BankInput): Promise<R> {
       return reply({ ok: true });
     }
     if (input.action === 'simulate-tx') {
+      // Creates a fake bank credit: only the test server may do that, never a real deployment.
+      if (!mockChannels()) return error('Chức năng giả lập chỉ dùng trên máy kiểm thử', 403);
       const now = Date.now();
       const txId = crypto.randomUUID();
       await db()

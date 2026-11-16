@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Gỡ dữ liệu điền sẵn do AI đặt, chặn giao dịch ngân hàng giả, xóa form cài đặt cũ (nhánh `fix/p0-data-integrity`)
+- **Lý do:** quy tắc dữ liệu của dự án (không dữ liệu giả). Các thẻ Cài đặt điền sẵn tài khoản ngân hàng, mã số thuế, tên công ty, mã marketing, VAT/phí, tỷ lệ hoa hồng… rồi lưu thành dữ liệu thật khi bấm Lưu; màn chuyển khoản dùng số tài khoản dự phòng tự đặt để tạo mã QR; nút "Giả lập báo có SePay" tạo giao dịch ngân hàng giả và máy chủ cho mọi nhân viên dùng.
+- **File:** `app/ui/SystemSettingsHub.tsx` (ô trống khi chưa cấu hình, hạng hội viên và quyền lợi lấy từ mặc định của hệ thống, ô số để trống không bị lưu thành 0), `app/ui/session/TransferPanel.tsx` (không QR khi chưa cấu hình tài khoản nhận tiền, hiện hướng dẫn; bỏ nút giả lập), `app/ui/SepaySettings.tsx` (bỏ nút gửi giao dịch test), `app/ui/ModernPosFlow.tsx`, `lib/server/bank-service.ts` (`simulate-tx` chỉ chạy trên máy kiểm thử, ngoài đó trả 403), `app/ui/Forms.tsx` và `app/ui/ClubApp.tsx` (xóa `SettingsForm` cũ không còn dùng, gồm các ô giá cũ).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`; e2e luồng tiền mức API đạt.
+- **Chưa làm:** các trường giá cũ (`rate`, `happy`, `hole9`…) còn trong kiểu cấu hình và mã nhưng không còn nơi nào sửa; e2e giao diện cũ cần viết lại.
+
 ## 2026-11-16 — Bảng giá: thêm khung giá trong từng nhóm, lưu không báo thành công giả (nhánh `fix/p0-data-integrity`)
 - **Lý do:** nút "Thêm khung giá mới" tưởng như không chạy (dòng mới nằm ngoài tầm nhìn, chỉ có dải lỗi ở trên); bấm Lưu khi dữ liệu sai vẫn báo "Đã lưu cấu hình thành công!" rồi đóng cửa sổ và mất thay đổi.
 - **File:** `app/ui/PriceEditor.tsx` (nút "Thêm khung giá" ở từng khu vực và "Thêm" ở từng dịch vụ, dòng mới tự mở rộng nhóm và cuộn vào giữa màn hình), `app/ui/SystemSettingsHub.tsx` (`handleSaveConfig` không báo thành công và không đóng khi máy chủ từ chối; thẻ Bảng giá kiểm tra hợp lệ trước khi lưu, hiện lỗi ngay trong cửa sổ và ở lại sau khi lưu thành công).

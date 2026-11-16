@@ -2249,9 +2249,9 @@ export function ModernPosFlow({
             <TransferPanel
               booking={{ ...activeBooking, amount: payableTotal }}
               bank={{
-                bin: data.config?.bankBin ?? '970422',
+                bin: data.config?.bankBin ?? '',
                 account: data.config?.bankAccount ?? '',
-                holder: data.config?.bankHolder ?? 'SAIGON INDOOR GOLF CLUB',
+                holder: data.config?.bankHolder ?? '',
               }}
               fallbackAmount={payableTotal}
               busy={saving || !data.activeShift}

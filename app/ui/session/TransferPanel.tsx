@@ -8,7 +8,6 @@ import {
   ExternalLink,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   Zap,
 } from 'lucide-react';
 import { money, type Booking } from '../../../lib/club';
@@ -39,7 +38,6 @@ export function TransferPanel({
   const [data, setData] = useState<Overview | null>(null);
   const [useFallbackQr, setUseFallbackQr] = useState(false);
   const [copiedField, setCopiedField] = useState<'account' | 'code' | null>(null);
-  const [simulating, setSimulating] = useState(false);
 
   const load = async () => {
     try {
@@ -69,9 +67,11 @@ export function TransferPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [booking.id]);
 
-  const effectiveBin = bank.bin || '970422';
-  const effectiveAccount = bank.account || '0877834888';
-  const effectiveHolder = bank.holder || 'SAIGON INDOOR GOLF CLUB';
+  // Never guess where the customer's money goes: without a configured account there is no QR.
+  const effectiveBin = bank.bin;
+  const effectiveAccount = bank.account;
+  const effectiveHolder = bank.holder;
+  const bankConfigured = !!bank.bin && !!bank.account;
   const effectiveAmount = data?.due ?? fallbackAmount ?? booking.amount ?? 0;
   const effectiveCode = data?.code || paymentCode(booking.id);
   const bankInfo = SEPAY_BANKS.find((b) => b.bin === effectiveBin);
@@ -101,27 +101,13 @@ export function TransferPanel({
     setTimeout(() => setCopiedField(null), 1800);
   }
 
-  async function handleSimulateSepay() {
-    if (effectiveAmount <= 0) return;
-    setSimulating(true);
-    try {
-      const r = await fetch('/api/bank', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'simulate-tx',
-          amount: effectiveAmount,
-          content: `${effectiveCode} thanh toan golf SePay`,
-          account: effectiveAccount,
-        }),
-      });
-      if (r.ok) {
-        await load();
-      }
-    } finally {
-      setSimulating(false);
-    }
-  }
+  if (!bankConfigured)
+    return (
+      <div className="info-strip transfer-panel" role="alert">
+        Chưa cấu hình tài khoản nhận tiền. Vào Cài đặt hệ thống › Thanh toán để nhập ngân hàng, số
+        tài khoản và tên chủ tài khoản trước khi thu chuyển khoản.
+      </div>
+    );
 
   return (
     <div
@@ -405,31 +391,6 @@ export function TransferPanel({
             flexWrap: 'wrap',
           }}
         >
-          <button
-            type="button"
-            disabled={busy || simulating || effectiveAmount <= 0}
-            onClick={handleSimulateSepay}
-            style={{
-              flex: 1,
-              padding: '9px 12px',
-              borderRadius: 5,
-              border: '1px solid #cbd5e1',
-              background: '#ffffff',
-              color: '#334155',
-              fontSize: 12.5,
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-            title="Giả lập Webhook báo có từ my.sepay.vn để kiểm thử nhanh"
-          >
-            <Sparkles size={14} style={{ color: '#059669' }} />
-            {simulating ? 'Đang gửi Webhook...' : 'Giả lập báo có SePay (Test)'}
-          </button>
-
           <button
             type="button"
             disabled={busy}

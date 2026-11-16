@@ -8,7 +8,6 @@ import {
   KeyRound,
   RefreshCw,
   ShieldCheck,
-  Sparkles,
   XCircle,
   Zap,
 } from 'lucide-react';
@@ -326,24 +325,6 @@ export function SepaySettings() {
                 </strong>
               </span>
             </div>
-            <button
-              type="button"
-              className="ar-btn-secondary"
-              disabled={busy}
-              onClick={() =>
-                act(
-                  {
-                    action: 'simulate-tx',
-                    amount: 450000,
-                    content: 'SGGTEST2026 chuyen khoan test SePay',
-                  },
-                  'Đã gửi giao dịch kiểm thử SePay (450.000 ₫ · SGGTEST2026) thành công!',
-                )
-              }
-              style={{ padding: '5px 10px', fontSize: 12 }}
-            >
-              <Sparkles size={13} /> Gửi giao dịch Test SePay
-            </button>
           </div>
         </div>
 

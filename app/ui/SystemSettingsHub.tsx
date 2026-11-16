@@ -50,6 +50,8 @@ import {
 } from 'lucide-react';
 import { rooms, money, type Config } from '../../lib/club';
 import { officialPriceRules } from '../../lib/official-pricing';
+import { DEFAULT_TIER_THRESHOLDS } from '../../lib/member-card';
+import { DEFAULT_BENEFITS } from '../../lib/member-benefits';
 import { PriceEditor } from './PriceEditor';
 import { validateRules, type PriceRule } from '../../lib/pricing';
 import { operationKey } from '../../lib/finance';
@@ -1812,10 +1814,10 @@ function SettingsCardModal({
   const [formFacility, setFormFacility] = useState({
     name: config.name || '',
     address: config.address || '',
-    hotline: config.hotline || '0877834888',
-    email: config.email || 'contact@sigolf.vn',
-    website: config.website || 'https://sigolf.vn',
-    logo: config.logo || '/logo.webp',
+    hotline: config.hotline ?? '',
+    email: config.email ?? '',
+    website: config.website ?? '',
+    logo: config.logo ?? '',
   });
 
   const [formHours, setFormHours] = useState({
@@ -1833,10 +1835,10 @@ function SettingsCardModal({
   const [formBookingRules, setFormBookingRules] = useState({
     days: config.days || 14,
     cancelHours: config.cancelHours || 2,
-    depositPercent: config.depositPercent ?? 30,
-    autoCancelGrace: config.autoCancelGrace ?? 15,
+    depositPercent: (config.depositPercent ?? '') as number | '',
+    autoCancelGrace: (config.autoCancelGrace ?? '') as number | '',
     onlineEnabled: !!config.onlineEnabled,
-    onlineSlug: config.onlineSlug || 'sigolf-club',
+    onlineSlug: config.onlineSlug ?? '',
   });
 
   // The detailed price table is the single source of price. It starts from the saved table, or from
@@ -1848,32 +1850,25 @@ function SettingsCardModal({
   const [priceError, setPriceError] = useState('');
 
   const [formPayment, setFormPayment] = useState({
-    bankBin: config.bankBin || '970422',
-    bankAccount: config.bankAccount || '0877834888',
-    bankHolder: config.bankHolder || 'SAIGON INDOOR GOLF CLUB',
+    bankBin: config.bankBin ?? '',
+    bankAccount: config.bankAccount ?? '',
+    bankHolder: config.bankHolder ?? '',
   });
 
   const [formTax, setFormTax] = useState({
-    vat: config.vat ?? 8,
-    fee: config.fee ?? 5,
+    vat: (config.vat ?? '') as number | '',
+    fee: (config.fee ?? '') as number | '',
     feeMode: config.feeMode || 'percent',
-    invoiceHeader: config.invoiceHeader || 'CÔNG TY TNHH SAIGON INDOOR GOLF',
-    taxCode: config.taxCode || '0318889999',
-    invoiceFooterNote: config.invoiceFooterNote || 'Cảm ơn Quý khách & Hẹn gặp lại!',
+    invoiceHeader: config.invoiceHeader ?? '',
+    taxCode: config.taxCode ?? '',
+    invoiceFooterNote: config.invoiceFooterNote ?? '',
   });
 
   const [formMembership, setFormMembership] = useState({
-    gold: config.tierThresholds?.gold ?? 20000000,
-    platinum: config.tierThresholds?.platinum ?? 50000000,
-    diamond: config.tierThresholds?.diamond ?? 100000000,
-    benefits: [
-      ...(config.memberBenefits ?? [
-        'Ưu tiên đặt line giờ cao điểm',
-        'Giảm 10% F&B và dịch vụ thuê gậy',
-        'Miễn phí 1 giờ chơi vào ngày sinh nhật',
-        'Tặng gói caddie 5 buổi/năm',
-      ]),
-    ],
+    gold: config.tierThresholds?.gold ?? DEFAULT_TIER_THRESHOLDS.gold,
+    platinum: config.tierThresholds?.platinum ?? DEFAULT_TIER_THRESHOLDS.platinum,
+    diamond: config.tierThresholds?.diamond ?? DEFAULT_TIER_THRESHOLDS.diamond,
+    benefits: [...(config.memberBenefits ?? DEFAULT_BENEFITS)],
   });
 
   const [newBenefit, setNewBenefit] = useState('');
@@ -1898,31 +1893,31 @@ function SettingsCardModal({
 
   // Marketing tools
   const [formMarketing, setFormMarketing] = useState({
-    fbPixel: config.marketingConfig?.fbPixel || '889218291028',
-    ga4Id: config.marketingConfig?.ga4Id || 'G-SIGOLF2026',
-    mapsPlaceId: config.marketingConfig?.mapsPlaceId || 'ChIJ...SigolfClub',
-    zaloOaId: config.marketingConfig?.zaloOaId || '198273645019',
+    fbPixel: config.marketingConfig?.fbPixel ?? '',
+    ga4Id: config.marketingConfig?.ga4Id ?? '',
+    mapsPlaceId: config.marketingConfig?.mapsPlaceId ?? '',
+    zaloOaId: config.marketingConfig?.zaloOaId ?? '',
   });
 
   // Matchmaking
   const [formMatchmaking, setFormMatchmaking] = useState({
-    enabled: config.matchmakingConfig?.enabled ?? true,
-    maxHdcDiff: config.matchmakingConfig?.maxHdcDiff ?? 8,
-    autoNotifyZalo: config.matchmakingConfig?.autoNotifyZalo ?? true,
+    enabled: config.matchmakingConfig?.enabled ?? false,
+    maxHdcDiff: (config.matchmakingConfig?.maxHdcDiff ?? '') as number | '',
+    autoNotifyZalo: config.matchmakingConfig?.autoNotifyZalo ?? false,
   });
 
   // Tournament
   const [formTournament, setFormTournament] = useState({
-    defaultFormat: config.tournamentConfig?.defaultFormat || 'Stroke Play',
-    hdcSystem: config.tournamentConfig?.hdcSystem || 'System 36',
-    liveLeaderboard: config.tournamentConfig?.liveLeaderboard ?? true,
+    defaultFormat: config.tournamentConfig?.defaultFormat ?? '',
+    hdcSystem: config.tournamentConfig?.hdcSystem ?? '',
+    liveLeaderboard: config.tournamentConfig?.liveLeaderboard ?? false,
   });
 
   // Academy
   const [formAcademy, setFormAcademy] = useState({
-    commissionRate: config.academyConfig?.commissionRate ?? 35,
-    lessonMinutes: config.academyConfig?.lessonMinutes ?? 60,
-    freeTrialAvailable: config.academyConfig?.freeTrialAvailable ?? true,
+    commissionRate: (config.academyConfig?.commissionRate ?? '') as number | '',
+    lessonMinutes: (config.academyConfig?.lessonMinutes ?? '') as number | '',
+    freeTrialAvailable: config.academyConfig?.freeTrialAvailable ?? false,
   });
 
   // Submitting logic (persisting 100% to SQLite Single Source of Truth)
@@ -1954,8 +1949,8 @@ function SettingsCardModal({
       await onSave({
         days: Number(formBookingRules.days),
         cancelHours: Number(formBookingRules.cancelHours),
-        depositPercent: Number(formBookingRules.depositPercent),
-        autoCancelGrace: Number(formBookingRules.autoCancelGrace),
+        depositPercent: optNum(formBookingRules.depositPercent),
+        autoCancelGrace: optNum(formBookingRules.autoCancelGrace),
         onlineEnabled: formBookingRules.onlineEnabled,
         onlineSlug: formBookingRules.onlineSlug,
       });
@@ -1984,8 +1979,8 @@ function SettingsCardModal({
     }
     if (cardId === 'invoice_tax') {
       await onSave({
-        vat: Number(formTax.vat),
-        fee: Number(formTax.fee),
+        vat: optNum(formTax.vat),
+        fee: optNum(formTax.fee),
         feeMode: formTax.feeMode as 'percent' | 'fixed',
         invoiceHeader: formTax.invoiceHeader,
         taxCode: formTax.taxCode,
@@ -2018,7 +2013,7 @@ function SettingsCardModal({
     }
     if (cardId === 'matchmaking') {
       await onSave({
-        matchmakingConfig: formMatchmaking,
+        matchmakingConfig: { ...formMatchmaking, maxHdcDiff: optNum(formMatchmaking.maxHdcDiff) },
       });
       return;
     }
@@ -2030,7 +2025,11 @@ function SettingsCardModal({
     }
     if (cardId === 'academy_coaching') {
       await onSave({
-        academyConfig: formAcademy,
+        academyConfig: {
+          ...formAcademy,
+          commissionRate: optNum(formAcademy.commissionRate),
+          lessonMinutes: optNum(formAcademy.lessonMinutes),
+        },
       });
       return;
     }
@@ -2920,7 +2919,7 @@ function SettingsCardModal({
                   <input
                     value={formPayment.bankAccount}
                     onChange={(e) => setFormPayment({ ...formPayment, bankAccount: e.target.value })}
-                    placeholder="0877834888"
+                    placeholder="Số tài khoản ngân hàng"
                   />
                 </div>
                 <div className="ar-field">
@@ -2930,7 +2929,7 @@ function SettingsCardModal({
                     onChange={(e) =>
                       setFormPayment({ ...formPayment, bankHolder: e.target.value.toUpperCase() })
                     }
-                    placeholder="SAIGON INDOOR GOLF CLUB"
+                    placeholder="Tên chủ tài khoản (không dấu)"
                   />
                 </div>
               </div>
@@ -2965,7 +2964,7 @@ function SettingsCardModal({
                       src={sepayQrUrl({
                         bin: formPayment.bankBin,
                         account: formPayment.bankAccount,
-                        holder: formPayment.bankHolder || 'SAIGON INDOOR GOLF CLUB',
+                        holder: formPayment.bankHolder,
                         amount: 50000,
                         note: 'SGGTESTQR',
                       })}
@@ -3069,7 +3068,7 @@ function SettingsCardModal({
                 <input
                   value={formMarketing.fbPixel}
                   onChange={(e) => setFormMarketing({ ...formMarketing, fbPixel: e.target.value })}
-                  placeholder="889218291028"
+                  placeholder="Mã Facebook Pixel"
                 />
               </div>
               <div className="ar-field">
@@ -3077,7 +3076,7 @@ function SettingsCardModal({
                 <input
                   value={formMarketing.ga4Id}
                   onChange={(e) => setFormMarketing({ ...formMarketing, ga4Id: e.target.value })}
-                  placeholder="G-SIGOLF2026"
+                  placeholder="G-XXXXXXXXXX"
                 />
               </div>
               <div className="ar-field">
@@ -3305,6 +3304,9 @@ function SettingsCardModal({
     </div>
   );
 }
+
+/** Empty field = not set; never turn a blank into 0 or an invented value. */
+const optNum = (v: number | '' | undefined) => (v === '' || v == null ? undefined : Number(v));
 
 // Helpers for modal titles and subtitles
 function getCardTitle(id: SettingsCardId, fallback?: string): string {

@@ -4,7 +4,6 @@ import { Check, X } from 'lucide-react';
 import { defaults, type Booking } from '../../lib/club';
 import FnbPanel from './FnbPanel';
 import { BookingForm } from './Forms';
-import { SettingsForm, type SettingsTab } from './Forms';
 import { SystemSettingsHub } from './SystemSettingsHub';
 import { ModernPosFlow } from './ModernPosFlow';
 import { PageTabs } from './kit';
@@ -56,7 +55,6 @@ export default function ClubApp() {
     [now, setNow] = useState(() => Date.now()),
     [leads] = useState<{ overdue: number; waiting: number; queued: number } | undefined>(),
     [crm2, setCrm2] = useState<{ newUnhandled: number; overdueTasks: number } | undefined>(),
-    [settingsTab, setSettingsTab] = useState<SettingsTab>('facility'),
     [settingsSub, setSettingsSub] = useState<string>(
       deepLink.view === 'packages' ? 'packages' : 'all',
     ),

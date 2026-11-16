@@ -1098,3 +1098,58 @@ export const legacyBills = sqliteTable(
     uniqueIndex('legacy_bills_code').on(t.tenant, t.code).where(sql`${t.code} <> ''`),
   ],
 );
+
+/** Tournament scoring: rounds (par per hole), golfers with handicap and group, and one score card per golfer and round. */
+export const tournamentRounds = sqliteTable(
+  'tournament_rounds',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    postId: text('post_id').notNull(),
+    roundNo: integer('round_no').notNull(),
+    name: text('name').notNull(),
+    holes: integer('holes').notNull(),
+    pars: text('pars').notNull(),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('tournament_round_no').on(t.tenant, t.postId, t.roundNo)],
+);
+export const tournamentPlayers = sqliteTable(
+  'tournament_players',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    postId: text('post_id').notNull(),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    hcp10: integer('hcp10').notNull().default(0),
+    grp: text('grp').notNull().default('A'),
+    created: integer('created').notNull(),
+  },
+  (t) => [uniqueIndex('tournament_player_phone').on(t.tenant, t.postId, t.phone)],
+);
+export const tournamentScores = sqliteTable(
+  'tournament_scores',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    roundId: text('round_id')
+      .notNull()
+      .references(() => tournamentRounds.id, { onDelete: 'cascade' }),
+    playerId: text('player_id')
+      .notNull()
+      .references(() => tournamentPlayers.id, { onDelete: 'cascade' }),
+    holes: text('holes').notNull(),
+    status: text('status').notNull(),
+    enteredBy: text('entered_by').notNull(),
+    enteredByName: text('entered_by_name').notNull(),
+    updated: integer('updated').notNull(),
+    reviewedByName: text('reviewed_by_name').notNull().default(''),
+    reviewedAt: integer('reviewed_at'),
+    reviewNote: text('review_note').notNull().default(''),
+  },
+  (t) => [
+    uniqueIndex('tournament_score_once').on(t.roundId, t.playerId),
+    index('tournament_score_status').on(t.tenant, t.status, t.updated),
+  ],
+);

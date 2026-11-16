@@ -53,6 +53,13 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
             // eslint-disable-next-line @next/next/no-img-element
             <img src={post.image} alt="" width={960} height={540} />
           )}
+          {post.kind === 'event' && (
+            <p>
+              <a className="sg-btn" href={`/giai-dau/${post.id}`}>
+                Bảng xếp hạng &amp; điểm thi đấu
+              </a>
+            </p>
+          )}
           {post.summary && <p className="sg-lead">{post.summary}</p>}
           {paragraphs.map((t, i) => (
             <p key={i}>{t}</p>

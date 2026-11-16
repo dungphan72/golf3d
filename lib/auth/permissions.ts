@@ -32,6 +32,9 @@ export const PERMISSIONS = [
   // Old (pre-system) bills: staff type them in, only the owner approves.
   'legacy.enter',
   'legacy.approve',
+  // Tournament scores: staff enter them, only the owner confirms scores golfers entered themselves.
+  'tournament.score',
+  'tournament.approve',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -45,7 +48,11 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 const MANAGER = PERMISSIONS.filter(
-  (p) => p !== 'data.export' && p !== 'coach.own' && p !== 'legacy.approve',
+  (p) =>
+    p !== 'data.export' &&
+    p !== 'coach.own' &&
+    p !== 'legacy.approve' &&
+    p !== 'tournament.approve',
 );
 const GRANTS: Record<Role, readonly Permission[]> = {
   owner: PERMISSIONS,
@@ -60,6 +67,7 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'finance.operate',
     'finance.shift',
     'legacy.enter',
+    'tournament.score',
     'fnb.order',
     'fnb.kitchen',
     'member.view',

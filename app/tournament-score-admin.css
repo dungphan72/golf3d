@@ -1,0 +1,262 @@
+/* Tournament score admin (inside Quản trị giải đấu). Light admin look, 5px corners. */
+.tsa {
+  display: grid;
+  gap: 16px;
+  color: #10211a;
+}
+.tsa-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tsa-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+.tsa-head p {
+  margin: 0;
+  color: #52627a;
+  font-size: 13.5px;
+}
+.tsa-pick {
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #52627a;
+}
+.tsa-pick select,
+.tsa select,
+.tsa input {
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1.5px solid #cfd8d2;
+  border-radius: 5px;
+  background: #fff;
+  font-size: 14px;
+}
+.tsa-pick select {
+  min-width: 260px;
+}
+.tsa-block {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e3e8e4;
+  border-radius: 5px;
+  background: #fff;
+}
+.tsa-block h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15.5px;
+}
+.tsa-block h4 small {
+  color: #b54708;
+  font-weight: 500;
+}
+.tsa-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tsa-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tsa-primary,
+.tsa-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 5px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tsa-primary {
+  border: 0;
+  background: #0a5c1e;
+  color: #fff;
+}
+.tsa-ghost {
+  border: 1.5px solid #cfd8d2;
+  background: #fff;
+  color: #10211a;
+}
+.tsa-ghost.danger {
+  color: #b42318;
+}
+.tsa-primary:disabled,
+.tsa-ghost:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.tsa-error,
+.tsa-ok {
+  padding: 10px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+}
+.tsa-error {
+  background: #fee4e2;
+  color: #b42318;
+}
+.tsa-ok {
+  background: #e3f6e8;
+  color: #0a5c1e;
+}
+.tsa-empty {
+  margin: 0;
+  padding: 16px;
+  text-align: center;
+  color: #52627a;
+}
+.tsa-pending {
+  border-color: #f4c97a;
+  background: #fffaf0;
+}
+.tsa-pend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #f0e2c4;
+}
+.tsa-pend small {
+  display: block;
+  color: #52627a;
+}
+.tsa-round {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 5px;
+  background: #f4f7f5;
+}
+.tsa-round-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.tsa-round-top input {
+  flex: 1 1 200px;
+  font-weight: 700;
+}
+.tsa-pars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+  gap: 8px;
+}
+.tsa-pars label {
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+.tsa-pars small {
+  color: #52627a;
+}
+.tsa-pars select {
+  padding: 0 4px;
+  text-align: center;
+}
+.tsa-add {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr auto;
+  gap: 8px;
+}
+.tsa-scroll {
+  overflow-x: auto;
+}
+.tsa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.tsa-table th {
+  padding: 8px 8px;
+  background: #f1f5f2;
+  color: #52627a;
+  font-size: 12.5px;
+  text-align: left;
+  white-space: nowrap;
+}
+.tsa-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #eef2ef;
+  vertical-align: middle;
+}
+.tsa-table .h {
+  padding-inline: 2px;
+  text-align: center;
+}
+.tsa-table th.h small {
+  display: block;
+  font-weight: 500;
+}
+.tsa-entry .h input {
+  width: 34px;
+  min-height: 36px;
+  padding: 0;
+  text-align: center;
+  font-weight: 700;
+}
+.tsa-sm {
+  width: 72px;
+}
+.tsa-chip {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #eef1ef;
+  color: #52627a;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tsa-chip.confirmed {
+  background: #e3f6e8;
+  color: #0a5c1e;
+}
+.tsa-chip.pending,
+.tsa-chip.draft {
+  background: #fef0c7;
+  color: #b54708;
+}
+.tsa-chip.rejected {
+  background: #fee4e2;
+  color: #b42318;
+}
+.tsa-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #52627a;
+}
+@media (max-width: 720px) {
+  .tsa-add {
+    grid-template-columns: 1fr;
+  }
+  .tsa-pick select {
+    min-width: 0;
+    width: 100%;
+  }
+  .tsa-pick {
+    width: 100%;
+  }
+}

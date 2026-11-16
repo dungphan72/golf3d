@@ -2,6 +2,19 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Nhập điểm và xếp hạng giải đấu (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu thiết kế màn hình nhập điểm và xếp hạng giải đấu. Quyết định đã chốt: golfer tự nhập điểm trong app hội viên và chủ cơ sở duyệt; xếp hạng Gross + Net theo HCP, có nhóm A/B/C, nhiều vòng; làm đủ nhập điểm, xếp hạng công khai và "thẻ điểm của tôi".
+- **Ảnh tham chiếu:** ảnh mẫu "SaiGon Indoor Golf CUP – Bảng xếp hạng" do chủ hệ thống gửi trong phiên (chưa lưu file vào `hinh-anh/thiet-ke/`). Dựng theo phong cách tối của luồng khách hàng đã duyệt thay vì nền sáng của ảnh mẫu, để đồng bộ với trang chủ và các trang khách hàng.
+- **File:** `drizzle/0034_tournament_scores.sql` (3 bảng: vòng, golfer, thẻ điểm), `db/schema.ts`, `lib/tournament-score.ts` (luật tính), `lib/server/tournament-score-service.ts`, `app/api/tournament-score|tournament-public|tournament-me/route.ts`, `app/giai-dau/[id]/page.tsx`, `app/ui/TournamentBoard.tsx`, `app/tournament-board.css`, `app/ui/TournamentScorePanel.tsx`, `app/tournament-score-admin.css`, `app/ui/ContentPanel.tsx` (tab "Điểm & xếp hạng"), `app/tin-tuc/[id]/page.tsx` (nút sang bảng xếp hạng), `lib/auth/permissions.ts` (quyền `tournament.score`, `tournament.approve`).
+- **Trang công khai `/giai-dau/<mã giải>`:** banner giải, bảng xếp hạng (#, golfer, nhóm, HCP, Gross, Net, ±Par; lọc theo vòng và nhóm), thẻ "Kết quả của tôi" (vị trí, Net, ±Par), thẻ điểm 9/18 hố tô màu theo par, tab Vòng đấu và Thông tin giải đấu, hộp thoại "Nhập điểm thi đấu" nhập từng hố bằng nút +/− (điện thoại dùng được). Chỉ thẻ điểm đã xác nhận mới vào bảng xếp hạng.
+- **Quản trị (Giải đấu › Điểm & xếp hạng):** tạo vòng 9/18 hố và sửa par từng hố; thêm golfer (hoặc nhập từ danh sách đăng ký) kèm HCP và nhóm; bảng nhập điểm từng hố cho nhân viên (có hiệu lực ngay); danh sách thẻ điểm golfer tự nhập chờ duyệt (chỉ chủ cơ sở duyệt hoặc từ chối kèm lý do); bảng xếp hạng xem trước.
+- **Luật tính:** Gross = tổng gậy các hố (chỉ khi đủ hố); Net = Gross − HCP (vòng 9 hố lấy nửa HCP, làm tròn); ±Par = Gross − Par; xếp theo Net rồi Gross, bằng nhau thì đồng hạng; nhóm mặc định A (HCP ≤ 12), B (≤ 24), C, sửa tay được; nhiều vòng thì cộng dồn.
+- **Quy tắc dữ liệu:** golfer chỉ nhập được khi có tài khoản hội viên đã xác nhận SĐT và có tên trong danh sách thi đấu (khớp theo SĐT); thẻ điểm đã xác nhận không tự sửa lại được; số gậy mỗi hố 1–15, par 3–6; không dùng ảnh/dữ liệu mẫu từ ảnh thiết kế.
+- **Screenshot:** chụp trong phiên (trang công khai máy tính và điện thoại, hộp thoại nhập điểm, màn quản trị); chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `eslint` 0 lỗi, thêm 8 test luật tính; chạy thật trên bản build: nhân viên nhập điểm, golfer gửi điểm (chờ duyệt, chưa vào xếp hạng), chủ duyệt thì golfer lên hạng 1, gửi lại sau khi xác nhận bị chặn (409), thiếu hố bị từ chối, trùng SĐT bị chặn.
+- **Chưa làm:** ảnh đại diện golfer (đang dùng chữ cái đầu), hiển thị lịch thi đấu theo ngày từng vòng, chia nhóm thi đấu theo giờ tee, xuất bảng xếp hạng ra file, báo cho golfer khi điểm được duyệt.
+- **Cần lưu ý khi deploy:** có migration `0034` (3 bảng mới); cần sao lưu cơ sở dữ liệu trước theo `docs/DEPLOY-VPS.md`.
+
 ## 2026-11-16 — Làm gọn toàn bộ màn hình Cài đặt hệ thống (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu chỉnh tất cả màn hình trong Cài đặt cho gọn gàng, ngăn nắp, sạch sẽ. Ảnh lỗi: form "Thêm gói giờ / thẻ hội viên" bị bóp nát (chữ "30n/60n" xếp dọc, ô tích to bất thường).
 - **Ảnh tham chiếu:** ảnh lỗi do chủ hệ thống gửi trong phiên; giữ phong cách Material xanh lá đã duyệt, bo góc 5px.

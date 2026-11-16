@@ -32,6 +32,7 @@ import {
   type TournamentStatus,
 } from '../../lib/tournament';
 import { askConfirm } from './kit';
+import { TournamentScorePanel } from './TournamentScorePanel';
 import '../tournament-admin.css';
 
 /**
@@ -52,7 +53,7 @@ type Draft = {
   sections: Sections;
 };
 type Signup = { id: string; name: string; phone: string; note: string; created: number };
-type Tab = 'tournaments' | 'signups' | 'news';
+type Tab = 'tournaments' | 'signups' | 'scores' | 'news';
 type Filter = 'all' | TournamentStatus;
 type EditorTab = 'general' | 'format' | 'prizes' | 'rules' | 'other';
 
@@ -364,6 +365,7 @@ export function ContentPanel() {
           [
             ['tournaments', 'Danh sách giải đấu', List],
             ['signups', 'Đăng ký tham gia', Users],
+            ['scores', 'Điểm & xếp hạng', Trophy],
             ['news', 'Tin tức', Newspaper],
           ] as const
         ).map(([key, label, Icon]) => (
@@ -404,7 +406,11 @@ export function ContentPanel() {
         </div>
       )}
 
-      {tab === 'signups' ? (
+      {tab === 'scores' ? (
+        <section className="ta-card">
+          <TournamentScorePanel events={events.map((p) => ({ id: p.id, title: p.title }))} />
+        </section>
+      ) : tab === 'signups' ? (
         <section className="ta-card ta-signups">
           <h3>Đăng ký tham gia</h3>
           <label className="ta-field">

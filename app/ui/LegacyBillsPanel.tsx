@@ -255,6 +255,7 @@ function BillForm({
   onClose: () => void;
   onSaved: (msg: string) => Promise<void>;
 }) {
+  const [today] = useState(() => vnDate(Date.now()));
   const [date, setDate] = useState(() => vnDate(Date.now() - 86_400_000));
   const [time, setTime] = useState('12:00');
   const [code, setCode] = useState('');
@@ -326,7 +327,7 @@ function BillForm({
         <div className="lb-grid">
           <label>
             Ngày
-            <input type="date" value={date} max={vnDate(Date.now())} onChange={(e) => setDate(e.target.value)} required />
+            <input type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} required />
           </label>
           <label>
             Giờ

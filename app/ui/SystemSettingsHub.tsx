@@ -2190,7 +2190,7 @@ function SettingsCardModal({
                     onChange={(e) => setNewHoliday(e.target.value)}
                     style={{
                       border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
+                      borderRadius: '5px',
                       padding: '8px 12px',
                       fontSize: '13px',
                     }}
@@ -2370,7 +2370,7 @@ function SettingsCardModal({
                     placeholder="Nhập quyền lợi mới..."
                     style={{
                       border: '1px solid #cbd5e1',
-                      borderRadius: '8px',
+                      borderRadius: '5px',
                       padding: '8px 12px',
                       fontSize: '13px',
                       flex: 1,

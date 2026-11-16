@@ -33,7 +33,7 @@
   width: 56px;
   height: 4px;
   margin: 0.8rem auto 0;
-  border-radius: 2px;
+  border-radius: 5px;
   background: var(--brass);
 }
 .hm h3 {
@@ -199,7 +199,7 @@
   width: 44px;
   height: 44px;
   margin-bottom: 1rem;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--forest);
   color: var(--brass);
   font-size: 1rem;

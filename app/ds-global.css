@@ -1,0 +1,102 @@
+/* ==========================================================================
+   SaiGon Indoor Golf Club: global design-system standards.
+   Loaded last in app/layout.tsx so every page, Website / Admin / POS / CRM / Mobile, follows
+   the same seven rules. Change a rule here, not page by page.
+   1. Logo: only the files in /public (logo.webp, icon-*.png); never redrawn.
+   2. Font: Be Vietnam Pro everywhere.
+   3. Material Design 3 look: flat, airy, one colour / icon / component language.
+   4. Placeholders are light grey, clearly different from typed text.
+   5. Long text wraps; nothing is forced onto one line or spills out of its box.
+   6. Scrollbars are hidden; scrolling by mouse, touch and keyboard still works.
+   7. One corner radius: 5px (circles stay circles: avatars, status dots, progress bars).
+   ========================================================================== */
+:root {
+  /* 7. One radius token; older names point at it so nothing keeps its own value. */
+  --radius: 5px;
+  --ds-radius: 5px;
+  --r: 5px;
+  --radius-sm: 5px;
+  --radius-md: 5px;
+  --radius-lg: 5px;
+  --radius-xl: 5px;
+  --pos-m3-radius-sm: 5px;
+  --pos-m3-radius-md: 5px;
+  --pos-m3-radius-lg: 5px;
+  /* 2. One font stack. */
+  --font-sans: 'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* 4. Placeholder colour. */
+  --placeholder: #9aa5a0;
+}
+
+/* 2. Be Vietnam Pro on every element, including form controls and code. */
+html,
+body,
+*,
+*::before,
+*::after {
+  font-family: var(--font-sans) !important;
+}
+code,
+kbd,
+samp,
+pre {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4. Placeholders: light grey, never the colour of real input. */
+input::placeholder,
+textarea::placeholder {
+  color: var(--placeholder) !important;
+  opacity: 1 !important;
+  font-weight: 400 !important;
+}
+input::-webkit-input-placeholder,
+textarea::-webkit-input-placeholder {
+  color: var(--placeholder) !important;
+  opacity: 1 !important;
+}
+
+/* 5. Long text wraps inside its box (desktop and mobile). */
+body {
+  overflow-wrap: break-word;
+}
+p,
+li,
+dt,
+dd,
+label,
+legend,
+small,
+blockquote,
+figcaption,
+summary,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: anywhere;
+}
+td,
+th {
+  overflow-wrap: break-word;
+}
+img,
+video {
+  max-width: 100%;
+}
+
+/* 6. No visible scrollbars anywhere; wheel, touch and keyboard scrolling are untouched. */
+* {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+*::-webkit-scrollbar,
+*::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-track {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}

@@ -175,7 +175,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  white-space: nowrap;
+  white-space: normal;
   color: #06430f;
   padding-right: 16px;
 }
@@ -288,7 +288,7 @@
   top: 3px;
   bottom: 3px;
   width: 4px;
-  border-radius: 3px;
+  border-radius: 5px;
   background: #078219;
 }
 .ref-heading > a {
@@ -809,7 +809,7 @@
   .ref-brand strong {
     font-size: 16px;
     letter-spacing: -0.55px;
-    white-space: nowrap;
+    white-space: normal;
   }
   .ref-brand small {
     font-size: 10px;
@@ -894,7 +894,7 @@
   }
   .ref-shortcuts a span {
     color: #101010;
-    white-space: nowrap;
+    white-space: normal;
     letter-spacing: -0.6px;
   }
   .ref-shortcuts a.gold svg {
@@ -940,7 +940,7 @@
     width: 20px;
     left: 3px;
     border: 2px solid #008314;
-    border-radius: 3px;
+    border-radius: 5px;
     background: linear-gradient(transparent 25%, #008314 25%, #008314 35%, transparent 35%);
   }
   .ref-booking-login {
@@ -1210,7 +1210,7 @@ body:has(.ref-home) {
   }
   .ref-service h3,
   .ref-service p {
-    white-space: nowrap;
+    white-space: normal;
   }
 }
 .ref-shortcuts .ref-golfer {

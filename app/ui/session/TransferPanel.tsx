@@ -169,7 +169,7 @@ export function TransferPanel({
             fontSize: 11.5,
             fontWeight: 600,
             padding: '3px 9px',
-            borderRadius: 999,
+            borderRadius: 5,
             background: exact.length > 0 ? '#dcfce7' : data?.configured ? '#e0f2fe' : '#fef3c7',
             color: exact.length > 0 ? '#15803d' : data?.configured ? '#0369a1' : '#92400e',
             display: 'inline-flex',

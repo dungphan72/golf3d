@@ -189,7 +189,7 @@
 .pos-m3-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   color: var(--pos-m3-text-sub);
@@ -388,7 +388,7 @@
 .pos-m3-facility-icon {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--pos-m3-primary-surface);
   color: var(--pos-m3-primary);
   display: grid;
@@ -482,7 +482,7 @@
 .pos-m3-header-bell {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   color: var(--pos-m3-text-sub);
@@ -751,7 +751,7 @@
 }
 
 .pos-m3-desk-room-name strong {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .pos-m3-lh-tag,
@@ -1468,7 +1468,7 @@
 .pos-m3-method-icon {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--pos-m3-surface-container);
   color: var(--pos-m3-text);
   display: grid;
@@ -1874,7 +1874,7 @@
 .pos-m3-mobile-back {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   display: grid;
@@ -1904,9 +1904,8 @@
   font-size: 15px;
   font-weight: 800;
   color: var(--pos-m3-text);
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .pos-m3-mobile-title-wrap small {
@@ -1938,7 +1937,7 @@
 .pos-m3-mobile-bell {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   display: grid;
@@ -2153,7 +2152,7 @@
 .pos-m3-tile-icon {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--pos-m3-primary-surface);
   color: var(--pos-m3-primary);
   display: grid;
@@ -2238,9 +2237,8 @@
   display: block;
   font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .pos-m3-room-meta {

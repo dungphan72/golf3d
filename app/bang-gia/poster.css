@@ -134,7 +134,7 @@
   background: #fffdf6;
   font-size: clamp(14px, 1.9vw, 19px);
   font-weight: 800;
-  white-space: nowrap;
+  white-space: normal;
 }
 .pg-table {
   width: 100%;

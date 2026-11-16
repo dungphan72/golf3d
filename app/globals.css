@@ -120,8 +120,7 @@ h3 {
 .profile strong {
   font-size: 11px;
   display: block;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  white-space: normal;
   overflow: hidden;
   color: #ecf1e9;
 }
@@ -153,7 +152,7 @@ h3 {
   height: 32px;
   background: transparent;
   color: #526658;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 .icon-btn:hover {
   background: #edf1e9;
@@ -269,7 +268,7 @@ h3 {
   color: #84907b;
   background: #e9eddf;
   padding: 3px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   margin-left: 8px;
 }
 .section-heading button,
@@ -297,7 +296,7 @@ h3 {
 .legend i {
   width: 6px;
   height: 6px;
-  border-radius: 2px;
+  border-radius: 5px;
 }
 .free {
   background: #8caa85;
@@ -455,7 +454,7 @@ td small {
   font-size: 8px;
   display: inline-flex;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: 5px;
   background: #edf1e6;
   color: #4f6340;
   white-space: nowrap;
@@ -1324,7 +1323,7 @@ select:focus {
   padding: 7px 0;
 }
 .booking-estimate > div strong {
-  white-space: nowrap;
+  white-space: normal;
 }
 .booking-estimate small {
   display: block;
@@ -1513,7 +1512,7 @@ select:focus {
 }
 .cash-breakdown strong {
   font-size: 15px;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .closed-summary {

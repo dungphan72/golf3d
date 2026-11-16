@@ -26,6 +26,13 @@ const status: Record<string, string> = {
   finished: 'Chờ thanh toán',
   paid: 'Hoàn thành',
 };
+/** Axis label in millions: 0, 0,3M, 1M… (a whole number is shown without decimals). */
+function axisMoney(v: number) {
+  if (v <= 0) return '0';
+  const m = v / 1_000_000;
+  return (Number.isInteger(m) ? String(m) : m.toFixed(1).replace('.', ',')) + 'M';
+}
+
 export function AdminOverview({
   data,
   now,
@@ -233,7 +240,7 @@ export function AdminOverview({
                   <line x1="45" x2="567" y1={190 - i * 38} y2={190 - i * 38} stroke="#e4eaf2" />
                   <text x="34" y={195 - i * 38} textAnchor="end" fontSize="13" fill="#43536b">
                     {metric === 'revenue'
-                      ? ((minimum + ((max - minimum) * i) / 4) / 1000000).toFixed(0) + 'M'
+                      ? axisMoney(minimum + ((max - minimum) * i) / 4)
                       : Math.round(minimum + ((max - minimum) * i) / 4)}
                   </text>
                 </g>

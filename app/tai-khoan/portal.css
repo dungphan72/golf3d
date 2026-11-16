@@ -715,9 +715,8 @@
 }
 
 .mp-tile-head span {
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .mp-tile-head svg {
@@ -1543,9 +1542,8 @@
   font-weight: 700;
   color: #fff;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
   display: block;
   max-width: 100%;
 }

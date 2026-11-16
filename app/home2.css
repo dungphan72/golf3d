@@ -460,7 +460,7 @@ html:has(.sg-page) {
   display: inline-block;
   margin-left: 0.5rem;
   padding: 0.12rem 0.5rem;
-  border-radius: 3px;
+  border-radius: 5px;
   background: var(--sg-gold);
   color: #2a1d00;
   font-size: 0.72rem;
@@ -526,7 +526,7 @@ html:has(.sg-page) {
 .sg-pk li strong {
   font: 700 1.2rem/1 var(--sg-plate-font);
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  white-space: normal;
 }
 .sg-pk .sg-btn {
   width: 100%;
@@ -1032,7 +1032,7 @@ html:has(.sg-page) {
   content: '';
   width: 5px;
   height: 1.1em;
-  border-radius: 3px;
+  border-radius: 5px;
   background: var(--sg-turf);
 }
 .sg-strengths {
@@ -1052,7 +1052,7 @@ html:has(.sg-page) {
   width: 52px;
   height: 52px;
   margin: 0;
-  border-radius: 14px;
+  border-radius: 5px;
   background: var(--sg-turf);
   color: #fff;
 }

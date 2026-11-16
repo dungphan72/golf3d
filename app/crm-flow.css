@@ -45,7 +45,7 @@
   min-height: 100vh;
   padding: 16px 22px 28px;
   color: #0f172a;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
 }
 
 /* Top Global Search & Action Bar */
@@ -299,7 +299,7 @@
 .crm2-title-icon {
   width: 42px;
   height: 42px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #dbeafe;
   color: #1d64f2;
   display: flex;
@@ -455,7 +455,7 @@
 .crm2-filter-icon-btn {
   width: 36px;
   height: 36px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   color: #475569;
@@ -570,9 +570,8 @@
   font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
   display: block;
 }
 
@@ -803,7 +802,7 @@
   gap: 4px;
   width: 52px;
   height: 52px;
-  border-radius: 12px;
+  border-radius: 5px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   color: #334155;
@@ -1105,7 +1104,7 @@
 .crm2-kpi-icon {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;

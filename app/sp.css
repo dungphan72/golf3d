@@ -200,7 +200,7 @@
   width: 48px;
   height: 4px;
   margin: 0.7rem auto 0;
-  border-radius: 2px;
+  border-radius: 5px;
   background: var(--brass);
 }
 .sp-head.center > p:last-child {
@@ -220,7 +220,7 @@
 .hm .sp-mark {
   width: 48px;
   height: 48px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--forest);
   position: relative;
 }
@@ -349,7 +349,7 @@
   width: 40px;
   height: 40px;
   margin-bottom: 1rem;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--forest);
   color: #fff;
   font-style: normal;
@@ -454,7 +454,7 @@
   width: 7px;
   height: 7px;
   margin-right: 0.6rem;
-  border-radius: 2px;
+  border-radius: 5px;
   background: var(--brass);
 }
 
@@ -621,7 +621,7 @@
   font-size: 0.95rem;
   font-weight: 800;
   color: var(--forest);
-  white-space: nowrap;
+  white-space: normal;
 }
 .sp-quick .sp-cta {
   display: flex;

@@ -440,9 +440,8 @@
   font-weight: 700;
   color: #0f172a;
   margin: 0;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .lcms-photo-body p {
@@ -450,7 +449,6 @@
   color: #64748b;
   margin: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.4;
@@ -791,7 +789,7 @@
   width: 60px;
   height: 5px;
   background: #333;
-  border-radius: 3px;
+  border-radius: 5px;
   margin: 6px auto 10px;
 }
 

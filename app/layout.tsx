@@ -5,6 +5,8 @@ import './globals.css';
 import './admin.css';
 import './crm-shell.css';
 import './staff.css';
+// Global design-system standards (font, radius, placeholder, wrapping, scrollbars): keep last.
+import './ds-global.css';
 export const metadata: Metadata = {
   title: 'SaiGon Indoor Golf Club — Play. Connect. Repeat.',
   description:

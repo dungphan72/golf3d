@@ -485,7 +485,7 @@ export function SepaySettings() {
                     <span style={{ color: '#94a3b8' }}>—</span>
                   )}
                 </td>
-                <td style={{ maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <td style={{ maxWidth: 240, overflowWrap: 'anywhere' }}>
                   {tx.content}
                 </td>
                 <td>

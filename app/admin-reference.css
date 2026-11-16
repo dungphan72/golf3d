@@ -203,9 +203,8 @@ body:has(.ar-shell) {
   color: #ffffff;
   font-weight: 600;
   line-height: 1.2;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .ar-footer-text small {
   font-size: 11px;
@@ -240,7 +239,7 @@ body:has(.ar-shell) {
   font-size: 16px;
   color: #3e4e6b;
   margin-top: 3px;
-  white-space: nowrap;
+  white-space: normal;
 }
 .ar-search {
   position: relative;
@@ -346,7 +345,6 @@ body:has(.ar-shell) {
   font-weight: 600;
   max-width: 140px;
   overflow: hidden;
-  text-overflow: ellipsis;
   color: #0f172a;
 }
 .ar-profile small {
@@ -540,7 +538,7 @@ body:has(.ar-shell) {
   height: 69px;
   display: grid;
   place-items: center;
-  border-radius: 30px;
+  border-radius: 5px;
   flex-shrink: 0;
   background: #e8fce5;
   color: #008713;
@@ -573,7 +571,7 @@ body:has(.ar-shell) {
   line-height: 1.15;
   margin-top: 6px;
   letter-spacing: -0.8px;
-  white-space: nowrap;
+  white-space: normal;
 }
 .ao-kpi em {
   display: block;
@@ -744,7 +742,7 @@ body:has(.ar-shell) {
 .ao-room.vip > svg {
   background: #e4f8ca;
   color: #00880a;
-  border-radius: 20px;
+  border-radius: 5px;
   width: 44px;
   height: 44px;
   padding: 7px;
@@ -1248,7 +1246,7 @@ body:has(.ar-shell) {
     left: 8%;
     right: 8%;
     height: 4px;
-    border-radius: 4px;
+    border-radius: 5px;
     background: #008915;
   }
   .ar-bottom button.on svg {
@@ -1306,7 +1304,7 @@ body:has(.ar-shell) {
     padding: 9px 16px;
     border: 1px solid #dce5ed;
     border-radius: 5px;
-    white-space: nowrap;
+    white-space: normal;
     font-size: 15px;
     color: #142131;
     box-shadow: 0 3px 5px #1b365611;
@@ -1329,7 +1327,7 @@ body:has(.ar-shell) {
   .ao-kpi-icon {
     width: 48px;
     height: 48px;
-    border-radius: 20px;
+    border-radius: 5px;
   }
   .ao-kpi-icon svg {
     width: 28px;
@@ -1519,7 +1517,7 @@ body:has(.ar-shell) {
   .ao-activity-icon {
     height: 36px;
     width: 36px;
-    border-radius: 12px;
+    border-radius: 5px;
   }
   .ao-activity-row strong {
     font-size: 14px;
@@ -1589,7 +1587,7 @@ body:has(.ar-shell) {
   .ar-mobile-brand strong {
     font-size: 15px;
     letter-spacing: -0.4px;
-    white-space: nowrap;
+    white-space: normal;
   }
   .ar-mobile-brand small {
     font-size: 12px;
@@ -1624,9 +1622,8 @@ body:has(.ar-shell) {
     font-size: 19px;
     letter-spacing: -0.6px;
     max-width: 180px;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
   .ao-mobile-heading p {
     font-size: 12px;
@@ -1655,7 +1652,7 @@ body:has(.ar-shell) {
   .ao-kpi-icon {
     width: 26px;
     height: 26px;
-    border-radius: 11px;
+    border-radius: 5px;
     float: left;
     margin-right: 4px;
     margin-bottom: 3px;
@@ -1785,7 +1782,7 @@ body:has(.ar-shell) {
   .ao-activity-icon {
     width: 24px;
     height: 24px;
-    border-radius: 9px;
+    border-radius: 5px;
   }
   .ao-activity-icon svg {
     width: 17px;
@@ -1952,7 +1949,7 @@ html body:has(.ar-shell) {
 .mod-page-icon {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2073,7 +2070,7 @@ html body:has(.ar-shell) {
 .mod-kpi-icon {
   width: 40px;
   height: 40px;
-  border-radius: 11px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2436,7 +2433,7 @@ html body:has(.ar-shell) {
 .mod-icon-close {
   width: 30px;
   height: 30px;
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   display: inline-flex;

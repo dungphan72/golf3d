@@ -598,7 +598,7 @@ export function PackageCatalogManager({
             style={{
               background: '#ffffff',
               border: '1px solid #bbf7d0',
-              borderRadius: 999,
+              borderRadius: 5,
               padding: '4px 10px',
               fontSize: 12,
               fontWeight: 700,
@@ -610,7 +610,7 @@ export function PackageCatalogManager({
           <span
             style={{
               background: '#dcfce7',
-              borderRadius: 999,
+              borderRadius: 5,
               padding: '4px 10px',
               fontSize: 12,
               fontWeight: 700,
@@ -623,7 +623,7 @@ export function PackageCatalogManager({
             <span
               style={{
                 background: '#f1f5f9',
-                borderRadius: 999,
+                borderRadius: 5,
                 padding: '4px 10px',
                 fontSize: 12,
                 fontWeight: 600,

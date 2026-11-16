@@ -70,7 +70,7 @@ body:has(.app-shell) {
 .app-shell .gold-button {
   min-height: 34px;
   padding: 7px 14px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 13px;
   font-weight: 600;
 }
@@ -98,7 +98,7 @@ body:has(.app-shell) {
 .app-shell select,
 .app-shell textarea {
   border: 1px solid #c5d0c8;
-  border-radius: 4px;
+  border-radius: 5px;
   background: #fff;
   color: var(--kv-text);
   min-height: 34px;
@@ -115,7 +115,7 @@ body:has(.app-shell) {
   font-size: 12px;
 }
 .app-shell .icon-btn {
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 /* ---------- Panels ---------- */
@@ -127,7 +127,7 @@ body:has(.app-shell) {
 .app-shell .table-wrap,
 .app-shell .shift-banner,
 .app-shell .info-strip {
-  border-radius: 4px;
+  border-radius: 5px;
   border-color: var(--kv-line);
   box-shadow: none;
 }
@@ -167,14 +167,14 @@ body:has(.app-shell) {
   color: var(--kv-text);
 }
 .app-shell .error-box {
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 /* ---------- Dense tables ---------- */
 .app-shell table {
   background: #fff;
   border: 1px solid var(--kv-line);
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 13px;
   border-collapse: collapse;
   width: 100%;
@@ -277,7 +277,7 @@ body:has(.app-shell) {
   font-weight: 500;
   line-height: 1.3;
   padding: 5px 9px;
-  border-radius: 4px;
+  border-radius: 5px;
   white-space: nowrap;
   z-index: 90;
   pointer-events: none;
@@ -1017,7 +1017,7 @@ html:has(.app-shell)::-webkit-scrollbar {
     width: 42px;
     height: 5px;
     margin-left: -21px;
-    border-radius: 3px;
+    border-radius: 5px;
     background: #cfd8d2;
   }
   .native-dialog::backdrop {
@@ -1224,7 +1224,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   place-items: center;
   background: #fff;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 5px;
   color: var(--ds-text);
 }
 .ds-iconbtn:hover {
@@ -2137,7 +2137,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   flex: 1 0 10px;
   min-width: 10px;
   background: var(--ds-green);
-  border-radius: 3px 3px 0 0;
+  border-radius: 5px 5px 0 0;
 }
 .ds-note {
   margin-top: 12px;
@@ -2191,7 +2191,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
-  white-space: nowrap;
+  white-space: normal;
 }
 .ds-head .ds-search {
   flex: 1;
@@ -2457,7 +2457,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   padding: 0 5px;
   border: 1px solid var(--ds-line);
-  border-radius: 4px;
+  border-radius: 5px;
   color: var(--ds-muted);
 }
 
@@ -2481,8 +2481,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 13px;
   color: var(--ds-muted);
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .ds-root .room-card .room-actions {
   display: flex;
@@ -2632,7 +2631,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   flex-wrap: nowrap;
 }
 .rc-head strong {
-  white-space: nowrap;
+  white-space: normal;
 }
 .rc-chip {
   margin-left: auto;
@@ -3737,7 +3736,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 5px;
   background: #f0f4f1;
   color: inherit;
   flex-shrink: 0;
@@ -3999,7 +3998,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .crm-channel-card-icon {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -4146,7 +4145,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-weight: 500;
   background: #f0f4f1;
   border: 1px solid var(--ds-line, #dde5de);
-  border-radius: 4px;
+  border-radius: 5px;
   padding: 3px 8px;
   color: var(--kv-text, #24332b);
   cursor: pointer;
@@ -4413,7 +4412,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 4px;
   color: #94a3b8;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 .ds-root .members-search-box .search-clear-btn:hover {
   color: #475569;
@@ -4551,7 +4550,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .member-avatar {
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
   color: #334155;
   display: flex;
@@ -4583,8 +4582,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-weight: 600;
   color: #1e293b;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .ds-root .chip-badge {
   display: inline-flex;
@@ -4593,7 +4591,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 10.5px;
   font-weight: 600;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 .ds-root .chip-badge.warning {
   background: #fffbeb;
@@ -4618,7 +4616,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #475569;
   background: #f1f5f9;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 .ds-root .member-item-bottom {
   display: flex;
@@ -4693,7 +4691,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .profile-avatar {
   width: 58px;
   height: 58px;
-  border-radius: 14px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5398,7 +5396,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .section-tag {
   font-size: 11px;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   background: #f1f5f9;
   color: #475569;
 }
@@ -5410,7 +5408,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 2px 7px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 4px;
+  border-radius: 5px;
   color: #334155;
 }
 .ds-root .status-pill {
@@ -5435,7 +5433,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .btn-xs {
   padding: 3px 8px;
   font-size: 11.5px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 /* ==========================================================================
@@ -5486,7 +5484,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .kpi-icon-wrap {
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -5613,9 +5611,8 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .kpi-hint {
   font-size: 11.5px;
   color: #94a3b8;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* 2. Main Floor Map Header & Controls */
@@ -5785,7 +5782,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 1px 5px;
   background: #fef3c7;
   color: #b45309;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .ds-root .room-hit {
@@ -6014,7 +6011,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .ds-root .bay-tag.vip {
@@ -6035,7 +6032,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 10.5px;
   font-weight: 600;
   border: 1px solid #86efac;
-  border-radius: 4px;
+  border-radius: 5px;
   background: #f0fdf4;
   color: #15803d;
   cursor: pointer;
@@ -6095,7 +6092,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   align-items: center;
   gap: 3px;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   background: #ef4444;
   color: #ffffff;
   font-size: 10.5px;
@@ -6161,7 +6158,6 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11.5px;
   font-weight: 700;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .block-time {
@@ -6203,7 +6199,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .timeline-tooltip-bar .service-badge {
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 11px;
 }
 
@@ -6262,7 +6258,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .task-icon-circle {
   width: 34px;
   height: 34px;
-  border-radius: 10px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6314,15 +6310,14 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-weight: 700;
   color: #0f172a;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .ds-root .task-category-pill {
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   flex-shrink: 0;
 }
 
@@ -6355,8 +6350,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 12px;
   color: #64748b;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .ds-root .task-arrow {
@@ -6430,7 +6424,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .member-avatar-ring {
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6503,7 +6497,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   background: rgba(0, 0, 0, 0.05);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: 5px;
   color: #334155;
 }
 
@@ -6764,7 +6758,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .item-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 5px;
   background: #e2e8f0;
   color: #334155;
   display: flex;
@@ -6804,7 +6798,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   background: #f1f5f9;
   padding: 1px 4px;
-  border-radius: 4px;
+  border-radius: 5px;
   color: #475569;
 }
 
@@ -6890,7 +6884,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 2px 6px;
   background: #1f7a4d;
   color: #ffffff;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .ds-root .section-title {
@@ -7099,7 +7093,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 1px 4px;
   background: #fef08a;
   color: #854d0e;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 .ds-root .tag-left {
@@ -7107,7 +7101,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 1px 4px;
   background: #f1f5f9;
   color: #64748b;
-  border-radius: 3px;
+  border-radius: 5px;
 }
 
 /* Booking Date & Time Grid */
@@ -7532,7 +7526,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   background: #fffbeb;
   border-left: 3px solid #f59e0b;
   padding: 6px 10px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 12.5px;
   color: #78350f;
 }
@@ -7633,7 +7627,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   background: #f1f5f9;
   color: #475569;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-weight: 600;
 }
 
@@ -8036,7 +8030,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   background: #0f172a;
   color: #ffffff;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 5px;
   font-size: 11px;
   white-space: nowrap;
   pointer-events: none;
@@ -8189,7 +8183,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   background: #f1f5f9;
   color: #475569;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   width: fit-content;
 }
 
@@ -8226,7 +8220,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #2563eb;
   background: #eff6ff;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   width: fit-content;
   margin-top: 2px;
 }
@@ -8997,7 +8991,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .duty-tag {
   font-size: 9.5px;
   padding: 1px 4px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
   font-weight: 700;
 }
 
@@ -9019,9 +9013,8 @@ html:has(.app-shell)::-webkit-scrollbar {
 .ds-root .duty-status {
   font-size: 11px;
   color: #64748b;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .duty-status.text-green {
@@ -9266,7 +9259,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #854d0e;
   background: #fef9c3;
   padding: 1px 5px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
   border: 1px solid #fef08a;
 }
 
@@ -9307,9 +9300,8 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 12px;
   font-weight: 600;
   color: #1e293b;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .db-bay-empty-lbl {
@@ -9320,9 +9312,8 @@ html:has(.app-shell)::-webkit-scrollbar {
 
 .ds-root .db-bay-subtext {
   font-size: 10.5px;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .db-bay-subtext.text-emerald {
@@ -9366,7 +9357,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-weight: 600;
   color: #64748b;
   padding: 5px 10px;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
   cursor: pointer;
   transition: all 150ms ease;
 }
@@ -9418,7 +9409,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   padding: 4px 8px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
   flex-shrink: 0;
 }
 
@@ -9476,7 +9467,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #025c0a;
   background: #e8f5e9;
   padding: 1px 6px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
 }
 
 .ds-root .plan-tag {
@@ -9484,7 +9475,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #475569;
   background: #f1f5f9;
   padding: 1px 6px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
 }
 
 .ds-root .schedule-status-block {
@@ -9498,7 +9489,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   font-weight: 600;
   padding: 3px 8px;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
 }
 
 .ds-root .db-status-badge.playing {
@@ -9549,7 +9540,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   gap: 6px;
   cursor: pointer;
   padding: 4px 8px;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
   transition: background 150ms ease;
 }
 
@@ -9692,9 +9683,8 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 12px;
   font-weight: 600;
   color: #0f172a;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .ds-branch-arrow {
@@ -9805,9 +9795,8 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 12.5px;
   font-weight: 600;
   color: #0f172a;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ds-root .ds-user-role {
@@ -10088,7 +10077,7 @@ html:has(.app-shell)::-webkit-scrollbar {
 .gcd-mini-sparkline span {
   width: 4px;
   background: #e2e8f0;
-  border-radius: 2px !important;
+  border-radius: 5px !important;
   display: inline-block;
 }
 
@@ -10211,7 +10200,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   background: #f1f5f9;
   color: #475569;
   padding: 1px 6px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
 }
 
 /* 7.5 Main Layout: 2 Columns */
@@ -10277,7 +10266,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-weight: 600;
   color: #64748b;
   padding: 4px 10px;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
   cursor: pointer;
   transition: all 150ms ease;
 }
@@ -10388,7 +10377,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   gap: 4px;
   cursor: pointer;
   padding: 4px;
-  border-radius: 4px !important;
+  border-radius: 5px !important;
 }
 
 .gcd-view-all-btn:hover {
@@ -10492,7 +10481,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   width: 2.5px;
   height: 28px;
   background: #025c0a;
-  border-radius: 2px !important;
+  border-radius: 5px !important;
   flex-shrink: 0;
 }
 
@@ -10507,17 +10496,15 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 13px;
   font-weight: 600;
   color: #0f172a;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .gcd-appt-detail {
   font-size: 11px;
   color: #64748b;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .gcd-appt-price-col {
@@ -10609,7 +10596,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   font-weight: 600;
   padding: 2px 6px;
-  border-radius: 3px !important;
+  border-radius: 5px !important;
   display: inline-block;
   align-self: flex-start;
 }
@@ -10753,9 +10740,8 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 11px;
   font-weight: 600;
   color: #15803d;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .gcd-bay-mini-tile .tile-status-txt {
@@ -11032,7 +11018,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   font-size: 10px;
   font-weight: 600;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   letter-spacing: 0.3px;
 }
 
@@ -11168,7 +11154,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   color: #64748b;
   cursor: pointer;
   padding: 6px;
-  border-radius: 4px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -11449,7 +11435,7 @@ html:has(.app-shell)::-webkit-scrollbar {
   .ds-appmenu-grab {
     width: 40px;
     height: 4px;
-    border-radius: 2px;
+    border-radius: 5px;
     background: #cbd5e1;
     margin: 8px auto 2px;
     flex: none;
@@ -11479,9 +11465,8 @@ html:has(.app-shell)::-webkit-scrollbar {
   .ds-appmenu-brand small {
     font-size: 12px;
     color: #64748b;
-    white-space: nowrap;
+    white-space: normal;
     overflow: hidden;
-    text-overflow: ellipsis;
   }
   .ds-appmenu-close {
     width: 44px;
@@ -11524,7 +11509,7 @@ html:has(.app-shell)::-webkit-scrollbar {
     position: relative;
     width: 58px;
     height: 58px;
-    border-radius: 18px;
+    border-radius: 5px;
     display: grid;
     place-items: center;
     background: var(--tile-bg, #e6f3eb);

@@ -283,7 +283,7 @@
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 /* ── Side menu ─────────────────────────────────────────────────────── */
@@ -561,7 +561,7 @@
   width: 48px;
   height: 48px;
   border: 1px solid var(--pos-line);
-  border-radius: 12px;
+  border-radius: 5px;
   background: #fff;
   color: var(--pos-muted);
   cursor: pointer;
@@ -637,8 +637,7 @@
   padding: 0 6px;
   overflow: hidden;
   font-size: 0.8rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
   color: var(--pos-muted);
 }
 .pos-line.vip .pos-who {
@@ -840,8 +839,7 @@
 .pos-tasks small {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .pos-tasks small {
   color: var(--pos-muted);
@@ -1709,8 +1707,7 @@
 .pos-content-list small {
   display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .pos-content-list small {
   color: var(--pos-muted);
@@ -1721,7 +1718,7 @@
   flex: none;
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--pos-soft);
   color: var(--pos-green);
 }
@@ -1910,7 +1907,7 @@
   height: 36px;
   padding: 0;
   border: 1px solid var(--pos-line);
-  border-radius: 10px;
+  border-radius: 5px;
   background: #fff;
   cursor: pointer;
 }

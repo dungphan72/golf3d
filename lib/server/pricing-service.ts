@@ -48,6 +48,11 @@ export type PublicPricing = {
   offers: string[];
   promotions: PublicPromotion[];
   benefits: string[];
+  clubName?: string;
+  clubAddress?: string;
+  hotline?: string;
+  logo?: string;
+  days?: number;
   source: 'admin' | 'default';
 };
 
@@ -114,11 +119,16 @@ export async function publicPricing(): Promise<PublicPricing> {
         groups: groupPackages(items),
         vat: config.vat,
         fee: config.fee,
-        open: config.open,
-        close: config.close,
+        open: config.open || '06:00',
+        close: config.close || '23:00',
         offers: config.offers ?? [],
         promotions: livePromotions(config.promotions),
         benefits: config.memberBenefits ?? DEFAULT_BENEFITS,
+        clubName: config.name,
+        clubAddress: config.address,
+        hotline: config.hotline,
+        logo: config.logo,
+        days: config.days,
         source: 'admin',
       };
     }

@@ -48,10 +48,15 @@ import {
   Download,
   RefreshCw,
 } from 'lucide-react';
-import type { Config } from '../../lib/club';
+import { rooms, money, type Config } from '../../lib/club';
+import { officialPriceRules } from '../../lib/official-pricing';
+import { syncRulesWithRates } from '../../lib/price-sync';
+import { operationKey } from '../../lib/finance';
+import type { MenuItem } from '../../lib/fnb';
 import type { Data } from './shared';
 import { PackageCatalogManager } from './PackageEditor';
 import { SepaySettings } from './SepaySettings';
+import { StaffPanel } from './StaffPanel';
 import { SEPAY_BANKS, sepayQrUrl } from '../../lib/bank';
 import '../system-settings.css';
 
@@ -510,6 +515,10 @@ export function SystemSettingsHub({
 
   useEffect(() => {
     if (!initialOpenCardId) return;
+    let cancelled = false;
+    // Deferred so state is not set synchronously inside the effect body.
+    queueMicrotask(() => {
+    if (cancelled) return;
     for (const g of groups) {
       const found = g.cards.find((c) => c.id === initialOpenCardId);
       if (found) {
@@ -529,6 +538,10 @@ export function SystemSettingsHub({
     };
     setOpenCard(fallback);
     onClearInitialOpenCard?.();
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [initialOpenCardId, groups, onClearInitialOpenCard]);
 
   // Modal for Adding or Editing a Function Card on the Hub
@@ -583,13 +596,36 @@ export function SystemSettingsHub({
       .filter(Boolean) as GroupDef[];
   }, [groups, effectiveTab, searchQuery, manageMode]);
 
-  // Save handler for Config
+  // Save handler for Config (Single Source of Truth)
   const handleSaveConfig = async (patch: Partial<Config>) => {
     const next = { ...draftConfig, ...patch };
     setDraftConfig(next);
     await onSave(patch);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+    }
     showToast('Đã lưu cấu hình thành công!');
     setOpenCard(null);
+    onChanged?.();
+  };
+
+  // Inline save handler for CRUD tables without closing modal
+  const handleSyncTable = async (storageKey: string, nextRows: Record<string, string>[]) => {
+    const nextCustomTables = {
+      ...(draftConfig.customTables ?? config.customTables ?? {}),
+      [storageKey]: nextRows,
+    };
+    const patch: Partial<Config> = { customTables: nextCustomTables };
+    if (storageKey === 'promotions_vouchers') {
+      patch.offers = nextRows
+        .filter((r) => !r.st || !r.st.toLowerCase().includes('dừng'))
+        .map((r) => `${r.name || r.code} | ${r.val || ''} | Mã: ${r.code || ''} · Hạn: ${r.exp || 'Đang áp dụng'}`);
+    }
+    setDraftConfig((prev) => ({ ...prev, ...patch }));
+    await onSave(patch);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+    }
     onChanged?.();
   };
 
@@ -813,7 +849,7 @@ export function SystemSettingsHub({
           style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: 16,
+            borderRadius: 5,
             padding: 20,
             marginBottom: 24,
             boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
@@ -865,7 +901,7 @@ export function SystemSettingsHub({
           style={{
             background: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: 16,
+            borderRadius: 5,
             padding: 20,
             marginBottom: 24,
             boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
@@ -1174,6 +1210,7 @@ export function SystemSettingsHub({
           busy={busy}
           onClose={() => setOpenCard(null)}
           onSave={handleSaveConfig}
+          onSyncTable={handleSyncTable}
           onShowToast={showToast}
           onGo={onGo}
           onChanged={onChanged}
@@ -1184,7 +1221,379 @@ export function SystemSettingsHub({
 }
 
 // =============================================================================
-// Universal CRUD Table Manager inside Settings Modals (Add / Edit / Delete rows)
+// Database-backed Menu & Service Catalog Manager (Single Source of Truth: /api/fnb)
+// =============================================================================
+function DatabaseMenuCrudManager({
+  mode,
+  onNotify,
+  onChanged,
+}: {
+  mode: 'fnb' | 'service';
+  onNotify: (msg: string) => void;
+  onChanged?: () => void;
+}) {
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [editingItem, setEditingItem] = useState<MenuItem | 'new' | null>(null);
+  const [form, setForm] = useState({
+    name: '',
+    category: (mode === 'fnb' ? 'drink' : 'other') as 'drink' | 'food' | 'other',
+    unit: mode === 'fnb' ? 'ly' : 'buổi',
+    price: 50000,
+    active: true,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const loadMenu = async () => {
+    setLoading(true);
+    try {
+      const r = await fetch('/api/fnb', { cache: 'no-store' });
+      const d = (await r.json()) as { menu?: MenuItem[] };
+      if (d.menu) setItems(d.menu);
+    } catch {
+      /* ignore */
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      void loadMenu();
+    });
+  }, []);
+
+  const filtered = useMemo(() => {
+    return items.filter((m) =>
+      mode === 'fnb' ? m.category === 'drink' || m.category === 'food' : m.category === 'other',
+    );
+  }, [items, mode]);
+
+  const startAdd = () => {
+    setForm({
+      name: '',
+      category: mode === 'fnb' ? 'drink' : 'other',
+      unit: mode === 'fnb' ? 'ly' : 'buổi',
+      price: mode === 'fnb' ? 45000 : 150000,
+      active: true,
+    });
+    setEditingItem('new');
+  };
+
+  const startEdit = (m: MenuItem) => {
+    setForm({
+      name: m.name,
+      category: m.category,
+      unit: m.unit,
+      price: m.price,
+      active: !!m.active,
+    });
+    setEditingItem(m);
+  };
+
+  const handleSave = async () => {
+    if (!form.name.trim() || form.price <= 0) {
+      onNotify('Vui lòng nhập tên và đơn giá hợp lệ (> 0₫)');
+      return;
+    }
+    setSaving(true);
+    try {
+      const payload =
+        editingItem === 'new'
+          ? {
+              action: 'item-create',
+              requestId: operationKey(),
+              name: form.name.trim(),
+              category: form.category,
+              unit: form.unit.trim() || (mode === 'fnb' ? 'phần' : 'lượt'),
+              price: Math.round(Number(form.price)),
+              feeBps: 0,
+              vatBps: 0,
+              active: form.active,
+            }
+          : {
+              action: 'item-update',
+              id: (editingItem as MenuItem).id,
+              expectedVersion: (editingItem as MenuItem).version,
+              name: form.name.trim(),
+              category: form.category,
+              unit: form.unit.trim() || (mode === 'fnb' ? 'phần' : 'lượt'),
+              price: Math.round(Number(form.price)),
+              feeBps: (editingItem as MenuItem).fee_bps ?? 0,
+              vatBps: (editingItem as MenuItem).vat_bps ?? 0,
+              active: form.active,
+            };
+      const r = await fetch('/api/fnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const res = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        onNotify(res.error || 'Không lưu được mục');
+        return;
+      }
+      await loadMenu();
+      setEditingItem(null);
+      onChanged?.();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+      }
+      onNotify(
+        editingItem === 'new'
+          ? 'Đã thêm mới và đồng bộ sang POS & Thực đơn!'
+          : 'Đã cập nhật và đồng bộ sang POS & Thực đơn!',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (m: MenuItem) => {
+    setSaving(true);
+    try {
+      const r = await fetch('/api/fnb', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'item-delete', id: m.id }),
+      });
+      if (r.ok) {
+        await loadMenu();
+        onChanged?.();
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+        }
+        onNotify(`Đã xóa/ngừng kinh doanh "${m.name}" trên toàn hệ thống!`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+          {mode === 'fnb'
+            ? 'Đồng bộ trực tiếp với POS (Desktop & Mobile) và Phân hệ Thực đơn & Kho (menu_items).'
+            : 'Đồng bộ trực tiếp bảng giá Thuê gậy, Caddie, Giày tập và Phụ kiện với màn hình POS.'}
+        </p>
+        <button type="button" className="ar-btn-primary" style={{ padding: '7px 14px', fontSize: 12.5 }} onClick={startAdd}>
+          <Plus size={15} /> Thêm mới
+        </button>
+      </div>
+
+      {editingItem !== null && (
+        <div className="ar-crud-inline-box">
+          <div className="ar-form-grid" style={{ marginBottom: 10 }}>
+            <div className="ar-field">
+              <label>{mode === 'fnb' ? 'Tên món / đồ uống' : 'Tên dịch vụ / phụ kiện'}</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder={mode === 'fnb' ? 'VD: Cà phê sữa đá' : 'VD: Thuê bộ gậy TaylorMade'}
+              />
+            </div>
+            {mode === 'fnb' && (
+              <div className="ar-field">
+                <label>Phân nhóm</label>
+                <select
+                  value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value as 'drink' | 'food' })}
+                >
+                  <option value="drink">Đồ uống</option>
+                  <option value="food">Đồ ăn / Combo</option>
+                </select>
+              </div>
+            )}
+            <div className="ar-field">
+              <label>Đơn vị tính</label>
+              <input
+                value={form.unit}
+                onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                placeholder={mode === 'fnb' ? 'ly / chai / phần' : 'buổi / giờ / hộp'}
+              />
+            </div>
+            <div className="ar-field">
+              <label>Đơn giá bán (VNĐ)</label>
+              <input
+                type="number"
+                step="5000"
+                value={form.price}
+                onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+              />
+            </div>
+            <div className="ar-field">
+              <label>Trạng thái kinh doanh</label>
+              <select
+                value={form.active ? '1' : '0'}
+                onChange={(e) => setForm({ ...form, active: e.target.value === '1' })}
+              >
+                <option value="1">Đang bán (Còn hàng)</option>
+                <option value="0">Tạm ngưng (Hết hàng)</option>
+              </select>
+            </div>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <button type="button" className="ar-btn-secondary" style={{ padding: '6px 12px', fontSize: 12.5 }} onClick={() => setEditingItem(null)}>
+              Hủy
+            </button>
+            <button type="button" className="ar-btn-primary" style={{ padding: '6px 14px', fontSize: 12.5 }} disabled={saving} onClick={handleSave}>
+              <Check size={14} /> {editingItem === 'new' ? 'Lưu & Đồng bộ POS' : 'Cập nhật & Đồng bộ POS'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <table className="ar-modal-table">
+        <thead>
+          <tr>
+            <th>{mode === 'fnb' ? 'Tên món / đồ uống' : 'Tên dịch vụ / phụ kiện'}</th>
+            <th>Phân loại</th>
+            <th>Đơn vị</th>
+            <th>Đơn giá</th>
+            <th>Trạng thái</th>
+            <th style={{ width: 92, textAlign: 'right' }}>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((m) => (
+            <tr key={m.id}>
+              <td><strong>{m.name}</strong></td>
+              <td>{m.category === 'drink' ? 'Đồ uống' : m.category === 'food' ? 'Đồ ăn' : 'Dịch vụ / Phụ kiện'}</td>
+              <td>{m.unit}</td>
+              <td><strong>{money(m.price)}</strong></td>
+              <td>
+                <span className={`ar-status-badge ${m.active ? 'ar-badge-success' : 'ar-badge-warning'}`}>
+                  {m.active ? 'Đang bán' : 'Tạm ngưng'}
+                </span>
+              </td>
+              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <button type="button" className="ar-table-icon-btn edit" title="Sửa" onClick={() => startEdit(m)}>
+                  <Edit3 size={14} />
+                </button>
+                <button type="button" className="ar-table-icon-btn delete" title="Xóa" onClick={() => handleDelete(m)}>
+                  <Trash2 size={14} />
+                </button>
+              </td>
+            </tr>
+          ))}
+          {!loading && filtered.length === 0 && (
+            <tr>
+              <td colSpan={6} style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>
+                Chưa có mục nào. Bấm &ldquo;+ Thêm mới&rdquo; để khởi tạo.
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// =============================================================================
+// Database-backed Rooms & Maintenance Manager (Single Source of Truth: /api/club)
+// =============================================================================
+function DatabaseRoomsManager({
+  data,
+  onNotify,
+  onChanged,
+}: {
+  data: Data | null;
+  onNotify: (msg: string) => void;
+  onChanged?: () => void;
+}) {
+  const [busyRoom, setBusyRoom] = useState<string | null>(null);
+  const maintList = data?.maintenance ?? [];
+
+  const toggleMaintenance = async (roomId: string, currentlyMaint: boolean) => {
+    setBusyRoom(roomId);
+    try {
+      const r = await fetch('/api/club', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'maintenance',
+          room: roomId,
+          value: { on: !currentlyMaint, reason: !currentlyMaint ? 'Bảo trì kỹ thuật từ Cài đặt' : '' },
+        }),
+      });
+      const res = (await r.json()) as { error?: string };
+      if (!r.ok) {
+        onNotify(res.error || 'Không đổi được trạng thái line');
+        return;
+      }
+      onChanged?.();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+      }
+      onNotify(
+        !currentlyMaint
+          ? `Đã chuyển ${roomId.toUpperCase()} sang trạng thái Bảo trì trên POS & Đặt sân!`
+          : `Đã mở lại ${roomId.toUpperCase()} sẵn sàng đón khách!`,
+      );
+    } finally {
+      setBusyRoom(null);
+    }
+  };
+
+  return (
+    <div>
+      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 12 }}>
+        Danh sách 10 Line tiêu chuẩn và 2 Phòng VIP đồng bộ trực tiếp với sơ đồ POS và Lịch đặt sân. Bấm nút trạng thái để bật/tắt chế độ Bảo trì thời gian thực.
+      </p>
+      <table className="ar-modal-table">
+        <thead>
+          <tr>
+            <th>Mã Line</th>
+            <th>Tên hiển thị</th>
+            <th>Hạng phòng</th>
+            <th>Tay thuận</th>
+            <th>Trạng thái vận hành</th>
+            <th style={{ textAlign: 'right' }}>Điều khiển bảo trì</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rooms.map((rm) => {
+            const maint = maintList.find((m) => m.room === rm.id);
+            const isMaint = !!maint;
+            return (
+              <tr key={rm.id}>
+                <td><code>{rm.id}</code></td>
+                <td><strong>{rm.name}</strong></td>
+                <td>
+                  <span className={`ar-status-badge ${rm.vip ? 'ar-badge-warning' : 'ar-badge-info'}`}>
+                    {rm.vip ? 'Phòng VIP' : 'Line Tiêu chuẩn'}
+                  </span>
+                </td>
+                <td>{rm.left || rm.vip ? 'Phải & Trái' : 'Tay phải'}</td>
+                <td>
+                  <span className={`ar-status-badge ${isMaint ? 'ar-badge-warning' : 'ar-badge-success'}`}>
+                    {isMaint ? `Đang bảo trì${maint?.reason ? ` (${maint.reason})` : ''}` : 'Sẵn sàng hoạt động'}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <button
+                    type="button"
+                    className="ar-btn-secondary"
+                    style={{ padding: '5px 12px', fontSize: 12 }}
+                    disabled={busyRoom === rm.id}
+                    onClick={() => toggleMaintenance(rm.id, isMaint)}
+                  >
+                    {isMaint ? 'Mở hoạt động lại' : 'Chuyển sang Bảo trì'}
+                  </button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// =============================================================================
+// Universal CRUD Table Manager inside Settings Modals (Persists to SQLite config.customTables)
 // =============================================================================
 interface CrudColumn {
   key: string;
@@ -1198,15 +1607,20 @@ function EditableCrudList({
   description,
   columns,
   initialRows,
+  savedRows,
+  onSyncTable,
   onNotify,
 }: {
   storageKey: string;
   description: string;
   columns: CrudColumn[];
   initialRows: Record<string, string>[];
+  savedRows?: Record<string, string>[];
+  onSyncTable?: (key: string, nextRows: Record<string, string>[]) => Promise<void> | void;
   onNotify: (msg: string) => void;
 }) {
   const [rows, setRows] = useState<Record<string, string>[]>(() => {
+    if (savedRows && Array.isArray(savedRows) && savedRows.length > 0) return savedRows;
     if (typeof window === 'undefined') return initialRows;
     try {
       const raw = window.localStorage.getItem('sigolf_crud_' + storageKey);
@@ -1230,6 +1644,7 @@ function EditableCrudList({
     } catch {
       /* ignore */
     }
+    onSyncTable?.(storageKey, next);
   };
 
   const startAdd = () => {
@@ -1363,9 +1778,11 @@ function EditableCrudList({
 function SettingsCardModal({
   card,
   config,
+  data,
   busy,
   onClose,
   onSave,
+  onSyncTable,
   onShowToast,
   onGo,
   onChanged,
@@ -1376,19 +1793,20 @@ function SettingsCardModal({
   busy?: boolean;
   onClose: () => void;
   onSave: (patch: Partial<Config>) => Promise<void> | void;
+  onSyncTable?: (key: string, nextRows: Record<string, string>[]) => Promise<void> | void;
   onShowToast: (msg: string) => void;
   onGo?: (v: string) => void;
   onChanged?: () => void;
 }) {
   const cardId = card.id;
-  // Local states per modal type
+  // Local states per modal type (initialized from Single Source of Truth `config`)
   const [formFacility, setFormFacility] = useState({
     name: config.name || '',
     address: config.address || '',
-    hotline: '0877834888',
-    email: 'contact@sigolf.vn',
-    website: 'https://sigolf.vn',
-    logo: '/logo.webp',
+    hotline: config.hotline || '0877834888',
+    email: config.email || 'contact@sigolf.vn',
+    website: config.website || 'https://sigolf.vn',
+    logo: config.logo || '/logo.webp',
   });
 
   const [formHours, setFormHours] = useState({
@@ -1406,17 +1824,24 @@ function SettingsCardModal({
   const [formBookingRules, setFormBookingRules] = useState({
     days: config.days || 14,
     cancelHours: config.cancelHours || 2,
-    depositPercent: 30,
-    autoCancelGrace: 15,
+    depositPercent: config.depositPercent ?? 30,
+    autoCancelGrace: config.autoCancelGrace ?? 15,
     onlineEnabled: !!config.onlineEnabled,
     onlineSlug: config.onlineSlug || 'sigolf-club',
   });
 
-  const [formPrices, setFormPrices] = useState({
-    rate: config.rate || 350000,
-    happy: config.happy || 250000,
-    vipRate: config.vipRate || 500000,
-    vipHappy: config.vipHappy || 400000,
+  const [formPrices, setFormPrices] = useState(() => {
+    const rules = config.priceRules ?? [];
+    const stdNormal = rules.find((r) => r.service === 'gdr' && r.room === 'standard' && r.day === 'weekday' && r.from === '11:00')?.amount;
+    const stdHappy = rules.find((r) => r.service === 'gdr' && r.room === 'standard' && r.day === 'weekday' && r.to === '11:00')?.amount;
+    const vipNormal = rules.find((r) => r.service === 'gdr' && r.room === 'vip' && r.day === 'weekday' && r.from === '11:00')?.amount;
+    const vipHappyRule = rules.find((r) => r.service === 'gdr' && r.room === 'vip' && r.day === 'weekday' && r.to === '11:00')?.amount;
+    return {
+      rate: stdNormal ?? config.rate ?? 150000,
+      happy: stdHappy ?? config.happy ?? 100000,
+      vipRate: vipNormal ?? config.vipRate ?? 200000,
+      vipHappy: vipHappyRule ?? config.vipHappy ?? 150000,
+    };
   });
 
   const [formPayment, setFormPayment] = useState({
@@ -1429,9 +1854,9 @@ function SettingsCardModal({
     vat: config.vat ?? 8,
     fee: config.fee ?? 5,
     feeMode: config.feeMode || 'percent',
-    invoiceHeader: 'CÔNG TY TNHH SAIGON INDOOR GOLF',
-    taxCode: '0318889999',
-    invoiceFooterNote: 'Cảm ơn Quý khách & Hẹn gặp lại!',
+    invoiceHeader: config.invoiceHeader || 'CÔNG TY TNHH SAIGON INDOOR GOLF',
+    taxCode: config.taxCode || '0318889999',
+    invoiceFooterNote: config.invoiceFooterNote || 'Cảm ơn Quý khách & Hẹn gặp lại!',
   });
 
   const [formMembership, setFormMembership] = useState({
@@ -1454,11 +1879,11 @@ function SettingsCardModal({
 
   // General Config
   const [formGeneral, setFormGeneral] = useState({
-    language: 'vi',
-    currency: 'VND',
-    dateFormat: 'DD/MM/YYYY',
-    soundAlert: true,
-    autoRefreshSec: 30,
+    language: config.generalConfig?.language || 'vi',
+    currency: config.generalConfig?.currency || 'VND',
+    dateFormat: config.generalConfig?.dateFormat || 'DD/MM/YYYY',
+    soundAlert: config.generalConfig?.soundAlert ?? true,
+    autoRefreshSec: config.generalConfig?.autoRefreshSec ?? 30,
   });
 
   // Security
@@ -1470,39 +1895,43 @@ function SettingsCardModal({
 
   // Marketing tools
   const [formMarketing, setFormMarketing] = useState({
-    fbPixel: '889218291028',
-    ga4Id: 'G-SIGOLF2026',
-    mapsPlaceId: 'ChIJ...SigolfClub',
-    zaloOaId: '198273645019',
+    fbPixel: config.marketingConfig?.fbPixel || '889218291028',
+    ga4Id: config.marketingConfig?.ga4Id || 'G-SIGOLF2026',
+    mapsPlaceId: config.marketingConfig?.mapsPlaceId || 'ChIJ...SigolfClub',
+    zaloOaId: config.marketingConfig?.zaloOaId || '198273645019',
   });
 
   // Matchmaking
   const [formMatchmaking, setFormMatchmaking] = useState({
-    enabled: true,
-    maxHdcDiff: 8,
-    autoNotifyZalo: true,
+    enabled: config.matchmakingConfig?.enabled ?? true,
+    maxHdcDiff: config.matchmakingConfig?.maxHdcDiff ?? 8,
+    autoNotifyZalo: config.matchmakingConfig?.autoNotifyZalo ?? true,
   });
 
   // Tournament
   const [formTournament, setFormTournament] = useState({
-    defaultFormat: 'Stroke Play',
-    hdcSystem: 'System 36',
-    liveLeaderboard: true,
+    defaultFormat: config.tournamentConfig?.defaultFormat || 'Stroke Play',
+    hdcSystem: config.tournamentConfig?.hdcSystem || 'System 36',
+    liveLeaderboard: config.tournamentConfig?.liveLeaderboard ?? true,
   });
 
   // Academy
   const [formAcademy, setFormAcademy] = useState({
-    commissionRate: 35,
-    lessonMinutes: 60,
-    freeTrialAvailable: true,
+    commissionRate: config.academyConfig?.commissionRate ?? 35,
+    lessonMinutes: config.academyConfig?.lessonMinutes ?? 60,
+    freeTrialAvailable: config.academyConfig?.freeTrialAvailable ?? true,
   });
 
-  // Submitting logic
+  // Submitting logic (persisting 100% to SQLite Single Source of Truth)
   const handleSave = async () => {
     if (cardId === 'facility_info') {
       await onSave({
         name: formFacility.name,
         address: formFacility.address,
+        hotline: formFacility.hotline,
+        email: formFacility.email,
+        website: formFacility.website,
+        logo: formFacility.logo,
       });
       return;
     }
@@ -1522,17 +1951,38 @@ function SettingsCardModal({
       await onSave({
         days: Number(formBookingRules.days),
         cancelHours: Number(formBookingRules.cancelHours),
+        depositPercent: Number(formBookingRules.depositPercent),
+        autoCancelGrace: Number(formBookingRules.autoCancelGrace),
         onlineEnabled: formBookingRules.onlineEnabled,
         onlineSlug: formBookingRules.onlineSlug,
       });
       return;
     }
     if (cardId === 'pricing_rates') {
+      const nextRate = Number(formPrices.rate);
+      const nextHappy = Number(formPrices.happy);
+      const nextVipRate = Number(formPrices.vipRate);
+      const nextVipHappy = Number(formPrices.vipHappy);
+      const baseRules = config.priceRules?.length ? config.priceRules : officialPriceRules();
+      // Only weekday hourly rules follow these fields; weekend/holiday/per-person prices stay as set.
+      const syncedRules = syncRulesWithRates(baseRules, {
+        prevOpen: config.open || '06:00',
+        prevClose: config.close || '23:00',
+        open: config.open || '06:00',
+        close: config.close || '23:00',
+        rate: nextRate,
+        happy: nextHappy,
+        vipRate: nextVipRate,
+        vipHappy: nextVipHappy,
+        ratesTouched: true,
+        hoursTouched: false,
+      });
       await onSave({
-        rate: Number(formPrices.rate),
-        happy: Number(formPrices.happy),
-        vipRate: Number(formPrices.vipRate),
-        vipHappy: Number(formPrices.vipHappy),
+        rate: nextRate,
+        happy: nextHappy,
+        vipRate: nextVipRate,
+        vipHappy: nextVipHappy,
+        priceRules: syncedRules,
       });
       return;
     }
@@ -1549,6 +1999,9 @@ function SettingsCardModal({
         vat: Number(formTax.vat),
         fee: Number(formTax.fee),
         feeMode: formTax.feeMode as 'percent' | 'fixed',
+        invoiceHeader: formTax.invoiceHeader,
+        taxCode: formTax.taxCode,
+        invoiceFooterNote: formTax.invoiceFooterNote,
       });
       return;
     }
@@ -1560,6 +2013,36 @@ function SettingsCardModal({
           diamond: Number(formMembership.diamond),
         },
         memberBenefits: formMembership.benefits,
+      });
+      return;
+    }
+    if (cardId === 'general_config') {
+      await onSave({
+        generalConfig: formGeneral,
+      });
+      return;
+    }
+    if (cardId === 'marketing_tools') {
+      await onSave({
+        marketingConfig: formMarketing,
+      });
+      return;
+    }
+    if (cardId === 'matchmaking') {
+      await onSave({
+        matchmakingConfig: formMatchmaking,
+      });
+      return;
+    }
+    if (cardId === 'tournament_settings') {
+      await onSave({
+        tournamentConfig: formTournament,
+      });
+      return;
+    }
+    if (cardId === 'academy_coaching') {
+      await onSave({
+        academyConfig: formAcademy,
       });
       return;
     }
@@ -1649,27 +2132,10 @@ function SettingsCardModal({
           )}
 
           {cardId === 'rooms_lines' && (
-            <EditableCrudList
-              storageKey="rooms_lines"
-              description="Thêm, sửa, xóa các Line tập và Phòng VIP trong cơ sở."
+            <DatabaseRoomsManager
+              data={data}
               onNotify={onShowToast}
-              columns={[
-                { key: 'id', label: 'Mã Line', placeholder: 'VD: line-6' },
-                { key: 'name', label: 'Tên hiển thị', placeholder: 'VD: Line 06' },
-                { key: 'type', label: 'Loại phòng', placeholder: 'Standard hoặc VIP', badge: 'info' },
-                { key: 'hand', label: 'Tay thuận', placeholder: 'Phải / Cả hai' },
-                { key: 'status', label: 'Trạng thái', placeholder: 'Hoạt động / Bảo trì', badge: 'success' },
-              ]}
-              initialRows={[
-                { id: 'line-1', name: 'Line 01', type: 'Standard', hand: 'Phải', status: 'Hoạt động' },
-                { id: 'line-2', name: 'Line 02', type: 'Standard', hand: 'Phải', status: 'Hoạt động' },
-                { id: 'line-3', name: 'Line 03', type: 'Standard', hand: 'Phải', status: 'Hoạt động' },
-                { id: 'line-4', name: 'Line 04', type: 'Standard', hand: 'Phải', status: 'Hoạt động' },
-                { id: 'line-5', name: 'Line 05', type: 'Standard', hand: 'Phải', status: 'Hoạt động' },
-                { id: 'line-10', name: 'Line 10 (Tay trái)', type: 'Standard', hand: 'Cả hai', status: 'Hoạt động' },
-                { id: 'vip-1', name: 'VIP 01 (Suite)', type: 'VIP', hand: 'Cả hai', status: 'Hoạt động' },
-                { id: 'vip-2', name: 'VIP 02 (President)', type: 'VIP', hand: 'Cả hai', status: 'Hoạt động' },
-              ]}
+              onChanged={onChanged}
             />
           )}
 
@@ -1795,6 +2261,8 @@ function SettingsCardModal({
           {cardId === 'facility_layout' && (
             <EditableCrudList
               storageKey="facility_layout_zones"
+              savedRows={config.customTables?.facility_layout_zones}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các Khu vực hiển thị trên sơ đồ màn hình POS Bán hàng."
               onNotify={onShowToast}
               columns={[
@@ -1954,7 +2422,7 @@ function SettingsCardModal({
                             style={{
                               flex: 1,
                               padding: '4px 8px',
-                              borderRadius: 6,
+                              borderRadius: 5,
                               border: '1px solid #cbd5e1',
                             }}
                           />
@@ -2014,7 +2482,9 @@ function SettingsCardModal({
           {cardId === 'promotions_vouchers' && (
             <EditableCrudList
               storageKey="promotions_vouchers"
-              description="Thêm, sửa, xóa các chương trình khuyến mãi, voucher kích cầu và mã giảm giá."
+              savedRows={config.customTables?.promotions_vouchers}
+              onSyncTable={onSyncTable}
+              description="Thêm, sửa, xóa các chương trình khuyến mãi, voucher kích cầu và mã giảm giá (đồng bộ trực tiếp với POS & Bảng giá)."
               onNotify={onShowToast}
               columns={[
                 { key: 'code', label: 'Mã Voucher', placeholder: 'VD: GOLFNEW20' },
@@ -2033,23 +2503,10 @@ function SettingsCardModal({
 
           {cardId === 'fnb_menu' && (
             <div>
-              <EditableCrudList
-                storageKey="fnb_menu"
-                description="Thêm, sửa, xóa nhanh thực đơn F&B phục vụ tại Line chơi và phòng chờ."
+              <DatabaseMenuCrudManager
+                mode="fnb"
                 onNotify={onShowToast}
-                columns={[
-                  { key: 'name', label: 'Tên món / đồ uống', placeholder: 'VD: Cà phê Muối' },
-                  { key: 'cat', label: 'Danh mục', placeholder: 'Đồ uống / Đồ ăn / Combo' },
-                  { key: 'price', label: 'Giá bán', placeholder: 'VD: 45.000₫' },
-                  { key: 'st', label: 'Tình trạng', placeholder: 'Còn hàng / Hết hàng', badge: 'success' },
-                ]}
-                initialRows={[
-                  { name: 'Cà phê Muối Signature', cat: 'Đồ uống', price: '45.000₫', st: 'Còn hàng' },
-                  { name: 'Trà Đào Cam Sả', cat: 'Đồ uống', price: '49.000₫', st: 'Còn hàng' },
-                  { name: 'Nước Ion Pocari Sweat', cat: 'Đồ uống', price: '30.000₫', st: 'Còn hàng' },
-                  { name: 'Bánh Mì Thịt Nướng Bơ Tỏi', cat: 'Đồ ăn', price: '55.000₫', st: 'Còn hàng' },
-                  { name: 'Combo Swing & Coffee', cat: 'Combo', price: '79.000₫', st: 'Còn hàng' },
-                ]}
+                onChanged={onChanged}
               />
               <div style={{ marginTop: '14px', textAlign: 'right' }}>
                 <button
@@ -2067,28 +2524,18 @@ function SettingsCardModal({
           )}
 
           {cardId === 'extra_services' && (
-            <EditableCrudList
-              storageKey="extra_services"
-              description="Thêm, sửa, xóa bảng giá dịch vụ bổ sung: Thuê gậy, Caddie hỗ trợ, Găng tay, Giày tập."
+            <DatabaseMenuCrudManager
+              mode="service"
               onNotify={onShowToast}
-              columns={[
-                { key: 'name', label: 'Tên dịch vụ', placeholder: 'VD: Thuê bộ gậy TaylorMade' },
-                { key: 'unit', label: 'Đơn vị tính', placeholder: 'Buổi chơi / Giờ' },
-                { key: 'price', label: 'Đơn giá', placeholder: 'VD: 150.000₫', badge: 'success' },
-                { key: 'note', label: 'Ghi chú', placeholder: 'VD: Nam / Cán R' },
-              ]}
-              initialRows={[
-                { name: 'Thuê bộ gậy TaylorMade Stealth', unit: 'Buổi chơi', price: '150.000₫', note: 'Nam / Cán R' },
-                { name: 'Thuê bộ gậy Nữ Callaway Reva', unit: 'Buổi chơi', price: '150.000₫', note: 'Nữ / Cán L' },
-                { name: 'Phí Caddie hỗ trợ Swing / Nhặt bóng', unit: 'Giờ', price: '100.000₫', note: 'Cần đặt trước' },
-                { name: 'Thuê giày golf FootJoy', unit: 'Buổi', price: '50.000₫', note: 'Size 38 - 43' },
-              ]}
+              onChanged={onChanged}
             />
           )}
 
           {cardId === 'inventory_stock' && (
             <EditableCrudList
               storageKey="inventory_stock_rules"
+              savedRows={config.customTables?.inventory_stock_rules}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa định mức tồn kho tối thiểu và quy tắc cảnh báo cho các nhóm hàng."
               onNotify={onShowToast}
               columns={[
@@ -2108,6 +2555,8 @@ function SettingsCardModal({
           {cardId === 'suppliers_vendor' && (
             <EditableCrudList
               storageKey="suppliers_vendor"
+              savedRows={config.customTables?.suppliers_vendor}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa danh sách nhà cung cấp đồ uống, thực phẩm và trang thiết bị sân tập 3D."
               onNotify={onShowToast}
               columns={[
@@ -2127,6 +2576,8 @@ function SettingsCardModal({
           {cardId === 'crm_lead_sources' && (
             <EditableCrudList
               storageKey="crm_lead_sources"
+              savedRows={config.customTables?.crm_lead_sources}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các kênh thu thập khách hàng tiềm năng (Lead Sources) cho CRM."
               onNotify={onShowToast}
               columns={[
@@ -2148,6 +2599,8 @@ function SettingsCardModal({
           {cardId === 'crm_pipeline' && (
             <EditableCrudList
               storageKey="crm_pipeline"
+              savedRows={config.customTables?.crm_pipeline}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các giai đoạn trong Pipeline bán hàng CRM từ Lead mới đến Chốt thành công."
               onNotify={onShowToast}
               columns={[
@@ -2168,6 +2621,8 @@ function SettingsCardModal({
           {cardId === 'crm_automation' && (
             <EditableCrudList
               storageKey="crm_automation"
+              savedRows={config.customTables?.crm_automation}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các kịch bản tự động gửi tin nhắn chăm sóc khách qua Zalo ZNS / SMS / Email."
               onNotify={onShowToast}
               columns={[
@@ -2188,6 +2643,8 @@ function SettingsCardModal({
           {cardId === 'crm_tags' && (
             <EditableCrudList
               storageKey="crm_tags"
+              savedRows={config.customTables?.crm_tags}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các nhóm phân loại và thẻ Tag khách hàng trong CRM."
               onNotify={onShowToast}
               columns={[
@@ -2490,7 +2947,7 @@ function SettingsCardModal({
                   style={{
                     marginTop: 16,
                     padding: 16,
-                    borderRadius: 12,
+                    borderRadius: 5,
                     background: '#f8fafc',
                     border: '1px solid #cbd5e1',
                     display: 'flex',
@@ -2503,7 +2960,7 @@ function SettingsCardModal({
                     style={{
                       background: '#fff',
                       padding: 8,
-                      borderRadius: 10,
+                      borderRadius: 5,
                       border: '1px solid #e2e8f0',
                       textAlign: 'center',
                     }}
@@ -2519,7 +2976,7 @@ function SettingsCardModal({
                         amount: 50000,
                         note: 'SGGTESTQR',
                       })}
-                      style={{ display: 'block', borderRadius: 6 }}
+                      style={{ display: 'block', borderRadius: 5 }}
                     />
                     <small style={{ fontSize: 10.5, color: '#64748b' }}>QR SePay mẫu (50.000₫)</small>
                   </div>
@@ -2594,6 +3051,8 @@ function SettingsCardModal({
           {cardId === 'system_integrations' && (
             <EditableCrudList
               storageKey="system_integrations"
+              savedRows={config.customTables?.system_integrations}
+              onSyncTable={onSyncTable}
               description="Thêm, sửa, xóa các thiết bị phần cứng (Máy in, POS, Sensor 3D) và dịch vụ kết nối."
               onNotify={onShowToast}
               columns={[
@@ -2648,24 +3107,9 @@ function SettingsCardModal({
           )}
 
           {cardId === 'staff_roles' && (
-            <EditableCrudList
-              storageKey="staff_roles"
-              description="Thêm, sửa, xóa tài khoản nhân viên, phân quyền vai trò và trạng thái kích hoạt."
-              onNotify={onShowToast}
-              columns={[
-                { key: 'u', label: 'Tài khoản / Email', placeholder: 'VD: sale01@sigolf.vn' },
-                { key: 'name', label: 'Họ và tên', placeholder: 'VD: Nguyễn Văn Nam' },
-                { key: 'role', label: 'Vai trò', placeholder: 'Quản lý ca / Thu ngân / Lễ tân', badge: 'info' },
-                { key: 'perm', label: 'Quyền hạn truy cập', placeholder: 'VD: POS, Đặt sân, CRM' },
-                { key: 'st', label: 'Trạng thái', placeholder: 'Hoạt động', badge: 'success' },
-              ]}
-              initialRows={[
-                { u: 'admin', name: 'Quản trị viên', role: 'Chủ cơ sở', perm: 'Toàn quyền hệ thống', st: 'Hoạt động' },
-                { u: 'manager', name: 'Nguyễn Văn Quản Lý', role: 'Quản lý ca', perm: 'POS, Báo cáo, Đặt sân', st: 'Hoạt động' },
-                { u: 'cashier1', name: 'Trần Thị Thu Ngân', role: 'Thu ngân', perm: 'POS, Thanh toán, F&B', st: 'Hoạt động' },
-                { u: 'reception', name: 'Lê Hoàng Lễ Tân', role: 'Lễ tân', perm: 'Đặt sân, CRM Khách hàng', st: 'Hoạt động' },
-              ]}
-            />
+            <div>
+              <StaffPanel actorRole="owner" />
+            </div>
           )}
 
           {cardId === 'general_config' && (
@@ -2782,29 +3226,58 @@ function SettingsCardModal({
           )}
 
           {cardId === 'audit_logs' && (
-            <EditableCrudList
-              storageKey="audit_logs"
-              description="Nhật ký thao tác hệ thống (Cho phép ghi chú kiểm toán hoặc xóa bản ghi cũ)."
-              onNotify={onShowToast}
-              columns={[
-                { key: 'time', label: 'Thời gian', placeholder: 'VD: 14:20 Hôm nay' },
-                { key: 'user', label: 'Tài khoản', placeholder: 'VD: Admin' },
-                { key: 'act', label: 'Hành động', placeholder: 'VD: Lưu cấu hình', badge: 'info' },
-                { key: 'det', label: 'Chi tiết thao tác', placeholder: 'Mô tả chi tiết' },
-              ]}
-              initialRows={[
-                { time: '10:45:12 Hôm nay', user: 'Admin', act: 'Lưu cấu hình', det: 'Cập nhật giờ hoạt động 06:00 - 23:00' },
-                { time: '09:30:00 Hôm nay', user: 'manager', act: 'Check-in Line', det: 'Bắt đầu line VIP 01 cho khách VIP' },
-                { time: '08:15:22 Hôm nay', user: 'cashier1', act: 'Thanh toán POS', det: 'Hoàn tất đơn #HD-9082 (750.000₫)' },
-                { time: '21:05:14 Hôm qua', user: 'Admin', act: 'Đăng nhập', det: 'Đăng nhập thành công vào hệ thống Quản trị' },
-              ]}
-            />
+            <div>
+              {data?.audit && data.audit.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, color: '#059669', fontWeight: 600, marginBottom: 8 }}>
+                    ✓ Nhật ký thao tác thời gian thực từ cơ sở dữ liệu hệ thống ({data.audit.length} bản ghi mới nhất):
+                  </p>
+                  <table className="ar-modal-table">
+                    <thead>
+                      <tr>
+                        <th>Thời gian</th>
+                        <th>Hành động</th>
+                        <th>Chi tiết thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.audit.slice(0, 15).map((a) => (
+                        <tr key={a.id}>
+                          <td>{new Date(a.created).toLocaleString('vi-VN')}</td>
+                          <td><span className="ar-status-badge ar-badge-info">{a.action}</span></td>
+                          <td>{a.detail}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <EditableCrudList
+                storageKey="audit_logs"
+                savedRows={config.customTables?.audit_logs}
+                onSyncTable={onSyncTable}
+                description="Ghi chú kiểm toán bổ sung của Quản trị viên (đồng bộ cơ sở dữ liệu)."
+                onNotify={onShowToast}
+                columns={[
+                  { key: 'time', label: 'Thời gian', placeholder: 'VD: 14:20 Hôm nay' },
+                  { key: 'user', label: 'Tài khoản', placeholder: 'VD: Admin' },
+                  { key: 'act', label: 'Hành động', placeholder: 'VD: Lưu cấu hình', badge: 'info' },
+                  { key: 'det', label: 'Chi tiết thao tác', placeholder: 'Mô tả chi tiết' },
+                ]}
+                initialRows={[
+                  { time: '10:45:12 Hôm nay', user: 'Admin', act: 'Lưu cấu hình', det: 'Cập nhật giờ hoạt động 06:00 - 23:00' },
+                  { time: '09:30:00 Hôm nay', user: 'manager', act: 'Check-in Line', det: 'Bắt đầu line VIP 01 cho khách VIP' },
+                ]}
+              />
+            </div>
           )}
 
           {/* Custom Admin-Created Function Card -> Full CRUD Parameter Table */}
           {String(cardId).startsWith('custom_') && (
             <EditableCrudList
               storageKey={cardId}
+              savedRows={config.customTables?.[cardId]}
+              onSyncTable={onSyncTable}
               description={`Danh sách thông số và quy tắc cấu hình cho chức năng "${card.title}".`}
               onNotify={onShowToast}
               columns={[

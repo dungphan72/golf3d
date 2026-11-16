@@ -1,4 +1,4 @@
-﻿import type { Metadata } from 'next';
+import type { Metadata } from 'next';
 import '../home2.css';
 import '../sub.css';
 import '../tai-khoan/portal.css';
@@ -23,7 +23,7 @@ export default async function MembershipPage() {
   const pricing = await publicPricing();
   const overview: Overview = {
     profile: { name: 'Đăng nhập để xem thẻ', phone: '', email: '', verified: false },
-    club: { name: BRAND.name, address: BRAND.address },
+    club: { name: pricing.clubName || BRAND.name, address: pricing.clubAddress || BRAND.address },
     benefits: pricing.benefits,
     catalog: pricing.groups.flatMap((g) =>
       g.items.map((p) => ({
@@ -39,7 +39,7 @@ export default async function MembershipPage() {
     points: 0,
     packages: [],
     activity: [],
-    booking: { enabled: true, vip: true, services: ['gdr'], days: 28 },
+    booking: { enabled: true, vip: true, services: ['gdr'], days: pricing.days || 28 },
   };
   return (
     <div className="sg-page">

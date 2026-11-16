@@ -102,6 +102,84 @@ export const configSchema = z
       .optional(),
     priceRules: z.array(ruleSchema).max(300),
     holidays: z.array(holiday).max(366),
+    hotline: z.string().trim().max(40).optional(),
+    email: z.string().trim().max(120).optional(),
+    website: z.string().trim().max(200).optional(),
+    logo: z.string().trim().max(300).optional(),
+    invoiceHeader: z.string().trim().max(150).optional(),
+    taxCode: z.string().trim().max(40).optional(),
+    invoiceFooterNote: z.string().trim().max(200).optional(),
+    depositPercent: z.number().min(0).max(100).optional(),
+    autoCancelGrace: z.number().min(0).max(1440).optional(),
+    generalConfig: z
+      .object({
+        language: z.string().max(10).optional(),
+        currency: z.string().max(10).optional(),
+        dateFormat: z.string().max(20).optional(),
+        soundAlert: z.boolean().optional(),
+        autoRefreshSec: z.number().int().min(5).max(3600).optional(),
+      })
+      .optional(),
+    marketingConfig: z
+      .object({
+        fbPixel: z.string().max(80).optional(),
+        ga4Id: z.string().max(80).optional(),
+        mapsPlaceId: z.string().max(120).optional(),
+        zaloOaId: z.string().max(80).optional(),
+      })
+      .optional(),
+    matchmakingConfig: z
+      .object({
+        enabled: z.boolean().optional(),
+        maxHdcDiff: z.number().min(0).max(54).optional(),
+        autoNotifyZalo: z.boolean().optional(),
+      })
+      .optional(),
+    tournamentConfig: z
+      .object({
+        defaultFormat: z.string().max(80).optional(),
+        hdcSystem: z.string().max(80).optional(),
+        liveLeaderboard: z.boolean().optional(),
+      })
+      .optional(),
+    academyConfig: z
+      .object({
+        commissionRate: z.number().min(0).max(100).optional(),
+        lessonMinutes: z.number().int().min(15).max(480).optional(),
+        freeTrialAvailable: z.boolean().optional(),
+      })
+      .optional(),
+    customTables: z
+      .record(z.string().max(80), z.array(z.record(z.string().max(60), z.string().max(500))).max(200))
+      .optional(),
+    customCards: z
+      .array(
+        z.object({
+          id: z.string().max(80),
+          cat: z.string().max(40),
+          title: z.string().max(120),
+          subtitle: z.string().max(200),
+          badge: z.string().max(60),
+          badgeType: z.string().max(30),
+          iconBg: z.string().max(40),
+          meta: z
+            .array(z.object({ label: z.string().max(80), value: z.string().max(120) }))
+            .max(10),
+        }),
+      )
+      .max(100)
+      .optional(),
+    cardTitleOverrides: z
+      .record(
+        z.string().max(80),
+        z.object({
+          title: z.string().max(120),
+          subtitle: z.string().max(200),
+          badge: z.string().max(60),
+        }),
+      )
+      .optional(),
+    hiddenCardIds: z.array(z.string().max(80)).max(100).optional(),
   })
   .superRefine((c, ctx) => {
     if (c.feeMode === 'fixed' && c.fee != null && !Number.isInteger(c.fee))

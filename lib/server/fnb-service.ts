@@ -1,4 +1,4 @@
-import { db, type ServiceResult } from './common';
+import { db, audit, type ServiceResult } from './common';
 import {
   type fnbInput,
   lineQuote,
@@ -21,6 +21,7 @@ const reply = (body: Record<string, unknown>, status = 200): R => ({ status, bod
 const error = (message: string, status = 400): R => reply({ error: message }, status);
 
 export type FnbInput = z.infer<typeof fnbInput>;
+
 export async function loadFnb(tenant: string, booking: string | null): Promise<R> {
   try {
     if (
@@ -133,6 +134,34 @@ export async function applyFnb(tenant: string, actor: string, input: FnbInput): 
       return result.meta.changes
         ? reply({ ok: true })
         : error('Món vừa thay đổi. Tải lại trước khi sửa.', 409);
+    }
+    if (input.action === 'item-delete') {
+      const item = await db()
+        .prepare('SELECT name FROM menu_items WHERE tenant=? AND id=?')
+        .bind(tenant, input.id)
+        .first<{ name: string }>();
+      if (!item) return error('Không tìm thấy món', 404);
+      // Past orders keep their own item snapshot. An item with stock history is hidden, not removed,
+      // so stock movements never point at a missing item.
+      const used = await db()
+        .prepare(
+          'SELECT 1 AS x FROM stock_items WHERE tenant=? AND item_id=? UNION ALL SELECT 1 FROM stock_movements WHERE tenant=? AND item_id=? LIMIT 1',
+        )
+        .bind(tenant, input.id, tenant, input.id)
+        .first();
+      if (used) {
+        await db()
+          .prepare('UPDATE menu_items SET active=0, version=version+1 WHERE tenant=? AND id=?')
+          .bind(tenant, input.id)
+          .run();
+      } else {
+        await db()
+          .prepare('DELETE FROM menu_items WHERE tenant=? AND id=?')
+          .bind(tenant, input.id)
+          .run();
+      }
+      await audit(tenant, used ? 'Ẩn món' : 'Xóa món', item.name);
+      return reply({ ok: true, hidden: Boolean(used) });
     }
     if (input.action === 'order') {
       const items: FoodLine[] = [];

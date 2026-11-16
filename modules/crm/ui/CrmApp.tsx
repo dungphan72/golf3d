@@ -965,34 +965,155 @@ export function CrmModule({
     message: 'Chào {ten}, Saigon Indoor Golf Club gửi tặng Quý khách ưu đãi giảm 15% khi gia hạn thẻ hội viên trong tháng này!',
   });
 
-  // Merge live customers & leads from API if available
+  // Merge live customers, members, bookings & leads from Single Source of Truth APIs
   useEffect(() => {
     let active = true;
-    call<{
-      customers?: {
-        id: string;
-        name: string;
-        phone: string;
-        email: string;
-        birthday: string;
-        visits: number;
-        spend: number;
-        points: number;
-      }[];
-    }>('/api/crm2/care-customers')
-      .then((res) => {
-        if (!active || !res.customers?.length) return;
+    const syncFromBackend = () => {
+      Promise.all([
+        call<{
+          customers?: {
+            id: string;
+            name: string;
+            phone: string;
+            email?: string;
+            birthday?: string;
+            visits?: number;
+            spend?: number;
+            points?: number;
+          }[];
+        }>('/api/crm2/care-customers').catch(() => ({ customers: [] })),
+        call<{
+          customers?: {
+            id: string;
+            name: string;
+            phone: string;
+            note?: string;
+            points?: number;
+          }[];
+        }>('/api/members?q=').catch(() => ({ customers: [] })),
+        call<{
+          config?: {
+            tierThresholds?: { gold: number; platinum: number; diamond: number };
+          };
+          bookings?: {
+            id: string;
+            room: string;
+            customer: string;
+            phone: string;
+            service: string;
+            start: number;
+            end: number;
+            status: string;
+            amount: number | null;
+            payment: string | null;
+          }[];
+        }>('/api/club').catch(() => ({ config: undefined, bookings: [] })),
+      ]).then(([careRes, memRes, clubRes]) => {
+        if (!active) return;
+        const goldTh = clubRes.config?.tierThresholds?.gold ?? 20_000_000;
+        const platTh = clubRes.config?.tierThresholds?.platinum ?? 50_000_000;
+        const diaTh = clubRes.config?.tierThresholds?.diamond ?? 100_000_000;
+        const allBookings = clubRes.bookings ?? [];
+
+        const mergedRaw = new Map<
+          string,
+          {
+            id: string;
+            name: string;
+            phone: string;
+            email?: string;
+            birthday?: string;
+            visits?: number;
+            spend?: number;
+            points?: number;
+            note?: string;
+          }
+        >();
+
+        for (const c of careRes.customers ?? []) {
+          const norm = (c.phone || '').replace(/\D+/g, '');
+          if (norm) mergedRaw.set(norm, { ...c });
+        }
+        for (const m of memRes.customers ?? []) {
+          const norm = (m.phone || '').replace(/\D+/g, '');
+          if (!norm) continue;
+          const prev = mergedRaw.get(norm);
+          mergedRaw.set(norm, {
+            id: prev?.id || m.id,
+            name: m.name || prev?.name || 'Khách hàng',
+            phone: m.phone || prev?.phone || '',
+            email: prev?.email,
+            birthday: prev?.birthday,
+            visits: prev?.visits,
+            spend: prev?.spend,
+            points: Math.max(m.points ?? 0, prev?.points ?? 0),
+            note: m.note || prev?.note,
+          });
+        }
+
+        if (mergedRaw.size === 0 && allBookings.length === 0) return;
+
         setCustomers((prev) => {
-          const existingPhones = new Set(prev.map((c) => c.phone.replace(/\s+/g, '')));
+          // Also enrich existing customers with live booking history & transactions if phone matches
+          const updatedPrev = prev.map((cust) => {
+            const norm = cust.phone.replace(/\D+/g, '');
+            const custBookings = allBookings.filter(
+              (b) => b.phone && b.phone.replace(/\D+/g, '') === norm,
+            );
+            if (!custBookings.length) return cust;
+            const liveHistory: CustomerBookingRecord[] = custBookings.slice(0, 15).map((b) => {
+              const d = new Date(b.start);
+              const e = new Date(b.end);
+              const durHrs = Math.max(0.5, Math.round(((b.end - b.start) / 3600000) * 10) / 10);
+              return {
+                id: b.id,
+                date: d.toLocaleDateString('vi-VN'),
+                time: `${d.toTimeString().slice(0, 5)} – ${e.toTimeString().slice(0, 5)}`,
+                line: b.room.toUpperCase(),
+                service: b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`,
+                duration: `${durHrs} giờ`,
+                amount: b.amount ?? 350000,
+                status:
+                  b.status === 'cancelled'
+                    ? 'Đã hủy'
+                    : b.status === 'paid' || b.status === 'finished'
+                      ? 'Hoàn tất'
+                      : 'Đang đặt',
+              };
+            });
+            return {
+              ...cust,
+              bookingHistory: liveHistory.length ? liveHistory : cust.bookingHistory,
+            };
+          });
+
+          const existingPhones = new Set(updatedPrev.map((c) => c.phone.replace(/\D+/g, '')));
           const extra: CustomerRecord[] = [];
-          for (const raw of res.customers ?? []) {
-            const norm = raw.phone.replace(/\s+/g, '');
+          for (const [norm, raw] of mergedRaw.entries()) {
             if (!existingPhones.has(norm) && raw.name) {
               existingPhones.add(norm);
+              const custBookings = allBookings.filter(
+                (b) => b.phone && b.phone.replace(/\D+/g, '') === norm,
+              );
+              const calcSpend =
+                raw.spend ??
+                custBookings
+                  .filter((b) => b.status === 'paid' || b.status === 'finished')
+                  .reduce((s, b) => s + (b.amount ?? 0), 0);
+              const tier: TierKind =
+                calcSpend >= diaTh
+                  ? 'vip'
+                  : calcSpend >= platTh
+                    ? 'platinum'
+                    : calcSpend >= goldTh
+                      ? 'gold'
+                      : calcSpend > 0
+                        ? 'silver'
+                        : 'none';
               extra.push({
                 id: raw.id,
                 code: `KH${raw.id.slice(-6).toUpperCase()}`,
-                memberCode: raw.spend > 5000000 ? `HV-GD-${raw.id.slice(-4).toUpperCase()}` : 'Chưa cấp thẻ',
+                memberCode: tier !== 'none' ? `HV-${tier.slice(0, 2).toUpperCase()}-${raw.id.slice(-4).toUpperCase()}` : 'Chưa cấp thẻ',
                 name: raw.name,
                 gender: 'Nam',
                 phone: raw.phone,
@@ -1001,78 +1122,100 @@ export function CrmModule({
                 age: 38,
                 address: 'TP. Hồ Chí Minh',
                 avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80',
-                tier: raw.spend > 10000000 ? 'platinum' : raw.spend > 3000000 ? 'gold' : 'silver',
+                tier,
                 status: 'active',
-                segment: ['member'],
-                source: 'POS',
+                segment: tier !== 'none' ? ['member'] : ['lead'],
+                source: 'POS / Đặt sân',
                 lastDate: 'Gần đây',
-                lastAction: 'Chơi golf',
-                memberDaysLeft: 60,
+                lastAction: custBookings.length ? 'Đặt sân / Chơi golf' : 'Hồ sơ hệ thống',
+                memberDaysLeft: tier !== 'none' ? 60 : 0,
                 memberStart: '01/10/2026',
                 memberEnd: '31/12/2026',
-                memberProgress: 50,
-                discountPercent: 10,
-                pointMultiplier: 'x1.2',
+                memberProgress: tier !== 'none' ? 50 : 0,
+                discountPercent: tier === 'vip' ? 25 : tier === 'platinum' ? 20 : tier === 'gold' ? 15 : tier === 'silver' ? 10 : 0,
+                pointMultiplier: tier === 'vip' ? 'x2.5' : tier === 'platinum' ? 'x2.0' : tier === 'gold' ? 'x1.5' : 'x1.0',
                 stats: {
-                  bookings: raw.visits || 1,
+                  bookings: raw.visits || custBookings.length || 1,
                   bookingsDelta: '+10%',
-                  hours: `${(raw.visits || 1) * 1.5} giờ`,
+                  hours: `${((raw.visits || custBookings.length || 1) * 1.5).toFixed(1).replace('.', ',')} giờ`,
                   hoursDelta: '+10%',
-                  spend: raw.spend || 350000,
+                  spend: calcSpend || 350000,
                   spendDelta: '+15%',
-                  points: raw.points || 100,
+                  points: raw.points || Math.round((calcSpend || 350000) / 10000),
                 },
                 tags: ['Khách hàng hệ thống'],
-                internalNote: 'Đồng bộ từ dữ liệu đặt sân & POS.',
+                internalNote: raw.note || 'Đồng bộ tự động từ cơ sở dữ liệu Hội viên, Đặt sân & POS.',
                 timeline: [],
                 tasks: [],
-                bookingHistory: [],
+                bookingHistory: custBookings.slice(0, 15).map((b) => {
+                  const d = new Date(b.start);
+                  const e = new Date(b.end);
+                  const durHrs = Math.max(0.5, Math.round(((b.end - b.start) / 3600000) * 10) / 10);
+                  return {
+                    id: b.id,
+                    date: d.toLocaleDateString('vi-VN'),
+                    time: `${d.toTimeString().slice(0, 5)} – ${e.toTimeString().slice(0, 5)}`,
+                    line: b.room.toUpperCase(),
+                    service: b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`,
+                    duration: `${durHrs} giờ`,
+                    amount: b.amount ?? 350000,
+                    status:
+                      b.status === 'cancelled'
+                        ? 'Đã hủy'
+                        : b.status === 'paid' || b.status === 'finished'
+                          ? 'Hoàn tất'
+                          : 'Đang đặt',
+                  };
+                }),
                 transactions: [],
                 opportunities: [],
               });
             }
           }
-          return extra.length ? [...prev, ...extra] : prev;
+          return extra.length ? [...updatedPrev, ...extra] : updatedPrev;
         });
-      })
-      .catch(() => undefined);
+      });
 
-    call<{
-      leads?: {
-        id: string;
-        fullName: string;
-        phone: string;
-        email: string;
-        source: string;
-        targetService: string;
-        stage: string;
-        notes: string;
-      }[];
-    }>('/api/crm2/leads')
-      .then((res) => {
-        if (!active || !res.leads?.length) return;
-        setLeadsList((prev) => {
-          const existingIds = new Set(prev.map((l) => l.id));
-          const extra = (res.leads ?? [])
-            .filter((l) => !existingIds.has(l.id) && l.fullName)
-            .map((l) => ({
-              id: l.id,
-              fullName: l.fullName,
-              phone: l.phone || 'Chưa có SĐT',
-              email: l.email || '',
-              source: l.source || 'Website',
-              targetService: l.targetService || 'Thẻ Hội viên Gold',
-              stage: l.stage === 'WON' ? 'Đã chốt' : 'Mới tiếp nhận',
-              notes: l.notes || 'Tiếp nhận từ hệ thống',
-              created: 'Hôm nay',
-            }));
-          return extra.length ? [...extra, ...prev] : prev;
-        });
-      })
-      .catch(() => undefined);
+      call<{
+        leads?: {
+          id: string;
+          fullName: string;
+          phone: string;
+          email: string;
+          source: string;
+          targetService: string;
+          stage: string;
+          notes: string;
+        }[];
+      }>('/api/crm2/leads')
+        .then((res) => {
+          if (!active || !res.leads?.length) return;
+          setLeadsList((prev) => {
+            const existingIds = new Set(prev.map((l) => l.id));
+            const extra = (res.leads ?? [])
+              .filter((l) => !existingIds.has(l.id) && l.fullName)
+              .map((l) => ({
+                id: l.id,
+                fullName: l.fullName,
+                phone: l.phone || 'Chưa có SĐT',
+                email: l.email || '',
+                source: l.source || 'Website',
+                targetService: l.targetService || 'Thẻ Hội viên Gold',
+                stage: l.stage === 'WON' ? 'Đã chốt' : 'Mới tiếp nhận',
+                notes: l.notes || 'Tiếp nhận từ hệ thống',
+                created: 'Hôm nay',
+              }));
+            return extra.length ? [...extra, ...prev] : prev;
+          });
+        })
+        .catch(() => undefined);
+    };
 
+    syncFromBackend();
+    window.addEventListener('sigolf:data-sync', syncFromBackend);
     return () => {
       active = false;
+      window.removeEventListener('sigolf:data-sync', syncFromBackend);
     };
   }, []);
 
@@ -1382,6 +1525,19 @@ export function CrmModule({
     } catch {
       /* fallback local id */
     }
+    try {
+      await call('/api/members', {
+        action: 'customer-create',
+        name: cleanName,
+        phone: cleanPhone,
+        note: `Nguồn CRM: ${newCustForm.source}`,
+      });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
+      }
+    } catch {
+      /* already exists in members table */
+    }
     const code = 'KH00' + Math.floor(1000 + Math.random() * 9000);
     const created: CustomerRecord = {
       id,
@@ -1676,7 +1832,7 @@ export function CrmModule({
             background: '#0f172a',
             color: '#ffffff',
             padding: '12px 18px',
-            borderRadius: 12,
+            borderRadius: 5,
             boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
             display: 'flex',
             alignItems: 'center',

@@ -84,7 +84,7 @@ export function PackageRedeem({
     }
   }
   return (
-    <div className="info-strip" style={{ marginBottom: 8, padding: '10px 14px', borderRadius: 8 }}>
+    <div className="info-strip" style={{ marginBottom: 8, padding: '10px 14px', borderRadius: 5 }}>
       {data.covered > 0 ? (
         <p style={{ margin: 0, fontSize: 13 }}>
           Đã trừ gói: <strong>{fmt(data.covered)}</strong> · Còn lại:{' '}

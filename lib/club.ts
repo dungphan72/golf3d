@@ -54,6 +54,57 @@ export type Config = {
   memberBenefits?: string[];
   /** Spending (đồng) that earns Gold / Platinum / Diamond. Unset = 50 / 80 / 100 million. */
   tierThresholds?: { gold: number; platinum: number; diamond: number };
+  /** Extended facility, invoice, and operational settings (Single Source of Truth). */
+  hotline?: string;
+  email?: string;
+  website?: string;
+  logo?: string;
+  invoiceHeader?: string;
+  taxCode?: string;
+  invoiceFooterNote?: string;
+  depositPercent?: number;
+  autoCancelGrace?: number;
+  generalConfig?: {
+    language?: string;
+    currency?: string;
+    dateFormat?: string;
+    soundAlert?: boolean;
+    autoRefreshSec?: number;
+  };
+  marketingConfig?: {
+    fbPixel?: string;
+    ga4Id?: string;
+    mapsPlaceId?: string;
+    zaloOaId?: string;
+  };
+  matchmakingConfig?: {
+    enabled?: boolean;
+    maxHdcDiff?: number;
+    autoNotifyZalo?: boolean;
+  };
+  tournamentConfig?: {
+    defaultFormat?: string;
+    hdcSystem?: string;
+    liveLeaderboard?: boolean;
+  };
+  academyConfig?: {
+    commissionRate?: number;
+    lessonMinutes?: number;
+    freeTrialAvailable?: boolean;
+  };
+  customTables?: Record<string, Record<string, string>[]>;
+  customCards?: {
+    id: string;
+    cat: string;
+    title: string;
+    subtitle: string;
+    badge: string;
+    badgeType: string;
+    iconBg: string;
+    meta: { label: string; value: string }[];
+  }[];
+  cardTitleOverrides?: Record<string, { title: string; subtitle: string; badge: string }>;
+  hiddenCardIds?: string[];
 };
 export const defaults: Config = {
   name: 'SaiGon Indoor Golf Club',

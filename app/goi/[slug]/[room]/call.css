@@ -35,7 +35,7 @@
 }
 .call-grid button {
   min-height: 120px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid #d8ded6;
   background: #fff;
   color: #0a5c1e;
@@ -63,7 +63,7 @@
   justify-items: center;
   text-align: center;
   padding: 24px 16px;
-  border-radius: 16px;
+  border-radius: 5px;
   background: #fff;
   border: 1px solid #cfdcc8;
 }
@@ -81,7 +81,7 @@
   margin-top: 8px;
   min-height: 48px;
   padding: 0 20px;
-  border-radius: 12px;
+  border-radius: 5px;
   border: 0;
   background: #165a3c;
   color: #fff;
@@ -95,7 +95,7 @@
 .call-error {
   background: #fbeae6;
   color: #8a3b29;
-  border-radius: 12px;
+  border-radius: 5px;
   padding: 12px 14px;
   text-align: center;
 }

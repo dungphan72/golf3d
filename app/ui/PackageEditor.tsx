@@ -226,7 +226,7 @@ export function PackageEditor({
       style={{
         background: '#f8fafc',
         border: '1px solid #cbd5e1',
-        borderRadius: 12,
+        borderRadius: 5,
         padding: 18,
         marginBottom: 16,
       }}
@@ -255,7 +255,7 @@ export function PackageEditor({
                 style={{
                   fontSize: 11.5,
                   padding: '4px 9px',
-                  borderRadius: 6,
+                  borderRadius: 5,
                   border: '1px solid #cbd5e1',
                   background: '#ffffff',
                   color: '#0f172a',
@@ -312,7 +312,7 @@ export function PackageEditor({
                 style={{
                   padding: '6px 8px',
                   fontSize: 11.5,
-                  borderRadius: 6,
+                  borderRadius: 5,
                   border: Number(days) === d ? '1px solid #059669' : '1px solid #cbd5e1',
                   background: Number(days) === d ? '#ecfdf5' : '#ffffff',
                   color: Number(days) === d ? '#047857' : '#475569',
@@ -370,7 +370,7 @@ export function PackageEditor({
         </label>
       </div>
 
-      <fieldset style={{ marginTop: 12, borderRadius: 8, border: '1px solid #cbd5e1', padding: 12 }}>
+      <fieldset style={{ marginTop: 12, borderRadius: 5, border: '1px solid #cbd5e1', padding: 12 }}>
         <legend style={{ fontSize: 12.5, fontWeight: 700, color: '#334155', padding: '0 6px' }}>
           Định mức Giờ chơi & Số lượt trong gói
         </legend>
@@ -571,7 +571,7 @@ export function PackageCatalogManager({
           padding: '12px 16px',
           background: '#f0fdf4',
           border: '1px solid #bbf7d0',
-          borderRadius: 10,
+          borderRadius: 5,
           marginBottom: 14,
         }}
       >
@@ -702,7 +702,7 @@ export function PackageCatalogManager({
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
                 padding: '7px 12px 7px 30px',
-                borderRadius: 8,
+                borderRadius: 5,
                 border: '1px solid #cbd5e1',
                 fontSize: 13,
                 minWidth: 190,
@@ -782,7 +782,7 @@ export function PackageCatalogManager({
                           display: 'inline-block',
                           marginLeft: 6,
                           padding: '2px 8px',
-                          borderRadius: 6,
+                          borderRadius: 5,
                           fontSize: 11,
                           fontWeight: 600,
                           background: '#f1f5f9',

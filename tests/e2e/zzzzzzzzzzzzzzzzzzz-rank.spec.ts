@@ -16,7 +16,9 @@ test('hạng hội viên tính theo tổng chi tiêu và mốc sửa được tr
   expect((await owner.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
 
   // Default marks: 50 / 80 / 100 million.
-  let { config, activeShift } = await (await owner.get('/api/club')).json();
+  const first = await (await owner.get('/api/club')).json();
+  let { config } = first;
+  const { activeShift } = first;
   const cashier = { open: async () => post(owner, '/api/finance', { action: 'open', requestId: key(), name: 'Ca hạng', openingCash: 0 }) };
   if (!activeShift) await cashier.open();
 

@@ -154,7 +154,7 @@ export function SepaySettings() {
             alignItems: 'center',
             gap: 6,
             padding: '8px 14px',
-            borderRadius: 8,
+            borderRadius: 5,
             background: '#059669',
             color: '#ffffff',
             fontWeight: 600,
@@ -173,7 +173,7 @@ export function SepaySettings() {
           margin: '14px 0',
           padding: 14,
           background: '#f8fafc',
-          borderRadius: 10,
+          borderRadius: 5,
           border: '1px solid #e2e8f0',
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
@@ -297,7 +297,7 @@ export function SepaySettings() {
           <div
             style={{
               padding: '10px 14px',
-              borderRadius: 8,
+              borderRadius: 5,
               background: configured ? '#f0fdf4' : '#fffbeb',
               border: configured ? '1px solid #bbf7d0' : '1px solid #fef08a',
               color: configured ? '#166534' : '#854d0e',
@@ -423,7 +423,7 @@ export function SepaySettings() {
           style={{
             marginTop: 10,
             padding: '8px 12px',
-            borderRadius: 8,
+            borderRadius: 5,
             background: '#dcfce7',
             color: '#166534',
             fontWeight: 600,

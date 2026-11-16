@@ -27,6 +27,12 @@ export const fnbInput = z
       .strict(),
     z
       .object({
+        action: z.literal('item-delete'),
+        id,
+      })
+      .strict(),
+    z
+      .object({
         action: z.literal('order'),
         requestId,
         bookingId: id,

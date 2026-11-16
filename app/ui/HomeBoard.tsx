@@ -171,7 +171,7 @@ export function HomeBoard({
           style={{
             background: '#ffffff',
             padding: '12px 16px',
-            borderRadius: 10,
+            borderRadius: 5,
             border: '1px solid #e2e8f0',
             display: 'flex',
             alignItems: 'center',

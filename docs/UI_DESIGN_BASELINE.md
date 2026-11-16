@@ -8,7 +8,7 @@ Cập nhật: 15/11/2026. Mốc phục hồi: tag `ui-approved-2026-11-15` (comm
 | Font | Be Vietnam Pro, toàn hệ thống (`app/tokens.css`) |
 | Xanh thương hiệu | đậm `#0a5c1e`, nền nhạt `#e8f3ea`; hành động POS `#16a34a` |
 | Vàng logo | `#fcb000` |
-| Nền / thẻ | trắng, xám nhạt `#f8fafc`, viền `#e2e8f0`, bo 12–20px, bóng rất nhẹ |
+| Nền / thẻ | trắng, xám nhạt `#f8fafc`, viền `#e2e8f0`, bóng rất nhẹ. **Bo góc 5px thống nhất toàn hệ thống** (từ 16/11/2026, theo yêu cầu chủ hệ thống; chỉ giữ hình tròn, công tắc, thanh tiến độ) |
 | Icon | lucide-react, phẳng |
 | Điều hướng | Desktop: sidebar trái (`AdminReferenceShell`). Mobile: bottom navigation + header xanh |
 

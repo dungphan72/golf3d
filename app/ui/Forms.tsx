@@ -29,6 +29,7 @@ import { type Service } from '../../lib/pricing';
 import { rooms, ready, money, type Config } from '../../lib/club';
 
 import { MemberSelector } from './MemberSelector';
+import { normalizePhone, validPhone } from '../../lib/member';
 
 
 
@@ -137,42 +138,41 @@ export function BookingForm({
 
 
 
-  let estimate: ReturnType<typeof planBooking> | null = null,
-
-    estimateError = '';
-
-  try {
-
-    estimate = planBooking(
-
-      {
-
-        room,
-
-        service: service as Service,
-
-        start: Date.parse(start + ':00+07:00'),
-
-        people,
-
-        minutes,
-
-      },
-
-      config,
-
-      now,
-
-    );
-
-  } catch (e) {
-
-    estimateError = e instanceof Error ? e.message : 'Chưa có báo giá';
-
-  }
-
-
-
+  const startMs = Date.parse(start + ':00+07:00');
+  const plan = (svc: string, n: number) => {
+    try {
+      return {
+        quote: planBooking(
+          { room, service: svc as Service, start: startMs, people: n, minutes },
+          config,
+          now,
+        ),
+        error: '',
+      };
+    } catch (e) {
+      return { quote: null, error: e instanceof Error ? e.message : 'Chưa có báo giá' };
+    }
+  };
+  // A group size without a price in the table cannot be booked: it is disabled, never guessed.
+  const pricedPeople = [1, 2, 3, 4].map((n) => ({ n, ok: plan(service, n).quote !== null }));
+  const firstPriced = pricedPeople.find((x) => x.ok)?.n;
+  const guests = pricedPeople.find((x) => x.n === people)?.ok ? people : (firstPriced ?? people);
+  const { quote: estimate, error: estimateError } = plan(service, guests);
+  const noPrice = estimateError.startsWith('Chưa có giá');
+  const phoneOk = validPhone(normalizePhone(phone));
+  const startOk = Number.isFinite(startMs) && start >= minStart && start <= maxStart;
+  const conditions = [
+    { ok: customer.trim().length >= 2, text: 'Nhập tên khách' },
+    { ok: phoneOk, text: 'Nhập số điện thoại hợp lệ (bắt đầu bằng 0)' },
+    { ok: startOk, text: 'Chọn giờ bắt đầu trong khoảng cho phép đặt lịch' },
+    {
+      ok: !!estimate,
+      text: noPrice
+        ? 'Chưa có giá cho lựa chọn này: chọn dịch vụ, giờ hoặc số người khác'
+        : estimateError || 'Chưa có báo giá',
+    },
+  ];
+  const unmet = conditions.filter((c) => !c.ok);
   // Quick jump time helper (adds minutes to current start)
   function adjustTime(addMinutes: number) {
     const curr = Date.parse(start + ':00+07:00');
@@ -204,15 +204,9 @@ export function BookingForm({
         onSubmit={(e) => {
 
           e.preventDefault();
-
-          const f = new FormData(e.currentTarget);
-
-          const finalCustomer = String(f.get('customer') || customer || 'Khách đặt lịch');
-
-          const finalPhone = String(f.get('phone') || phone || '');
-
-
-
+          if (unmet.length || !ready(config)) return;
+          const finalCustomer = customer.trim();
+          const finalPhone = normalizePhone(phone);
           onSave({
 
             room,
@@ -221,12 +215,9 @@ export function BookingForm({
 
             expectedRevision: config.pricingRevision,
 
-            start: Date.parse(start + ':00+07:00'),
-
-            people,
-
+            start: startMs,
+            people: guests,
             minutes,
-
             customer: finalCustomer,
 
             phone: finalPhone,
@@ -481,24 +472,17 @@ export function BookingForm({
 
                 <div className="spec-btn-group">
 
-                  {[1, 2, 3, 4].map((n) => (
-
+                  {pricedPeople.map(({ n, ok }) => (
                     <button
-
                       key={n}
-
                       type="button"
-
-                      className={`btn-spec-pill ${people === n ? 'active' : ''}`}
-
+                      className={`btn-spec-pill ${guests === n ? 'active' : ''}`}
+                      disabled={!ok}
+                      title={ok ? undefined : 'Chưa có giá cho số người này'}
                       onClick={() => setPeople(n)}
-
                     >
-
                       {n} người
-
                     </button>
-
                   ))}
 
                 </div>
@@ -645,7 +629,11 @@ export function BookingForm({
 
           ) : (
 
-            <p role="status" className="estimate-error">{estimateError}</p>
+            <p role="status" className="estimate-empty">
+              {noPrice
+                ? 'Chưa có báo giá cho lựa chọn này. Hãy chọn số người, dịch vụ hoặc giờ khác; nếu vẫn thiếu, bổ sung khung giá trong Cài đặt › Giá.'
+                : estimateError}
+            </p>
 
           )}
 
@@ -653,15 +641,18 @@ export function BookingForm({
 
 
 
+        {unmet.length > 0 && (
+          <ul className="booking-unmet" aria-label="Điều kiện còn thiếu">
+            {unmet.map((c) => (
+              <li key={c.text}>{c.text}</li>
+            ))}
+          </ul>
+        )}
         <div className="form-footer operate-modal-footer">
-
           <button className="secondary" type="button" onClick={onClose}>
-
             Để sau
-
           </button>
-
-          <button className="primary btn-confirm-booking" disabled={busy || !ready(config) || !estimate}>
+          <button className="primary btn-confirm-booking" disabled={busy || !ready(config) || unmet.length > 0}>
 
             {busy ? 'Đang lưu…' : 'Xác nhận lịch đặt'}
 
@@ -896,7 +887,7 @@ export function SettingsForm({
                   alignItems: 'center',
                   gap: 8,
                   padding: '9px 16px',
-                  borderRadius: 8,
+                  borderRadius: 5,
                   cursor: 'pointer',
                 }}
                 onClick={async () => {
@@ -1517,7 +1508,7 @@ export function SettingsForm({
 
                 padding: '18px 20px',
 
-                borderRadius: 12,
+                borderRadius: 5,
 
                 background: '#f8fafc',
 
@@ -1539,7 +1530,7 @@ export function SettingsForm({
 
                   padding: 10,
 
-                  borderRadius: 10,
+                  borderRadius: 5,
 
                   boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
 
@@ -1561,7 +1552,7 @@ export function SettingsForm({
 
                     src={`https://img.vietqr.io/image/${encodeURIComponent(c.bankBin)}-${encodeURIComponent(c.bankAccount)}-compact2.png?amount=50000&addInfo=TEST%20GOLF3D&accountName=${encodeURIComponent(c.bankHolder || 'SAIGON GOLF')}`}
 
-                    style={{ display: 'block', borderRadius: 6 }}
+                    style={{ display: 'block', borderRadius: 5 }}
 
                   />
 
@@ -1601,7 +1592,7 @@ export function SettingsForm({
 
                   </p>
 
-                  <div style={{ fontSize: 13, color: '#475569', background: '#e0f2fe', padding: '8px 12px', borderRadius: 6, border: '1px solid #bae6fd' }}>
+                  <div style={{ fontSize: 13, color: '#475569', background: '#e0f2fe', padding: '8px 12px', borderRadius: 5, border: '1px solid #bae6fd' }}>
 
                     💡 <strong>Mẹo kiểm tra:</strong> Hãy mở App ngân hàng trên điện thoại quét thử mã QR này xem đúng tên chủ tài khoản và số tài khoản chưa trước khi bấm Lưu cấu hình.
 
@@ -1621,7 +1612,7 @@ export function SettingsForm({
 
               padding: '16px 20px',
 
-              borderRadius: 10,
+              borderRadius: 5,
 
               background: '#f0fdf4',
 

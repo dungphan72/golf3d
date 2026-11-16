@@ -92,7 +92,7 @@
   min-height: 46px;
   padding: 0 1.4rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--brass);
   color: #1c1200 !important;
   font: inherit;
@@ -126,7 +126,7 @@
   display: inline-block;
   margin: 0 0 1rem;
   padding: 0.4rem 0.95rem;
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--forest);
   color: #fff;
   font-size: 0.75rem;
@@ -139,14 +139,14 @@
 .sp-card {
   background: #fff;
   border: 1px solid var(--rule);
-  border-radius: 16px;
+  border-radius: 5px;
   box-shadow: 0 14px 30px -24px rgba(7, 53, 27, 0.55);
 }
 .hm .sp-tab {
   display: inline-block;
   margin: 0;
   padding: 0.5rem 1rem;
-  border-radius: 8px 8px 8px 0;
+  border-radius: 5px 5px 5px 0;
   background: var(--forest);
   color: #fff;
   font-size: 0.75rem;
@@ -291,14 +291,14 @@
   margin: 0;
   padding: 10px;
   background: #fff;
-  border-radius: 20px;
+  border-radius: 5px;
   box-shadow: 0 30px 60px -30px rgba(7, 53, 27, 0.6);
 }
 .sp-hero-card img {
   width: 100%;
   aspect-ratio: 5 / 4;
   object-fit: cover;
-  border-radius: 14px;
+  border-radius: 5px;
 }
 .sp-hero-card figcaption {
   position: absolute;
@@ -310,7 +310,7 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.7rem 0.9rem;
-  border-radius: 12px;
+  border-radius: 5px;
   background: rgba(244, 244, 241, 0.96);
   font-weight: 800;
   color: var(--forest);
@@ -324,7 +324,7 @@
 }
 .sp-hero-card figcaption a {
   padding: 0.5rem 0.9rem;
-  border-radius: 8px;
+  border-radius: 5px;
   background: var(--forest);
   color: #fff;
   font-size: 0.8125rem;
@@ -406,7 +406,7 @@
   left: 12px;
   top: 12px;
   padding: 0.3rem 0.7rem;
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--brass);
   color: #1c1200;
   font-size: 0.6875rem;
@@ -501,7 +501,7 @@
 }
 .hm .sp-rate .sp-tab {
   margin: 0;
-  border-radius: 0 0 10px 0;
+  border-radius: 0 0 5px 0;
 }
 .sp-table {
   overflow-x: auto;
@@ -522,10 +522,10 @@
   color: var(--forest);
 }
 .sp-table th:first-child {
-  border-radius: 8px 0 0 8px;
+  border-radius: 5px 0 0 5px;
 }
 .sp-table th:last-child {
-  border-radius: 0 8px 8px 0;
+  border-radius: 0 5px 5px 0;
 }
 .sp-table td {
   padding: 0.8rem;
@@ -556,7 +556,7 @@
 .hm .sp-gold .sp-tab,
 .hm .sp-quick .sp-tab {
   margin: 0 0 1rem -1.1rem;
-  border-radius: 0 0 10px 0;
+  border-radius: 0 0 5px 0;
 }
 .hm .sp-gold-when {
   margin: 0 0 0.9rem;
@@ -578,7 +578,7 @@
   align-items: baseline;
   gap: 0.4rem;
   padding: 0.75rem 0.9rem;
-  border-radius: 10px;
+  border-radius: 5px;
   background: #f4f4f1;
 }
 .sp-gold li b {
@@ -600,7 +600,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 0.9rem;
-  border-radius: 10px;
+  border-radius: 5px;
   background: #f4f4f1;
 }
 .sp-quick li.hot {
@@ -680,7 +680,7 @@
 .hm .sp-form .booking-embed input,
 .hm .sp-form .booking-embed select {
   background: #f6f6f3;
-  border-radius: 10px;
+  border-radius: 5px;
 }
 .sp-book-side {
   display: grid;
@@ -690,7 +690,7 @@
   display: grid;
   gap: 1.1rem;
   padding: 1.6rem;
-  border-radius: 16px;
+  border-radius: 5px;
   background: var(--forest);
   color: #d7e6da;
   box-shadow: 0 20px 40px -26px rgba(7, 53, 27, 0.8);
@@ -737,7 +737,7 @@
   width: 100%;
   height: 16rem;
   border: 0;
-  border-radius: 10px;
+  border-radius: 5px;
 }
 
 /* faq */

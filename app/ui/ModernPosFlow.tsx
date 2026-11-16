@@ -65,7 +65,7 @@ import {
   type Entry,
 } from '../../lib/finance';
 import { discountFromPercent, changeDue, type BillInfo } from '../../lib/billing';
-import type { Bill, Service } from '../../lib/pricing';
+import { selectRule, type Bill, type Service } from '../../lib/pricing';
 import { foodLabels, type FoodLine, type MenuItem, type FoodOrder } from '../../lib/fnb';
 import type { Data } from './shared';
 import { time, date } from './shared';
@@ -114,32 +114,6 @@ interface CatalogProduct {
   sku: string;
   menuItem?: MenuItem;
 }
-
-const DEFAULT_PRODUCTS: CatalogProduct[] = [
-  // F&B
-  { id: 'fnb-coffee-milk', name: 'Cà phê sữa đá', category: 'fnb', price: 45000, unit: 'ly', sku: '89345602' },
-  { id: 'fnb-latte', name: 'Cà phê Latte', category: 'fnb', price: 55000, unit: 'ly', sku: '89345620' },
-  { id: 'fnb-orange', name: 'Nước cam tươi', category: 'fnb', price: 55000, unit: 'ly', sku: '89345603' },
-  { id: 'fnb-peach-tea', name: 'Trà đào cam sả', category: 'fnb', price: 55000, unit: 'ly', sku: '89345621' },
-  { id: 'fnb-water', name: 'Nước khoáng Lavie', category: 'fnb', price: 20000, unit: 'chai', sku: '89345601' },
-  { id: 'fnb-sandwich', name: 'Bánh mì Sandwich gà', category: 'fnb', price: 65000, unit: 'phần', sku: '89345604' },
-  { id: 'fnb-fries', name: 'Khoai tây chiên', category: 'fnb', price: 55000, unit: 'đĩa', sku: '89345622' },
-  { id: 'fnb-fruit', name: 'Đĩa trái cây theo mùa', category: 'fnb', price: 85000, unit: 'đĩa', sku: '89345607' },
-  // Phụ kiện
-  { id: 'acc-balls', name: 'Bóng golf Titleist (Hộp 3)', category: 'accessory', price: 120000, unit: 'hộp', sku: '89345610' },
-  { id: 'acc-glove', name: 'Găng tay golf da cao cấp', category: 'accessory', price: 250000, unit: 'chiếc', sku: '89345609' },
-  { id: 'acc-tee', name: 'Tee golf gỗ (Gói 10)', category: 'accessory', price: 30000, unit: 'gói', sku: '89345611' },
-  { id: 'acc-cap', name: 'Mũ golf Saigon Indoor Club', category: 'accessory', price: 280000, unit: 'chiếc', sku: '89345612' },
-  // Dịch vụ
-  { id: 'srv-club-rent', name: 'Thuê bộ gậy tập tiêu chuẩn', category: 'service', price: 150000, unit: 'bộ', sku: '89345613' },
-  { id: 'srv-glove-rent', name: 'Thuê găng tay tập', category: 'service', price: 30000, unit: 'chiếc', sku: '89345614' },
-  { id: 'srv-coach-30', name: 'HLV hướng dẫn (30 phút)', category: 'service', price: 300000, unit: 'buổi', sku: '89345615' },
-  { id: 'srv-vip-setup', name: 'Phục vụ phòng VIP riêng', category: 'service', price: 200000, unit: 'lượt', sku: '89345616' },
-  // Gói giờ
-  { id: 'pkg-10h', name: 'Thẻ tập 10 giờ (Tiêu chuẩn)', category: 'package', price: 2200000, unit: 'gói', sku: '89345630' },
-  { id: 'pkg-20h', name: 'Thẻ tập 20 giờ (Tiết kiệm)', category: 'package', price: 4000000, unit: 'gói', sku: '89345631' },
-  { id: 'pkg-vip-10h', name: 'Thẻ phòng VIP 10 giờ', category: 'package', price: 5200000, unit: 'gói', sku: '89345632' },
-];
 
 const SERVICE_LABEL: Record<string, string> = {
   gdr: 'Luyện tập theo giờ',
@@ -377,6 +351,20 @@ export function ModernPosFlow({
     loadCustomersDirectory(customerSearchQuery);
   }, [customerSearchQuery, loadCustomersDirectory]);
 
+  // Listen to global Single Source of Truth synchronization events
+  const reloadFood = food.reload;
+  const reloadGeneralFood = generalFood.reload;
+  useEffect(() => {
+    const onSync = () => {
+      reloadFood();
+      reloadGeneralFood();
+      loadCustomersDirectory(customerSearchQuery);
+      onRefresh();
+    };
+    window.addEventListener('sigolf:data-sync', onSync);
+    return () => window.removeEventListener('sigolf:data-sync', onSync);
+  }, [reloadFood, reloadGeneralFood, loadCustomersDirectory, customerSearchQuery, onRefresh]);
+
   // Load Finance Shift Summary & Entries for M09
   const loadFinanceOverview = useCallback(async () => {
     try {
@@ -427,13 +415,6 @@ export function ModernPosFlow({
         sku: m.id.slice(-8).toUpperCase(),
         menuItem: m,
       });
-    }
-
-    for (const def of DEFAULT_PRODUCTS) {
-      if (!seenNames.has(def.name.toLowerCase())) {
-        seenNames.add(def.name.toLowerCase());
-        list.push(def);
-      }
     }
 
     for (const pkg of memberTypes) {
@@ -561,14 +542,83 @@ export function ModernPosFlow({
     return 0;
   }, [activeBooking, tick]);
 
-  // Standard hourly rate display for a room
+  // Hourly rate shown for a room: the price rule that applies right now, never a guess.
   const getRoomRateLabel = useCallback(
     (vip: boolean) => {
-      const rate = vip ? (data.config.vipRate || data.config.rate * 2) : data.config.rate;
-      return money(rate) + '/giờ';
+      try {
+        return money(selectRule(tick, data.config, 'gdr', vip).amount) + '/giờ';
+      } catch {
+        return 'Chưa có khung giá';
+      }
     },
-    [data.config.rate, data.config.vipRate],
+    [data.config, tick],
   );
+
+  // One room card on the floor plan (standard lines and VIP rooms share it).
+  const renderDeskRoom = ({ room: r, statusKey, booking: rb, maint }: (typeof filteredRooms)[number]) => {
+    const liveAmt =
+      rb && rb.status === 'playing' && rb.started
+        ? (() => {
+            try {
+              const snap = JSON.parse(rb.price);
+              const segs: Segment[] = JSON.parse(rb.segments);
+              segs.push({ start: rb.started, end: tick });
+              return sessionQuote(rb.service as Service, segs, snap).total + (rb.food_total ?? 0);
+            } catch {
+              return rb.amount ?? 0;
+            }
+          })()
+        : (rb?.amount ?? 0);
+    const statusLabel =
+      statusKey === 'playing'
+        ? 'Đang chơi'
+        : statusKey === 'empty'
+          ? r.vip
+            ? 'Phòng trống'
+            : 'Line trống'
+          : statusKey === 'booked'
+            ? 'Đặt trước'
+            : statusKey === 'due'
+              ? 'Chờ thu'
+              : 'Bảo trì';
+    return (
+      <button
+        key={r.id}
+        type="button"
+        className={`pos-m3-desk-room-card ${r.vip ? 'vip ' : ''}${statusKey} ${selectedRoomId === r.id ? 'selected' : ''}`}
+        onClick={() => selectRoom(r.id)}
+      >
+        <span className="pos-m3-desk-room-name">
+          {r.vip ? <Crown size={16} /> : <Flag size={15} />}
+          <strong>{r.vip ? `Phòng ${r.name}` : r.name}</strong>
+          {r.vip && <em className="pos-m3-vip-pill">VIP</em>}
+          {r.left && <em className="pos-m3-lh-tag">Trái/Phải</em>}
+        </span>
+        <span className={`pos-m3-room-badge ${statusKey}`}>{statusLabel}</span>
+        {rb ? (
+          <span className="pos-m3-desk-info">
+            <strong className="pos-m3-desk-cust">{rb.customer}</strong>
+            <span>{rb.phone || 'Khách lẻ'}</span>
+            <span>
+              {SERVICE_LABEL[rb.service] || rb.service}
+              {r.vip ? ` · ${rb.people} khách` : ''}
+            </span>
+            <span className="pos-m3-desk-timer">
+              <Clock size={13} />
+              {rb.status === 'playing' || rb.status === 'paused'
+                ? clock(playedMs(rb, tick))
+                : `Hẹn ${time(rb.start)}`}
+            </span>
+            {canSeeMoney && <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>}
+          </span>
+        ) : maint ? (
+          <span className="pos-m3-desk-info">
+            <span>{maint.reason || 'Tạm ngưng nhận khách'}</span>
+          </span>
+        ) : null}
+      </button>
+    );
+  };
 
   // Keyboard shortcuts (F4 Cash Drawer) & Barcode Scanner
   useEffect(() => {
@@ -3048,6 +3098,7 @@ export function ModernPosFlow({
 
               {/* 2-Column Product Cards Grid */}
               <div className="pos-m3-catalog-grid">
+                {filteredCatalog.length === 0 && (<p className="pos-m3-empty-note">Chưa có món hoặc dịch vụ nào. Thêm trong Cài đặt hệ thống.</p>)}
                 {filteredCatalog.map((item) => {
                   const inCart = cart.find((c) => c.product.id === item.id);
                   return (
@@ -3745,76 +3796,7 @@ export function ModernPosFlow({
               <span>Đơn giá tiêu chuẩn: {getRoomRateLabel(false)}</span>
             </div>
             <div className="pos-m3-desktop-line-grid">
-              {filteredRooms
-                .filter((r) => !r.room.vip)
-                .map(({ room: r, statusKey, booking: rb, maint }) => {
-                  const isSelected = selectedRoomId === r.id;
-                  const liveAmt =
-                    rb && rb.status === 'playing' && rb.started
-                      ? (() => {
-                          try {
-                            const s = JSON.parse(rb.price);
-                            const segs: Segment[] = JSON.parse(rb.segments);
-                            segs.push({ start: rb.started, end: tick });
-                            return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
-                          } catch {
-                            return rb.amount ?? 0;
-                          }
-                        })()
-                      : (rb?.amount ?? 0);
-
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      className={`pos-m3-desk-room-card ${statusKey} ${isSelected ? 'selected' : ''}`}
-                      onClick={() => selectRoom(r.id)}
-                    >
-                      <div className="pos-m3-desk-room-top">
-                        <span className="pos-m3-desk-room-name">
-                          <Flag size={15} />
-                          <strong>{r.name}</strong>
-                          {r.left && <em className="pos-m3-lh-tag">Trái/Phải</em>}
-                        </span>
-                        <span className={`pos-m3-room-badge ${statusKey}`}>
-                          {statusKey === 'playing' && 'Đang chơi'}
-                          {statusKey === 'empty' && 'Sẵn sàng'}
-                          {statusKey === 'booked' && 'Đặt trước'}
-                          {statusKey === 'due' && 'Chờ thu'}
-                          {statusKey === 'maintenance' && 'Bảo trì'}
-                        </span>
-                      </div>
-
-                      {rb ? (
-                        <div className="pos-m3-desk-room-body">
-                          <strong className="pos-m3-desk-cust">{rb.customer}</strong>
-                          <small>{rb.phone || 'Khách lẻ'} · {SERVICE_LABEL[rb.service] || rb.service}</small>
-                          <div className="pos-m3-desk-room-foot">
-                            <span className="pos-m3-desk-timer">
-                              <Clock size={13} />
-                              {rb.status === 'playing' || rb.status === 'paused'
-                                ? clock(playedMs(rb, tick))
-                                : `Hẹn ${time(rb.start)}`}
-                            </span>
-                            {canSeeMoney && (
-                              <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>
-                            )}
-                          </div>
-                        </div>
-                      ) : maint ? (
-                        <div className="pos-m3-desk-room-body empty">
-                          <span>Đang bảo trì thiết bị</span>
-                          <small>{maint.reason || 'Tạm ngưng nhận khách'}</small>
-                        </div>
-                      ) : (
-                        <div className="pos-m3-desk-room-body empty">
-                          <span>Trống · Sẵn sàng</span>
-                          <small>Nhấn để nhận khách / Mở phiên</small>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              {filteredRooms.filter((e) => !e.room.vip).map(renderDeskRoom)}
             </div>
           </div>
 
@@ -3827,78 +3809,7 @@ export function ModernPosFlow({
               <span>Đơn giá phòng VIP: {getRoomRateLabel(true)}</span>
             </div>
             <div className="pos-m3-desktop-vip-grid">
-              {filteredRooms
-                .filter((r) => r.room.vip)
-                .map(({ room: r, statusKey, booking: rb, maint }) => {
-                  const isSelected = selectedRoomId === r.id;
-                  const liveAmt =
-                    rb && rb.status === 'playing' && rb.started
-                      ? (() => {
-                          try {
-                            const s = JSON.parse(rb.price);
-                            const segs: Segment[] = JSON.parse(rb.segments);
-                            segs.push({ start: rb.started, end: tick });
-                            return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
-                          } catch {
-                            return rb.amount ?? 0;
-                          }
-                        })()
-                      : (rb?.amount ?? 0);
-
-                  return (
-                    <button
-                      key={r.id}
-                      type="button"
-                      className={`pos-m3-desk-room-card vip ${statusKey} ${isSelected ? 'selected' : ''}`}
-                      onClick={() => selectRoom(r.id)}
-                    >
-                      <div className="pos-m3-desk-room-top">
-                        <span className="pos-m3-desk-room-name">
-                          <Crown size={16} />
-                          <strong>Phòng {r.name}</strong>
-                          <em className="pos-m3-vip-pill">VIP</em>
-                        </span>
-                        <span className={`pos-m3-room-badge ${statusKey}`}>
-                          {statusKey === 'playing' && 'Đang chơi'}
-                          {statusKey === 'empty' && 'Sẵn sàng'}
-                          {statusKey === 'booked' && 'Đặt trước'}
-                          {statusKey === 'due' && 'Chờ thu'}
-                          {statusKey === 'maintenance' && 'Bảo trì'}
-                        </span>
-                      </div>
-
-                      {rb ? (
-                        <div className="pos-m3-desk-room-body">
-                          <strong className="pos-m3-desk-cust">{rb.customer}</strong>
-                          <small>
-                            {rb.phone || 'Khách VIP'} · {rb.people} khách · {SERVICE_LABEL[rb.service] || rb.service}
-                          </small>
-                          <div className="pos-m3-desk-room-foot">
-                            <span className="pos-m3-desk-timer">
-                              <Clock size={13} />
-                              {rb.status === 'playing' || rb.status === 'paused'
-                                ? clock(playedMs(rb, tick))
-                                : `Hẹn ${time(rb.start)}`}
-                            </span>
-                            {canSeeMoney && (
-                              <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>
-                            )}
-                          </div>
-                        </div>
-                      ) : maint ? (
-                        <div className="pos-m3-desk-room-body empty">
-                          <span>Phòng VIP đang bảo trì</span>
-                          <small>{maint.reason}</small>
-                        </div>
-                      ) : (
-                        <div className="pos-m3-desk-room-body empty">
-                          <span>Phòng VIP sẵn sàng phục vụ</span>
-                          <small>Nhấn để nhận khách VIP hoặc kiểm tra đặt trước</small>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              {filteredRooms.filter((e) => e.room.vip).map(renderDeskRoom)}
             </div>
           </div>
         </section>
@@ -4409,6 +4320,7 @@ export function ModernPosFlow({
                 </div>
 
                 <div className="pos-m3-panel-prod-list">
+                  {filteredCatalog.length === 0 && (<p className="pos-m3-empty-note">Chưa có món hoặc dịch vụ nào. Thêm trong Cài đặt hệ thống.</p>)}
                   {filteredCatalog.map((item) => {
                     const inCart = cart.find((c) => c.product.id === item.id);
                     return (

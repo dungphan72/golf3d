@@ -108,7 +108,7 @@ body:has(.ar-shell) {
   gap: 14px;
   padding: 0 16px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 5px;
   background: none;
   color: #cadcd2;
   font-size: 14.5px;
@@ -155,7 +155,7 @@ body:has(.ar-shell) {
   padding: 6px 10px !important;
   height: 32px !important;
   min-height: 32px !important;
-  border-radius: 8px;
+  border-radius: 5px;
   background: none !important;
   border: none;
   color: #9cb5a6 !important;
@@ -253,7 +253,7 @@ body:has(.ar-shell) {
   margin-left: auto;
   padding: 0 14px;
   border: 1px solid #d6e0ed;
-  border-radius: 22px;
+  border-radius: 5px;
   background: #fff;
   box-shadow: 0 3px 6px #1f334d0a;
 }
@@ -293,7 +293,7 @@ body:has(.ar-shell) {
   place-items: center;
   background: none;
   border: 0;
-  border-radius: 8px;
+  border-radius: 5px;
   color: #34425c;
   width: 30px;
   height: 36px;
@@ -369,7 +369,7 @@ body:has(.ar-shell) {
   background: #fff;
   box-shadow: 0 8px 25px #1b394333;
   border: 1px solid #e2e9ef;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 16px;
   min-width: 270px;
   max-width: 340px;
@@ -430,7 +430,7 @@ body:has(.ar-shell) {
 }
 .ar-menu {
   background: #fff;
-  border-radius: 22px;
+  border-radius: 5px;
   padding: 22px;
   width: min(620px, 100%);
   max-height: 85svh;
@@ -464,7 +464,7 @@ body:has(.ar-shell) {
   gap: 10px;
   background: #f3faf2;
   border: 1px solid #dfebde;
-  border-radius: 14px;
+  border-radius: 5px;
   color: #0d4f1a;
   text-align: center;
   padding: 18px 8px;
@@ -520,7 +520,7 @@ body:has(.ar-shell) {
   min-height: 121px;
   padding: 14px 18px;
   border: 1px solid #e5edf4;
-  border-radius: 21px;
+  border-radius: 5px;
   box-shadow: 0 3px 6px #28433808;
   text-align: left;
   color: #10121d;
@@ -585,7 +585,7 @@ body:has(.ar-shell) {
 .ao-panel {
   background: linear-gradient(145deg, #fff, #fbfcff);
   border: 1px solid #e2eaf3;
-  border-radius: 20px;
+  border-radius: 5px;
   box-shadow: 0 4px 9px #2a487409;
   padding: 15px 17px;
   min-width: 0;
@@ -659,7 +659,7 @@ body:has(.ar-shell) {
 }
 .ao-rooms header > button {
   border: 1px solid #20a443;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 5px 9px;
   font-weight: 700;
 }
@@ -674,7 +674,7 @@ body:has(.ar-shell) {
   gap: 10px;
   min-height: 66px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #f4f6f9;
   text-align: left;
   color: #101928;
@@ -763,7 +763,7 @@ body:has(.ar-shell) {
   gap: 2px;
   background: #fff;
   border: 1px solid #e2eaf2;
-  border-radius: 12px;
+  border-radius: 5px;
   padding: 8px 14px;
   box-shadow: 0 2px 4px #22394c0a;
   font-size: 12px;
@@ -793,7 +793,7 @@ body:has(.ar-shell) {
 .ao-filters {
   display: flex;
   gap: 0;
-  border-radius: 18px;
+  border-radius: 5px;
   border: 1px solid #e6eaf1;
   background: #f8faff;
   overflow: hidden;
@@ -802,7 +802,7 @@ body:has(.ar-shell) {
 .ao-filters button {
   border: 0;
   background: none;
-  border-radius: 18px;
+  border-radius: 5px;
   padding: 6px 10px;
   white-space: nowrap;
   font-size: 11px;
@@ -830,10 +830,10 @@ body:has(.ar-shell) {
   color: #152139;
 }
 .ao-bookings th:first-child {
-  border-radius: 9px 0 0 9px;
+  border-radius: 5px 0 0 5px;
 }
 .ao-bookings th:last-child {
-  border-radius: 0 9px 9px 0;
+  border-radius: 0 5px 5px 0;
 }
 .ao-bookings td {
   padding: 8px 9px;
@@ -851,7 +851,7 @@ body:has(.ar-shell) {
   height: 26px;
   background: #f5f8fc;
   border: 1px solid #dce5f0;
-  border-radius: 15px;
+  border-radius: 5px;
   color: #2e4361;
 }
 .ao-bookings td button svg {
@@ -864,7 +864,7 @@ body:has(.ar-shell) {
   min-width: 61px;
   background: #e3fadb;
   color: #007715;
-  border-radius: 9px;
+  border-radius: 5px;
   padding: 3px 6px;
   font-size: 12px;
 }
@@ -956,7 +956,7 @@ body:has(.ar-shell) {
   gap: 13px;
   background: linear-gradient(140deg, #fff, #f8fbff);
   border: 1px solid #dde6f2;
-  border-radius: 14px;
+  border-radius: 5px;
   box-shadow: 0 3px 6px #1e3a5807;
   color: #101725;
   padding: 12px 3px;
@@ -1047,7 +1047,7 @@ body:has(.ar-shell) {
   .ao-kpi-icon {
     width: 50px;
     height: 55px;
-    border-radius: 22px;
+    border-radius: 5px;
   }
   .ao-kpi-icon svg {
     width: 30px;
@@ -1197,7 +1197,7 @@ body:has(.ar-shell) {
     position: relative;
     margin-top: -1px;
     background: white;
-    border-radius: 24px 24px 0 0;
+    border-radius: 5px 5px 0 0;
     padding: 17px 20px 24px;
     z-index: 26;
   }
@@ -1213,7 +1213,7 @@ body:has(.ar-shell) {
     height: 75px;
     padding: 8px 10px max(10px, env(safe-area-inset-bottom));
     border: 1px solid #e3eaf2;
-    border-radius: 22px 22px 0 0;
+    border-radius: 5px 5px 0 0;
     background: #fff;
     box-shadow: 0 -3px 15px #24465b08;
   }
@@ -1262,7 +1262,7 @@ body:has(.ar-shell) {
   .ar-menu {
     width: 100%;
     max-width: 600px;
-    border-radius: 22px;
+    border-radius: 5px;
   }
   .ar-menu > div {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1305,7 +1305,7 @@ body:has(.ar-shell) {
     gap: 8px;
     padding: 9px 16px;
     border: 1px solid #dce5ed;
-    border-radius: 22px;
+    border-radius: 5px;
     white-space: nowrap;
     font-size: 15px;
     color: #142131;
@@ -1323,7 +1323,7 @@ body:has(.ar-shell) {
     min-height: 105px;
     padding: 13px 12px;
     gap: 10px;
-    border-radius: 16px;
+    border-radius: 5px;
     align-items: flex-start;
   }
   .ao-kpi-icon {
@@ -1382,11 +1382,11 @@ body:has(.ar-shell) {
     border: 1px solid #dce5ed;
     background: #f8fbfd;
     box-shadow: 0 3px 6px #22394e12;
-    border-radius: 24px;
+    border-radius: 5px;
   }
   .ao-chart-tabs button {
     border: 0;
-    border-radius: 22px;
+    border-radius: 5px;
     background: none;
     padding: 7px 16px;
     white-space: nowrap;
@@ -1451,7 +1451,7 @@ body:has(.ar-shell) {
     gap: 10px;
     scroll-snap-align: start;
     border: 1px solid #e5ece8;
-    border-radius: 17px;
+    border-radius: 5px;
     position: relative;
     flex-wrap: wrap;
   }
@@ -1533,7 +1533,7 @@ body:has(.ar-shell) {
   }
   .ao-quick > div > button {
     min-height: 87px;
-    border-radius: 15px;
+    border-radius: 5px;
     font-size: 15px;
     gap: 10px;
   }
@@ -1612,7 +1612,7 @@ body:has(.ar-shell) {
   }
   .ar-main {
     padding: 13px 12px 24px;
-    border-radius: 18px 18px 0 0;
+    border-radius: 5px 5px 0 0;
   }
   .ao-dashboard {
     gap: 13px;
@@ -1648,7 +1648,7 @@ body:has(.ar-shell) {
     padding: 8px 6px;
     min-height: 78px;
     gap: 5px;
-    border-radius: 12px;
+    border-radius: 5px;
     display: block;
     position: relative;
   }
@@ -1689,7 +1689,7 @@ body:has(.ar-shell) {
   .ao-chart {
     padding: 12px;
     min-height: 205px;
-    border-radius: 15px;
+    border-radius: 5px;
   }
   .ao-chart h2 {
     font-size: 16px;
@@ -1731,7 +1731,7 @@ body:has(.ar-shell) {
     min-height: 87px;
     padding: 8px 5px;
     gap: 4px;
-    border-radius: 12px;
+    border-radius: 5px;
   }
   .ao-room > svg,
   .ao-room.vip > svg {
@@ -1759,7 +1759,7 @@ body:has(.ar-shell) {
   }
   .ao-lower > .ao-panel {
     padding: 10px 8px;
-    border-radius: 14px;
+    border-radius: 5px;
     min-height: 190px;
   }
   .ao-lower .ao-panel h2 {
@@ -1809,7 +1809,7 @@ body:has(.ar-shell) {
     font-size: 10px;
     padding: 7px 4px;
     gap: 7px;
-    border-radius: 12px;
+    border-radius: 5px;
   }
   .ao-quick svg {
     width: 24px;
@@ -1821,7 +1821,7 @@ body:has(.ar-shell) {
   .ar-bottom {
     height: 66px;
     padding-inline: 5px;
-    border-radius: 17px 17px 0 0;
+    border-radius: 5px 5px 0 0;
   }
   .ar-bottom button {
     font-size: 10px;
@@ -1884,7 +1884,7 @@ html body:has(.ar-shell) {
   background: #f7faff !important;
 }
 .ar-shell .ao-kpi {
-  border-radius: 21px;
+  border-radius: 5px;
 }
 .ar-shell .ar-workspace,
 .ar-shell .ar-main,
@@ -1938,7 +1938,7 @@ html body:has(.ar-shell) {
   flex-wrap: wrap;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 16px 20px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
 }
@@ -2002,7 +2002,7 @@ html body:has(.ar-shell) {
   gap: 7px;
   height: 38px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: none;
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   color: #ffffff;
@@ -2020,7 +2020,7 @@ html body:has(.ar-shell) {
   height: 32px;
   padding: 0 12px;
   font-size: 12px;
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 .mod-btn-outline {
@@ -2029,7 +2029,7 @@ html body:has(.ar-shell) {
   gap: 7px;
   height: 38px;
   padding: 0 14px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
   color: #1e293b;
@@ -2049,7 +2049,7 @@ html body:has(.ar-shell) {
   height: 32px;
   padding: 0 11px;
   font-size: 12px;
-  border-radius: 8px;
+  border-radius: 5px;
 }
 
 /* KPI Strip (4 cards) */
@@ -2065,7 +2065,7 @@ html body:has(.ar-shell) {
   gap: 13px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 15px 18px;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.025);
 }
@@ -2143,7 +2143,7 @@ html body:has(.ar-shell) {
   gap: 7px;
   height: 38px;
   padding: 0 16px;
-  border-radius: 999px;
+  border-radius: 5px;
   border: 1px solid #dbe3ef;
   background: #ffffff;
   color: #334155;
@@ -2175,7 +2175,7 @@ html body:has(.ar-shell) {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
 }
@@ -2188,7 +2188,7 @@ html body:has(.ar-shell) {
 .mod-surface-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 5px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
   overflow: hidden;
 }
@@ -2212,7 +2212,7 @@ html body:has(.ar-shell) {
   gap: 8px;
   height: 38px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid #dbe3ef;
   background: #f8fafc;
   min-width: 260px;
@@ -2248,7 +2248,7 @@ html body:has(.ar-shell) {
 .mod-input {
   height: 38px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid #dbe3ef;
   background: #ffffff;
   color: #0f172a;
@@ -2269,7 +2269,7 @@ html body:has(.ar-shell) {
   gap: 6px;
   height: 34px;
   padding: 0 12px;
-  border-radius: 999px;
+  border-radius: 5px;
   border: 1px solid #e2e8f0;
   background: #f8fafc;
   color: #475569;
@@ -2290,7 +2290,7 @@ html body:has(.ar-shell) {
 .mod-chip-count {
   background: rgba(15, 23, 42, 0.07);
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 11px;
 }
 .mod-filter-chip.active .mod-chip-count {
@@ -2304,7 +2304,7 @@ html body:has(.ar-shell) {
   background: #fffbeb;
   border: 1px solid #fde68a;
   padding: 6px 12px;
-  border-radius: 9px;
+  border-radius: 5px;
 }
 
 .mod-info-banner {
@@ -2313,7 +2313,7 @@ html body:has(.ar-shell) {
   justify-content: space-between;
   gap: 12px;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #f0fdf4;
   border: 1px solid #bbf7d0;
   color: #166534;
@@ -2333,7 +2333,7 @@ html body:has(.ar-shell) {
   gap: 14px;
   flex-wrap: wrap;
   padding: 14px 16px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   margin-bottom: 14px;
@@ -2355,7 +2355,7 @@ html body:has(.ar-shell) {
   min-width: 28px;
   height: 26px;
   padding: 0 8px;
-  border-radius: 8px;
+  border-radius: 5px;
   font-size: 12px;
   font-weight: 800;
   background: #f1f5f9;
@@ -2377,7 +2377,7 @@ html body:has(.ar-shell) {
 .mod-tag {
   display: inline-block;
   padding: 3px 9px;
-  border-radius: 999px;
+  border-radius: 5px;
   background: #eff6ff;
   color: #1d4ed8;
   font-size: 12px;
@@ -2387,7 +2387,7 @@ html body:has(.ar-shell) {
 .mod-inline-form {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 5px;
   padding: 14px 16px;
   margin-bottom: 16px;
 }
@@ -2410,7 +2410,7 @@ html body:has(.ar-shell) {
 .mod-field select {
   height: 36px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid #cbd5e1;
   background: #ffffff;
   font-size: 13px;
@@ -2455,7 +2455,7 @@ html body:has(.ar-shell) {
   align-items: center;
   gap: 12px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
 }
@@ -2482,7 +2482,7 @@ html body:has(.ar-shell) {
 .ar-modern-page-wrap .operate-chart-container {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  border-radius: 5px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.025);
 }
 
@@ -2520,7 +2520,7 @@ html body:has(.ar-shell) {
 }
 
 .ar-dialog-root .modal {
-  border-radius: 16px !important;
+  border-radius: 5px !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18) !important;
 }
@@ -2530,7 +2530,7 @@ html body:has(.ar-shell) {
 }
 
 .auth-card {
-  border-radius: 18px !important;
+  border-radius: 5px !important;
   border: 1px solid #e2e8f0 !important;
   box-shadow: 0 18px 42px rgba(15, 23, 42, 0.09) !important;
 }

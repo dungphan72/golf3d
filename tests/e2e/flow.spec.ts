@@ -71,7 +71,7 @@ test('đăng nhập: sai mật khẩu bị từ chối, đúng thì vào đượ
   await expect(page.getByText('Email hoặc mật khẩu không đúng')).toBeVisible();
   await page.getByLabel('Mật khẩu').fill(OWNER.password);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Tổng quan', level: 1, exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Chào mừng, Quản trị viên', level: 1, exact: true })).toBeVisible();
 });
 
 test('cấu hình cơ sở và nạp danh mục gói', async ({ request }) => {

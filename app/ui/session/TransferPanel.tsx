@@ -128,7 +128,7 @@ export function TransferPanel({
       className="info-strip transfer-panel"
       style={{
         padding: '16px',
-        borderRadius: 12,
+        borderRadius: 5,
         background: '#f8fafc',
         border: exact.length > 0 ? '2px solid #16a34a' : '1px solid #cbd5e1',
       }}
@@ -152,7 +152,7 @@ export function TransferPanel({
               fontSize: 11,
               fontWeight: 700,
               padding: '3px 8px',
-              borderRadius: 6,
+              borderRadius: 5,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
@@ -216,7 +216,7 @@ export function TransferPanel({
           alignItems: 'center',
           background: '#ffffff',
           padding: 14,
-          borderRadius: 10,
+          borderRadius: 5,
           border: '1px solid #e2e8f0',
         }}
       >
@@ -224,7 +224,7 @@ export function TransferPanel({
           style={{
             background: '#fff',
             padding: 8,
-            borderRadius: 8,
+            borderRadius: 5,
             border: '1px solid #e2e8f0',
             textAlign: 'center',
           }}
@@ -233,7 +233,7 @@ export function TransferPanel({
             alt="Mã QR Cổng thanh toán SePay"
             width={175}
             height={175}
-            style={{ display: 'block', margin: '0 auto', borderRadius: 6 }}
+            style={{ display: 'block', margin: '0 auto', borderRadius: 5 }}
             src={useFallbackQr ? backupQr : primaryQr}
             onError={() => {
               if (!useFallbackQr) setUseFallbackQr(true);
@@ -340,7 +340,7 @@ export function TransferPanel({
             padding: '10px 14px',
             background: '#dcfce7',
             border: '1px solid #86efac',
-            borderRadius: 10,
+            borderRadius: 5,
           }}
         >
           <div
@@ -369,7 +369,7 @@ export function TransferPanel({
               background: '#16a34a',
               color: '#fff',
               border: 'none',
-              borderRadius: 8,
+              borderRadius: 5,
               cursor: 'pointer',
             }}
           >
@@ -386,7 +386,7 @@ export function TransferPanel({
             color: '#b45309',
             background: '#fef3c7',
             padding: '8px 12px',
-            borderRadius: 8,
+            borderRadius: 5,
             fontSize: 12.5,
             marginTop: 8,
           }}
@@ -412,7 +412,7 @@ export function TransferPanel({
             style={{
               flex: 1,
               padding: '9px 12px',
-              borderRadius: 8,
+              borderRadius: 5,
               border: '1px solid #cbd5e1',
               background: '#ffffff',
               color: '#334155',
@@ -437,7 +437,7 @@ export function TransferPanel({
             style={{
               flex: 1,
               padding: '9px 12px',
-              borderRadius: 8,
+              borderRadius: 5,
               border: 'none',
               background: '#059669',
               color: '#ffffff',

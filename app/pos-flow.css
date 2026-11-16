@@ -26,9 +26,9 @@
   --pos-m3-due-border: #fdba74;
   --pos-m3-danger: #dc2626;
   --pos-m3-danger-bg: #fef2f2;
-  --pos-m3-radius-lg: 16px;
-  --pos-m3-radius-md: 12px;
-  --pos-m3-radius-sm: 8px;
+  --pos-m3-radius-lg: 5px;
+  --pos-m3-radius-md: 5px;
+  --pos-m3-radius-sm: 5px;
 }
 
 /* Scope shell adjustments strictly when POS view (.ar-pos-wrap) is active */
@@ -183,7 +183,7 @@
   height: 50px;
   font-size: 15px;
   font-weight: 700;
-  border-radius: 14px;
+  border-radius: 5px;
 }
 
 .pos-m3-icon-btn {
@@ -210,7 +210,7 @@
   gap: 10px;
   height: 44px;
   padding: 0 14px;
-  border-radius: 12px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
 }
@@ -218,7 +218,7 @@
 .pos-m3-search-box.compact {
   height: 38px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
 }
 
 .pos-m3-search-box svg {
@@ -259,7 +259,7 @@
 .pos-m3-chip {
   height: 34px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   color: var(--pos-m3-text-sub);
@@ -315,7 +315,7 @@
 .pos-m3-select-lg {
   height: 44px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline-strong);
   background: var(--pos-m3-surface);
   font-size: 14px;
@@ -327,7 +327,7 @@
   display: inline-flex;
   align-items: center;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 12px;
   font-weight: 700;
 }
@@ -418,7 +418,7 @@
 .pos-m3-header-shift-pill {
   height: 36px;
   padding: 0 14px;
-  border-radius: 999px;
+  border-radius: 5px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -450,7 +450,7 @@
 .pos-m3-header-tool-btn {
   height: 36px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   color: var(--pos-m3-text-sub);
@@ -502,7 +502,7 @@
   font-weight: 700;
   min-width: 18px;
   height: 18px;
-  border-radius: 999px;
+  border-radius: 5px;
   display: grid;
   place-items: center;
   padding: 0 4px;
@@ -515,7 +515,7 @@
   width: 320px;
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 14px;
+  border-radius: 5px;
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
   padding: 14px;
   z-index: 60;
@@ -543,7 +543,7 @@
 .pos-m3-bell-item {
   text-align: left;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--pos-m3-surface-dim);
   border: 1px solid var(--pos-m3-outline);
 }
@@ -660,8 +660,10 @@
 
 .pos-m3-floor-group-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 4px 12px;
   margin-bottom: 14px;
 }
 
@@ -683,39 +685,35 @@
 
 .pos-m3-desktop-line-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
   gap: 12px;
-}
-
-@media (max-width: 1365px) {
-  .pos-m3-desktop-line-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 .pos-m3-desktop-vip-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
 }
 
+/* Room card: one fact per row, nothing squeezed onto a single line. */
 .pos-m3-desk-room-card {
   text-align: left;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1.5px solid var(--pos-m3-outline);
-  background: var(--pos-m3-surface);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 118px;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  min-height: 96px;
+  padding: 14px;
+  border-radius: 5px;
+  border: 1px solid var(--pos-m3-outline);
+  background: var(--pos-m3-surface);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .pos-m3-desk-room-card:hover {
   border-color: #94a3b8;
-  transform: translateY(-1px);
 }
 
 .pos-m3-desk-room-card.playing {
@@ -736,7 +734,6 @@
 .pos-m3-desk-room-card.maintenance {
   background: #f1f5f9;
   border-color: #cbd5e1;
-  opacity: 0.85;
 }
 
 .pos-m3-desk-room-card.selected {
@@ -744,38 +741,37 @@
   border-color: var(--pos-m3-primary) !important;
 }
 
-.pos-m3-desk-room-top {
+.pos-m3-desk-room-name {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 4px 6px;
+  font-size: 15px;
+  color: var(--pos-m3-text);
 }
 
-.pos-m3-desk-room-name {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  color: var(--pos-m3-text);
+.pos-m3-desk-room-name strong {
+  white-space: nowrap;
 }
 
 .pos-m3-lh-tag,
 .pos-m3-vip-pill {
   font-style: normal;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: 5px;
   background: #fef08a;
   color: #854d0e;
+  white-space: nowrap;
 }
 
 .pos-m3-room-badge {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 5px;
+  white-space: nowrap;
 }
 
 .pos-m3-room-badge.playing {
@@ -803,52 +799,44 @@
   color: #475569;
 }
 
-.pos-m3-desk-room-body {
+.pos-m3-desk-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-}
-
-.pos-m3-desk-room-body.empty span {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--pos-m3-text-sub);
-}
-
-.pos-m3-desk-room-body small {
-  font-size: 11.5px;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+  font-size: 12.5px;
   color: var(--pos-m3-text-muted);
 }
 
-.pos-m3-desk-cust {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--pos-m3-text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.pos-m3-desk-info > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.pos-m3-desk-room-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(15, 23, 42, 0.1);
+.pos-m3-desk-cust {
+  max-width: 100%;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--pos-m3-text);
+  overflow-wrap: anywhere;
 }
 
 .pos-m3-desk-timer {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--pos-m3-primary-dark);
 }
 
 .pos-m3-desk-amt {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--pos-m3-text);
 }
@@ -914,7 +902,7 @@
 .pos-m3-metric-box {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 8px 10px;
 }
 
@@ -1030,7 +1018,7 @@
 .pos-m3-mini-btn {
   height: 28px;
   padding: 0 10px;
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline-strong);
   background: var(--pos-m3-surface);
   font-size: 12px;
@@ -1062,7 +1050,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface-dim);
 }
@@ -1097,7 +1085,7 @@
 .pos-m3-panel-bill-box {
   background: var(--pos-m3-surface-dim);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 12px;
+  border-radius: 5px;
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -1142,7 +1130,7 @@
   gap: 4px;
   height: 54px;
   padding: 4px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface-dim);
   color: var(--pos-m3-text);
@@ -1219,7 +1207,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface-dim);
   font-size: 12px;
@@ -1244,7 +1232,7 @@
   justify-content: space-between;
   gap: 10px;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
 }
@@ -1273,7 +1261,7 @@
   width: 100%;
   height: 30px;
   padding: 0 8px;
-  border-radius: 6px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline-strong);
   font-size: 12px;
 }
@@ -1284,7 +1272,7 @@
   gap: 8px;
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline-strong);
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 3px 6px;
 }
 
@@ -1378,7 +1366,7 @@
 .pos-m3-pay-total-banner {
   background: var(--pos-m3-primary-surface);
   border: 1px solid #86efac;
-  border-radius: 16px;
+  border-radius: 5px;
   padding: 16px;
   text-align: center;
 }
@@ -1408,7 +1396,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--pos-m3-danger-bg);
   border: 1px solid #fca5a5;
   color: var(--pos-m3-danger);
@@ -1439,7 +1427,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 5px;
   border: 1.5px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   text-align: left;
@@ -1518,7 +1506,7 @@
 .pos-m3-pay-options {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -1576,7 +1564,7 @@
 .pos-m3-vat-fields input {
   height: 38px;
   padding: 0 12px;
-  border-radius: 8px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline-strong);
   font-size: 13px;
 }
@@ -1589,7 +1577,7 @@
 }
 
 .pos-m3-shift-hero {
-  border-radius: 16px;
+  border-radius: 5px;
   padding: 18px;
   display: flex;
   align-items: center;
@@ -1613,7 +1601,7 @@
   font-size: 11px;
   font-weight: 800;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.18);
   margin-bottom: 6px;
 }
@@ -1645,7 +1633,7 @@
 .pos-m3-kpi-card {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 14px;
 }
 
@@ -1691,7 +1679,7 @@
   justify-content: space-between;
   margin-top: 12px;
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--pos-m3-surface-dim);
   font-size: 13px;
 }
@@ -1715,7 +1703,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: var(--pos-m3-surface-dim);
   border: 1px solid var(--pos-m3-outline);
 }
@@ -1777,7 +1765,7 @@
 .pos-m3-tx-card {
   text-align: left;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   display: flex;
@@ -1936,7 +1924,7 @@
 .pos-m3-mobile-cart-badge {
   height: 36px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: 5px;
   border: none;
   background: var(--pos-m3-primary);
   color: #ffffff;
@@ -1977,7 +1965,7 @@
 .pos-m3-toast {
   margin: 10px 14px 0;
   padding: 10px 14px;
-  border-radius: 12px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2020,7 +2008,7 @@
 .pos-m3-home-hero {
   background: linear-gradient(135deg, #093824 0%, #15803d 100%);
   color: #ffffff;
-  border-radius: 18px;
+  border-radius: 5px;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -2034,7 +2022,7 @@
   letter-spacing: 0.05em;
   background: rgba(255, 255, 255, 0.16);
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: 5px;
 }
 
 .pos-m3-home-hero h2 {
@@ -2053,7 +2041,7 @@
   align-self: flex-start;
   height: 40px;
   padding: 0 16px;
-  border-radius: 999px;
+  border-radius: 5px;
   border: none;
   background: #ffffff;
   color: var(--pos-m3-primary-deep);
@@ -2068,7 +2056,7 @@
   width: 100%;
   text-align: left;
   padding: 12px 14px;
-  border-radius: 14px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   display: flex;
@@ -2114,7 +2102,7 @@
 .pos-m3-stat-pill {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 12px 8px;
   text-align: center;
 }
@@ -2148,7 +2136,7 @@
 .pos-m3-home-tile {
   text-align: left;
   padding: 16px 14px;
-  border-radius: 16px;
+  border-radius: 5px;
   border: 1px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   display: flex;
@@ -2198,7 +2186,7 @@
 .pos-m3-room-card {
   text-align: left;
   padding: 12px;
-  border-radius: 14px;
+  border-radius: 5px;
   border: 1.5px solid var(--pos-m3-outline);
   background: var(--pos-m3-surface);
   min-height: 104px;
@@ -2282,7 +2270,7 @@
 .pos-m3-session-hero {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 16px;
+  border-radius: 5px;
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2312,7 +2300,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--pos-m3-primary-surface);
   border: 1px solid #bbf7d0;
 }
@@ -2346,7 +2334,7 @@
 .pos-m3-prod-card {
   background: var(--pos-m3-surface);
   border: 1.5px solid var(--pos-m3-outline);
-  border-radius: 16px;
+  border-radius: 5px;
   padding: 12px;
   display: flex;
   flex-direction: column;
@@ -2360,7 +2348,7 @@
 
 .pos-m3-prod-visual {
   height: 68px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: var(--pos-m3-surface-dim);
   display: flex;
   align-items: center;
@@ -2376,7 +2364,7 @@
   font-size: 10px;
   font-weight: 700;
   padding: 2px 6px;
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--pos-m3-surface);
   color: var(--pos-m3-text-sub);
 }
@@ -2415,7 +2403,7 @@
   width: 100%;
   height: 52px;
   padding: 0 18px;
-  border-radius: 14px;
+  border-radius: 5px;
   border: none;
   background: var(--pos-m3-primary);
   color: #ffffff;
@@ -2485,7 +2473,7 @@
 .pos-m3-panel-receipt {
   background: var(--pos-m3-surface);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 20px;
+  border-radius: 5px;
   padding: 24px 18px;
   text-align: center;
   display: flex;
@@ -2509,7 +2497,7 @@
   width: 100%;
   background: var(--pos-m3-surface-dim);
   border: 1px solid var(--pos-m3-outline);
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 14px;
   display: flex;
   flex-direction: column;

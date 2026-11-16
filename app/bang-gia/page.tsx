@@ -30,7 +30,8 @@ const parseOffer = (line: string) => {
 
 export default async function PricingPage() {
   const [pricing, slug] = await Promise.all([publicPricing(), bookingSlug()]);
-  const bookHref = slug ? '/#dat-cho' : `tel:${BRAND.hotline}`;
+  const hotline = pricing.hotline || BRAND.hotline;
+  const bookHref = slug ? '/#dat-cho' : `tel:${hotline}`;
   const bookLabel = slug ? 'Đặt line' : 'Gọi đặt line';
   const goldRow = pricing.standard.rows.find((r) => r.gold);
   const hasHoles = pricing.standard.rows.some((r) => r.h9 != null || r.h18 != null);
@@ -102,7 +103,7 @@ export default async function PricingPage() {
             <h2>Gói trả trước</h2>
           </header>
           <p className="sg-note">
-            Đăng ký tại quầy hoặc gọi <a href={`tel:${BRAND.hotline}`}>{BRAND.hotline}</a>. Xem thêm{' '}
+            Đăng ký tại quầy hoặc gọi <a href={`tel:${hotline}`}>{hotline}</a>. Xem thêm{' '}
             <a href="/thanh-vien">thẻ hội viên</a>.
           </p>
           <nav className="sg-chips" aria-label="Nhóm gói">
@@ -151,9 +152,9 @@ export default async function PricingPage() {
               <Icon name="event" size={20} />
               {bookLabel}
             </a>
-            <a className="sg-btn sg-btn--quiet" href={`tel:${BRAND.hotline}`}>
+            <a className="sg-btn sg-btn--quiet" href={`tel:${hotline}`}>
               <Icon name="phone" size={20} />
-              {BRAND.hotline}
+              {hotline}
             </a>
           </div>
         </section>

@@ -113,6 +113,10 @@ export default async function LandingPage() {
   const content = tenant ? await publicContent(tenant) : { news: [], upcoming: [], past: [] };
   const event = content.upcoming[0];
   const bookHref = '#dat-cho';
+  const clubName = pricing.clubName || BRAND.name;
+  const clubAddress = pricing.clubAddress || BRAND.address;
+  const clubHotline = pricing.hotline || BRAND.hotline;
+  const clubLogo = pricing.logo || BRAND.logo;
   const strength = [
     { icon: Flag, title: '10 Line', text: 'Tiêu chuẩn' },
     { icon: Crown, title: '2 Phòng VIP', text: 'Riêng tư' },
@@ -125,9 +129,9 @@ export default async function LandingPage() {
     <div className="ref-home">
       <header className="ref-header">
         <a className="ref-brand" href="/" aria-label="SaiGon Indoor Golf Club — Trang chủ">
-          <img src={BRAND.logo} alt="" width="52" height="52" />
+          <img src={clubLogo} alt="" width="52" height="52" />
           <span>
-            <strong>{BRAND.name}</strong>
+            <strong>{clubName}</strong>
             <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
           </span>
         </a>
@@ -407,9 +411,9 @@ export default async function LandingPage() {
         <div className="ref-container">
           <div className="ref-footer-brand">
             <a className="ref-brand" href="/">
-              <img src={BRAND.logo} alt="" width="50" height="50" />
+              <img src={clubLogo} alt="" width="50" height="50" />
               <span>
-                <strong>{BRAND.name}</strong>
+                <strong>{clubName}</strong>
                 <small>Golf 3D · Tập luyện · Giải đấu · Cộng đồng</small>
               </span>
             </a>
@@ -421,7 +425,7 @@ export default async function LandingPage() {
               <a href={BRAND.zalo} aria-label="Liên hệ Zalo">
                 Zalo
               </a>
-              <a href={`tel:${BRAND.hotline}`} aria-label="Gọi câu lạc bộ">
+              <a href={`tel:${clubHotline}`} aria-label="Gọi câu lạc bộ">
                 <Phone size={18} />
               </a>
             </div>
@@ -443,16 +447,16 @@ export default async function LandingPage() {
             <h3>Hỗ trợ</h3>
             <a href={bookHref}>Hướng dẫn đặt sân</a>
             <a href="/tai-khoan">Tài khoản của tôi</a>
-            <a href={`tel:${BRAND.hotline}`}>Liên hệ</a>
+            <a href={`tel:${clubHotline}`}>Liên hệ</a>
           </div>
           <address>
             <p>
               <MapPin size={22} />
-              {BRAND.address}
+              {clubAddress}
             </p>
-            <a href={`tel:${BRAND.hotline}`}>
+            <a href={`tel:${clubHotline}`}>
               <Phone size={21} />
-              <strong>0877 834 888</strong>
+              <strong>{clubHotline}</strong>
             </a>
             <a href="https://sigolf.vn">
               <Globe size={21} /> <span>sigolf.vn</span>

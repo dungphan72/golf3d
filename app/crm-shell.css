@@ -65,7 +65,7 @@
   gap: 8px;
   margin: 12px 12px 0;
   padding: 8px 14px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 13px;
   cursor: pointer;
   text-align: left;
@@ -147,7 +147,7 @@
   width: 100%;
   padding: 8px 14px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 5px;
   background: transparent;
   color: #46514b;
   font-size: 13px;
@@ -187,7 +187,7 @@
   font-weight: 600;
   color: #fff;
   background: #c53030;
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 1px 8px;
 }
 .crm-ws[data-collapsed='1'] .crm-ws-side .crm-ws-group button em {
@@ -242,7 +242,7 @@
   margin-top: 8px;
   padding: 6px;
   border: 0;
-  border-radius: 999px;
+  border-radius: 5px;
   background: transparent;
   color: #55605a;
   font-size: 12px;
@@ -305,7 +305,7 @@
 .crm-ws-search {
   width: min(560px, 92vw);
   background: #fff;
-  border-radius: 16px;
+  border-radius: 5px;
   box-shadow: 0 24px 48px rgba(15, 23, 42, 0.25);
   overflow: hidden;
 }
@@ -345,7 +345,7 @@
   width: 100%;
   padding: 9px 12px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 5px;
   background: transparent;
   text-align: left;
   cursor: pointer;
@@ -423,7 +423,7 @@
   .crm-ws-bar button {
     padding: 8px;
     border: 0;
-    border-radius: 999px;
+    border-radius: 5px;
     background: transparent;
     color: #55605a;
     cursor: pointer;
@@ -453,7 +453,7 @@
     z-index: 1;
     padding: 8px;
     border: 0;
-    border-radius: 999px;
+    border-radius: 5px;
     background: transparent;
     cursor: pointer;
   }
@@ -525,7 +525,7 @@
 }
 .crm-ws-group button {
   color: rgba(255, 255, 255, 0.82);
-  border-radius: 12px;
+  border-radius: 5px;
   padding-block: 10px;
 }
 .crm-ws-group button svg {
@@ -584,7 +584,7 @@
   gap: 14px;
   padding: 16px;
   border: 1px solid #e3e7e4;
-  border-radius: 16px;
+  border-radius: 5px;
   background: #fff;
   box-shadow: 0 6px 18px rgba(6, 51, 26, 0.06);
 }
@@ -626,7 +626,7 @@
   min-width: 0;
   padding: 16px;
   border: 1px solid #e3e7e4;
-  border-radius: 16px;
+  border-radius: 5px;
   background: #fff;
   box-shadow: 0 6px 18px rgba(6, 51, 26, 0.06);
 }
@@ -675,7 +675,7 @@
   align-content: start;
   gap: 8px;
   padding: 8px;
-  border-radius: 14px;
+  border-radius: 5px;
   background: #f1f5f2;
 }
 .crm-pipe-col.t0 { background: #e8f1fc; }
@@ -691,7 +691,7 @@
   gap: 2px;
   padding: 10px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #fff;
   text-align: left;
   cursor: pointer;
@@ -712,7 +712,7 @@
   border-bottom: 1px solid #e3e7e4;
 }
 .crm-bars > div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
-.crm-bars i { display: block; width: 70%; border-radius: 8px 8px 0 0; background: var(--crm-green-2); }
+.crm-bars i { display: block; width: 70%; border-radius: 5px 5px 0 0; background: var(--crm-green-2); }
 .crm-bars small { position: absolute; bottom: -22px; font-size: 12px; color: #55605a; }
 .crm-recent { grid-column: 1; }
 .crm-act { grid-column: 2; grid-row: 2; }
@@ -727,7 +727,7 @@
 .crm-recent td small { display: block; font-size: 12px; color: #55605a; }
 .crm-recent td svg { color: var(--crm-green-2); vertical-align: -2px; }
 .crm-recent td.num { text-align: right; font-weight: 600; white-space: nowrap; }
-.crm-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: #e8f1fc; color: #1d5fb4; }
+.crm-pill { display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 12px; font-weight: 600; background: #e8f1fc; color: #1d5fb4; }
 .crm-pill.visit_scheduled, .crm-pill.visited { background: #fdf1d9; color: #946200; }
 .crm-pill.deposited { background: #f0eafb; color: #5b34b8; }
 .crm-pill.won { background: #e3f5e8; color: #14833b; }
@@ -769,7 +769,7 @@
   flex: 1;
   height: 48px;
   padding: 0 18px;
-  border-radius: 14px;
+  border-radius: 5px;
   border: 1px solid #e6edf3;
   background: rgba(255, 255, 255, 0.7);
   color: #7a8a93;
@@ -778,7 +778,7 @@
 .crm-search-box span:last-child {
   margin-left: auto;
   font-size: 12px;
-  border-radius: 7px;
+  border-radius: 5px;
   border: 1px solid #dfe8f0;
   background: #f7fafc;
   padding: 4px 7px;
@@ -808,7 +808,7 @@
   justify-content: center;
   height: 42px;
   padding: 0 18px;
-  border-radius: 12px;
+  border-radius: 5px;
   font-size: 14px;
   font-weight: 600;
 }
@@ -835,7 +835,7 @@
   align-items: center;
   gap: 10px;
   padding: 6px 10px 6px 6px;
-  border-radius: 16px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.72);
   border: 1px solid #e7edf3;
 }
@@ -890,7 +890,7 @@
 .crm-tab {
   height: 38px;
   padding: 0 18px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid #edf0f4;
   color: #4f6470;
@@ -913,7 +913,7 @@
 .crm-rail-panel .crm-side-card {
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid #e4edf4;
-  border-radius: 18px;
+  border-radius: 5px;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.04);
 }
 .crm-list-panel {
@@ -931,7 +931,7 @@
   gap: 8px;
   width: 100%;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 5px;
   background: #f7f9fb;
   border: 1px solid #edf0f3;
   padding: 0 12px;
@@ -954,7 +954,7 @@
   padding-bottom: 4px;
 }
 .crm-filter-item {
-  border-radius: 10px;
+  border-radius: 5px;
   background: #f6f7f9;
   padding: 8px 12px;
   color: #536672;
@@ -980,7 +980,7 @@
   text-align: left;
   background: #fff;
   border: 1px solid #e9eef5;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 12px 10px;
 }
 .crm-customer-card:hover {
@@ -1029,7 +1029,7 @@
   background: #eefaf3;
   color: #1f8d5a;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -1037,7 +1037,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
+  border-radius: 5px;
   padding: 4px 9px;
   font-size: 11px;
   font-weight: 700;
@@ -1155,7 +1155,7 @@
   gap: 6px;
   height: 34px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   background: #f5f8fc;
   color: #0f2231;
   font-size: 12px;
@@ -1179,7 +1179,7 @@
   border: 1px solid transparent;
   height: 32px;
   padding: 0 12px;
-  border-radius: 10px;
+  border-radius: 5px;
   color: #556b78;
   font-size: 12px;
   font-weight: 600;
@@ -1206,7 +1206,7 @@
   gap: 12px;
   padding: 14px;
   background: #f8fafc;
-  border-radius: 14px;
+  border-radius: 5px;
 }
 .crm-info-row {
   display: flex;
@@ -1231,7 +1231,7 @@
   padding: 14px 12px;
   background: linear-gradient(180deg, #f7faff 0%, #eef7ff 100%);
   border: 1px solid #e4ecf9;
-  border-radius: 14px;
+  border-radius: 5px;
 }
 .crm-stat-box span {
   display: block;
@@ -1272,7 +1272,7 @@
 }
 .crm-mini-card {
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 5px;
   border: 1px solid #edf1f5;
   background: #fbfcfe;
 }
@@ -1390,7 +1390,7 @@
   justify-content: center;
   min-width: 76px;
   height: 26px;
-  border-radius: 999px;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
 }
@@ -1419,7 +1419,7 @@
 .crm-legend .bar { width: 12px; height: 10px; border-radius: 2px; background: var(--crm-green-2); }
 .crm-legend .ln { width: 14px; height: 3px; border-radius: 2px; background: var(--crm-gold); }
 .crm-recent td:first-child { display: flex; align-items: center; gap: 10px; }
-.crm-av { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; background: #e3f5e8; color: var(--crm-green); font-size: 12px; font-weight: 700; }
+.crm-av { flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 5px; background: #e3f5e8; color: var(--crm-green); font-size: 12px; font-weight: 700; }
 @media (max-width: 1200px) {
   .crm-layout {
     grid-template-columns: 1fr 1.3fr;

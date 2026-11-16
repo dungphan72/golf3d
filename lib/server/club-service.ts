@@ -15,9 +15,28 @@ import type { Service } from '../pricing';
 import { configSchema } from '../config';
 import { planBooking, withinOpening } from '../booking';
 import { packagePrice } from '../pricing';
+import { syncRulesWithRates } from '../price-sync';
 import { FINISH_SESSION_SQL } from '../fnb-sql';
+import { normalizePhone, validPhone } from '../member';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 import { rooms } from '../club';
+
+async function syncCustomerOnBooking(tenant: string, rawName: string, rawPhone: string, now: number) {
+  const name = rawName.trim();
+  const phone = normalizePhone(rawPhone);
+  if (name.length < 2 || !validPhone(phone)) return;
+  try {
+    await db()
+      .prepare(
+        'INSERT INTO customers(id,tenant,name,phone,note,created) VALUES (?,?,?,?,?,?) ON CONFLICT(tenant,phone) DO NOTHING',
+      )
+      .bind(crypto.randomUUID(), tenant, name, phone, 'Đồng bộ tự động từ Đặt sân / POS', now)
+      .run();
+  } catch (e) {
+    // Booking must not fail because of the customer sync; keep the existing customer record untouched.
+    console.error('syncCustomerOnBooking failed', e instanceof Error ? e.message : e);
+  }
+}
 
 const ROOM_IDS = rooms.map((r) => r.id);
 
@@ -161,7 +180,33 @@ export async function runClubAction(
   if (input.action === 'settings') {
     if (input.value?.pricingRevision !== c.pricingRevision)
       return fail('Cấu hình đã thay đổi ở thiết bị khác. Hãy tải lại trước khi lưu.', 409);
-    const parsed = configSchema.safeParse({ ...c, ...input.value });
+    const mergedRaw: Record<string, unknown> = { ...c, ...input.value };
+    // Auto-synchronize priceRules when rate / happy / vipRate / vipHappy / open / close change without explicit priceRules override
+    const changed = (keys: string[]) =>
+      keys.some((k) => {
+        const next = (input.value as Record<string, unknown> | undefined)?.[k];
+        return next !== undefined && next !== (c as Record<string, unknown>)[k];
+      });
+    const ratesTouched = changed(['rate', 'happy', 'vipRate', 'vipHappy']);
+    const hoursTouched = changed(['open', 'close']);
+    if ((ratesTouched || hoursTouched) && !('priceRules' in (input.value ?? {})) && Array.isArray(c.priceRules)) {
+      const nextRate = Number(mergedRaw.rate ?? c.rate);
+      const nextHappy = Number(mergedRaw.happy ?? c.happy);
+      mergedRaw.priceRules = syncRulesWithRates(c.priceRules, {
+        prevOpen: c.open || '06:00',
+        prevClose: c.close || '23:00',
+        open: typeof mergedRaw.open === 'string' && mergedRaw.open ? mergedRaw.open : c.open || '06:00',
+        close:
+          typeof mergedRaw.close === 'string' && mergedRaw.close ? mergedRaw.close : c.close || '23:00',
+        rate: nextRate,
+        happy: nextHappy,
+        vipRate: Number(mergedRaw.vipRate ?? c.vipRate ?? nextRate),
+        vipHappy: Number(mergedRaw.vipHappy ?? c.vipHappy ?? nextHappy),
+        ratesTouched: Boolean(ratesTouched),
+        hoursTouched: Boolean(hoursTouched),
+      });
+    }
+    const parsed = configSchema.safeParse(mergedRaw);
     if (!parsed.success) return fail(parsed.error.issues.map((i) => i.message).join(' · '));
     if (parsed.data.onlineEnabled && !parsed.data.onlineSlug)
       return fail('Hãy nhập mã đường dẫn để bật nhận đặt lịch online');
@@ -333,6 +378,7 @@ export async function runClubAction(
       .run();
     if (!result.meta.changes)
       return fail('Phòng vừa có lịch trùng hoặc đang sử dụng. Vui lòng chọn giờ/phòng khác.', 409);
+    await syncCustomerOnBooking(tenant, input.customer, input.phone, now);
     await audit(tenant, 'Đặt lịch', `${room.name} · ${input.customer}`);
     return ok({ id });
   }
@@ -405,6 +451,7 @@ export async function runClubAction(
         'Line này đang có khách hoặc sắp có lịch đặt trong thời gian chơi. Hãy chọn line khác hoặc rút ngắn thời lượng.',
         409,
       );
+    await syncCustomerOnBooking(tenant, customer, phone, now);
     await audit(tenant, 'Vào chơi ngay', `${room.name} · ${customer}`);
     return ok({ id });
   }

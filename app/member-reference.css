@@ -138,7 +138,7 @@ body:has(.mps) {
   gap: 26px;
   color: #121518;
   font-size: 20px;
-  border-radius: 14px;
+  border-radius: 5px;
   font-weight: 400;
 }
 .mps-nav svg {
@@ -162,7 +162,7 @@ body:has(.mps) {
 }
 .mps-promo {
   min-height: 206px;
-  border-radius: 20px;
+  border-radius: 5px;
   background: url('/img/member/sidebar.webp') center/100% 100%;
   padding: 0;
   box-shadow: 0 3px 6px #1739240a;
@@ -215,7 +215,7 @@ body:has(.mps) {
 .mr-card {
   width: 83%;
   height: 180px;
-  border-radius: 20px;
+  border-radius: 5px;
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -279,7 +279,7 @@ body:has(.mps) {
   top: 20px;
   padding: 5px 28px;
   background: linear-gradient(100deg, #fff6a3, #ffcc21);
-  border-radius: 30px;
+  border-radius: 5px;
   color: #111;
   font-size: 18px;
 }
@@ -326,7 +326,7 @@ body:has(.mps) {
   gap: 10px;
   text-align: center;
   border: 1px solid #e6e9ee;
-  border-radius: 17px;
+  border-radius: 5px;
   background: linear-gradient(145deg, white, #fcfdff);
   box-shadow: 0 3px 4px #0c293b18;
   padding: 12px;
@@ -357,7 +357,7 @@ body:has(.mps) {
 .mr-panel {
   background: linear-gradient(140deg, #fff, #fdfdff);
   border: 1px solid #e7eaf0;
-  border-radius: 19px;
+  border-radius: 5px;
   padding: 14px 16px;
   box-shadow: 0 3px 4px #24372a10;
   min-width: 0;
@@ -437,7 +437,7 @@ body:has(.mps) {
 .mr-date {
   flex-direction: column !important;
   background: #eaf8e7;
-  border-radius: 9px;
+  border-radius: 5px;
   padding: 4px 12px;
   gap: 0 !important;
   min-width: 90px;
@@ -453,7 +453,7 @@ body:has(.mps) {
   color: #00590f;
   background: #e4f9df;
   padding: 3px 8px;
-  border-radius: 20px;
+  border-radius: 5px;
   font-size: 12px;
 }
 .mr-status.pending {
@@ -504,7 +504,7 @@ body:has(.mps) {
   top: 12px;
   width: 57%;
   height: 255px;
-  border-radius: 20px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .mr-hero > img {
@@ -590,7 +590,7 @@ body:has(.mps) {
   margin-top: 18px;
   height: 18px;
   background: #e4ebf2;
-  border-radius: 20px;
+  border-radius: 5px;
   overflow: hidden;
 }
 .mr-progress i {
@@ -630,7 +630,7 @@ body:has(.mps) {
   background: #e3f8df;
   color: #00480d;
   border: 0;
-  border-radius: 13px;
+  border-radius: 5px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -644,7 +644,7 @@ body:has(.mps) {
 }
 .mr-offer {
   border: 0;
-  border-radius: 20px;
+  border-radius: 5px;
   min-height: 132px;
   background:
     url('/img/member/gift.webp') right center/auto 100% no-repeat,
@@ -675,7 +675,7 @@ body:has(.mps) {
   background: #fff2b1;
   color: #102518;
   padding: 8px 28px;
-  border-radius: 25px;
+  border-radius: 5px;
   font-size: 14px;
   font-weight: bold;
   margin-top: 8px;
@@ -714,7 +714,7 @@ body:has(.mps) {
 }
 .mr-catalog article {
   border: 1px solid #e8ece8;
-  border-radius: 17px;
+  border-radius: 5px;
   background: #fff;
   padding: 20px;
   box-shadow: 0 5px 8px #14322010;
@@ -761,7 +761,7 @@ body:has(.mps) {
   background: #fff;
   color: #006b0e;
   border: 1px solid #007c0c;
-  border-radius: 13px;
+  border-radius: 5px;
   font-weight: bold;
   font-size: 18px;
   padding: 12px;
@@ -1016,7 +1016,7 @@ body:has(.mps) {
     background:
       radial-gradient(ellipse at 90% 95%, #ffdf16 0, transparent 42%),
       linear-gradient(120deg, #05742b, #004920);
-    border-radius: 0 0 20px 20px;
+    border-radius: 0 0 5px 5px;
   }
   .mps-burger {
     display: grid;
@@ -1127,7 +1127,7 @@ body:has(.mps) {
     min-height: 108px;
     padding: 14px 19px;
     border: 1px solid #e7da93;
-    border-radius: 17px;
+    border-radius: 5px;
     background:
       radial-gradient(ellipse at 5% -10%, #649730, transparent 45%),
       linear-gradient(120deg, #00552a, #004822);
@@ -1182,7 +1182,7 @@ body:has(.mps) {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     background: linear-gradient(130deg, #fff, #f5f9f8);
-    border-radius: 14px;
+    border-radius: 5px;
     box-shadow: 0 5px 9px #16332014;
     padding: 14px 0;
     margin-top: -12px;
@@ -1278,7 +1278,7 @@ body:has(.mps) {
     justify-content: flex-start;
     gap: 8px;
     background: #effbef;
-    border-radius: 14px;
+    border-radius: 5px;
     padding: 10px 7px;
     font-size: 12px;
     line-height: 1.5;
@@ -1319,7 +1319,7 @@ body:has(.mps) {
     padding: 12px 10px;
     gap: 10px;
     scroll-snap-align: start;
-    border-radius: 15px;
+    border-radius: 5px;
     min-width: 130px;
     box-shadow: 0 4px 6px #12321a12;
   }
@@ -1351,7 +1351,7 @@ body:has(.mps) {
   .mr-catalog article button {
     font-size: 12px;
     padding: 8px 4px;
-    border-radius: 9px;
+    border-radius: 5px;
     margin-top: 3px;
   }
   .mr-activity {
@@ -1379,7 +1379,7 @@ body:has(.mps) {
   }
   .mr-activity > div {
     border: 1px solid #e8edf0;
-    border-radius: 15px;
+    border-radius: 5px;
     padding: 0 10px;
     box-shadow: 0 5px 8px #213a2714;
   }
@@ -1400,7 +1400,7 @@ body:has(.mps) {
     place-items: center;
     grid-area: icon;
     background: #effbef;
-    border-radius: 10px;
+    border-radius: 5px;
     width: 34px;
     height: 31px;
     color: #00810d;
@@ -1455,7 +1455,7 @@ body:has(.mps) {
     place-items: center;
     width: 51px;
     height: 29px;
-    border-radius: 18px;
+    border-radius: 5px;
   }
   .mps-tabs svg {
     width: 25px;

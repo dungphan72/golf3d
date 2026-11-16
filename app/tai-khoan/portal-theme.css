@@ -21,15 +21,15 @@
 }
 .sg-page .mp :is(.mp-auth-card, .mp-pro-head, .mp-card, .mp-pro-tile, .mp-support-box, .mp-pack) {
   border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 10px;
+  border-radius: 5px;
   background: rgba(255, 255, 255, 0.05);
   box-shadow: none;
 }
 .sg-page .mp .mp-auth-badge {
-  border-radius: 999px;
+  border-radius: 5px;
 }
 .sg-page .mp :is(.mp-auth-tabs, .mp-auth-tabs button, .mp-input-box input, .mp-auth-submit, .mp-btn-action, .mp-btn-save) {
-  border-radius: 8px;
+  border-radius: 5px;
 }
 .sg-page .mp :is(
     .mp-auth-submit,

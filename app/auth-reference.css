@@ -19,7 +19,7 @@
   margin: 48px auto;
   font-family: Arial, 'Be Vietnam Pro', sans-serif;
   color: #152236;
-  border-radius: 20px;
+  border-radius: 5px;
   overflow: hidden;
   box-shadow: 0 10px 16px #1c39412b;
   background: #fff;
@@ -95,7 +95,7 @@
   align-items: center;
   gap: 7px;
   white-space: nowrap;
-  border-radius: 24px;
+  border-radius: 5px;
   padding: 11px 15px;
   font-size: 14px;
   font-weight: 700;
@@ -142,7 +142,7 @@
 .auth-card {
   grid-column: 2;
   align-self: center;
-  border-radius: 22px;
+  border-radius: 5px;
   background: #fff;
   padding: 26px 34px 30px;
   display: flex;
@@ -155,7 +155,7 @@
   order: 0;
   display: flex;
   background: #f5f7f9;
-  border-radius: 15px;
+  border-radius: 5px;
   box-shadow: 0 3px 5px #172f3b0d;
   padding: 0;
   margin-bottom: 16px;
@@ -164,7 +164,7 @@
 .auth-tabs button {
   width: 50%;
   border: 0;
-  border-radius: 14px;
+  border-radius: 5px;
   background: none;
   color: #142136;
   font-weight: 700;
@@ -222,7 +222,7 @@
   align-items: center;
   gap: 16px;
   border: 1px solid #dde5ef;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 0 22px;
   height: 44px;
   box-shadow: 0 2px 3px #142f3b05;
@@ -311,7 +311,7 @@
   justify-content: center;
   gap: 16px;
   border: 0;
-  border-radius: 17px;
+  border-radius: 5px;
   background: linear-gradient(140deg, #188a05, #005413);
   color: #fff;
   font-size: 20px !important;
@@ -327,7 +327,7 @@
   color: #a31b20;
   background: #fff2f0;
   border: 1px solid #f1c6c1;
-  border-radius: 10px;
+  border-radius: 5px;
   padding: 10px;
   font-size: 13px;
   display: flex;
@@ -370,7 +370,7 @@
   display: grid;
   place-items: center;
   border: 1px solid #e8edf2;
-  border-radius: 17px;
+  border-radius: 5px;
   box-shadow: 0 3px 4px #213c3a12;
   background: #fff;
   color: #050607;
@@ -397,7 +397,7 @@
   gap: 18px;
   background: linear-gradient(130deg, #f2f9ee, #edf6e8);
   border: 0;
-  border-radius: 18px;
+  border-radius: 5px;
   color: #002f12;
   padding: 16px 18px;
   margin-top: 22px;
@@ -633,7 +633,7 @@ body:has(.auth-page) > .mnav {
     margin: 24px 7px 0;
     height: 48px;
     min-height: 48px;
-    border-radius: 15px;
+    border-radius: 5px;
   }
   .auth-tabs button {
     font-size: 15px;
@@ -665,7 +665,7 @@ body:has(.auth-page) > .mnav {
     min-height: 47px;
     padding: 0 19px;
     gap: 16px;
-    border-radius: 14px;
+    border-radius: 5px;
   }
   .auth-field input {
     font-size: 14px;
@@ -685,7 +685,7 @@ body:has(.auth-page) > .mnav {
   .auth-submit {
     height: 50px;
     min-height: 50px;
-    border-radius: 16px;
+    border-radius: 5px;
     font-size: 18px !important;
     gap: 15px;
   }
@@ -705,7 +705,7 @@ body:has(.auth-page) > .mnav {
     height: 56px;
     flex: 1;
     width: auto;
-    border-radius: 16px;
+    border-radius: 5px;
   }
   .auth-social button svg {
     width: 32px;
@@ -720,7 +720,7 @@ body:has(.auth-page) > .mnav {
     min-height: 96px;
     padding: 14px 13px;
     gap: 13px;
-    border-radius: 17px;
+    border-radius: 5px;
   }
   .auth-crown {
     width: 59px;

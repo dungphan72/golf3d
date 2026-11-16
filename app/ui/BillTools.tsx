@@ -100,7 +100,7 @@ export function DiscountForm({
         alignItems: 'stretch',
         gap: 8,
         padding: '14px 16px',
-        borderRadius: 8,
+        borderRadius: 5,
         width: '100%',
         boxSizing: 'border-box',
       }}
@@ -235,7 +235,7 @@ export function CashPay({
         alignItems: 'stretch',
         gap: 10,
         padding: '14px 16px',
-        borderRadius: 8,
+        borderRadius: 5,
         width: '100%',
         boxSizing: 'border-box',
       }}
@@ -363,7 +363,7 @@ export function RefundForm({
         alignItems: 'stretch',
         gap: 8,
         padding: '14px 16px',
-        borderRadius: 8,
+        borderRadius: 5,
         width: '100%',
         boxSizing: 'border-box',
       }}

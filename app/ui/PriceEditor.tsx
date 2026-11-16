@@ -1,5 +1,5 @@
 'use client';
-import { Fragment, useState } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { ChevronDown, Pencil, Plus, Trash2, SlidersHorizontal, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { money, type Config } from '../../lib/club';
 import { validateRules, type PriceRule, type Service, type DayType } from '../../lib/pricing';
@@ -51,25 +51,43 @@ export function PriceEditor({
     onChange(rules.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   }
 
-  function add() {
+  function add(prefill?: { room?: 'standard' | 'vip'; service?: Service }) {
     const id = `rate-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const nextRoom = (prefill?.room ?? (room === 'all' ? 'standard' : room)) as 'standard' | 'vip';
+    const nextService = (prefill?.service ?? (service === 'all' ? 'gdr' : service)) as Service;
     onChange([
       ...rules,
       {
         id,
         label: 'Khung giá mới',
-        service: (service === 'all' ? 'gdr' : service) as Service,
-        room: (room === 'all' ? 'standard' : room) as 'standard' | 'vip',
+        service: nextService,
+        room: nextRoom,
         day: (day === 'all' ? 'weekday' : day) as DayType,
         from: '08:00',
         to: '11:00',
-        people: service === '9' || service === '18' ? 1 : null,
+        people: nextService === '9' || nextService === '18' ? 1 : null,
         amount: 0,
         enabled: true,
       },
     ]);
+    // Make sure the new row is visible: unfold its group and open its editor.
+    setFolded((f) => {
+      const n = new Set(f);
+      n.delete(`${nextRoom}:${nextService}`);
+      return n;
+    });
     setEditing(id);
   }
+
+  // Bring the row being edited into view (the table can be long).
+  useEffect(() => {
+    if (!editing) return;
+    const t = setTimeout(
+      () => document.getElementById('pt-edit-' + editing)?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+      60,
+    );
+    return () => clearTimeout(t);
+  }, [editing]);
 
   function remove(id: string) {
     onChange(rules.filter((x) => x.id !== id));
@@ -142,7 +160,7 @@ export function PriceEditor({
           <button
             className="primary operate-btn"
             type="button"
-            onClick={add}
+            onClick={() => add()}
             disabled={rules.length >= 300}
           >
             <Plus size={16} />
@@ -167,7 +185,17 @@ export function PriceEditor({
         <section className="pt-group" key={g.key} style={{ marginTop: '20px' }}>
           <h3 className="section-title" style={{ fontSize: '16px', fontWeight: 800, marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span>{rooms[g.key]}</span>
-            <span className="badge" style={{ fontSize: '12px' }}>{g.rows.length} khung giá</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+              <span className="badge" style={{ fontSize: '12px' }}>{g.rows.length} khung giá</span>
+              <button
+                type="button"
+                className="secondary"
+                disabled={rules.length >= 300}
+                onClick={() => add({ room: g.key as 'standard' | 'vip' })}
+              >
+                <Plus size={14} /> Thêm khung giá
+              </button>
+            </span>
           </h3>
           <div className="pt-scroll">
             <table className="pt-table">
@@ -201,6 +229,15 @@ export function PriceEditor({
                               <span>
                                 {g.rows.filter((x) => x.service === r.service).length} khung giá
                               </span>
+                            </button>
+                            <button
+                              type="button"
+                              className="secondary"
+                              style={{ float: 'right' }}
+                              disabled={rules.length >= 300}
+                              onClick={() => add({ room: g.key as 'standard' | 'vip', service: r.service })}
+                            >
+                              <Plus size={13} /> Thêm
                             </button>
                           </td>
                         </tr>
@@ -269,7 +306,7 @@ export function PriceEditor({
                         </td>
                       </tr>
                       {editing === r.id && (
-                        <tr className="pt-edit">
+                        <tr className="pt-edit" id={`pt-edit-${r.id}`}>
                           <td colSpan={7}>
                             <div className="pt-fields">
                               <label>

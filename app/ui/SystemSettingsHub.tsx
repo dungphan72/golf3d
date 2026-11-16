@@ -51,7 +51,7 @@ import {
 import { rooms, money, type Config } from '../../lib/club';
 import { officialPriceRules } from '../../lib/official-pricing';
 import { PriceEditor } from './PriceEditor';
-import type { PriceRule } from '../../lib/pricing';
+import { validateRules, type PriceRule } from '../../lib/pricing';
 import { operationKey } from '../../lib/finance';
 import type { MenuItem } from '../../lib/fnb';
 import type { Data } from './shared';
@@ -598,16 +598,21 @@ export function SystemSettingsHub({
   }, [groups, effectiveTab, searchQuery, manageMode]);
 
   // Save handler for Config (Single Source of Truth)
-  const handleSaveConfig = async (patch: Partial<Config>) => {
-    const next = { ...draftConfig, ...patch };
-    setDraftConfig(next);
-    await onSave(patch);
+  const handleSaveConfig = async (
+    patch: Partial<Config>,
+    opts?: { keepOpen?: boolean; message?: string },
+  ): Promise<boolean> => {
+    const ok = await onSave(patch);
+    // The server refused (validation, conflict): keep the form and its changes, no success message.
+    if (ok === false) return false;
+    setDraftConfig((prev) => ({ ...prev, ...patch }));
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
     }
-    showToast('Đã lưu cấu hình thành công!');
-    setOpenCard(null);
+    showToast(opts?.message ?? 'Đã lưu cấu hình thành công!');
+    if (!opts?.keepOpen) setOpenCard(null);
     onChanged?.();
+    return true;
   };
 
   // Inline save handler for CRUD tables without closing modal
@@ -1793,7 +1798,10 @@ function SettingsCardModal({
   data: Data | null;
   busy?: boolean;
   onClose: () => void;
-  onSave: (patch: Partial<Config>) => Promise<void> | void;
+  onSave: (
+    patch: Partial<Config>,
+    opts?: { keepOpen?: boolean; message?: string },
+  ) => Promise<boolean | void> | boolean | void;
   onSyncTable?: (key: string, nextRows: Record<string, string>[]) => Promise<void> | void;
   onShowToast: (msg: string) => void;
   onGo?: (v: string) => void;
@@ -1837,6 +1845,7 @@ function SettingsCardModal({
     config.priceRules?.length ? config.priceRules : officialPriceRules(),
   );
   const [confirmOfficial, setConfirmOfficial] = useState(false);
+  const [priceError, setPriceError] = useState('');
 
   const [formPayment, setFormPayment] = useState({
     bankBin: config.bankBin || '970422',
@@ -1953,7 +1962,16 @@ function SettingsCardModal({
       return;
     }
     if (cardId === 'pricing_rates') {
-      await onSave({ priceRules: formRules });
+      try {
+        validateRules(formRules);
+      } catch (e) {
+        setPriceError(e instanceof Error ? e.message : 'Bảng giá chưa hợp lệ');
+        return;
+      }
+      setPriceError('');
+      // Stay on the price table after saving so more rows can be added.
+      const saved = await onSave({ priceRules: formRules }, { keepOpen: true, message: 'Đã lưu bảng giá' });
+      if (saved === false) setPriceError('Chưa lưu được bảng giá. Xem thông báo lỗi rồi thử lại.');
       return;
     }
     if (cardId === 'payment_methods') {
@@ -2282,7 +2300,18 @@ function SettingsCardModal({
                   </>
                 )}
               </div>
-              <PriceEditor rules={formRules} onChange={setFormRules} />
+              {priceError && (
+                <div className="error-box" role="alert" style={{ marginBottom: '12px' }}>
+                  {priceError}
+                </div>
+              )}
+              <PriceEditor
+                rules={formRules}
+                onChange={(r) => {
+                  setPriceError('');
+                  setFormRules(r);
+                }}
+              />
             </div>
           )}
           {cardId === 'hour_packages' && (

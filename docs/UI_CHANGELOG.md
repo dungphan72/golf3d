@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Bảng giá: thêm khung giá trong từng nhóm, lưu không báo thành công giả (nhánh `fix/p0-data-integrity`)
+- **Lý do:** nút "Thêm khung giá mới" tưởng như không chạy (dòng mới nằm ngoài tầm nhìn, chỉ có dải lỗi ở trên); bấm Lưu khi dữ liệu sai vẫn báo "Đã lưu cấu hình thành công!" rồi đóng cửa sổ và mất thay đổi.
+- **File:** `app/ui/PriceEditor.tsx` (nút "Thêm khung giá" ở từng khu vực và "Thêm" ở từng dịch vụ, dòng mới tự mở rộng nhóm và cuộn vào giữa màn hình), `app/ui/SystemSettingsHub.tsx` (`handleSaveConfig` không báo thành công và không đóng khi máy chủ từ chối; thẻ Bảng giá kiểm tra hợp lệ trước khi lưu, hiện lỗi ngay trong cửa sổ và ở lại sau khi lưu thành công).
+- **Hành vi:** Lưu bảng giá thành công thì giữ nguyên cửa sổ và hiện "Đã lưu bảng giá"; các thẻ khác vẫn đóng sau khi lưu thành công.
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`; trình duyệt: thêm khung trong nhóm 18 hố, lưu khi chưa hợp lệ (cửa sổ giữ nguyên, báo lỗi), điền khung 23:00–23:30 và lưu (73 khung, cửa sổ ở lại).
+
 ## 2026-11-16 — Bảng giá chính thức duy nhất, thêm/sửa/xóa khung giá (nhánh `fix/p0-data-integrity`)
 - **Lý do:** bảng giá đang chạy thật là bảng cũ, thiếu giá 9 hố cho 2–4 người và lệch bảng chính thức 11/2026; Cài đặt hệ thống mới không còn nơi sửa bảng khung giá chi tiết (chỉ 4 ô giá theo giờ). Chủ hệ thống yêu cầu dùng bảng chính thức cho toàn hệ thống, bỏ các bảng giá không liên quan, cho phép thêm, sửa, xóa.
 - **Ảnh tham chiếu:** `docs/PRICING.md` (bảng giá chính thức 11/2026); giao diện theo `caidat.png`.

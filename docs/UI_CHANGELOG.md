@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Trang bảng giá thiết kế như poster, tự cập nhật theo cài đặt (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu trang `/bang-gia` có bố cục như poster "Bảng giá" và tự đổi nội dung khi đổi giá trong Cài đặt.
+- **Ảnh tham chiếu:** poster "BẢNG GIÁ" do chủ hệ thống gửi trong phiên (chưa có file trong `hinh-anh/thiet-ke/`; nên lưu vào thư mục này).
+- **File:** `app/bang-gia/page.tsx` (viết lại), `app/bang-gia/poster.css` (mới), `lib/price-poster.ts` (mới: dựng thẻ giá và thẻ gói từ khung giá và danh mục gói), `lib/server/pricing-service.ts` (trả thêm `poster`), `tests/price-poster.test.ts` (mới), `package.json`.
+- **Nội dung tự động:** thẻ "Thứ hai – Thứ sáu" (khung giờ vàng và khung thường), thẻ "Thứ 7 – CN – Lễ" (tách "Thứ 7 – CN" và "Ngày lễ" nếu giá lễ khác), bảng Tập luyện/9 hố/18 hố cho Tiêu chuẩn và VIP; thẻ "Thẻ giờ" từ ưu đãi nạp ví (`WALLET_TIERS`, cùng hằng số dùng khi cộng tiền thưởng); thẻ cho từng nhóm gói trả trước đang bán (thẻ tháng, v.v.); khuyến mãi; ghi chú VAT/phí dịch vụ; địa chỉ, hotline. Khung giá tắt thì ẩn, khung giờ mới thì thêm khối mới.
+- **Khác poster:** bo góc 5px theo quy ước mới; không có dòng "Chỉ áp dụng tập luyện" ở thẻ giờ vì ví hiện trả được cả phiếu có đồ ăn thức uống; khung thường bắt đầu 11:00 (poster ghi 11:10, xem `docs/PRICING.md`).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`; chụp desktop và mobile; trình duyệt: đổi giá giờ vàng thành 123.000 và bật phí dịch vụ 5%, trang hiện đúng ngay.
+
 ## 2026-11-16 — Màn thanh toán: khung chuyển khoản gọn, ví nội bộ báo ngay (nhánh `fix/p0-data-integrity`)
 - **Lý do:** khung QR chuyển khoản bị bóp thành dải hẹp (lớp `info-strip` bố trí hàng ngang), QR nhỏ, chữ rớt từng chữ; chọn "Ví nội bộ" không báo gì khi không tìm thấy ví hoặc không đủ số dư, chỉ có một nút xám nhỏ.
 - **File:** `app/ui/session/TransferPanel.tsx` (một cột: QR lớn, mỗi thông tin một dòng, số tiền và nội dung có nút sao chép), `app/ui/session/PackageRedeem.tsx` (chế độ `wallet` và `package`), `app/ui/ModernPosFlow.tsx`, `app/pos-flow.css`, `lib/server/member-service.ts` (trả thêm `member` gồm tên và số dư kể cả khi ví 0).

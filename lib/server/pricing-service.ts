@@ -1,5 +1,6 @@
 import { db, loadConfig } from './common';
 import { officialPriceRules } from '../official-pricing';
+import { buildPoster, type PosterCard } from '../price-poster';
 import { benefitText, conditionText, vnParts, type Promotion } from '../promotions';
 import { DEFAULT_BENEFITS } from '../member-benefits';
 import { OFFICIAL_PACKAGES } from '../official-packages';
@@ -41,6 +42,8 @@ export type PublicPricing = {
   standard: PriceTable;
   vip: PriceTable | null; // null = the VIP room shares the standard prices
   groups: PackageGroup[];
+  /** Price cards of the public price page, built from the same rules. */
+  poster: PosterCard[];
   vat: number | null;
   fee: number | null;
   open: string;
@@ -117,6 +120,7 @@ export async function publicPricing(): Promise<PublicPricing> {
         standard: buildPriceTable(rules, 'standard'),
         vip: vipDiffers(rules) ? buildPriceTable(rules, 'vip') : null,
         groups: groupPackages(items),
+        poster: buildPoster(rules),
         vat: config.vat,
         fee: config.fee,
         open: config.open || '06:00',
@@ -140,6 +144,7 @@ export async function publicPricing(): Promise<PublicPricing> {
     standard: buildPriceTable(rules, 'standard'),
     vip: vipDiffers(rules) ? buildPriceTable(rules, 'vip') : null,
     groups: groupPackages(fallbackItems()),
+    poster: buildPoster(rules),
     vat: null,
     fee: null,
     open: '06:00',

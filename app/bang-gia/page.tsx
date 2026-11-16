@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
 import '../home2.css';
 import '../sub.css';
+import './poster.css';
 import { BRAND } from '../../lib/brand';
-import { money } from '../../lib/club';
 import { WALLET_TIERS } from '../../lib/wallet';
+import { buildPackageCards, type PosterCard } from '../../lib/price-poster';
 import { publicPricing } from '../../lib/server/pricing-service';
 import { bookingSlug } from '../../lib/server/online-service';
 import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
 import { Icon } from '../ui/Icon';
-import { HourlyGrid, PackageGrid, RateGrid } from '../ui/PriceUi';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,137 +24,178 @@ export const metadata: Metadata = {
   },
 };
 
+const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
+const cell = (n: number | null) => (n == null ? '—' : vnd(n));
+
 /** "Tiêu đề | Giá hoặc mức giảm | Điều kiện" -> parts; missing parts are simply left out. */
 const parseOffer = (line: string) => {
   const [title, value = '', note = ''] = line.split('|').map((s) => s.trim());
   return { title, value, note };
 };
 
+function RateCard({ card }: { card: PosterCard }) {
+  return (
+    <section className="pg-card" aria-labelledby={`pg-${card.key}`}>
+      <h2 className="pg-pill" id={`pg-${card.key}`}>
+        {card.title}
+      </h2>
+      {card.blocks.map((b) => (
+        <div className="pg-block" key={b.key}>
+          {b.title && (
+            <h3 className="pg-sub">
+              <span>{b.title}</span>
+            </h3>
+          )}
+          <table className="pg-table">
+            <thead>
+              <tr>
+                <th scope="col">Loại line</th>
+                <th scope="col">Tập luyện</th>
+                <th scope="col">9 hố</th>
+                <th scope="col">18 hố</th>
+              </tr>
+            </thead>
+            <tbody>
+              {b.rows.map((r) => (
+                <tr key={r.room}>
+                  <th scope="row">{r.label}</th>
+                  <td>{cell(r.gdr)}</td>
+                  <td>{cell(r.h9)}</td>
+                  <td>{cell(r.h18)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      <p className="pg-foot">Tập luyện: đ/line/giờ • 9 và 18 hố: đ/người</p>
+    </section>
+  );
+}
+
 export default async function PricingPage() {
   const [pricing, slug] = await Promise.all([publicPricing(), bookingSlug()]);
   const hotline = pricing.hotline || BRAND.hotline;
+  const address = pricing.clubAddress || BRAND.address;
+  const clubName = pricing.clubName || BRAND.name;
+  const logo = pricing.logo || BRAND.logo;
   const bookHref = slug ? '/#dat-cho' : `tel:${hotline}`;
   const bookLabel = slug ? 'Đặt line' : 'Gọi đặt line';
-  const goldRow = pricing.standard.rows.find((r) => r.gold);
-  const hasHoles = pricing.standard.rows.some((r) => r.h9 != null || r.h18 != null);
-  const vipByKey = new Map((pricing.vip?.rows ?? []).map((r) => [r.key, r]));
-  const mergeVip = !hasHoles && !!pricing.vip;
+  const [first, ...rest] = pricing.poster;
+  const packageCards = buildPackageCards(pricing.groups);
   const vat = pricing.vat != null ? `${pricing.vat}%` : null;
   const fee = pricing.fee ? `${pricing.fee}%` : null;
-  const tax = `Chưa gồm VAT${vat ? ` ${vat}` : ''}${fee ? ` và phí dịch vụ ${fee}` : ''}`;
+  const tax = `Giá chưa gồm VAT${vat ? ` ${vat}` : ''}${fee ? ` và phí dịch vụ ${fee}` : ''}; các khoản này cộng thêm trên hóa đơn.`;
+
+  const wallet = (
+    <section className="pg-card" aria-labelledby="pg-wallet">
+      <h2 className="pg-pill" id="pg-wallet">
+        THẺ GIỜ
+      </h2>
+      <div className="pg-items pg-items--two">
+        {WALLET_TIERS.map((t) => (
+          <div key={t.amount} className="pg-item">
+            <span className="pg-item-name">Nạp</span>
+            <strong>{vnd(t.amount)}đ</strong>
+            <span className="pg-item-name">Tặng</span>
+            <strong>{vnd(t.bonus)}đ</strong>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 
   return (
     <div className="sg-page">
       <link rel="stylesheet" href={FONT_URL} />
       <SiteHeader bookHref={bookHref} bookLabel={bookLabel} />
-      <main id="top">
-        <section className="sg-pagehead">
-          <p className="sg-kicker">Bảng giá</p>
-          <h1>Giá theo giờ, theo lượt và theo gói</h1>
-          <p className="sg-lead">Luôn khớp với giá đang áp dụng tại quầy.</p>
-          <ul className="sg-meta">
-            <li>
-              Mở cửa {pricing.open}–{pricing.close} mỗi ngày
-            </li>
-            <li>{tax}</li>
-          </ul>
-        </section>
+      <main id="top" className="pg">
+        <header className="pg-head">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="" width={88} height={88} />
+          <p className="pg-club">{clubName.toLocaleUpperCase('vi-VN')}</p>
+          <h1>BẢNG GIÁ</h1>
+          <div className="pg-rule" aria-hidden="true">
+            <span />
+          </div>
+          <p className="pg-open">
+            Mở cửa {pricing.open} – {pricing.close} mỗi ngày
+          </p>
+        </header>
 
-        <section className="sg-in sg-block" id="gia-theo-gio">
-          <header className="sg-head">
-            <h2>Giá theo giờ</h2>
-            {!pricing.vip && <p>Phòng VIP dùng chung bảng giá này.</p>}
-            {hasHoles && <p>Giá 9 hố và 18 hố tính theo người; nhóm đông trả theo số người.</p>}
-          </header>
-          {hasHoles ? (
-            <div className="sg-stack">
-              <RateGrid title={pricing.vip ? 'Phòng tiêu chuẩn' : undefined} table={pricing.standard} />
-              {pricing.vip && <RateGrid title="Phòng VIP" table={pricing.vip} />}
+        <div className="pg-wrap">
+          {first && (
+            <div className="pg-top">
+              <div className="pg-col">
+                <RateCard card={first} />
+              </div>
+              <div className="pg-col">
+                {rest.map((c) => (
+                  <RateCard key={c.key} card={c} />
+                ))}
+                {wallet}
+              </div>
             </div>
-          ) : (
-            <HourlyGrid rows={pricing.standard.rows} vip={mergeVip ? vipByKey : undefined} />
           )}
-        </section>
+          {!first && <div className="pg-top pg-top--single">{wallet}</div>}
 
-        {(pricing.offers.length > 0 || pricing.promotions.length > 0) && (
-          <section className="sg-in sg-block" id="uu-dai" style={{ paddingTop: 0 }}>
-            <header className="sg-head">
-              <h2>Khuyến mãi</h2>
-            </header>
-            <div className="sg-promos">
-              {pricing.promotions.map((p) => (
-                <article key={p.id}>
-                  <h3>{p.name}</h3>
-                  <strong>{p.benefit}</strong>
-                  <p>{p.condition}</p>
-                  {p.description && <p>{p.description}</p>}
-                </article>
-              ))}
-              {pricing.offers.map(parseOffer).map((o) => (
-                <article key={o.title + o.value}>
-                  <h3>{o.title}</h3>
-                  {o.value && <strong>{o.value}</strong>}
-                  {o.note && <p>{o.note}</p>}
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="sg-in sg-block" id="goi" style={{ paddingTop: 0 }}>
-          <header className="sg-head">
-            <h2>Gói trả trước</h2>
-          </header>
-          <p className="sg-note">
-            Đăng ký tại quầy hoặc gọi <a href={`tel:${hotline}`}>{hotline}</a>. Xem thêm{' '}
-            <a href="/thanh-vien">thẻ hội viên</a>.
-          </p>
-          <p className="sg-note">
-            Nạp ví trả trước:{' '}
-            {WALLET_TIERS.map((t) => `nạp ${money(t.amount)} được tặng ${money(t.bonus)}`).join(' · ')}.
-          </p>
-          <nav className="sg-chips" aria-label="Nhóm gói">
-            {pricing.groups.map((g) => (
-              <a key={g.id} href={`#${g.id}`}>
-                {g.title}
-              </a>
-            ))}
-          </nav>
-          {pricing.groups.map((g) => (
-            <PackageGrid key={g.id} group={g} vipOf={() => !!g.vip} />
+          {packageCards.map((g) => (
+            <section className="pg-card pg-card--wide" key={g.id} id={g.id} aria-labelledby={`pg-${g.id}`}>
+              <h2 className="pg-pill" id={`pg-${g.id}`}>
+                {g.title.toLocaleUpperCase('vi-VN')}
+              </h2>
+              {g.subtitle && <p className="pg-subtitle">{g.subtitle}</p>}
+              <div className="pg-items">
+                {g.items.map((it) => (
+                  <div key={it.id} className="pg-item">
+                    <span className="pg-item-name">{it.name}</span>
+                    <strong>{vnd(it.price)}đ</strong>
+                    {it.lines.length > 0 && <small>{it.lines.join(' · ')}</small>}
+                  </div>
+                ))}
+              </div>
+              {g.footnote && <p className="pg-foot">{g.footnote}</p>}
+            </section>
           ))}
-        </section>
 
-        <section className="sg-in sg-block" id="luu-y" style={{ paddingTop: 0 }}>
-          <header className="sg-head">
-            <h2>Lưu ý</h2>
-          </header>
-          <ul className="sg-facts-list">
-            <li>
-              <h3>Thuế và phí</h3>
-              <p>{tax}; các khoản này cộng thêm trên hóa đơn.</p>
-            </li>
-            <li>
-              <h3>Giờ vàng</h3>
-              <p>
-                {goldRow
-                  ? `${goldRow.days}, ${goldRow.from}–${goldRow.to}. Giá thấp hơn khung thường.`
-                  : 'Khung giá ưu đãi (nếu có) ghi ở bảng trên.'}
-              </p>
-            </li>
-            {hasHoles && (
-              <li>
-                <h3>Tích điểm</h3>
-                <p>Mỗi lượt 9 hoặc 18 hố được 1 điểm, đủ 10 điểm đổi 1 lượt chơi miễn phí.</p>
-              </li>
-            )}
-          </ul>
-        </section>
+          {(pricing.offers.length > 0 || pricing.promotions.length > 0) && (
+            <section className="pg-card pg-card--wide" id="uu-dai" aria-labelledby="pg-promo">
+              <h2 className="pg-pill" id="pg-promo">
+                KHUYẾN MÃI
+              </h2>
+              <div className="pg-promos">
+                {pricing.promotions.map((p) => (
+                  <article key={p.id}>
+                    <h3>{p.name}</h3>
+                    <strong>{p.benefit}</strong>
+                    <p>{p.condition}</p>
+                    {p.description && <p>{p.description}</p>}
+                  </article>
+                ))}
+                {pricing.offers.map(parseOffer).map((o) => (
+                  <article key={o.title + o.value}>
+                    <h3>{o.title}</h3>
+                    {o.value && <strong>{o.value}</strong>}
+                    {o.note && <p>{o.note}</p>}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
-        <section className="sg-end">
-          <h2>Giữ line cho buổi chơi của bạn</h2>
-          <p>Gửi yêu cầu, nhân viên xác nhận. Không cần trả trước.</p>
-          <div className="sg-actions">
+          <p className="pg-tax">{tax}</p>
+        </div>
+
+        <div className="pg-contact">
+          <p>
+            <Icon name="location" size={22} />
+            {address}
+          </p>
+          <p>
+            <Icon name="home" size={22} />
+            Booking: {BRAND.website} • Hotline: <a href={`tel:${hotline}`}>{hotline}</a>
+          </p>
+          <div className="pg-actions">
             <a className="sg-btn" href={bookHref}>
               <Icon name="event" size={20} />
               {bookLabel}
@@ -164,7 +205,7 @@ export default async function PricingPage() {
               {hotline}
             </a>
           </div>
-        </section>
+        </div>
       </main>
       <SiteFooter />
     </div>

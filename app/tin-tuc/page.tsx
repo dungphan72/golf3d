@@ -1,6 +1,5 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- plain links, like the rest of the public site */
 import type { Metadata } from 'next';
-import '../home2.css';
 import '../sub.css';
 import { BRAND } from '../../lib/brand';
 import { publicContent } from '../../lib/server/content-service';

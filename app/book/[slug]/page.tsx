@@ -1,4 +1,3 @@
-import '../../home2.css';
 import '../../sub.css';
 import BookingPage from '../../ui/BookingPage';
 import { FONT_URL, SiteFooter, SiteHeader } from '../../ui/SiteChrome';

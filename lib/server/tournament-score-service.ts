@@ -30,7 +30,7 @@ type EventRow = {
   status: string;
 };
 type RoundRaw = { id: string; round_no: number; name: string; holes: number; pars: string; play_date: string };
-type PlayerRaw = { id: string; name: string; phone: string; hcp10: number; grp: string };
+type PlayerRaw = { id: string; name: string; phone: string; hcp10: number; grp: string; avatar_url: string; tee_time: string };
 type ScoreRaw = {
   id: string;
   round_id: string;
@@ -79,7 +79,7 @@ async function load(tenant: string, postId: string) {
       .bind(tenant, postId)
       .all<RoundRaw>(),
     db()
-      .prepare('SELECT id,name,phone,hcp10,grp FROM tournament_players WHERE tenant=? AND post_id=? ORDER BY name')
+      .prepare('SELECT id,name,phone,hcp10,grp,avatar_url,tee_time FROM tournament_players WHERE tenant=? AND post_id=? ORDER BY name')
       .bind(tenant, postId)
       .all<PlayerRaw>(),
   ]);
@@ -98,7 +98,7 @@ async function load(tenant: string, postId: string) {
 }
 
 const playerDefs = (ps: PlayerRaw[]): PlayerDef[] =>
-  ps.map((p) => ({ id: p.id, name: p.name, hcp10: p.hcp10, group: p.grp }));
+  ps.map((p) => ({ id: p.id, name: p.name, hcp10: p.hcp10, group: p.grp, avatarUrl: p.avatar_url, teeTime: p.tee_time }));
 const scoreRows = (ss: ScoreRaw[]): ScoreRow[] =>
   ss.map((s) => ({ roundId: s.round_id, playerId: s.player_id, holes: json<Score[]>(s.holes, []), status: s.status }));
 
@@ -248,9 +248,9 @@ export type StaffAction =
   | { action: 'round-add'; postId: string; name?: string; holes: number; pars?: number[]; date?: string }
   | { action: 'round-update'; id: string; name: string; pars: number[]; date?: string }
   | { action: 'round-delete'; id: string }
-  | { action: 'player-add'; postId: string; name: string; phone: string; hcp10: number; group?: string }
+  | { action: 'player-add'; postId: string; name: string; phone: string; hcp10: number; group?: string; avatarUrl?: string; teeTime?: string }
   | { action: 'player-import'; postId: string }
-  | { action: 'player-update'; id: string; name?: string; hcp10?: number; group?: string }
+  | { action: 'player-update'; id: string; name?: string; hcp10?: number; group?: string; avatarUrl?: string; teeTime?: string }
   | { action: 'player-remove'; id: string }
   | { action: 'score-enter'; roundId: string; playerId: string; holes: unknown }
   | { action: 'score-review'; id: string; decision: 'confirm' | 'reject'; note?: string };
@@ -327,10 +327,12 @@ export async function staffAction(actor: AuthUser, a: StaffAction): Promise<Serv
       if (!validPhone(phone)) return fail('Số điện thoại không hợp lệ');
       if (!Number.isInteger(a.hcp10) || a.hcp10 < -50 || a.hcp10 > 540) return fail('HCP từ -5 đến 54');
       const group = a.group && (GROUPS as readonly string[]).includes(a.group) ? a.group : groupFor(a.hcp10);
+      const avatarUrl = (a.avatarUrl ?? '').trim().slice(0, 500);
+      const teeTime = (a.teeTime ?? '').trim().slice(0, 30);
       try {
         await db()
-          .prepare('INSERT INTO tournament_players(id,tenant,post_id,name,phone,hcp10,grp,created) VALUES (?,?,?,?,?,?,?,?)')
-          .bind(crypto.randomUUID(), t, a.postId, name, phone, a.hcp10, group, now)
+          .prepare('INSERT INTO tournament_players(id,tenant,post_id,name,phone,hcp10,grp,avatar_url,tee_time,created) VALUES (?,?,?,?,?,?,?,?,?,?)')
+          .bind(crypto.randomUUID(), t, a.postId, name, phone, a.hcp10, group, avatarUrl, teeTime, now)
           .run();
       } catch {
         return fail('Số điện thoại này đã có trong danh sách thi đấu', 409);
@@ -359,11 +361,13 @@ export async function staffAction(actor: AuthUser, a: StaffAction): Promise<Serv
       if (a.group !== undefined && !(GROUPS as readonly string[]).includes(a.group)) return fail('Nhóm không hợp lệ');
       const name = a.name === undefined ? p.name : a.name.trim().slice(0, 100);
       if (name.length < 2) return fail('Vui lòng nhập tên golfer');
+      const avatarUrl = a.avatarUrl === undefined ? null : a.avatarUrl.trim().slice(0, 500);
+      const teeTime = a.teeTime === undefined ? null : a.teeTime.trim().slice(0, 30);
       await db()
         .prepare(
-          'UPDATE tournament_players SET name=?,hcp10=COALESCE(?,hcp10),grp=COALESCE(?,grp) WHERE tenant=? AND id=?',
+          'UPDATE tournament_players SET name=?,hcp10=COALESCE(?,hcp10),grp=COALESCE(?,grp),avatar_url=COALESCE(?,avatar_url),tee_time=COALESCE(?,tee_time) WHERE tenant=? AND id=?',
         )
-        .bind(name, a.hcp10 ?? null, a.group ?? null, t, a.id)
+        .bind(name, a.hcp10 ?? null, a.group ?? null, avatarUrl, teeTime, t, a.id)
         .run();
       return ok();
     }

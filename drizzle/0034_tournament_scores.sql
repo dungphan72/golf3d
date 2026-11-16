@@ -18,6 +18,8 @@ CREATE TABLE `tournament_players` (
 	`phone` text NOT NULL,
 	`hcp10` integer DEFAULT 0 NOT NULL,
 	`grp` text DEFAULT 'A' NOT NULL,
+	`avatar_url` text DEFAULT '' NOT NULL,
+	`tee_time` text DEFAULT '' NOT NULL,
 	`created` integer NOT NULL
 );--> statement-breakpoint
 CREATE UNIQUE INDEX `tournament_player_phone` ON `tournament_players` (`tenant`,`post_id`,`phone`);--> statement-breakpoint

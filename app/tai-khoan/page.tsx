@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import '../home2.css';
 import '../sub.css';
 import './portal.css';
 import './portal-theme.css';

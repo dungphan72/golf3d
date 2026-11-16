@@ -57,6 +57,17 @@ export async function authorize(
   return { auth };
 }
 
+export async function authorizeAny(
+  ...permissions: Permission[]
+): Promise<{ auth: AuthUser; response?: undefined } | { auth?: undefined; response: Response }> {
+  const auth = await getAuth();
+  if (!auth) return { response: httpError('Vui lòng đăng nhập', 401) };
+  if (auth.mustChange) return { response: httpError('Hãy đổi mật khẩu tạm thời trước', 403) };
+  if (!permissions.some((p) => can(auth.role, p)))
+    return { response: httpError('Bạn không có quyền thực hiện thao tác này', 403) };
+  return { auth };
+}
+
 export function sessionCookie(token: string, request: Request) {
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_SECONDS}${secure}`;

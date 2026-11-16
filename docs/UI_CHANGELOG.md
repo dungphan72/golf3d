@@ -2,6 +2,13 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-17 — Đồng bộ giao diện Dark Premium Golf các trang con & hoàn thiện nghiệp vụ bill cũ, giải đấu, CRM (nhánh `fix/p0-data-integrity`)
+- **Đồng bộ trang con sang Dark Premium Golf:** đã hỏi ý kiến chủ hệ thống và áp dụng phương án đồng bộ toàn diện. Loại bỏ hoàn toàn tệp `home2.css` cũ khỏi các trang con (`/bang-gia`, `/thanh-vien`, `/tin-tuc`, `/tin-tuc/[id]`, `/book/[slug]`, `/tai-khoan`). Viết lại `app/bang-gia/poster.css` theo chuẩn Dark Premium Golf (`#08101f`, thẻ bo góc 5px chuẩn MD3 `#0f1c34`, viền xanh emerald `#34d399`, điểm nhấn vàng gold `#fbbf24`, font Be Vietnam Pro), xóa bỏ hoàn toàn nền giấy kem cũ `#f8f4ea`.
+- **Lịch sử khách hàng & Bill cũ:** hiển thị các bill cũ đã được duyệt (`legacy_bills`) và lịch sử chơi sân (`bookings`) trực tiếp trong hồ sơ chi tiết hội viên (`app/ui/MembersPanel.tsx`) và hồ sơ CRM (`modules/crm/server/customers.ts`).
+- **Đính kèm ảnh bill giấy:** thêm cột `bill_image_url` vào bảng `legacy_bills` (`drizzle/0033_legacy_bills.sql`, `db/schema.ts`, `lib/server/legacy-bill-service.ts`); thêm form upload chụp ảnh bill giấy qua `/api/upload` và nút xem ảnh hóa đơn gốc trong `LegacyBillsPanel.tsx`.
+- **Giải đấu - Avatar & Giờ Tee:** thêm cột `avatar_url` và `tee_time` vào bảng `tournament_players` (`drizzle/0034_tournament_scores.sql`, `db/schema.ts`, `lib/tournament-score.ts`, `lib/server/tournament-score-service.ts`); hiển thị ảnh đại diện golfer và giờ tee trên bảng xếp hạng công khai (`TournamentBoard.tsx`) và quản trị (`TournamentScorePanel.tsx`).
+- **Kiểm thử:** `pnpm typecheck` đạt 0 lỗi; `pnpm test` đạt 272/272 tests; `pnpm build` biên dịch thành công 100%. Không sử dụng bất kỳ dữ liệu mẫu/mock nào.
+
 ## 2026-11-17 — Hoàn thiện các mục còn thiếu của bill cũ và giải đấu (nhánh `fix/p0-data-integrity`)
 - **Bill cũ:** thêm "Sửa" cho bill đang chờ duyệt (người nhập hoặc chủ cơ sở sửa; bill đã duyệt phải thu hồi rồi nhập lại; sửa số bill vẫn chống trùng). File: `lib/server/legacy-bill-service.ts` (`updateLegacyBill`, tách phần kiểm tra dùng chung), `app/api/legacy-bills/route.ts`, `app/ui/LegacyBillsPanel.tsx`.
 - **Giải đấu:** ngày thi đấu cho từng vòng (nhập ở quản trị, hiện trong tab Vòng đấu và danh sách chọn vòng) và tải bảng xếp hạng ra CSV (quản trị và trang công khai). File: `drizzle/0034_tournament_scores.sql` (thêm cột `play_date`; migration này chưa áp dụng ở đâu nên sửa trực tiếp), `db/schema.ts`, `lib/tournament-score.ts`, `lib/server/tournament-score-service.ts`, `app/api/tournament-score/route.ts`, `app/ui/TournamentScorePanel.tsx`, `app/ui/TournamentBoard.tsx`.

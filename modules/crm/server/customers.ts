@@ -99,7 +99,7 @@ export async function customerDetail(c: Ctx, phone: string): Promise<Result> {
     .first<CustomerRow>();
   if (!row) return fail('Không tìm thấy khách hàng', 404);
   const settings = await getSettings(c.tenant);
-  const [profile, leads, orders, appts] = await Promise.all([
+  const [profile, leads, orders, appts, legacyBills, bookings] = await Promise.all([
     d
       .prepare(
         'SELECT code,birthday,gender,occupation,interests,note FROM crm2_customer_profiles WHERE tenant=? AND phone_norm=?',
@@ -124,6 +124,20 @@ export async function customerDetail(c: Ctx, phone: string): Promise<Result> {
       )
       .bind(c.tenant, norm)
       .all(),
+    d
+      .prepare(
+        "SELECT id,code,bill_at AS billAt,total,service,room,lines,method,status,created_by_name AS createdByName,bill_image_url AS billImageUrl FROM legacy_bills WHERE tenant=? AND (phone=? OR phone=?) AND status='approved' ORDER BY bill_at DESC LIMIT 30",
+      )
+      .bind(c.tenant, norm, phone)
+      .all()
+      .catch(() => ({ results: [] })),
+    d
+      .prepare(
+        'SELECT id,room,service,people,start,end,status,amount,payment,started,finished FROM bookings WHERE tenant=? AND (phone=? OR phone=?) ORDER BY start DESC LIMIT 30',
+      )
+      .bind(c.tenant, norm, phone)
+      .all()
+      .catch(() => ({ results: [] })),
   ]);
   return reply({
     customer: { ...row, tier: tierFor(row.total, settings.tiers) },
@@ -131,6 +145,8 @@ export async function customerDetail(c: Ctx, phone: string): Promise<Result> {
     leads: leads.results,
     orders: orders.results,
     appointments: appts.results,
+    legacyBills: legacyBills.results,
+    bookings: bookings.results,
   });
 }
 

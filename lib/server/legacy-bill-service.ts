@@ -34,12 +34,13 @@ export type LegacyBillRow = {
   reviewed_by_name: string;
   reviewed_at: number | null;
   review_note: string;
+  bill_image_url: string;
 };
 
 type Raw = Omit<LegacyBillRow, 'lines'> & { lines: string };
 
 const COLUMNS =
-  'id,code,bill_at,customer,phone,room,service,lines,total,method,note,status,created_by_name,created,reviewed_by_name,reviewed_at,review_note';
+  'id,code,bill_at,customer,phone,room,service,lines,total,method,note,status,created_by_name,created,reviewed_by_name,reviewed_at,review_note,bill_image_url';
 
 const parseLines = (s: string): LegacyLine[] => {
   try {
@@ -89,6 +90,7 @@ export type LegacyInput = {
   lines: LegacyLine[];
   method: string;
   note?: string;
+  billImageUrl?: string;
 };
 
 type Clean = {
@@ -101,6 +103,7 @@ type Clean = {
   note: string;
   lines: LegacyLine[];
   code: string;
+  billImageUrl: string;
 };
 
 /** Checks a typed bill and returns the cleaned fields, or the message to show. */
@@ -135,6 +138,7 @@ function clean(input: LegacyInput): { error: string } | Clean {
     note: (input.note ?? '').trim().slice(0, 500),
     lines,
     code: (input.code ?? '').trim().slice(0, 40),
+    billImageUrl: (input.billImageUrl ?? '').trim().slice(0, 500),
   };
 }
 
@@ -158,8 +162,8 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
   try {
     await db()
       .prepare(
-        `INSERT INTO legacy_bills(id,tenant,code,bill_at,customer,phone,room,service,lines,total,food,method,note,status,created_by,created_by_name,created,reviewed_by,reviewed_by_name,reviewed_at,review_note)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO legacy_bills(id,tenant,code,bill_at,customer,phone,room,service,lines,total,food,method,note,status,created_by,created_by_name,created,reviewed_by,reviewed_by_name,reviewed_at,review_note,bill_image_url)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       )
       .bind(
         id,
@@ -183,6 +187,7 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
         owner ? actor.name : '',
         owner ? now : null,
         '',
+        c.billImageUrl,
       )
       .run();
   } catch {
@@ -258,9 +263,9 @@ export async function updateLegacyBill(actor: AuthUser, id: string, input: Legac
   try {
     await db()
       .prepare(
-        "UPDATE legacy_bills SET code=?,bill_at=?,customer=?,phone=?,room=?,service=?,lines=?,total=?,food=?,method=?,note=? WHERE tenant=? AND id=? AND status='pending'",
+        "UPDATE legacy_bills SET code=?,bill_at=?,customer=?,phone=?,room=?,service=?,lines=?,total=?,food=?,method=?,note=?,bill_image_url=? WHERE tenant=? AND id=? AND status='pending'",
       )
-      .bind(c.code, c.at, c.customer, c.phone, c.room, c.service, JSON.stringify(c.lines), linesTotal(c.lines), linesFood(c.lines), c.method, c.note, actor.tenant, id)
+      .bind(c.code, c.at, c.customer, c.phone, c.room, c.service, JSON.stringify(c.lines), linesTotal(c.lines), linesFood(c.lines), c.method, c.note, c.billImageUrl, actor.tenant, id)
       .run();
   } catch {
     return fail('Số bill này đã được nhập trước đó', 409);

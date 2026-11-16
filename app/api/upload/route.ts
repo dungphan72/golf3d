@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { authorize, httpError, sameOrigin } from '../../auth-session';
+import { authorizeAny, httpError, sameOrigin } from '../../auth-session';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return httpError('Dung lượng hình ảnh không vượt quá 10MB', 413);
   const rawBody = await req.arrayBuffer().catch(() => new ArrayBuffer(0));
   if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
-  const { auth, response } = await authorize('settings.manage');
+  const { auth, response } = await authorizeAny('settings.manage', 'legacy.enter', 'tournament.score');
   if (response) return response;
 
   try {

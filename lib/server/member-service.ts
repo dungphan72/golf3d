@@ -136,7 +136,36 @@ export async function loadMembers(tenant: string, query: string, customerId: str
         history: (await db().prepare(WALLET_HISTORY_SQL).bind(tenant, customerId).all()).results,
       };
       const absences = (await db().prepare(ABSENCES_SQL).bind(tenant, customerId).all()).results;
-      detail = { customerId, packages, orders, wallet, absences, rank: await tierInfo(tenant, customerId) };
+      const cust = await db()
+        .prepare('SELECT phone,name FROM customers WHERE tenant=? AND id=?')
+        .bind(tenant, customerId)
+        .first<{ phone: string; name: string }>();
+      const normPhone = cust ? normalizePhone(cust.phone) : '';
+      let legacyBills: unknown[] = [];
+      let bookings: unknown[] = [];
+      try {
+        if (cust) {
+          legacyBills = (
+            await db()
+              .prepare(
+                'SELECT id,code,bill_at AS billAt,customer,phone,room,service,lines,total,method,status,created_by_name AS createdByName,bill_image_url AS billImageUrl FROM legacy_bills WHERE tenant=? AND (phone=? OR phone=?) AND status=? ORDER BY bill_at DESC LIMIT 30',
+              )
+              .bind(tenant, normPhone, cust.phone, 'approved')
+              .all()
+          ).results;
+          bookings = (
+            await db()
+              .prepare(
+                'SELECT id,room,customer,phone,service,people,start,end,status,amount,payment,started,finished FROM bookings WHERE tenant=? AND (phone=? OR phone=? OR customer=?) ORDER BY start DESC LIMIT 30',
+              )
+              .bind(tenant, normPhone, cust.phone, cust.name)
+              .all()
+          ).results;
+        }
+      } catch {
+        /* ignore if legacy_bills table not yet populated */
+      }
+      detail = { customerId, packages, orders, wallet, absences, rank: await tierInfo(tenant, customerId), legacyBills, bookings };
     }
     return reply({ customers, types, detail });
   } catch (e) {

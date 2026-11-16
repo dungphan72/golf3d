@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
-import { CheckCircle2, Plus, Trash2, XCircle } from 'lucide-react';
+import { CheckCircle2, Plus, Trash2, Upload, XCircle } from 'lucide-react';
 import { money } from '../../lib/club';
 import {
   LEGACY_METHODS,
@@ -35,6 +35,7 @@ type Bill = {
   reviewed_by_name: string;
   reviewed_at: number | null;
   review_note: string;
+  bill_image_url?: string;
 };
 type ListResult = { bills: Bill[]; hasMore: boolean; pending: number; canEnter: boolean; canApprove: boolean };
 type Draft = { name: string; qty: string; price: string; fnb: boolean };
@@ -197,6 +198,14 @@ export function LegacyBillsPanel({ onChanged }: { onChanged?: () => void }) {
             </ul>
             {b.note && <p className="lb-note">Ghi chú: {b.note}</p>}
             {b.review_note && <p className="lb-note">Ghi chú của chủ cơ sở: {b.review_note}</p>}
+            {b.bill_image_url && (
+              <div className="lb-photo-row">
+                <a href={b.bill_image_url} target="_blank" rel="noreferrer" className="lb-photo-link">
+                  <img src={b.bill_image_url} alt="Ảnh hóa đơn giấy" className="lb-thumb" />
+                  <span>📷 Xem ảnh hóa đơn giấy gốc</span>
+                </a>
+              </div>
+            )}
             <div className="lb-actions">
               {b.status === 'pending' && data?.canApprove && (
                 <>
@@ -280,6 +289,8 @@ function BillForm({
   const [service, setService] = useState<LegacyService>((initial?.service as LegacyService) ?? 'gdr');
   const [method, setMethod] = useState<LegacyMethod>((initial?.method as LegacyMethod) ?? 'cash');
   const [note, setNote] = useState(initial?.note ?? '');
+  const [billImageUrl, setBillImageUrl] = useState(initial?.bill_image_url ?? '');
+  const [uploading, setUploading] = useState(false);
   const [lines, setLines] = useState<Draft[]>(() =>
     initial
       ? initial.lines.map((l) => ({ name: l.name, qty: String(l.qty), price: String(l.price), fnb: !!l.fnb }))
@@ -287,6 +298,25 @@ function BillForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', { method: 'POST', body: formData });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error || 'Tải ảnh thất bại');
+      setBillImageUrl(data.url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Tải ảnh thất bại');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const parsed: LegacyLine[] = lines.map((l) => ({
     name: l.name,
@@ -322,6 +352,7 @@ function BillForm({
         lines: parsed,
         method,
         note,
+        billImageUrl,
       })) as { status?: string };
       await onSaved(
         initial
@@ -446,6 +477,37 @@ function BillForm({
           Ghi chú
           <textarea value={note} maxLength={500} rows={2} onChange={(e) => setNote(e.target.value)} />
         </label>
+
+        <div className="lb-upload-box">
+          <label style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
+            Ảnh chụp hóa đơn giấy (tùy chọn)
+          </label>
+          {billImageUrl ? (
+            <div className="lb-upload-preview">
+              <img src={billImageUrl} alt="Ảnh hóa đơn giấy" />
+              <button
+                type="button"
+                className="lb-ghost danger"
+                style={{ minHeight: 32, fontSize: 12 }}
+                onClick={() => setBillImageUrl('')}
+              >
+                Xóa ảnh
+              </button>
+            </div>
+          ) : (
+            <label className="lb-ghost" style={{ cursor: 'pointer', display: 'inline-flex', width: 'fit-content' }}>
+              <Upload size={14} />
+              <span>{uploading ? 'Đang tải lên…' : 'Chụp / Tải ảnh bill giấy'}</span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display: 'none' }}
+                disabled={uploading}
+                onChange={handlePhotoUpload}
+              />
+            </label>
+          )}
+        </div>
 
         {error && (
           <div className="lb-error" role="alert">

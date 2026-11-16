@@ -13,7 +13,7 @@ export const defaultPars = (holes: Holes) => DEFAULT_PARS_18.slice(0, holes);
 export type Score = number | null;
 export type RoundDef = { id: string; no: number; name: string; holes: Holes; pars: number[]; date?: string };
 export const validRoundDate = (d: unknown) => d === '' || (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
-export type PlayerDef = { id: string; name: string; hcp10: number; group: string };
+export type PlayerDef = { id: string; name: string; hcp10: number; group: string; avatarUrl?: string; teeTime?: string };
 export type ScoreRow = { roundId: string; playerId: string; holes: Score[]; status: string };
 
 export function parsProblem(holes: number, pars: unknown): string | null {
@@ -73,6 +73,8 @@ export type BoardRow = {
   net: number | null;
   toPar: number | null;
   rank: number | null;
+  avatarUrl?: string;
+  teeTime?: string;
 };
 
 /**
@@ -115,6 +117,8 @@ export function leaderboard(
       net: played ? gross - hcp : null,
       toPar: played ? gross - par : null,
       rank: null,
+      avatarUrl: p.avatarUrl,
+      teeTime: p.teeTime,
     });
   }
   const done = rows.filter((r) => r.net != null);

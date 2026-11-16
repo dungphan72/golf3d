@@ -1092,6 +1092,7 @@ export const legacyBills = sqliteTable(
     reviewedByName: text('reviewed_by_name').notNull().default(''),
     reviewedAt: integer('reviewed_at'),
     reviewNote: text('review_note').notNull().default(''),
+    billImageUrl: text('bill_image_url').notNull().default(''),
   },
   (t) => [
     index('legacy_bills_list').on(t.tenant, t.status, t.billAt),
@@ -1125,6 +1126,8 @@ export const tournamentPlayers = sqliteTable(
     phone: text('phone').notNull(),
     hcp10: integer('hcp10').notNull().default(0),
     grp: text('grp').notNull().default('A'),
+    avatarUrl: text('avatar_url').notNull().default(''),
+    teeTime: text('tee_time').notNull().default(''),
     created: integer('created').notNull(),
   },
   (t) => [uniqueIndex('tournament_player_phone').on(t.tenant, t.postId, t.phone)],

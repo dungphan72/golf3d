@@ -19,7 +19,8 @@ CREATE TABLE `legacy_bills` (
 	`reviewed_by` text DEFAULT '' NOT NULL,
 	`reviewed_by_name` text DEFAULT '' NOT NULL,
 	`reviewed_at` integer,
-	`review_note` text DEFAULT '' NOT NULL
+	`review_note` text DEFAULT '' NOT NULL,
+	`bill_image_url` text DEFAULT '' NOT NULL
 );--> statement-breakpoint
 CREATE INDEX `legacy_bills_list` ON `legacy_bills` (`tenant`,`status`,`bill_at`);--> statement-breakpoint
 CREATE UNIQUE INDEX `legacy_bills_code` ON `legacy_bills` (`tenant`,`code`) WHERE `code` <> '';

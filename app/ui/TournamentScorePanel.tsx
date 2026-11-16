@@ -16,7 +16,7 @@ import { toCsv } from '../../lib/csv';
 import { askConfirm } from './kit';
 import '../tournament-score-admin.css';
 
-type Player = { id: string; name: string; phone: string; hcp10: number; grp: string };
+type Player = { id: string; name: string; phone: string; hcp10: number; grp: string; avatarUrl?: string; teeTime?: string };
 type Card = {
   id: string;
   roundId: string;
@@ -237,6 +237,7 @@ export function TournamentScorePanel({ events }: { events: { id: string; title: 
                     <th>Số điện thoại</th>
                     <th>HCP</th>
                     <th>Nhóm</th>
+                    <th>Giờ Tee</th>
                     <th />
                   </tr>
                 </thead>
@@ -246,7 +247,7 @@ export function TournamentScorePanel({ events }: { events: { id: string; title: 
                       key={p.id}
                       p={p}
                       used={st.scores.some((s) => s.playerId === p.id)}
-                      onSave={(hcp10, group) => act({ action: 'player-update', id: p.id, hcp10, group }, 'Đã lưu golfer.')}
+                      onSave={(hcp10, group, teeTime) => act({ action: 'player-update', id: p.id, hcp10, group, teeTime }, 'Đã lưu golfer.')}
                       onRemove={async () => {
                         if (await askConfirm({ title: `Xóa ${p.name} khỏi giải?`, confirmLabel: 'Xóa golfer' }))
                           await act({ action: 'player-remove', id: p.id }, 'Đã xóa golfer.');
@@ -465,13 +466,14 @@ function PlayerRow({
 }: {
   p: Player;
   used: boolean;
-  onSave: (hcp10: number, group: string) => void;
+  onSave: (hcp10: number, group: string, teeTime?: string) => void;
   onRemove: () => void;
 }) {
   const [hcp, setHcp] = useState(hcpText(p.hcp10));
   const [group, setGroup] = useState(p.grp);
+  const [teeTime, setTeeTime] = useState(p.teeTime ?? '');
   const n = parseHcp(hcp);
-  const dirty = (Number.isFinite(n) && n !== p.hcp10) || group !== p.grp;
+  const dirty = (Number.isFinite(n) && n !== p.hcp10) || group !== p.grp || teeTime !== (p.teeTime ?? '');
   return (
     <tr>
       <td>
@@ -490,8 +492,18 @@ function PlayerRow({
           ))}
         </select>
       </td>
+      <td>
+        <input
+          className="tsa-sm"
+          style={{ width: 75 }}
+          aria-label={`Giờ Tee của ${p.name}`}
+          placeholder="08:00"
+          value={teeTime}
+          onChange={(e) => setTeeTime(e.target.value)}
+        />
+      </td>
       <td className="tsa-btns">
-        <button type="button" className="tsa-primary" disabled={!dirty || !Number.isFinite(n)} onClick={() => onSave(n, group)}>
+        <button type="button" className="tsa-primary" disabled={!dirty || !Number.isFinite(n)} onClick={() => onSave(n, group, teeTime)}>
           Lưu
         </button>
         <button type="button" className="tsa-ghost danger" disabled={used} title={used ? 'Đã có thẻ điểm' : ''} onClick={onRemove}>

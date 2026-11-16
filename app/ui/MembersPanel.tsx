@@ -42,6 +42,8 @@ import {
   BadgeAlert,
   KeyRound,
   Settings,
+  History,
+  Receipt,
 } from 'lucide-react';
 
 type Customer = {
@@ -99,6 +101,32 @@ type Overview = {
     wallet?: { balance: number; history: WalletEntry[] };
     absences?: Absence[];
     rank?: Rank;
+    legacyBills?: {
+      id: string;
+      code: string;
+      billAt: number;
+      customer: string;
+      phone: string;
+      room: string;
+      service: string;
+      total: number;
+      method: string;
+      status: string;
+      createdByName: string;
+      billImageUrl?: string;
+    }[];
+    bookings?: {
+      id: string;
+      room: string;
+      customer: string;
+      service: string;
+      people: number;
+      start: number;
+      end: number;
+      status: string;
+      amount: number | null;
+      payment: string | null;
+    }[];
   } | null;
 };
 
@@ -1265,6 +1293,127 @@ export function MembersPanel({
                   ) : (
                     <p className={`note-content ${!current.note ? 'empty' : ''}`}>
                       {current.note || 'Chưa có ghi chú đặc biệt cho khách hàng này.'}
+                    </p>
+                  )}
+                </div>
+
+                {/* 7. PLAY HISTORY & LEGACY BILLS */}
+                <div className="customer-history-section" style={{ marginTop: 20 }}>
+                  <div className="section-title-wrap">
+                    <History size={18} className="text-emerald" />
+                    <h3>Lịch sử chơi sân &amp; Bill cũ</h3>
+                    <span className="section-badge">
+                      {(data?.detail?.legacyBills?.length ?? 0) + (data?.detail?.bookings?.length ?? 0)} giao dịch
+                    </span>
+                  </div>
+
+                  {/* Legacy Bills */}
+                  {!!data?.detail?.legacyBills?.length && (
+                    <div style={{ marginBottom: 14 }}>
+                      <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: '8px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Receipt size={14} /> Bill cũ đã duyệt ({data.detail.legacyBills.length})
+                      </h4>
+                      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                        {data.detail.legacyBills.map((b) => (
+                          <li
+                            key={b.id}
+                            style={{
+                              background: '#f8faf9',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: 5,
+                              padding: '10px 12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: 13.5, color: '#0f172a' }}>{money(b.total)}</strong>
+                              <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8 }}>
+                                · {new Date(b.billAt).toLocaleDateString('vi-VN')} {new Date(b.billAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                                {b.room ? `${b.room} · ` : ''}{b.code ? `Số bill: ${b.code} · ` : ''}Dịch vụ: {b.service}
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              {b.billImageUrl && (
+                                <a
+                                  href={b.billImageUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  style={{
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    color: '#059669',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 4,
+                                    textDecoration: 'none',
+                                    background: '#ecfdf5',
+                                    padding: '4px 8px',
+                                    borderRadius: 4,
+                                    border: '1px solid #a7f3d0',
+                                  }}
+                                >
+                                  📷 Xem bill giấy
+                                </a>
+                              )}
+                              <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0369a1', padding: '3px 8px', borderRadius: 4, fontWeight: 600 }}>
+                                {b.method}
+                              </span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Past Bookings */}
+                  {!!data?.detail?.bookings?.length && (
+                    <div>
+                      <h4 style={{ fontSize: 13, fontWeight: 700, color: '#334155', margin: '8px 0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Clock size={14} /> Lượt chơi gần đây ({data.detail.bookings.length})
+                      </h4>
+                      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                        {data.detail.bookings.map((bk) => (
+                          <li
+                            key={bk.id}
+                            style={{
+                              background: '#fff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: 5,
+                              padding: '10px 12px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              flexWrap: 'wrap',
+                              gap: 8,
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: 13, color: '#0f172a' }}>{bk.room}</strong>
+                              <span style={{ fontSize: 12, color: '#64748b', marginLeft: 8 }}>
+                                · {new Date(bk.start).toLocaleDateString('vi-VN')} {new Date(bk.start).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                              <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                                {bk.service} · {bk.people} người · Trạng thái: {bk.status}
+                              </div>
+                            </div>
+                            {bk.amount != null && (
+                              <strong style={{ fontSize: 13, color: '#059669' }}>{money(bk.amount)}</strong>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {!data?.detail?.legacyBills?.length && !data?.detail?.bookings?.length && (
+                    <p style={{ fontSize: 12.5, color: '#94a3b8', fontStyle: 'italic', margin: '8px 0' }}>
+                      Chưa có lịch sử chơi sân hoặc bill cũ được duyệt cho khách hàng này.
                     </p>
                   )}
                 </div>

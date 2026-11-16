@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import '../home2.css';
 import '../sub.css';
 import './poster.css';
 import { BRAND } from '../../lib/brand';

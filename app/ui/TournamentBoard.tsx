@@ -24,7 +24,7 @@ export type BoardData = {
 type Me = {
   signedOut?: boolean;
   verified?: boolean;
-  player?: { id: string; name: string; hcp10: number; group: string } | null;
+  player?: { id: string; name: string; hcp10: number; group: string; avatarUrl?: string; teeTime?: string } | null;
   rounds?: RoundDef[];
   standing?: { rank: number | null; gross: number | null; net: number | null; toPar: number | null } | null;
   cards?: { id: string; roundId: string; holes: Score[]; status: string; note: string; enteredBy: string }[];
@@ -414,10 +414,17 @@ export function TournamentBoard({ initial, postHref }: { initial: BoardData; pos
                       </td>
                       <td>
                         <span className="tb-who">
-                          <span className="tb-av" aria-hidden="true">
-                            {initials(r.name)}
-                          </span>
-                          <strong>{r.name}</strong>
+                          {r.avatarUrl ? (
+                            <img src={r.avatarUrl} alt="" className="tb-av-img" />
+                          ) : (
+                            <span className="tb-av" aria-hidden="true">
+                              {initials(r.name)}
+                            </span>
+                          )}
+                          <div>
+                            <strong>{r.name}</strong>
+                            {r.teeTime && <small className="tb-teetime">Tee: {r.teeTime}</small>}
+                          </div>
                         </span>
                       </td>
                       <td className="c-grp">
@@ -514,9 +521,13 @@ export function TournamentBoard({ initial, postHref }: { initial: BoardData; pos
           {player ? (
             <div className="tb-card tb-me">
               <div className="tb-me-top">
-                <span className="tb-av big" aria-hidden="true">
-                  {initials(player.name)}
-                </span>
+                {player.avatarUrl ? (
+                  <img src={player.avatarUrl} alt="" className="tb-av-img big" />
+                ) : (
+                  <span className="tb-av big" aria-hidden="true">
+                    {initials(player.name)}
+                  </span>
+                )}
                 <div>
                   <strong>{player.name}</strong>
                   <span className="tb-chip">

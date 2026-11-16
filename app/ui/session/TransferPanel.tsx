@@ -193,128 +193,66 @@ export function TransferPanel({
         </span>
       </div>
 
-      {/* Main QR + Account Details */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
-          gap: 16,
-          alignItems: 'center',
-          background: '#ffffff',
-          padding: 14,
-          borderRadius: 5,
-          border: '1px solid #e2e8f0',
-        }}
-      >
-        <div
-          style={{
-            background: '#fff',
-            padding: 8,
-            borderRadius: 5,
-            border: '1px solid #e2e8f0',
-            textAlign: 'center',
-          }}
-        >
+      {/* Main QR + Account Details: one column, QR on top, one fact per row */}
+      <div className="pos-m3-tp">
+        <div className="pos-m3-tp-qr">
           <img
             alt="Mã QR Cổng thanh toán SePay"
-            width={175}
-            height={175}
-            style={{ display: 'block', margin: '0 auto', borderRadius: 5 }}
+            width={220}
+            height={220}
             src={useFallbackQr ? backupQr : primaryQr}
             onError={() => {
               if (!useFallbackQr) setUseFallbackQr(true);
             }}
           />
-          <small style={{ fontSize: 10.5, color: '#64748b', display: 'block', marginTop: 4 }}>
-            Quét bằng mọi App Ngân hàng / Ví
-          </small>
+          <small>Quét bằng ứng dụng ngân hàng hoặc ví điện tử</small>
         </div>
 
-        <div style={{ textAlign: 'left', fontSize: 13 }}>
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>Ngân hàng thụ hưởng</span>
-            <strong style={{ color: '#0f172a', fontSize: 13.5 }}>
-              {bankInfo ? `${bankInfo.code} - ${bankInfo.name}` : `BIN ${effectiveBin}`}
-            </strong>
+        <dl className="pos-m3-tp-info">
+          <div>
+            <dt>Ngân hàng thụ hưởng</dt>
+            <dd>{bankInfo ? `${bankInfo.code} - ${bankInfo.name}` : `BIN ${effectiveBin}`}</dd>
           </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>Số tài khoản</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <code
-                style={{
-                  fontSize: 14,
-                  fontWeight: 700,
-                  color: '#0f172a',
-                  background: '#f1f5f9',
-                  padding: '2px 8px',
-                  borderRadius: 5,
-                }}
-              >
-                {effectiveAccount}
-              </code>
+          <div>
+            <dt>Số tài khoản</dt>
+            <dd>
+              <code>{effectiveAccount}</code>
               <button
                 type="button"
                 onClick={() => copyText(effectiveAccount, 'account')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#059669',
-                  padding: 2,
-                }}
                 title="Sao chép số tài khoản"
+                aria-label="Sao chép số tài khoản"
               >
-                {copiedField === 'account' ? <Check size={14} /> : <Copy size={14} />}
+                {copiedField === 'account' ? <Check size={15} /> : <Copy size={15} />}
               </button>
-            </div>
+            </dd>
           </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>Chủ tài khoản</span>
-            <strong style={{ color: '#0f172a' }}>{effectiveHolder}</strong>
-          </div>
-
-          <div style={{ marginBottom: 8 }}>
-            <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>Số tiền thanh toán</span>
-            <strong style={{ color: '#059669', fontSize: 16 }}>{money(effectiveAmount)}</strong>
-          </div>
-
           <div>
-            <span style={{ color: '#64748b', fontSize: 12, display: 'block' }}>
-              Nội dung chuyển khoản (Tự động khớp đơn)
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-              <code
-                style={{
-                  fontSize: 13.5,
-                  fontWeight: 700,
-                  color: '#047857',
-                  background: '#ecfdf5',
-                  border: '1px solid #a7f3d0',
-                  padding: '2px 8px',
-                  borderRadius: 5,
-                }}
-              >
-                {effectiveCode}
-              </code>
+            <dt>Chủ tài khoản</dt>
+            <dd>{effectiveHolder}</dd>
+          </div>
+          <div className="amount">
+            <dt>Số tiền thanh toán</dt>
+            <dd>{money(effectiveAmount)}</dd>
+          </div>
+          <div>
+            <dt>
+              Nội dung chuyển khoản
+              <small>Nhập đúng nội dung để hệ thống tự khớp đơn</small>
+            </dt>
+            <dd>
+              <code className="code">{effectiveCode}</code>
               <button
                 type="button"
                 onClick={() => copyText(effectiveCode, 'code')}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: '#059669',
-                  padding: 2,
-                }}
-                title="Sao chép mã nội dung"
+                title="Sao chép nội dung chuyển khoản"
+                aria-label="Sao chép nội dung chuyển khoản"
               >
-                {copiedField === 'code' ? <Check size={14} /> : <Copy size={14} />}
+                {copiedField === 'code' ? <Check size={15} /> : <Copy size={15} />}
               </button>
-            </div>
+            </dd>
           </div>
-        </div>
+        </dl>
       </div>
 
       {/* Matched SePay Webhook Transactions */}

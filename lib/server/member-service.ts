@@ -161,7 +161,7 @@ export async function usablePackages(tenant: string, bookingId: string) {
         status: string;
         amount: number | null;
       }>();
-    if (!b) return reply({ packages: [], wallet: null });
+    if (!b) return reply({ packages: [], wallet: null, member: null });
     // The wallet pays a whole finished bill; it is offered until something has been collected.
     const owner = await db()
       .prepare('SELECT id,name FROM customers WHERE tenant=? AND phone=?')
@@ -181,6 +181,8 @@ export async function usablePackages(tenant: string, bookingId: string) {
       )
       .bind(tenant, bookingId)
       .first<{ paid: number }>();
+    // The member behind the phone number and the wallet balance, even when it is 0.
+    const member = owner ? { name: owner.name, balance } : null;
     const wallet =
       owner && (balance > 0 || walletSpent)
         ? {
@@ -193,7 +195,7 @@ export async function usablePackages(tenant: string, bookingId: string) {
           }
         : null;
     const kind = kindForService(b.service);
-    if (!kind) return reply({ packages: [], wallet });
+    if (!kind) return reply({ packages: [], wallet, member });
     const units = unitsForSession(b.service, JSON.parse(b.segments));
     const rows = (
       await db()
@@ -224,6 +226,7 @@ export async function usablePackages(tenant: string, bookingId: string) {
       covered: redemption?.covered ?? 0,
       usedUnits: redemption?.units ?? 0,
       wallet,
+      member,
     });
   } catch (e) {
     console.error('usable packages', e);

@@ -2263,6 +2263,7 @@ export function ModernPosFlow({
         {(payMethod === 'wallet' || payMethod === 'package') && (
           <div className="pos-m3-member-pay-box">
             <PackageRedeem
+              mode={payMethod === 'wallet' ? 'wallet' : 'package'}
               booking={{ ...activeBooking, status: 'finished', amount: payableTotal }}
               money={money}
               onChanged={async () => {

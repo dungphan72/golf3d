@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Màn thanh toán: khung chuyển khoản gọn, ví nội bộ báo ngay (nhánh `fix/p0-data-integrity`)
+- **Lý do:** khung QR chuyển khoản bị bóp thành dải hẹp (lớp `info-strip` bố trí hàng ngang), QR nhỏ, chữ rớt từng chữ; chọn "Ví nội bộ" không báo gì khi không tìm thấy ví hoặc không đủ số dư, chỉ có một nút xám nhỏ.
+- **File:** `app/ui/session/TransferPanel.tsx` (một cột: QR lớn, mỗi thông tin một dòng, số tiền và nội dung có nút sao chép), `app/ui/session/PackageRedeem.tsx` (chế độ `wallet` và `package`), `app/ui/ModernPosFlow.tsx`, `app/pos-flow.css`, `lib/server/member-service.ts` (trả thêm `member` gồm tên và số dư kể cả khi ví 0).
+- **Hành vi ví nội bộ:** hiện hội viên, số dư, số cần thanh toán; không đủ thì báo ngay "Số dư ví không đủ: thiếu X" kèm hướng dẫn; đủ thì báo số dư còn lại và hiện nút "Thanh toán bằng ví · số tiền". Không tìm thấy ví, phiếu chưa chốt, hoặc tổng trên màn hình khác số tiền phiếu thì báo lý do và không cho trả (ví chỉ trả đúng số tiền phiếu đã chốt). Thẻ giờ hội viên cũng báo rõ khi khách không có gói khả dụng.
+- **Kiểm thử:** `tsc`, `eslint`; trình duyệt: khung chuyển khoản, ví 100.000 cho phiếu 680.400 (báo thiếu 580.400), ví 1.300.000 (đủ, hiện nút thanh toán). Chưa thử bấm thanh toán bằng ví trên trình duyệt và chưa kiểm tra bản mobile.
+
 ## 2026-11-16 — Chọn nhiều khung giá để xóa (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống cần xóa nhiều khung giá cùng lúc thay vì từng dòng.
 - **File:** `app/ui/PriceEditor.tsx` (cột ô chọn ở mỗi dòng, ô "chọn tất cả" theo khu vực và theo dịch vụ, thanh "Chọn tất cả N khung đang hiển thị · Đã chọn N · Xóa đã chọn · Bỏ chọn" với bước xác nhận), `app/system-settings.css`.

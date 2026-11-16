@@ -2574,3 +2574,160 @@
   color: var(--pos-m3-primary);
   font-weight: 700;
 }
+
+/* ==========================================================================
+   PAYMENT: bank transfer (QR) and internal wallet panels
+   ========================================================================== */
+.pos-m3-tp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+}
+.pos-m3-tp-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.pos-m3-tp-qr img {
+  display: block;
+  width: min(220px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  background: #ffffff;
+}
+.pos-m3-tp-qr small {
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+.pos-m3-tp-info {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pos-m3-tp-info > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 0;
+  border-top: 1px solid #f1f5f9;
+}
+.pos-m3-tp-info dt {
+  flex: none;
+  max-width: 48%;
+  font-size: 12.5px;
+  color: #64748b;
+}
+.pos-m3-tp-info dt small {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+.pos-m3-tp-info dd {
+  margin: 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.pos-m3-tp-info code {
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #f1f5f9;
+  font-size: 14px;
+  font-weight: 700;
+}
+.pos-m3-tp-info code.code {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #047857;
+}
+.pos-m3-tp-info button {
+  flex: none;
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: #059669;
+  cursor: pointer;
+}
+.pos-m3-tp-info .amount dd {
+  font-size: 20px;
+  color: #047857;
+}
+
+.pos-m3-wallet {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  background: #ffffff;
+  font-size: 13.5px;
+}
+.pos-m3-wallet.ok {
+  border-color: #86efac;
+  background: #f0fdf4;
+  color: #166534;
+}
+.pos-m3-wallet.bad {
+  border-color: #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+.pos-m3-wallet.bad span {
+  color: #7f1d1d;
+}
+.pos-m3-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pos-m3-wallet-row span {
+  color: #64748b;
+}
+.pos-m3-wallet-row strong {
+  font-size: 15px;
+  color: #0f172a;
+}
+.pos-m3-wallet-row.total {
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+}
+.pos-m3-wallet-row.total strong {
+  font-size: 20px;
+  color: #047857;
+}
+
+/* The transfer panel is a column; the generic .info-strip row layout squeezed it into a thin strip. */
+.pos-m3-sepay-box .info-strip.transfer-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+}
+.pos-m3-sepay-box .transfer-panel > * {
+  min-width: 0;
+}

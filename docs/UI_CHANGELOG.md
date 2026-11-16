@@ -2,6 +2,17 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Nhập bill cũ, nhân viên nhập thì chủ cơ sở duyệt (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu cho phép chủ cơ sở hoặc nhân viên nhập lại bill cũ (trước khi dùng hệ thống); bill do nhân viên nhập phải được chủ cơ sở duyệt. Quyết định đã chốt: bill đã duyệt cộng vào báo cáo doanh thu và nhập chi tiết từng dòng.
+- **File:** `drizzle/0033_legacy_bills.sql` (bảng `legacy_bills`), `db/schema.ts`, `lib/legacy-bill.ts`, `lib/server/legacy-bill-service.ts`, `app/api/legacy-bills/route.ts`, `lib/auth/permissions.ts` (quyền `legacy.enter`, `legacy.approve`), `lib/report-sql.ts`, `lib/report-merge.ts`, `lib/server/report-service.ts`, `app/ui/LegacyBillsPanel.tsx`, `app/legacy-bills.css`, `app/ui/ReportsPanel.tsx` (tab "Bill cũ", cột "Từ bill cũ"), tests `legacy-bill`, `report-merge`, `auth`.
+- **Quy trình:** Báo cáo › tab Bill cũ › Nhập bill cũ (ngày giờ, số bill, line, khách, SĐT, dịch vụ, hình thức thanh toán, các dòng hàng có đánh dấu F&B, ghi chú). Chủ cơ sở nhập thì duyệt ngay. Thu ngân/quản lý nhập thì chờ duyệt; chỉ chủ cơ sở duyệt, không duyệt (cần lý do) hoặc thu hồi bill đã duyệt (cần lý do). Người nhập được xóa bill của mình khi còn chờ duyệt. Mọi thao tác ghi vào Nhật ký hoạt động.
+- **Quy tắc dữ liệu:** tổng tiền do máy chủ tự cộng từ các dòng (số nguyên đồng), không tin số tổng từ máy khách; ngày không ở tương lai và không quá 10 năm; số bill không được trùng; chỉ bill đã duyệt mới vào báo cáo, theo đúng ngày của bill, không đụng sổ ca, két tiền, giờ/gói hội viên.
+- **Quyền:** quản lý và thu ngân có `legacy.enter`; chỉ chủ cơ sở có `legacy.approve`. HLV, CSKH, Sale không có.
+- **Screenshot:** chụp trong phiên (chủ cơ sở, form nhập, nhân viên); chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `pnpm test` đạt (thêm test), e2e thủ công trên bản build: nhân viên nhập → chờ duyệt, báo cáo chưa tính; nhân viên duyệt bị 403; chủ cơ sở duyệt → báo cáo ngày 01/11 cộng đúng 180.000 đ; trùng số bill 409; ngày tương lai bị từ chối; không có dòng 400.
+- **Chưa làm:** sửa nội dung bill sau khi nhập (hiện chỉ xóa khi chờ duyệt hoặc thu hồi rồi nhập lại), đính kèm ảnh bill giấy, nhập hàng loạt từ file, hiển thị bill cũ trong lịch sử từng khách và trong Nhật ký hoạt động ở màn tổng quan.
+- **Cần lưu ý khi deploy:** có migration `0033` (bảng mới `legacy_bills`); cần sao lưu cơ sở dữ liệu trước theo `docs/DEPLOY-VPS.md`.
+
 ## 2026-11-16 — Tính tiền tối thiểu khi chơi theo giờ, quy định trong Cài đặt (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu khách chơi theo giờ (luyện tập) mà chưa đến 1 giờ thì tự tính thành 1 giờ, số phút quy định trong Cài đặt.
 - **File:** `lib/club.ts` (`minBillMinutes`, `padToMinimum`, tính tiền), `lib/pricing.ts` (mặc định 60 phút), `lib/config.ts` (kiểm tra 0–240), `app/ui/SystemSettingsHub.tsx` (ô mới), `tests/min-bill.test.ts`.

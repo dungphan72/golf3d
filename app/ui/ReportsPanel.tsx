@@ -4,6 +4,7 @@ import { Download, Calendar, DollarSign, ArrowUpRight, TrendingUp, BarChart3, Re
 import { money } from '../../lib/club';
 import { toCsv } from '../../lib/csv';
 import { DataTable } from './kit';
+import { LegacyBillsPanel } from './LegacyBillsPanel';
 
 type Day = {
   day: string;
@@ -13,11 +14,19 @@ type Day = {
   packages: number;
   expenses: number;
   payments: number;
+  /** Part of the day's receipts typed in from old bills (approved by the owner). */
+  legacy?: number;
+  other?: number;
 };
 type Service = { service: string; rounds: number; revenue: number; food: number };
 type Report = { days: Day[]; services: Service[] };
 
-const SERVICE: Record<string, string> = { gdr: 'Tập kỹ thuật (GDR)', '9': 'Chơi 9 hố', '18': 'Chơi 18 hố' };
+const SERVICE: Record<string, string> = {
+  gdr: 'Tập kỹ thuật (GDR)',
+  '9': 'Chơi 9 hố',
+  '18': 'Chơi 18 hố',
+  other: 'Dịch vụ khác (bill cũ)',
+};
 const vnDate = (ms: number) => new Date(ms + 7 * 3600_000).toISOString().slice(0, 10);
 const shortDay = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
 
@@ -28,6 +37,7 @@ export function ReportsPanel() {
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [tab, setTab] = useState<'revenue' | 'legacy'>('revenue');
 
   const loadData = () => {
     setLoading(true);
@@ -49,7 +59,7 @@ export function ReportsPanel() {
   }, [from, to]);
 
   const totals = useMemo(() => {
-    const t = { cash: 0, transfer: 0, card: 0, packages: 0, expenses: 0, payments: 0 };
+    const t = { cash: 0, transfer: 0, card: 0, packages: 0, expenses: 0, payments: 0, legacy: 0, other: 0 };
     for (const d of report?.days ?? []) {
       t.cash += d.cash;
       t.transfer += d.transfer;
@@ -57,12 +67,14 @@ export function ReportsPanel() {
       t.packages += d.packages;
       t.expenses += d.expenses;
       t.payments += d.payments;
+      t.legacy += d.legacy ?? 0;
+      t.other += d.other ?? 0;
     }
     return t;
   }, [report]);
 
-  const received = totals.cash + totals.transfer + totals.card;
-  const peak = Math.max(1, ...(report?.days ?? []).map((d) => d.cash + d.transfer + d.card));
+  const received = totals.cash + totals.transfer + totals.card + totals.other;
+  const peak = Math.max(1, ...(report?.days ?? []).map((d) => d.cash + d.transfer + d.card + (d.other ?? 0)));
 
   function download() {
     if (!report) return;
@@ -73,6 +85,7 @@ export function ReportsPanel() {
         'Chuyển khoản',
         'Thẻ',
         'Tổng thu',
+        'Trong đó từ bill cũ',
         'Bán gói',
         'Chi tiền mặt',
         'Lượt thanh toán',
@@ -82,7 +95,8 @@ export function ReportsPanel() {
         d.cash,
         d.transfer,
         d.card,
-        d.cash + d.transfer + d.card,
+        d.cash + d.transfer + d.card + (d.other ?? 0),
+        d.legacy ?? 0,
         d.packages,
         d.expenses,
         d.payments,
@@ -149,6 +163,19 @@ export function ReportsPanel() {
         </div>
       </div>
 
+      <div className="mod-chip-group" role="tablist" aria-label="Báo cáo">
+        <button type="button" role="tab" aria-selected={tab === 'revenue'} className={'mod-filter-chip' + (tab === 'revenue' ? ' active' : '')} onClick={() => setTab('revenue')}>
+          Doanh thu
+        </button>
+        <button type="button" role="tab" aria-selected={tab === 'legacy'} className={'mod-filter-chip' + (tab === 'legacy' ? ' active' : '')} onClick={() => setTab('legacy')}>
+          Bill cũ
+        </button>
+      </div>
+
+      {tab === 'legacy' ? (
+        <LegacyBillsPanel onChanged={loadData} />
+      ) : (
+        <>
       {/* Top Filter and Actions Ribbon */}
       <div className="mod-surface-card mod-toolbar" style={{ padding: '12px 16px', marginBottom: 0 }}>
         <div className="operate-filter-left">
@@ -204,7 +231,10 @@ export function ReportsPanel() {
             <strong>{money(received)}</strong>
           </div>
           <div className="operate-kpi-sub">
-            <small>{totals.payments} lượt thanh toán</small>
+            <small>
+              {totals.payments} lượt thanh toán
+              {totals.legacy > 0 ? ` · gồm ${money(totals.legacy)} từ bill cũ` : ''}
+            </small>
           </div>
         </div>
 
@@ -257,7 +287,7 @@ export function ReportsPanel() {
         </div>
         <div role="img" aria-label="Biểu đồ doanh thu theo ngày" className="operate-bar-chart">
           {chart.map((d) => {
-            const dayTotal = d.cash + d.transfer + d.card;
+            const dayTotal = d.cash + d.transfer + d.card + (d.other ?? 0);
             const pct = Math.max(3, (dayTotal / peak) * 100);
             return (
               <div key={d.day} className="chart-col" title={`${d.day}: ${money(dayTotal)}`}>
@@ -299,9 +329,15 @@ export function ReportsPanel() {
                 align: 'right',
                 cell: (d) => (
                   <strong style={{ color: '#16a34a', fontSize: '13.5px' }}>
-                    {money(d.cash + d.transfer + d.card)}
+                    {money(d.cash + d.transfer + d.card + (d.other ?? 0))}
                   </strong>
                 ),
+              },
+              {
+                key: 'legacy',
+                header: 'Từ bill cũ',
+                align: 'right',
+                cell: (d) => ((d.legacy ?? 0) > 0 ? money(d.legacy ?? 0) : '—'),
               },
               {
                 key: 'pk',
@@ -363,6 +399,8 @@ export function ReportsPanel() {
         * Doanh thu phiếu gồm cả phần đã cấn trừ bằng gói thành viên trả trước (không phát sinh tiền
         mặt tại quầy); tổng thực thu chỉ tính dòng tiền thực nhận ghi nhận trong sổ ca làm việc.
       </p>
+        </>
+      )}
     </section>
   );
 }

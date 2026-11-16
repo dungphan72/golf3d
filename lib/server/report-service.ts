@@ -1,5 +1,11 @@
 import { db, type ServiceResult } from './common';
-import { REPORT_DAYS_SQL, REPORT_SERVICES_SQL } from '../report-sql';
+import {
+  REPORT_DAYS_SQL,
+  REPORT_LEGACY_DAYS_SQL,
+  REPORT_LEGACY_SERVICES_SQL,
+  REPORT_SERVICES_SQL,
+} from '../report-sql';
+import { mergeLegacy, type DayRow, type ServiceRow } from '../report-merge';
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const startOfDay = (d: string) => Date.parse(d + 'T00:00:00+07:00');
@@ -20,11 +26,19 @@ export async function revenueReport(
   if ((end - start) / 86_400_000 > MAX_DAYS)
     return { status: 400, body: { error: 'Chỉ xem tối đa 366 ngày mỗi lần' } };
   try {
-    const [days, services] = await Promise.all([
+    const [days, services, legacyDays, legacyServices] = await Promise.all([
       db().prepare(REPORT_DAYS_SQL).bind(tenant, start, end).all(),
       db().prepare(REPORT_SERVICES_SQL).bind(tenant, start, end).all(),
+      db().prepare(REPORT_LEGACY_DAYS_SQL).bind(tenant, start, end).all(),
+      db().prepare(REPORT_LEGACY_SERVICES_SQL).bind(tenant, start, end).all(),
     ]);
-    return { status: 200, body: { from, to, days: days.results, services: services.results } };
+    const merged = mergeLegacy(
+      days.results as Omit<DayRow, 'legacy' | 'other'>[],
+      services.results as ServiceRow[],
+      legacyDays.results as Parameters<typeof mergeLegacy>[2],
+      legacyServices.results as ServiceRow[],
+    );
+    return { status: 200, body: { from, to, days: merged.days, services: merged.services } };
   } catch (e) {
     console.error('revenue report', e);
     return { status: 500, body: { error: 'Chưa tải được báo cáo' } };

@@ -1066,3 +1066,35 @@ export const eventSignups = sqliteTable(
     index('event_signup_list').on(t.tenant, t.postId, t.created),
   ],
 );
+
+/** Old (paper / pre-system) bills typed in by hand. Staff entries wait for the owner; approved ones count in revenue reports. */
+export const legacyBills = sqliteTable(
+  'legacy_bills',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    code: text('code').notNull().default(''),
+    billAt: integer('bill_at').notNull(),
+    customer: text('customer').notNull(),
+    phone: text('phone').notNull().default(''),
+    room: text('room').notNull().default(''),
+    service: text('service').notNull(),
+    lines: text('lines').notNull(),
+    total: integer('total').notNull(),
+    food: integer('food').notNull().default(0),
+    method: text('method').notNull(),
+    note: text('note').notNull().default(''),
+    status: text('status').notNull(),
+    createdBy: text('created_by').notNull(),
+    createdByName: text('created_by_name').notNull(),
+    created: integer('created').notNull(),
+    reviewedBy: text('reviewed_by').notNull().default(''),
+    reviewedByName: text('reviewed_by_name').notNull().default(''),
+    reviewedAt: integer('reviewed_at'),
+    reviewNote: text('review_note').notNull().default(''),
+  },
+  (t) => [
+    index('legacy_bills_list').on(t.tenant, t.status, t.billAt),
+    uniqueIndex('legacy_bills_code').on(t.tenant, t.code).where(sql`${t.code} <> ''`),
+  ],
+);

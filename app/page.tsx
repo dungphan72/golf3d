@@ -20,7 +20,6 @@ import {
   UsersRound,
 } from 'lucide-react';
 import { BRAND } from '../lib/brand';
-import { money } from '../lib/club';
 import { publicPricing } from '../lib/server/pricing-service';
 import { bookingSlug } from '../lib/server/online-service';
 import { publicContent } from '../lib/server/content-service';
@@ -28,6 +27,18 @@ import { publicTenant } from '../lib/server/member-account-service';
 import BookingPage from './ui/BookingPage';
 import QuickBook from './ui/QuickBook';
 import './home-reference.css';
+
+const vnd = (n: number) => new Intl.NumberFormat('vi-VN').format(n);
+/** Same table as /bang-gia: hourly price, then the per-person 9 and 18 hole prices when set. */
+function priceCell(r: { gdr: number | null; h9: number | null; h18: number | null }) {
+  const holes = [r.h9 != null && `9 hố ${vnd(r.h9)}`, r.h18 != null && `18 hố ${vnd(r.h18)}`].filter(Boolean);
+  return (
+    <>
+      {r.gdr == null ? 'Liên hệ' : `${vnd(r.gdr)} đ/giờ`}
+      {holes.length > 0 && <small>{holes.join(' · ')} đ/người</small>}
+    </>
+  );
+}
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = {
@@ -250,7 +261,7 @@ export default async function LandingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {pricing.standard.rows.slice(0, 3).map((row) => {
+                  {pricing.standard.rows.map((row) => {
                     const vip = pricing.vip?.rows.find((v) => v.key === row.key);
                     return (
                       <tr key={row.key}>
@@ -260,12 +271,8 @@ export default async function LandingPage() {
                             {row.from} – {row.to}
                           </small>
                         </td>
-                        <td>{row.gdr == null ? 'Liên hệ' : `${money(row.gdr)} đ/giờ`}</td>
-                        <td>
-                          {(vip?.gdr ?? row.gdr) == null
-                            ? 'Liên hệ'
-                            : `${money(vip?.gdr ?? row.gdr ?? 0)} đ/giờ`}
-                        </td>
+                        <td>{priceCell(row)}</td>
+                        <td>{priceCell(vip ?? row)}</td>
                       </tr>
                     );
                   })}

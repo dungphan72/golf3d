@@ -62,6 +62,7 @@ export default async function PricingPage() {
           <header className="sg-head">
             <h2>Giá theo giờ</h2>
             {!pricing.vip && <p>Phòng VIP dùng chung bảng giá này.</p>}
+            {hasHoles && <p>Giá 9 hố và 18 hố tính theo người; nhóm đông trả theo số người.</p>}
           </header>
           {hasHoles ? (
             <div className="sg-stack">

@@ -138,7 +138,7 @@ export async function publicPricing(): Promise<PublicPricing> {
   const rules = officialPriceRules();
   return {
     standard: buildPriceTable(rules, 'standard'),
-    vip: null,
+    vip: vipDiffers(rules) ? buildPriceTable(rules, 'vip') : null,
     groups: groupPackages(fallbackItems()),
     vat: null,
     fee: null,

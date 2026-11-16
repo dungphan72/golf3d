@@ -16,8 +16,8 @@ export function RateGrid({ title, table }: { title?: string; table: PriceTable }
             <tr>
               <th>Khung giờ</th>
               <th>Luyện tập / giờ</th>
-              <th>9 hố</th>
-              <th>18 hố</th>
+              <th>9 hố / người</th>
+              <th>18 hố / người</th>
             </tr>
           </thead>
           <tbody>
@@ -28,16 +28,16 @@ export function RateGrid({ title, table }: { title?: string; table: PriceTable }
                   {r.gold && <span className="sg-tag">Giờ vàng</span>}
                 </td>
                 <td data-label="Luyện tập / giờ">{cell(r.gdr)}</td>
-                <td data-label="9 hố">{cell(r.h9)}</td>
-                <td data-label="18 hố">{cell(r.h18)}</td>
+                <td data-label="9 hố / người">{cell(r.h9)}</td>
+                <td data-label="18 hố / người">{cell(r.h18)}</td>
               </tr>
             ))}
             {(g.h9 != null || g.h18 != null) && (
               <tr>
                 <td>Nhóm 4 người, cả ngày</td>
                 <td data-label="Luyện tập / giờ">—</td>
-                <td data-label="9 hố">{cell(g.h9)}</td>
-                <td data-label="18 hố">{cell(g.h18)}</td>
+                <td data-label="9 hố / người">{cell(g.h9)}</td>
+                <td data-label="18 hố / người">{cell(g.h18)}</td>
               </tr>
             )}
           </tbody>

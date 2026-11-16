@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Bảng giá trang chủ đồng bộ với Cài đặt (nhánh `fix/p0-data-integrity`)
+- **Lý do:** bảng giá trang chủ chỉ lấy 3 khung đầu (khung giá thêm sau không hiện), không có giá 9/18 hố và ghi sai đơn vị ("100.000 ₫ đ/giờ"); bảng mặc định bỏ qua giá VIP riêng.
+- **Ảnh tham chiếu:** `hinh-anh/thiet-ke/home-desk.png` (giữ nguyên bố cục bảng 3 cột Thời gian · Line tiêu chuẩn · Phòng VIP).
+- **File:** `app/page.tsx` (hiện mọi khung giá; mỗi ô có giá theo giờ và một dòng nhỏ giá 9/18 hố đ/người; sửa đơn vị), `app/ui/PriceUi.tsx` và `app/bang-gia/page.tsx` (cột "9 hố / người", "18 hố / người" và ghi chú), `lib/server/pricing-service.ts` (mặc định giữ giá VIP riêng).
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi); chụp trang chủ trên bản build. Trang chủ trên điện thoại chưa chụp (khu bảng giá ẩn ở bố cục mobile của thiết kế).
+
 ## 2026-11-16 — Giá 9/18 hố tính theo người (nhánh `fix/p0-data-integrity`)
 - **Lý do:** dòng "1 người" của 9/18 hố là đơn giá một người, nhưng hệ thống ghi "/nhóm" và đòi một dòng giá cho từng số người (thiếu thì báo "Chưa có giá").
 - **Quy tắc:** nhóm N người trả N × đơn giá dòng "1 người"; nếu có dòng riêng cho đúng N người (2–4) thì dòng đó là giá trọn nhóm và được ưu tiên. Không có dòng 1 người thì vẫn báo chưa có giá, không đoán.

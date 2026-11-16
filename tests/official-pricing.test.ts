@@ -72,3 +72,9 @@ test('nhóm N người trả N × đơn giá một người (9 hố, line tiêu 
   assert.equal(one, 300_000);
   for (let n = 2; n <= 4; n++) assert.equal(selectRule(at, config, '9', false, n).amount, one * n);
 });
+
+test('bảng giá chính thức: 9/18 hố chỉ một dòng mỗi khung, "1 người" là đơn giá một người', () => {
+  const rules = officialPriceRules();
+  assert.equal(rules.length, 24);
+  assert.ok(rules.filter((r) => r.service !== 'gdr').every((r) => r.people === 1));
+});

@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Giá 9/18 hố tính theo người (nhánh `fix/p0-data-integrity`)
+- **Lý do:** dòng "1 người" của 9/18 hố là đơn giá một người, nhưng hệ thống ghi "/nhóm" và đòi một dòng giá cho từng số người (thiếu thì báo "Chưa có giá").
+- **Quy tắc:** nhóm N người trả N × đơn giá dòng "1 người"; nếu có dòng riêng cho đúng N người (2–4) thì dòng đó là giá trọn nhóm và được ưu tiên. Không có dòng 1 người thì vẫn báo chưa có giá, không đoán.
+- **File:** `lib/pricing.ts` (`selectRule`), `lib/official-pricing.ts` (bảng chính thức còn 24 khung, mỗi khung 9/18 hố một dòng "1 người"), `app/ui/PriceEditor.tsx` (nhãn "/người" hoặc "/nhóm N người", giải thích cạnh ô Số người, nút "Thêm" cùng hàng), `app/ui/SystemSettingsHub.tsx`, `tests/booking-plan.test.ts`, `tests/official-pricing.test.ts`.
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`; trình duyệt: bảng chính thức 24 khung hiện "/người"; đặt 9 hố 2/3/4 người ra 600.000 / 900.000 / 1.200.000.
+
 ## 2026-11-16 — Gỡ dữ liệu điền sẵn do AI đặt, chặn giao dịch ngân hàng giả, xóa form cài đặt cũ (nhánh `fix/p0-data-integrity`)
 - **Lý do:** quy tắc dữ liệu của dự án (không dữ liệu giả). Các thẻ Cài đặt điền sẵn tài khoản ngân hàng, mã số thuế, tên công ty, mã marketing, VAT/phí, tỷ lệ hoa hồng… rồi lưu thành dữ liệu thật khi bấm Lưu; màn chuyển khoản dùng số tài khoản dự phòng tự đặt để tạo mã QR; nút "Giả lập báo có SePay" tạo giao dịch ngân hàng giả và máy chủ cho mọi nhân viên dùng.
 - **File:** `app/ui/SystemSettingsHub.tsx` (ô trống khi chưa cấu hình, hạng hội viên và quyền lợi lấy từ mặc định của hệ thống, ô số để trống không bị lưu thành 0), `app/ui/session/TransferPanel.tsx` (không QR khi chưa cấu hình tài khoản nhận tiền, hiện hướng dẫn; bỏ nút giả lập), `app/ui/SepaySettings.tsx` (bỏ nút gửi giao dịch test), `app/ui/ModernPosFlow.tsx`, `lib/server/bank-service.ts` (`simulate-tx` chỉ chạy trên máy kiểm thử, ngoài đó trả 403), `app/ui/Forms.tsx` và `app/ui/ClubApp.tsx` (xóa `SettingsForm` cũ không còn dùng, gồm các ô giá cũ).

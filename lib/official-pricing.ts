@@ -59,13 +59,13 @@ export function officialPriceRules(): PriceRule[] {
     add(room, 'gdr', 'weekday', PEAK_END, CLOSE, null, p.normal.gdr, 'Giờ thường T2–T6');
     add(room, 'gdr', 'weekend', OPEN, CLOSE, null, p.weekend.gdr, 'Thứ 7, Chủ nhật');
     add(room, 'gdr', 'holiday', OPEN, CLOSE, null, p.weekend.gdr, 'Ngày lễ');
+    // 9 and 18 holes: one rule per slot with "1 người" = the price of ONE person.
+    // A group of N pays N × that price (see selectRule); no per-group rows are needed.
     for (const service of ['9', '18'] as const) {
-      for (let people = 1; people <= 4; people++) {
-        add(room, service, 'weekday', OPEN, PEAK_END, people, p.peak[service] * people, 'Giờ vàng T2–T6');
-        add(room, service, 'weekday', PEAK_END, CLOSE, people, p.normal[service] * people, 'Giờ thường T2–T6');
-        add(room, service, 'weekend', OPEN, CLOSE, people, p.weekend[service] * people, 'Thứ 7, Chủ nhật');
-        add(room, service, 'holiday', OPEN, CLOSE, people, p.weekend[service] * people, 'Ngày lễ');
-      }
+      add(room, service, 'weekday', OPEN, PEAK_END, 1, p.peak[service], 'Giờ vàng T2–T6');
+      add(room, service, 'weekday', PEAK_END, CLOSE, 1, p.normal[service], 'Giờ thường T2–T6');
+      add(room, service, 'weekend', OPEN, CLOSE, 1, p.weekend[service], 'Thứ 7, Chủ nhật');
+      add(room, service, 'holiday', OPEN, CLOSE, 1, p.weekend[service], 'Ngày lễ');
     }
   }
   return rules;

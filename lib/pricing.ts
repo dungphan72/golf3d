@@ -101,23 +101,37 @@ export function dayAt(ms: number, holidays: string[] = []) {
       : 'weekday';
   return { date, day, minute: d.getUTCHours() * 60 + d.getUTCMinutes() };
 }
+/**
+ * Price rule for a time. Hourly practice is per room. For 9/18 holes a rule with "1 người" is the
+ * price of ONE person: a group of N pays N × that price. A rule saved for exactly N people (N ≥ 2)
+ * is a special group price and wins over the per-person price. The returned `amount` is the total
+ * for the group; `unit` is the per-person price when it was derived from the 1-person rule.
+ */
 export function selectRule(ms: number, c: Config, service: Service, vip: boolean, people = 1) {
   const p = dayAt(ms, c.holidays);
-  const matches = (c.priceRules ?? []).filter(
+  const inWindow = (r: PriceRule) => ruleWindows(r).some(([s, e]) => p.minute >= s && p.minute < e);
+  const pool = (c.priceRules ?? []).filter(
     (r) =>
       r.enabled &&
       r.service === service &&
       r.room === (vip ? 'vip' : 'standard') &&
       r.day === p.day &&
-      (service === 'gdr' || r.people === people) &&
-      ruleWindows(r).some(([s, e]) => p.minute >= s && p.minute < e),
+      inWindow(r),
   );
+  const pick = (n: number | null) => pool.filter((r) => r.people === n);
+  let matches = service === 'gdr' ? pool : pick(people);
+  let perPerson = false;
+  if (service !== 'gdr' && !matches.length && people > 1) {
+    matches = pick(1);
+    perPerson = matches.length > 0;
+  }
   if (matches.length > 1) throw new Error('Có khung giá trùng, hãy kiểm tra cấu hình');
   if (!matches.length)
     throw new Error(
       `Chưa có giá ${vip ? 'VIP' : 'line tiêu chuẩn'} · ${service === 'gdr' ? 'luyện tập' : service + ' hố'} · ${p.date} ${String(Math.floor(p.minute / 60)).padStart(2, '0')}:${String(p.minute % 60).padStart(2, '0')}`,
     );
-  return matches[0];
+  const rule = matches[0];
+  return perPerson ? { ...rule, amount: rule.amount * people, unit: rule.amount } : rule;
 }
 function roundRatio(numerator: bigint, denominator: bigint) {
   return Number((numerator + denominator / 2n) / denominator);

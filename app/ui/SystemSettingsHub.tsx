@@ -2268,8 +2268,7 @@ function SettingsCardModal({
           {cardId === 'pricing_rates' && (
             <div>
               <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', lineHeight: 1.5 }}>
-                Bảng giá này áp dụng cho toàn hệ thống: đặt lịch, POS và trang bảng giá công khai. Giá 9/18
-                hố là tổng cho cả nhóm (đơn giá một người × số người). Dịch vụ chưa có giá sẽ không đặt
+                Bảng giá này áp dụng cho toàn hệ thống: đặt lịch, POS và trang bảng giá công khai. Giá 9/18 hố: dòng &ldquo;1 người&rdquo; là đơn giá mỗi người, nhóm N người trả N × đơn giá. Dịch vụ chưa có giá sẽ không đặt
                 lịch hoặc mở phiên được.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>

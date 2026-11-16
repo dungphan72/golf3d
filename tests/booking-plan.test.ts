@@ -107,16 +107,18 @@ test('18-hole weekend price is different from weekday happy hour', () => {
   assert.equal(packagePrice(at('2026-11-07T09:00:00'), c, '18', false, 1).base, 650000);
   assert.equal(packagePrice(at('2026-11-02T09:00:00'), c, '18', false, 1).base, 400000);
 });
-test('unconfirmed group price is blocked rather than inferred', () =>
-  assert.throws(
-    () =>
-      planBooking(
-        { room: 'line-1', service: '9', start: at('2026-11-02T10:00:00'), people: 4, minutes: 60 },
-        c,
-        now,
-      ),
-    /Chưa có giá/,
-  ));
+test('group of N people pays N × the one-person price; a rule saved for N people overrides', () => {
+  const t = at('2026-11-02T10:00:00');
+  const unit = packagePrice(t, c, '9', false, 1).base;
+  for (const n of [2, 3, 4]) assert.equal(packagePrice(t, c, '9', false, n).base, unit * n);
+  // A special price saved for exactly 4 people wins over 4 × the per-person price.
+  const one = c.priceRules!.find((r) => r.service === '9' && r.room === 'standard' && r.day === 'weekday' && r.people === 1 && r.from <= '10:00' && r.to > '10:00')!;
+  const withGroup = { ...c, priceRules: [...c.priceRules!.filter((r) => !(r.service === '9' && r.room === 'standard' && r.people === 4 && r.day === 'weekday')), { ...one, id: 'group4', people: 4, amount: unit * 4 - 50000 }] };
+  assert.equal(packagePrice(t, withGroup, '9', false, 4).base, unit * 4 - 50000);
+  // Without any one-person rule there is still no price: never guessed.
+  const none = { ...c, priceRules: c.priceRules!.filter((r) => !(r.service === '9' && r.room === 'standard' && r.people === 1)) };
+  assert.throws(() => packagePrice(t, none, '9', false, 2), /Chưa có giá/);
+});
 test('reserved time includes group allowance, buffer and cleaning separately', () => {
   const start = at('2026-11-02T10:00:00'),
     plan = planBooking(

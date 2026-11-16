@@ -12,6 +12,10 @@ const services = {
 const days = { weekday: 'Thứ 2 – Thứ 6', weekend: 'Thứ 7 & Chủ nhật', holiday: 'Ngày lễ' };
 const rooms = { standard: 'Line tiêu chuẩn', vip: 'Phòng VIP' } as const;
 
+/** 9/18 holes: "1 người" is the price of one person; N ≥ 2 is a special price for that whole group. */
+const unitLabel = (r: PriceRule) =>
+  r.service === 'gdr' ? '/giờ' : (r.people ?? 1) <= 1 ? '/người' : `/nhóm ${r.people} người`;
+
 export function PriceEditor({
   rules,
   onChange,
@@ -221,6 +225,15 @@ export function PriceEditor({
                           <td colSpan={7}>
                             <button
                               type="button"
+                              className="secondary"
+                              style={{ float: 'right' }}
+                              disabled={rules.length >= 300}
+                              onClick={() => add({ room: g.key as 'standard' | 'vip', service: r.service })}
+                            >
+                              <Plus size={13} /> Thêm
+                            </button>
+                            <button
+                              type="button"
                               aria-expanded={!folded.has(gk)}
                               onClick={() => toggle(gk)}
                             >
@@ -229,15 +242,6 @@ export function PriceEditor({
                               <span>
                                 {g.rows.filter((x) => x.service === r.service).length} khung giá
                               </span>
-                            </button>
-                            <button
-                              type="button"
-                              className="secondary"
-                              style={{ float: 'right' }}
-                              disabled={rules.length >= 300}
-                              onClick={() => add({ room: g.key as 'standard' | 'vip', service: r.service })}
-                            >
-                              <Plus size={13} /> Thêm
                             </button>
                           </td>
                         </tr>
@@ -256,7 +260,7 @@ export function PriceEditor({
                         </td>
                         <td className="num">
                           {money(r.amount)}
-                          <small>{r.service === 'gdr' ? ' /giờ' : ' /nhóm'}</small>
+                          <small>{' ' + unitLabel(r)}</small>
                         </td>
                         <td>
                           <span className={'pt-state ' + (r.enabled ? 'on' : 'off')}>
@@ -382,7 +386,7 @@ export function PriceEditor({
                                 />
                               </label>
                               <label>
-                                Đơn giá (₫){r.service === 'gdr' ? ' / giờ' : ' / cả nhóm'}
+                                Đơn giá (₫) {unitLabel(r).replace('/', '/ ')}
                                 <input
                                   type="number"
                                   min={1}
@@ -408,6 +412,10 @@ export function PriceEditor({
                                       </option>
                                     ))}
                                   </select>
+                                  <small>
+                                    1 người = đơn giá mỗi người (nhóm N người trả N × đơn giá). Chọn 2–4
+                                    người chỉ khi nhóm đó có giá trọn nhóm riêng.
+                                  </small>
                                 </label>
                               )}
                               <label>
@@ -476,7 +484,7 @@ export function TariffPreview({ config }: { config: Config }) {
               </div>
               <b>
                 {money(r.amount)}
-                <small>{r.service === 'gdr' ? '/ giờ' : '/ cả nhóm'}</small>
+                <small>{unitLabel(r)}</small>
               </b>
             </article>
           ))

@@ -138,8 +138,8 @@ test('thanh toán chia nhiều hình thức: đủ tiền mới ghi, không ghi 
   // The payment dialog offers the split form for an unpaid bill.
   await page.goto('/quan-ly');
   await page
-    .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Đặt line/ })
+    .locator('nav[aria-label="Quản trị hệ thống"]')
+    .getByRole('button', { name: /Đặt sân/ })
     .click();
   await page.getByText('Khách chia UI').first().click();
   // Split payment lives under the "Khác" tab of the POS panel.

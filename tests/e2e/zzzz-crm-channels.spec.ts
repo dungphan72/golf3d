@@ -119,8 +119,8 @@ test('dữ liệu lạ bị từ chối', async () => {
 test('màn hình: tab Kênh & tích hợp, tạo mã hiện một lần', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
-  const crm = page.getByRole('region', { name: 'CRM' });
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
+  const crm = page.getByRole('region', { name: /CRM/ });
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Cấu hình', exact: true }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Kênh & tích hợp', exact: true }).click();
   await expect(crm.getByRole('heading', { name: 'Kênh nhận lead và gửi tin' })).toBeVisible();
@@ -139,8 +139,8 @@ test('nhân viên sale không thấy tab Kênh & tích hợp', async ({ browser 
   const page = await ctx.newPage();
   expect((await page.request.post('/api/auth/login', { data: SALE })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
-  const crm = page.getByRole('region', { name: 'CRM' });
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
+  const crm = page.getByRole('region', { name: /CRM/ });
   await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Bàn làm việc', exact: true })).toBeVisible();
   await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Kênh & tích hợp', exact: true })).toHaveCount(0);
   await ctx.close();

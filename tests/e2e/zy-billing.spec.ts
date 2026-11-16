@@ -154,7 +154,7 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   const total = await amountOf(owner, id);
   await page.goto('/quan-ly');
   // The home board lists the unpaid session under "Việc cần làm ngay"; the top search finds it too.
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /Bán hàng \(POS\)/ }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /POS/ }).click();
   const tasks = page.getByRole('region', { name: 'Việc cần làm ngay' });
   await expect(tasks.getByText('Thu tiền · Khách Giao Diện')).toBeVisible();
   await page.getByLabel('Tìm khách hoặc phiếu').fill('Giao Diện');
@@ -162,8 +162,8 @@ test('trong phiếu: giảm giá, tiền khách đưa và tiền thối, rồi h
   await page.getByLabel('Tìm khách hoặc phiếu').fill('');
   // A finished session waits for payment on its room card: one click opens the bill.
   await page
-    .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Bán hàng \(POS\)/ })
+    .locator('nav[aria-label="Quản trị hệ thống"]')
+    .getByRole('button', { name: /POS/ })
     .click();
   const card = page.locator('.pos-line', { hasText: 'Khách Giao Diện' });
   await expect(card.getByText('Chờ thu tiền')).toBeVisible();

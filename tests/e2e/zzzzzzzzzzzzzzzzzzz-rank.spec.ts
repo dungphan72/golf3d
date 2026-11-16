@@ -59,7 +59,7 @@ test('hạng hội viên tính theo tổng chi tiêu và mốc sửa được tr
 
   // The member's own page shows the same rank.
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: /Khách hàng/ }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /Khách hàng/ }).click();
   await page.getByRole('button', { name: /Khách Hạng/ }).click();
   await expect(page.getByText('Platinum').first()).toBeVisible();
 

@@ -56,7 +56,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import { rooms, money, sessionQuote, type Booking, type Segment } from '../../lib/club';
+import { rooms, money, sessionQuote, type Booking, type BillPart, type Segment } from '../../lib/club';
 import {
   operationKey,
   shiftTotals,
@@ -120,6 +120,79 @@ const SERVICE_LABEL: Record<string, string> = {
   '9': 'Game 9 hố',
   '18': 'Game 18 hố',
 };
+
+/** Hourly part: time ranges and minutes; game part: the whole-round label. */
+function partDetail(part: BillPart) {
+  return part.lines
+    .map((l) =>
+      l.package || l.from == null || l.to == null
+        ? l.label
+        : `${time(l.from)}–${time(l.to)} (${Math.round(l.minutes)}p)`,
+    )
+    .join(' · ');
+}
+
+/**
+ * Golf charge of a session. After switching between practice and a game, every service stays on the
+ * same bill: one row per service with its own amount, then service fee and VAT on the combined total.
+ */
+function GolfFeeRows({
+  bill,
+  service,
+  total,
+  fallback,
+  variant,
+}: {
+  bill: Bill & { parts?: BillPart[] };
+  service: string;
+  total: number;
+  fallback: string;
+  variant: 'used' | 'line';
+}) {
+  const rowClass = variant === 'used' ? 'pos-m3-used-row golf' : 'pos-m3-line-item';
+  const parts = bill.parts ?? [];
+  if (parts.length < 2) {
+    return (
+      <div className={rowClass}>
+        <div>
+          <strong>Phí chơi Golf ({SERVICE_LABEL[service] || service})</strong>
+          <small>
+            {bill.lines.length > 0
+              ? bill.lines.map((l) => `${l.label} (${Math.round(l.minutes)}p)`).join(' · ')
+              : fallback}
+          </small>
+        </div>
+        <strong>{money(total)}</strong>
+      </div>
+    );
+  }
+  const subtotal = parts.reduce((n, p) => n + p.subtotal, 0);
+  const extra = total - subtotal;
+  return (
+    <>
+      {parts.map((p, i) => (
+        <div key={`${p.service}-${i}`} className={rowClass}>
+          <div>
+            <strong>
+              {i + 1}. {p.label}
+            </strong>
+            <small>{partDetail(p)}</small>
+          </div>
+          <strong>{money(p.subtotal)}</strong>
+        </div>
+      ))}
+      {extra !== 0 && (
+        <div className={rowClass}>
+          <div>
+            <strong>Phí dịch vụ & VAT</strong>
+            <small>Tính trên tổng các dịch vụ trên</small>
+          </div>
+          <strong>{money(extra)}</strong>
+        </div>
+      )}
+    </>
+  );
+}
 
 const PAY_LABEL: Record<string, string> = {
   cash: 'Tiền mặt',
@@ -481,7 +554,7 @@ export function ModernPosFlow({
   );
 
   // Calculate live session quote for activeBooking
-  const sessionBill: Bill & { error?: string } = useMemo(() => {
+  const sessionBill: Bill & { error?: string; parts?: BillPart[] } = useMemo(() => {
     const emptyBill: Bill = { lines: [], subtotal: 0, fee: 0, vat: 0, total: 0 };
     if (!activeBooking) return emptyBill;
     try {
@@ -1020,7 +1093,16 @@ export function ModernPosFlow({
     if (!activeBooking || saving || activeBooking.service === target) return;
     setSaving(true);
     try {
-      await onMutate({ action: 'switch-service', id: activeBooking.id, service: target });
+      const from = activeBooking.service;
+      const ok = await onMutate({ action: 'switch-service', id: activeBooking.id, service: target });
+      if (ok) {
+        const name = SERVICE_LABEL[target] || target;
+        setNotice(
+          from !== 'gdr' && target !== 'gdr'
+            ? `Đã đổi sang ${name}: tính lại một lượt chơi, không tính hai lần.`
+            : `Đã chuyển sang ${name}. Tiền dịch vụ trước đó được giữ và cộng dồn trên cùng một phiếu.`,
+        );
+      }
     } finally {
       setSaving(false);
     }
@@ -2805,16 +2887,13 @@ export function ModernPosFlow({
                       </button>
                     </div>
                     <div className="pos-m3-line-items">
-                      <div className="pos-m3-line-item">
-                        <div>
-                          <strong>Phí sân ({SERVICE_LABEL[activeBooking.service]})</strong>
-                          <small>
-                            {sessionBill.lines.map((l) => `${l.label} (${Math.round(l.minutes)}p)`).join(' · ') ||
-                              getRoomRateLabel(selectedRoomObj.vip)}
-                          </small>
-                        </div>
-                        <strong>{money(golfTotal)}</strong>
-                      </div>
+                      <GolfFeeRows
+                        bill={sessionBill}
+                        service={activeBooking.service}
+                        total={golfTotal}
+                        fallback={getRoomRateLabel(selectedRoomObj.vip)}
+                        variant="line"
+                      />
 
                       {bookingOrders
                         .filter((o) => o.status !== 'cancelled')
@@ -4006,20 +4085,14 @@ export function ModernPosFlow({
                       </div>
 
                       <div className="pos-m3-used-list">
-                        {/* Golf Fee Line */}
-                        <div className="pos-m3-used-row golf">
-                          <div>
-                            <strong>Phí chơi Golf ({SERVICE_LABEL[activeBooking.service]})</strong>
-                            <small>
-                              {sessionBill.lines.length > 0
-                                ? sessionBill.lines
-                                    .map((l) => `${l.label}: ${Math.round(l.minutes)}p`)
-                                    .join(' · ')
-                                : getRoomRateLabel(selectedRoomObj.vip)}
-                            </small>
-                          </div>
-                          <strong>{money(golfTotal)}</strong>
-                        </div>
+                        {/* Golf fee: one row per service when the session switched between them */}
+                        <GolfFeeRows
+                          bill={sessionBill}
+                          service={activeBooking.service}
+                          total={golfTotal}
+                          fallback={getRoomRateLabel(selectedRoomObj.vip)}
+                          variant="used"
+                        />
 
                         {/* Committed F&B / Service Orders */}
                         {bookingOrders

@@ -50,7 +50,8 @@ import {
 } from 'lucide-react';
 import { rooms, money, type Config } from '../../lib/club';
 import { officialPriceRules } from '../../lib/official-pricing';
-import { syncRulesWithRates } from '../../lib/price-sync';
+import { PriceEditor } from './PriceEditor';
+import type { PriceRule } from '../../lib/pricing';
 import { operationKey } from '../../lib/finance';
 import type { MenuItem } from '../../lib/fnb';
 import type { Data } from './shared';
@@ -1830,19 +1831,12 @@ function SettingsCardModal({
     onlineSlug: config.onlineSlug || 'sigolf-club',
   });
 
-  const [formPrices, setFormPrices] = useState(() => {
-    const rules = config.priceRules ?? [];
-    const stdNormal = rules.find((r) => r.service === 'gdr' && r.room === 'standard' && r.day === 'weekday' && r.from === '11:00')?.amount;
-    const stdHappy = rules.find((r) => r.service === 'gdr' && r.room === 'standard' && r.day === 'weekday' && r.to === '11:00')?.amount;
-    const vipNormal = rules.find((r) => r.service === 'gdr' && r.room === 'vip' && r.day === 'weekday' && r.from === '11:00')?.amount;
-    const vipHappyRule = rules.find((r) => r.service === 'gdr' && r.room === 'vip' && r.day === 'weekday' && r.to === '11:00')?.amount;
-    return {
-      rate: stdNormal ?? config.rate ?? 150000,
-      happy: stdHappy ?? config.happy ?? 100000,
-      vipRate: vipNormal ?? config.vipRate ?? 200000,
-      vipHappy: vipHappyRule ?? config.vipHappy ?? 150000,
-    };
-  });
+  // The detailed price table is the single source of price. It starts from the saved table, or from
+  // the official list when none was saved yet; nothing is stored until the owner presses Lưu.
+  const [formRules, setFormRules] = useState<PriceRule[]>(() =>
+    config.priceRules?.length ? config.priceRules : officialPriceRules(),
+  );
+  const [confirmOfficial, setConfirmOfficial] = useState(false);
 
   const [formPayment, setFormPayment] = useState({
     bankBin: config.bankBin || '970422',
@@ -1959,31 +1953,7 @@ function SettingsCardModal({
       return;
     }
     if (cardId === 'pricing_rates') {
-      const nextRate = Number(formPrices.rate);
-      const nextHappy = Number(formPrices.happy);
-      const nextVipRate = Number(formPrices.vipRate);
-      const nextVipHappy = Number(formPrices.vipHappy);
-      const baseRules = config.priceRules?.length ? config.priceRules : officialPriceRules();
-      // Only weekday hourly rules follow these fields; weekend/holiday/per-person prices stay as set.
-      const syncedRules = syncRulesWithRates(baseRules, {
-        prevOpen: config.open || '06:00',
-        prevClose: config.close || '23:00',
-        open: config.open || '06:00',
-        close: config.close || '23:00',
-        rate: nextRate,
-        happy: nextHappy,
-        vipRate: nextVipRate,
-        vipHappy: nextVipHappy,
-        ratesTouched: true,
-        hoursTouched: false,
-      });
-      await onSave({
-        rate: nextRate,
-        happy: nextHappy,
-        vipRate: nextVipRate,
-        vipHappy: nextVipHappy,
-        priceRules: syncedRules,
-      });
+      await onSave({ priceRules: formRules });
       return;
     }
     if (cardId === 'payment_methods') {
@@ -2056,7 +2026,7 @@ function SettingsCardModal({
       <div
         className="ar-settings-modal"
         style={
-          cardId === 'hour_packages' || cardId === 'payment_methods'
+          cardId === 'hour_packages' || cardId === 'payment_methods' || cardId === 'pricing_rates'
             ? { maxWidth: 1060, width: '96%' }
             : undefined
         }
@@ -2280,47 +2250,41 @@ function SettingsCardModal({
 
           {cardId === 'pricing_rates' && (
             <div>
-              <div className="ar-form-grid">
-                <div className="ar-field">
-                  <label>Đơn giá Line thường - Giờ thường (VNĐ/h)</label>
-                  <input
-                    type="number"
-                    step="10000"
-                    value={formPrices.rate}
-                    onChange={(e) => setFormPrices({ ...formPrices, rate: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="ar-field">
-                  <label>Đơn giá Line thường - Giờ vàng (VNĐ/h)</label>
-                  <input
-                    type="number"
-                    step="10000"
-                    value={formPrices.happy}
-                    onChange={(e) => setFormPrices({ ...formPrices, happy: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="ar-field">
-                  <label>Đơn giá Phòng VIP - Giờ thường (VNĐ/h)</label>
-                  <input
-                    type="number"
-                    step="10000"
-                    value={formPrices.vipRate}
-                    onChange={(e) => setFormPrices({ ...formPrices, vipRate: Number(e.target.value) })}
-                  />
-                </div>
-                <div className="ar-field">
-                  <label>Đơn giá Phòng VIP - Giờ vàng (VNĐ/h)</label>
-                  <input
-                    type="number"
-                    step="10000"
-                    value={formPrices.vipHappy}
-                    onChange={(e) => setFormPrices({ ...formPrices, vipHappy: Number(e.target.value) })}
-                  />
-                </div>
+              <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '12px', lineHeight: 1.5 }}>
+                Bảng giá này áp dụng cho toàn hệ thống: đặt lịch, POS và trang bảng giá công khai. Giá 9/18
+                hố là tổng cho cả nhóm (đơn giá một người × số người). Dịch vụ chưa có giá sẽ không đặt
+                lịch hoặc mở phiên được.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                {!confirmOfficial ? (
+                  <button type="button" className="ar-btn-secondary" onClick={() => setConfirmOfficial(true)}>
+                    Nạp bảng giá chính thức 11/2026
+                  </button>
+                ) : (
+                  <>
+                    <span style={{ fontSize: '13px', fontWeight: 600 }}>
+                      Thay toàn bộ khung giá hiện tại bằng bảng giá chính thức?
+                    </span>
+                    <button
+                      type="button"
+                      className="ar-btn-primary"
+                      onClick={() => {
+                        setFormRules(officialPriceRules());
+                        setConfirmOfficial(false);
+                      }}
+                    >
+                      Thay thế
+                    </button>
+                    <button type="button" className="ar-btn-secondary" onClick={() => setConfirmOfficial(false)}>
+                      Giữ bảng hiện tại
+                    </button>
+                    <small style={{ color: '#64748b' }}>Chưa lưu cho tới khi bạn bấm Lưu bên dưới.</small>
+                  </>
+                )}
               </div>
+              <PriceEditor rules={formRules} onChange={setFormRules} />
             </div>
           )}
-
           {cardId === 'hour_packages' && (
             <PackageCatalogManager
               canAdjust
@@ -3320,7 +3284,7 @@ function getCardTitle(id: SettingsCardId, fallback?: string): string {
     rooms_lines: 'Quản lý Khu vực & Line / Phòng',
     operating_hours: 'Cài đặt Giờ hoạt động & Ngày lễ',
     facility_layout: 'Cài đặt Sơ đồ cơ sở trên POS',
-    pricing_rates: 'Cấu hình Bảng giá giờ chơi',
+    pricing_rates: 'Cấu hình Bảng giá',
     hour_packages: 'Quản lý Gói giờ & Thẻ',
     membership_tiers: 'Cài đặt Hạng hội viên & Quyền lợi',
     promotions_vouchers: 'Quản lý Ưu đãi & Mã giảm giá',
@@ -3354,7 +3318,7 @@ function getCardSubtitle(id: SettingsCardId, fallback?: string): string {
     rooms_lines: 'Thiết lập danh sách line tập GDR, phòng VIP và line tay trái',
     operating_hours: 'Quy định giờ mở cửa, đóng cửa, thời gian dọn line và ngày nghỉ lễ',
     facility_layout: 'Sắp xếp thứ tự các line và vị trí trực quan trên màn hình POS',
-    pricing_rates: 'Điều chỉnh đơn giá line thường, phòng VIP và khung giờ vàng',
+    pricing_rates: 'Khung giá theo line/VIP, ngày, giờ và số người; thêm, sửa, xóa',
     hour_packages: 'Thiết lập các gói giờ ưu đãi nạp trước cho hội viên',
     membership_tiers: 'Quy định mốc tích lũy lên hạng và chính sách giảm giá riêng',
     promotions_vouchers: 'Tạo mã voucher giảm giá, ưu đãi khai trương và combo',

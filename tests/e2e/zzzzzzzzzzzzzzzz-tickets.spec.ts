@@ -94,7 +94,7 @@ test('ticket đã đóng: nhân viên không mở lại được, quản lý m�
 test('giao diện: Ticket hỗ trợ tạo ticket, mở chi tiết và nhận xử lý', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Ticket hỗ trợ', exact: true }).click();
   await expect(page.getByText('Quá hạn SLA')).toBeVisible();
   await page.getByRole('button', { name: '+ Tạo ticket' }).click();

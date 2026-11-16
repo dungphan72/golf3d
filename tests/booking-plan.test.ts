@@ -1,3 +1,4 @@
+import { officialPriceRules } from '../lib/official-pricing.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -195,15 +196,13 @@ test('disabled rules do not shadow an enabled price', () =>
   assert.doesNotThrow(() =>
     validateRules([c.priceRules![0], { ...c.priceRules![0], id: 'disabled', enabled: false }]),
   ));
-test('legacy config upgraded without discarding configured VIP price', () => {
+test('config without a saved price table uses the official table, not the legacy price fields', () => {
   const old = { ...defaults, vipRate: 450000, vipHappy: 200000 };
   const upgraded = upgradeConfig(old, defaults);
-  assert.equal(
-    upgraded.priceRules?.find(
-      (r) => r.room === 'vip' && r.service === 'gdr' && r.label === 'Giờ tiêu chuẩn',
-    )?.amount,
-    450000,
-  );
+  assert.deepEqual(upgraded.priceRules, officialPriceRules());
+  // A saved table is never replaced.
+  const own = [officialPriceRules()[0]];
+  assert.deepEqual(upgradeConfig({ ...defaults, priceRules: own }, defaults).priceRules, own);
 });
 test('explicit empty rules remain empty on upgrade', () =>
   assert.deepEqual(upgradeConfig({ ...defaults, priceRules: [] }, defaults).priceRules, []));

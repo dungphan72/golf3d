@@ -2,6 +2,16 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Bảng giá chính thức duy nhất, thêm/sửa/xóa khung giá (nhánh `fix/p0-data-integrity`)
+- **Lý do:** bảng giá đang chạy thật là bảng cũ, thiếu giá 9 hố cho 2–4 người và lệch bảng chính thức 11/2026; Cài đặt hệ thống mới không còn nơi sửa bảng khung giá chi tiết (chỉ 4 ô giá theo giờ). Chủ hệ thống yêu cầu dùng bảng chính thức cho toàn hệ thống, bỏ các bảng giá không liên quan, cho phép thêm, sửa, xóa.
+- **Ảnh tham chiếu:** `docs/PRICING.md` (bảng giá chính thức 11/2026); giao diện theo `caidat.png`.
+- **File:** `app/ui/SystemSettingsHub.tsx` (thẻ "Bảng giá" dùng `PriceEditor`, nút "Nạp bảng giá chính thức 11/2026" có bước xác nhận; bỏ form 4 ô giá và đồng bộ phía client), `app/system-settings.css`, `lib/pricing.ts` (`upgradeConfig` luôn dùng bảng chính thức khi chưa lưu bảng riêng), `app/ui/ClubApp.tsx`, `tests/booking-plan.test.ts`, `tests/official-pricing.test.ts`.
+- **Sửa lỗi kèm theo:** nút Lưu trong Cài đặt hệ thống trước đây không gửi `pricingRevision` nên máy chủ trả 409 cho mọi lần lưu; nay gửi kèm.
+- **Cách áp dụng trên hệ thống thật:** Cài đặt hệ thống › Giá, gói & hội viên › Bảng giá › Nạp bảng giá chính thức 11/2026 › Thay thế › Lưu thay đổi. Chưa nạp tự động vào dữ liệu thật.
+- **Screenshot:** chụp trong phiên (thẻ Bảng giá); chưa lưu thành file trong repo.
+- **Kiểm thử:** `tsc`, `eslint` (0 lỗi), `pnpm test`; kiểm tra bằng trình duyệt: nạp bảng chính thức, xóa một khung, lưu, đọc lại từ server (72 → 71).
+- **Chưa làm:** các trường giá cũ (`rate`, `happy`, `hole9`…) còn trong cấu hình và mã nhưng không còn nơi nào chỉnh sửa; `SettingsForm` trong `Forms.tsx` là mã không dùng.
+
 ## 2026-11-16 — Sơ đồ line, form đặt lịch, bo góc 5px toàn hệ thống (nhánh `fix/p0-data-integrity`)
 - **Lý do:** (1) form "Tạo lịch đặt" không chặn điều kiện, layout lộn xộn; (2) đặt 9 hố báo "Chưa có giá line tiêu chuẩn" vì bảng giá không có giá 9 hố cho 2 và 3 người; (3) thẻ line nhồi nhiều thông tin trên một dòng, chữ thừa. Chủ hệ thống yêu cầu bo góc 5px thống nhất (thay quy ước 12–20px trước đây).
 - **Ảnh tham chiếu:** ảnh chụp lỗi do chủ hệ thống gửi trong phiên; chưa có ảnh thiết kế riêng cho hai màn này.

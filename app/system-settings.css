@@ -805,3 +805,26 @@
   border-color: #fca5a5;
   color: #dc2626;
 }
+
+/* Price table inside the settings modal: filters on one row, never stacked full-width. */
+.ar-settings-modal .price-editor .operate-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.ar-settings-modal .price-editor .operate-filter-left {
+  flex: 1 1 520px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.ar-settings-modal .price-editor .operate-filter-left .operate-label {
+  min-width: 0 !important;
+}
+@media (max-width: 720px) {
+  .ar-settings-modal .price-editor .operate-filter-left {
+    grid-template-columns: 1fr;
+  }
+}

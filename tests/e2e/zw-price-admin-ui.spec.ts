@@ -15,7 +15,7 @@ const rulesOf = async (page: Page) => {
 
 async function openPriceTab(page: Page) {
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label=\"Menu chính\"]').getByRole('button', { name: 'Cài đặt' }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /Cài đặt/ }).click();
   await page.getByRole('tab', { name: 'Giá', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Khung giá theo lịch' })).toBeVisible();
 }
@@ -101,7 +101,7 @@ test('admin ngừng bán gói (không xóa cứng) rồi bán lại', async ({ p
 
   await page.goto('/quan-ly');
   await page
-    .locator('aside[aria-label="Menu chính"]')
+    .locator('nav[aria-label="Quản trị hệ thống"]')
     .getByRole('button', { name: /Khách hàng/ })
     .click();
   await page.getByRole('tab', { name: 'Danh mục gói' }).click();

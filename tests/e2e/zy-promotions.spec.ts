@@ -115,7 +115,7 @@ test('khuyến mãi nhập trong cài đặt: tự áp vào báo giá, hiện tr
 test('thêm, sửa, tắt và xóa khuyến mãi ngay trong màn hình Cài đặt', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label=\"Menu chính\"]').getByRole('button', { name: 'Cài đặt' }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /Cài đặt/ }).click();
   await page.getByRole('tab', { name: 'Khuyến mãi' }).click();
 
   await page.getByRole('button', { name: 'Thêm khuyến mãi' }).click();

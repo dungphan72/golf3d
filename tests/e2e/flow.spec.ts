@@ -22,7 +22,7 @@ async function post(request: APIRequestContext, url: string, data: unknown, stat
   return (await response.json()) as Record<string, any>;
 }
 const nav = (page: Page, name: RegExp | string) =>
-  page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name });
+  page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name });
 
 /** All-day prices so the tests do not depend on the time of day they run. */
 function allDayRules() {
@@ -193,7 +193,7 @@ test('khách gửi yêu cầu đặt online, nhân viên xác nhận, khách th�
   await expect(customer.getByText('Đang chờ nhân viên xác nhận')).toBeVisible();
 
   await page.goto('/quan-ly');
-  await nav(page, /Đặt line/).click();
+  await nav(page, /Đặt sân/).click();
   await page.getByRole('tab', { name: /Đặt online/ }).click();
   const row = page.getByRole('row', { name: /Khách Online/ });
   await expect(row).toBeVisible();

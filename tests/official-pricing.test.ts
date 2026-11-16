@@ -41,3 +41,34 @@ test('new tenants get the official list; saved configs are untouched', () => {
   assert.equal(upgradeConfig({}, defaults).priceRules?.length, officialPriceRules().length);
   assert.deepEqual(upgradeConfig({ ...defaults, priceRules: [] }, defaults).priceRules, []);
 });
+
+test('bảng giá chính thức phủ kín: mọi line, dịch vụ, loại ngày, số người 1–4, mọi giờ mở cửa', async () => {
+  const { selectRule, validateRules } = await import('../lib/pricing.ts');
+  const { defaults } = await import('../lib/club.ts');
+  const rules = officialPriceRules();
+  validateRules(rules); // no overlapping windows
+  const config = { ...defaults, priceRules: rules, holidays: ['2026-11-03'] };
+  // Mon 2026-11-02 weekday, Sat 2026-11-07 weekend, Tue 2026-11-03 holiday (UTC+7).
+  const days = ['2026-11-02', '2026-11-07', '2026-11-03'];
+  for (const date of days)
+    for (const hhmm of ['06:00', '10:59', '11:00', '17:30', '22:59'])
+      for (const vip of [false, true]) {
+        const at = Date.parse(`${date}T${hhmm}:00+07:00`);
+        selectRule(at, config, 'gdr', vip);
+        for (const service of ['9', '18'] as const)
+          for (let people = 1; people <= 4; people++) {
+            const r = selectRule(at, config, service, vip, people);
+            assert.ok(r.amount > 0, `${date} ${hhmm} ${service} ${people}`);
+          }
+      }
+});
+
+test('nhóm N người trả N × đơn giá một người (9 hố, line tiêu chuẩn, giờ thường T2–T6)', async () => {
+  const { selectRule } = await import('../lib/pricing.ts');
+  const { defaults } = await import('../lib/club.ts');
+  const config = { ...defaults, priceRules: officialPriceRules() };
+  const at = Date.parse('2026-11-02T14:00:00+07:00');
+  const one = selectRule(at, config, '9', false, 1).amount;
+  assert.equal(one, 300_000);
+  for (let n = 2; n <= 4; n++) assert.equal(selectRule(at, config, '9', false, n).amount, one * n);
+});

@@ -344,9 +344,8 @@ export function upgradeConfig(value: Partial<Config>, fallback: Config): Config 
   const c = { ...fallback, ...value };
   return {
     ...c,
-    priceRules:
-      c.priceRules ??
-      (Object.keys(value).length === 0 ? officialPriceRules() : seedPriceRules(c, false)),
+    // One price list for the whole system: the official table unless the owner saved their own.
+    priceRules: c.priceRules ?? officialPriceRules(),
     holidays: c.holidays ?? [],
     offers: c.offers ?? [],
     promotions: c.promotions ?? [],

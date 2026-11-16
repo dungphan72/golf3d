@@ -6,7 +6,7 @@ const vnDay = (offset: number) =>
 
 test('khách đặt chỗ ngay trên trang chủ', async ({ page }) => {
   await page.goto('/');
-  await expect(page.getByRole('link', { name: /Đặt line/ }).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: /Đặt sân/ }).first()).toBeVisible();
   const form = page.locator('#dat-cho');
   await expect(form.getByRole('heading', { name: 'Giữ line cho buổi chơi của bạn' })).toBeVisible();
   await form.getByLabel('Dịch vụ').selectOption('9');

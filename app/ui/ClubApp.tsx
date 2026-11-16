@@ -318,7 +318,9 @@ export default function ClubApp() {
                     onSelectSub={setSettingsSub}
                     initialOpenCardId={settingsOpenCard}
                     onClearInitialOpenCard={() => setSettingsOpenCard(null)}
-                    onSave={(v) => mutate({ action: 'settings', value: v })}
+                    onSave={(v) =>
+                    mutate({ action: 'settings', value: { ...v, pricingRevision: c.pricingRevision } })
+                  }
                     onGo={go}
                     onChanged={load}
                   />

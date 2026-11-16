@@ -127,8 +127,8 @@ test('phân bổ lại nguồn/chiến dịch; xóa chiến dịch đã có chi 
 test('giao diện: tab Marketing hiện chỉ số, chiến dịch và thêm được số seeding', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
-  const crm = page.getByRole('region', { name: 'CRM' });
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
+  const crm = page.getByRole('region', { name: /CRM/ });
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Marketing', exact: true }).click();
   await expect(crm.getByRole('region', { name: 'Tổng quan marketing' }).getByText('CPL', { exact: true })).toBeVisible();
   await expect(crm.getByRole('region', { name: 'Hiệu quả theo chiến dịch' })).toContainText('Khai trương T11');

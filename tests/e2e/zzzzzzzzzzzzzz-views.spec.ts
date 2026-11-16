@@ -32,9 +32,9 @@ test('API: lưu, đọc, ghi đè cùng tên, xóa; tên quá ngắn bị từ c
 test('giao diện: lưu bộ lọc Chốt rồi bấm lại chế độ xem để lọc', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Danh sách lead', exact: true }).click();
-  const crm = page.getByRole('region', { name: 'CRM' });
+  const crm = page.getByRole('region', { name: /CRM/ });
   await crm.getByRole('button', { name: 'Chốt', exact: true }).click();
   await crm.getByRole('button', { name: 'Lưu bộ lọc hiện tại' }).click();
   await crm.getByLabel('Tên chế độ xem').fill('Khách đã chốt');

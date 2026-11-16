@@ -7,8 +7,8 @@ test('sơ đồ phòng: trống màu xanh có nút Vào chơi ngay, đang chơi 
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
   await page
-    .locator('aside[aria-label="Menu chính"]')
-    .getByRole('button', { name: /Bán hàng \(POS\)/ })
+    .locator('nav[aria-label="Quản trị hệ thống"]')
+    .getByRole('button', { name: /POS/ })
     .click();
   // Earlier specs leave bookings around, so take any line that can start a walk-in:
   // green when free, yellow when a booking is due within 2 hours.

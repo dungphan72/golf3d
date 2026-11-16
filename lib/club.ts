@@ -205,7 +205,7 @@ export function wholeQuote(base: number, c: Config, service: Service = 'gdr') {
 export const serviceName = (s: Service) => (s === 'gdr' ? 'Tập theo giờ' : `Chơi game ${s} hố`);
 /** A finished stretch of a session that changed between hourly practice and a game round. */
 export type PriorPart = { service: Service; subtotal: number; lines: PriceLine[] };
-export type BillPart = { service: Service; label: string; subtotal: number };
+export type BillPart = { service: Service; label: string; subtotal: number; lines: PriceLine[] };
 export function packageLine(
   service: Service,
   base: number,
@@ -245,16 +245,19 @@ export function sessionQuote(
     service: p.service,
     label: serviceName(p.service),
     subtotal: p.subtotal,
+    lines: p.lines,
   }));
   let subtotal = prior.reduce((s, p) => s + p.subtotal, 0);
   if (service === 'gdr') {
     const cur = quote(clipSegments(segments, snap.phaseFrom ?? 0), snap.config, snap.vip);
-    lines.push(...cur.lines.map((l) => ({ ...l, label: `${serviceName('gdr')} · ${l.label}` })));
-    parts.push({ service, label: serviceName(service), subtotal: cur.subtotal });
+    const curLines = cur.lines.map((l) => ({ ...l, label: `${serviceName('gdr')} · ${l.label}` }));
+    lines.push(...curLines);
+    parts.push({ service, label: serviceName(service), subtotal: cur.subtotal, lines: curLines });
     subtotal += cur.subtotal;
   } else {
-    lines.push(packageLine(service, snap.base, snap.promo));
-    parts.push({ service, label: serviceName(service), subtotal: snap.base });
+    const line = packageLine(service, snap.base, snap.promo);
+    lines.push(line);
+    parts.push({ service, label: serviceName(service), subtotal: snap.base, lines: [line] });
     subtotal += snap.base;
   }
   const all = [...prior.map((p) => p.service), service];

@@ -27,7 +27,7 @@ test('API: chưa đăng nhập bị chặn; số liệu nhất quán; khoảng n
 test('giao diện: Báo cáo > Phản hồi hiện các bảng', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Phản hồi', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Theo nhân viên' })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Theo nguồn' })).toBeVisible();

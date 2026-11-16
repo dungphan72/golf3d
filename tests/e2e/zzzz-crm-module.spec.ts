@@ -515,8 +515,8 @@ test('giao diện CRM: menu, các tab, mở lead, ghi kết quả, pipeline, đ�
     ).status(),
   ).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
-  const crm = page.getByRole('region', { name: 'CRM' });
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
+  const crm = page.getByRole('region', { name: /CRM/ });
   await expect(page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Bàn làm việc', exact: true })).toBeVisible();
   await expect(crm.getByRole('heading', { name: /Pipeline bán hàng/ })).toBeVisible();
   await crm.getByText('Phễu, nguồn khách và xếp hạng nhân viên').click();

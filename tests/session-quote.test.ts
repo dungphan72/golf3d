@@ -57,6 +57,29 @@ test('tập rồi chuyển sang chơi game: tiền tập + tiền game cộng d�
   assert.ok(bill.lines.some((l) => l.label.startsWith('Tập theo giờ')));
   assert.ok(bill.lines.some((l) => l.package && l.label.startsWith('Chơi game 9 hố')));
   assert.equal(bill.total, bill.subtotal + bill.fee + bill.vat);
+  // Each part carries its own lines so the bill can show every service on one receipt.
+  assert.equal(bill.parts?.[0].lines.length, practice.lines.length);
+  assert.ok(bill.parts?.[0].lines.every((l) => l.label.startsWith('Tập theo giờ')));
+  assert.equal(bill.parts?.[1].lines.length, 1);
+  assert.equal(bill.parts?.[1].lines[0].amount, game.base);
+  assert.equal(bill.lines.length, (bill.parts?.[0].lines.length ?? 0) + 1);
+});
+
+test('ví dụ: tập 120.000 rồi chuyển 9 hố, tổng tiền dịch vụ = 120.000 + giá 9 hố', () => {
+  const segs = [{ start, end: start + 90 * 60_000 }];
+  const game = packagePrice(switchAt, c, '9', false, 1);
+  const prior: PriorPart[] = [
+    {
+      service: 'gdr',
+      subtotal: 120_000,
+      lines: [
+        { date: '2026-11-02', label: 'Tập theo giờ · 60 phút', minutes: 60, rate: 120_000, amount: 120_000 },
+      ],
+    },
+  ];
+  const bill = sessionQuote('9', segs, { config: c, vip: false, base: game.base, promo: game.promo, prior, phaseFrom: switchAt });
+  assert.equal(bill.subtotal, 120_000 + game.base);
+  assert.deepEqual(bill.parts?.map((p) => p.subtotal), [120_000, game.base]);
 });
 
 test('chơi game rồi quay lại tập: chỉ tính thời gian tập sau lúc đổi', () => {

@@ -71,7 +71,7 @@ test('tiền thu thật từ đơn bán trong CRM được tính vào tiến đ�
 test('giao diện: thẻ Mục tiêu doanh thu hiện trên Tổng quan và đặt được mục tiêu', async ({ page }) => {
   expect((await page.request.post('/api/auth/login', { data: OWNER })).status()).toBe(200);
   await page.goto('/quan-ly');
-  await page.locator('aside[aria-label="Menu chính"]').getByRole('button', { name: 'CRM', exact: true }).click();
+  await page.locator('nav[aria-label="Quản trị hệ thống"]').getByRole('button', { name: /CRM/ }).click();
   await page.getByRole('navigation', { name: 'Menu CRM' }).getByRole('button', { name: 'Tổng quan', exact: true }).click();
   await page.getByText('Phễu, nguồn khách và xếp hạng nhân viên').click();
   await expect(page.getByRole('heading', { name: 'Mục tiêu doanh thu' })).toBeVisible();

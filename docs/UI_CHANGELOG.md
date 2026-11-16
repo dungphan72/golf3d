@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Kiểm tra và sửa lỗi POS (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu kiểm tra lại lỗi POS và sửa. Chạy thử toàn luồng trên bản build: mở ca, nhận khách, bắt đầu chơi, thêm dịch vụ, kết thúc, thanh toán tiền mặt, in/Zalo, lịch sử giao dịch, và màn tổng quan trên điện thoại.
+- **Lỗi đã sửa:** (1) bảng Quản lý ca / Lịch sử giao dịch không đóng bằng phím Esc, nút đóng không có nhãn; (2) thanh trên cùng POS bị xuống dòng chữ ("Quản lý ca", "Lịch sử giao dịch", "Két tiền (F4)", trạng thái ca), nay một dòng và địa chỉ cơ sở tự rút gọn; (3) sau khi thanh toán, line hiện "Đang chơi" trong vài phút dọn line, nay hiện "Đang dọn line" (xám); (4) phiếu đã thanh toán hiện "Đặt trước", thời gian chơi 00:00:00 và "Tiền tạm tính", nay hiện "Đã thanh toán", đúng thời gian chơi và số tiền đã thu; (5) giờ bắt đầu của phiên đã kết thúc ghi "Hẹn 20:54", nay chỉ phiên đặt trước mới ghi "Hẹn"; (6) danh sách chọn line ghi "Bảo trì" cho line chờ thu; (7) "Hoạt động gần đây" ở tổng quan và Nhật ký hoạt động hiển thị JSON thô và mã nội bộ, nay là câu đọc được (vd. "Thu tiền tiền mặt · 262 ₫ · phiếu #99D74D").
+- **File:** `app/ui/ModernPosFlow.tsx`, `app/pos-flow.css`, `lib/audit-text.ts` (mới), `app/ui/AdminOverview.tsx`, `app/ui/AuditPanel.tsx`, `tests/audit-text.test.ts`.
+- **Screenshot:** chụp trong phiên trước/sau; chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, `pnpm test` đạt (thêm 4 test), luồng POS chạy hết không còn lỗi console/mạng; không phát hiện lỗi 4xx/5xx trong nhật ký máy chủ ngoài vài yêu cầu 502 lúc khởi động lại dịch vụ.
+- **Chưa kiểm:** các cách thanh toán thẻ, QR SePay, ví, gói hội viên, chia nhiều hình thức; luồng chuyển dịch vụ; POS trên điện thoại (chỉ mới xem tổng quan). Nếu anh gặp lỗi cụ thể, gửi ảnh/mô tả để tôi xử lý đúng chỗ.
+
 ## 2026-11-16 — Màn Đổi mật khẩu nhân viên theo mẫu mới (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu thiết kế lại màn đổi mật khẩu của nhân viên theo mẫu (desktop và điện thoại).
 - **Ảnh tham chiếu:** hai ảnh mẫu "Đổi mật khẩu" (desktop có hình minh họa bên phải; điện thoại hình minh họa ở trên) do chủ hệ thống gửi trong phiên; chưa lưu file vào `hinh-anh/thiet-ke/`.

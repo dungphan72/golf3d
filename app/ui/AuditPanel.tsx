@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { DataTable, FilterBar } from './kit';
+import { auditDetailText } from '../../lib/audit-text';
 
 type Row = { id: string; action: string; detail: string; created: number };
 
@@ -75,7 +76,7 @@ export function AuditPanel() {
         columns={[
           { key: 'time', header: 'Thời gian', cell: (r) => when(r.created) },
           { key: 'action', header: 'Hành động', cell: (r) => <strong>{r.action}</strong> },
-          { key: 'detail', header: 'Chi tiết', cell: (r) => summary(r.detail) },
+          { key: 'detail', header: 'Chi tiết', cell: (r) => (r.detail.trim().startsWith('{') ? auditDetailText(r.detail) || summary(r.detail) : auditDetailText(r.detail)) },
         ]}
       />
       {hasMore && (

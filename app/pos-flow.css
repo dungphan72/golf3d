@@ -2759,3 +2759,48 @@
 .pos-m3-roundup-actions > button {
   flex: 1 1 200px;
 }
+
+/* POS header: keep every tool on one line; the facility name/address shortens before the buttons do. */
+.pos-m3-header-facility {
+  min-width: 0;
+  flex: 0 1 300px;
+}
+.pos-m3-header-facility > div:last-child {
+  min-width: 0;
+}
+.pos-m3-header-facility strong,
+.pos-m3-header-facility small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pos-m3-header-center {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: center;
+}
+.pos-m3-header-shift-pill {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 330px;
+  white-space: nowrap;
+}
+.pos-m3-header-shift-pill > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pos-m3-header-tool-btn {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* A paid line stays reserved for a few minutes while it is cleaned: neutral grey, not "playing". */
+.pos-m3-desk-room-card.clean,
+.pos-m3-room-card.clean {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.pos-m3-room-badge.clean {
+  background: #e2e8f0;
+  color: #475569;
+}

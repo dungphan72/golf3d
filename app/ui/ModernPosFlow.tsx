@@ -263,6 +263,15 @@ export function ModernPosFlow({
   // Desktop Panel Mode & Drawers (Single-screen workflow without page reload)
   const [desktopMode, setDesktopMode] = useState<DesktopPanelMode>('overview');
   const [desktopDrawer, setDesktopDrawer] = useState<DesktopDrawer>(null);
+  // Esc closes the shift / history drawer.
+  useEffect(() => {
+    if (!desktopDrawer) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDesktopDrawer(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [desktopDrawer]);
 
   // Mobile Screen Navigation (M01 - M10) & Bottom Tab
   const [mobileScreen, setMobileScreen] = useState<MobileScreenId>('M01');
@@ -349,10 +358,12 @@ export function ModernPosFlow({
       const info = roomInfo(r.id, data.bookings, tick);
       const maint = data.maintenance?.find((m) => m.room === r.id) ?? null;
       const activeBooking = info.live ?? info.due ?? info.soon ?? null;
-      let statusKey: 'playing' | 'due' | 'booked' | 'maintenance' | 'empty' = 'empty';
+      let statusKey: 'playing' | 'due' | 'booked' | 'maintenance' | 'empty' | 'clean' = 'empty';
       if (maint) statusKey = 'maintenance';
       else if (info.due || activeBooking?.status === 'finished') statusKey = 'due';
-      else if (info.state === 'occupied' || info.state === 'clean') statusKey = 'playing';
+      else if (info.state === 'occupied') statusKey = 'playing';
+      // Paid and left: the line is reserved for a few minutes to be cleaned, it is not being played.
+      else if (info.state === 'clean') statusKey = 'clean';
       else if (info.state === 'soon') statusKey = 'booked';
       return { room: r, info, maint, statusKey, booking: activeBooking };
     });
@@ -530,6 +541,7 @@ export function ModernPosFlow({
       empty: 0,
       booked: 0,
       due: 0,
+      clean: 0,
       maintenance: 0,
     };
     for (const r of roomStatuses) {
@@ -611,7 +623,12 @@ export function ModernPosFlow({
 
   const elapsedMs = useMemo(() => {
     if (!activeBooking) return 0;
-    if (activeBooking.started || activeBooking.status === 'paused' || activeBooking.status === 'finished') {
+    if (
+      activeBooking.started ||
+      activeBooking.status === 'paused' ||
+      activeBooking.status === 'finished' ||
+      activeBooking.status === 'paid'
+    ) {
       return playedMs(activeBooking, tick);
     }
     return 0;
@@ -655,7 +672,9 @@ export function ModernPosFlow({
             ? 'Đặt trước'
             : statusKey === 'due'
               ? 'Chờ thu'
-              : 'Bảo trì';
+              : statusKey === 'clean'
+                ? 'Đang dọn line'
+                : 'Bảo trì';
     return (
       <button
         key={r.id}
@@ -682,7 +701,9 @@ export function ModernPosFlow({
               <Clock size={13} />
               {rb.status === 'playing' || rb.status === 'paused'
                 ? clock(playedMs(rb, tick))
-                : `Hẹn ${time(rb.start)}`}
+                : rb.status === 'booked'
+                  ? `Hẹn ${time(rb.start)}`
+                  : time(rb.start)}
             </span>
             {canSeeMoney && <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>}
           </span>
@@ -2781,6 +2802,7 @@ export function ModernPosFlow({
                           {statusKey === 'empty' && '● Trống'}
                           {statusKey === 'booked' && '● Đặt trước'}
                           {statusKey === 'due' && '● Chờ thu'}
+                          {statusKey === 'clean' && '● Đang dọn'}
                           {statusKey === 'maintenance' && '● Bảo trì'}
                         </span>
                       </div>
@@ -3066,7 +3088,11 @@ export function ModernPosFlow({
                           ? `Đặt trước: ${rb?.customer} (${time(rb?.start ?? 0)})`
                           : statusKey === 'playing'
                             ? `Đang chơi: ${rb?.customer}`
-                            : 'Bảo trì'}
+                            : statusKey === 'due'
+                              ? `Chờ thu: ${rb?.customer}`
+                              : statusKey === 'clean'
+                                ? 'Đang dọn line'
+                                : 'Bảo trì'}
                     </option>
                   ))}
                 </select>
@@ -3869,6 +3895,8 @@ export function ModernPosFlow({
         <div className="pos-m3-desktop-drawer-backdrop" onClick={() => setDesktopDrawer(null)}>
           <section
             className="pos-m3-desktop-drawer"
+            role="dialog"
+            aria-modal="true"
             onClick={(e) => e.stopPropagation()}
             aria-label={desktopDrawer === 'shift' ? 'Quản lý ca làm việc' : 'Lịch sử giao dịch'}
           >
@@ -3888,6 +3916,7 @@ export function ModernPosFlow({
               <button
                 type="button"
                 className="pos-m3-icon-btn"
+                aria-label="Đóng"
                 onClick={() => setDesktopDrawer(null)}
               >
                 <X size={20} />
@@ -3986,7 +4015,11 @@ export function ModernPosFlow({
                         ? 'Tạm dừng'
                         : activeBooking.status === 'finished'
                           ? 'Chờ thanh toán'
-                          : 'Đặt trước'}
+                          : activeBooking.status === 'paid'
+                            ? 'Đã thanh toán'
+                            : activeBooking.status === 'cancelled'
+                              ? 'Đã hủy'
+                              : 'Đặt trước'}
                   </em>
                 )}
               </div>
@@ -4028,7 +4061,11 @@ export function ModernPosFlow({
               <div className="pos-m3-metric-box">
                 <span>Giờ bắt đầu</span>
                 <strong>
-                  {activeBooking.started ? time(activeBooking.started) : `Hẹn ${time(activeBooking.start)}`}
+                  {activeBooking.started
+                    ? time(activeBooking.started)
+                    : activeBooking.status === 'booked'
+                      ? `Hẹn ${time(activeBooking.start)}`
+                      : time(activeBooking.start)}
                 </strong>
               </div>
               <div className="pos-m3-metric-box clock">
@@ -4036,8 +4073,12 @@ export function ModernPosFlow({
                 <strong>{clock(elapsedMs)}</strong>
               </div>
               <div className="pos-m3-metric-box total">
-                <span>Tiền tạm tính</span>
-                <strong>{canSeeMoney ? money(payableTotal) : '***'}</strong>
+                <span>{activeBooking?.status === 'paid' ? 'Đã thanh toán' : 'Tiền tạm tính'}</span>
+                <strong>
+                  {canSeeMoney
+                    ? money(activeBooking?.status === 'paid' ? (activeBooking.amount ?? payableTotal) : payableTotal)
+                    : '***'}
+                </strong>
               </div>
             </div>
           )}

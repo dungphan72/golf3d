@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { auditDetailText } from '../../lib/audit-text';
 import {
   ArrowRight,
   CalendarDays,
@@ -463,7 +464,7 @@ export function AdminOverview({
                 <time>{time(a.created)}</time>
                 <span>
                   <strong>{a.action}</strong>
-                  <small>{a.detail}</small>
+                  <small>{auditDetailText(a.detail)}</small>
                 </span>
               </div>
             ))}

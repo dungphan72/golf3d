@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Plus, Save, Trash2, Trophy, UserPlus, Users, XCircle } from 'lucide-react';
 import {
   GROUPS,
+  boardCsvRows,
   grossOf,
   hcpText,
   leaderboard,
@@ -11,6 +12,7 @@ import {
   type RoundDef,
   type Score,
 } from '../../lib/tournament-score';
+import { toCsv } from '../../lib/csv';
 import { askConfirm } from './kit';
 import '../tournament-score-admin.css';
 
@@ -206,7 +208,7 @@ export function TournamentScorePanel({ events }: { events: { id: string; title: 
                 key={r.id}
                 round={r}
                 used={st.scores.some((s) => s.roundId === r.id)}
-                onSave={(name, pars) => act({ action: 'round-update', id: r.id, name, pars }, 'Đã lưu vòng đấu.')}
+                onSave={(name, pars, date) => act({ action: 'round-update', id: r.id, name, pars, date }, 'Đã lưu vòng đấu.')}
                 onDelete={async () => {
                   if (await askConfirm({ title: `Xóa ${r.name}?`, confirmLabel: 'Xóa vòng' }))
                     await act({ action: 'round-delete', id: r.id }, 'Đã xóa vòng đấu.');
@@ -311,7 +313,24 @@ export function TournamentScorePanel({ events }: { events: { id: string; title: 
           )}
 
           <div className="tsa-block">
-            <h4>Bảng xếp hạng (thẻ điểm đã xác nhận)</h4>
+            <div className="tsa-row-head">
+              <h4>Bảng xếp hạng (thẻ điểm đã xác nhận)</h4>
+              <button
+                type="button"
+                className="tsa-ghost"
+                disabled={!board.length}
+                onClick={() => {
+                  const url = URL.createObjectURL(new Blob([toCsv(boardCsvRows(board))], { type: 'text/csv;charset=utf-8' }));
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `xep-hang-${st.event.title.replace(/[^\p{L}\p{N}]+/gu, '-')}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Tải bảng xếp hạng (CSV)
+              </button>
+            </div>
             <div className="tsa-scroll">
               <table className="tsa-table">
                 <thead>
@@ -369,21 +388,23 @@ function RoundEditor({
 }: {
   round: RoundDef;
   used: boolean;
-  onSave: (name: string, pars: number[]) => void;
+  onSave: (name: string, pars: number[], date: string) => void;
   onDelete: () => void;
 }) {
   const [name, setName] = useState(round.name);
   const [pars, setPars] = useState(round.pars);
-  const dirty = name !== round.name || pars.some((p, i) => p !== round.pars[i]);
+  const [date, setDate] = useState(round.date ?? '');
+  const dirty = name !== round.name || date !== (round.date ?? '') || pars.some((p, i) => p !== round.pars[i]);
   return (
     <div className="tsa-round">
       <div className="tsa-round-top">
         <input aria-label="Tên vòng" value={name} maxLength={60} onChange={(e) => setName(e.target.value)} />
+        <input aria-label="Ngày thi đấu" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         <span>
           {round.holes} hố · Par {sumPars(pars)}
         </span>
         <div className="tsa-btns">
-          <button type="button" className="tsa-primary" disabled={!dirty} onClick={() => onSave(name, pars)}>
+          <button type="button" className="tsa-primary" disabled={!dirty} onClick={() => onSave(name, pars, date)}>
             <Save size={15} /> Lưu
           </button>
           <button type="button" className="tsa-ghost danger" disabled={used} title={used ? 'Đã có thẻ điểm' : ''} onClick={onDelete}>

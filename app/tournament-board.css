@@ -649,3 +649,13 @@
     overflow-wrap: anywhere;
   }
 }
+
+.tb-export {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 10px;
+}
+.tb-export .tb-btn {
+  min-height: 38px;
+  font-size: 13.5px;
+}

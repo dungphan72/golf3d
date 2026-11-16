@@ -2,6 +2,12 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-17 — Hoàn thiện các mục còn thiếu của bill cũ và giải đấu (nhánh `fix/p0-data-integrity`)
+- **Bill cũ:** thêm "Sửa" cho bill đang chờ duyệt (người nhập hoặc chủ cơ sở sửa; bill đã duyệt phải thu hồi rồi nhập lại; sửa số bill vẫn chống trùng). File: `lib/server/legacy-bill-service.ts` (`updateLegacyBill`, tách phần kiểm tra dùng chung), `app/api/legacy-bills/route.ts`, `app/ui/LegacyBillsPanel.tsx`.
+- **Giải đấu:** ngày thi đấu cho từng vòng (nhập ở quản trị, hiện trong tab Vòng đấu và danh sách chọn vòng) và tải bảng xếp hạng ra CSV (quản trị và trang công khai). File: `drizzle/0034_tournament_scores.sql` (thêm cột `play_date`; migration này chưa áp dụng ở đâu nên sửa trực tiếp), `db/schema.ts`, `lib/tournament-score.ts`, `lib/server/tournament-score-service.ts`, `app/api/tournament-score/route.ts`, `app/ui/TournamentScorePanel.tsx`, `app/ui/TournamentBoard.tsx`.
+- **Kiểm thử:** `tsc` sạch, `pnpm test` đạt (thêm 2 test); e2e thủ công: sửa bill của mình 200, trùng số bill 409, sửa bill đã duyệt 409; vòng có ngày 200, ngày sai định dạng 400, cập nhật tên và ngày vòng đúng.
+- **Vẫn chưa làm:** hiển thị bill cũ trong lịch sử từng khách, đính kèm ảnh bill giấy, nhập bill hàng loạt; ảnh đại diện golfer và giờ tee; nối các danh sách tùy biến trong Cài đặt vào chức năng thật; hạng thẻ/ưu đãi thật trong hồ sơ CRM; cập nhật lại các bài e2e cũ.
+
 ## 2026-11-16 — Nhập điểm và xếp hạng giải đấu (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu thiết kế màn hình nhập điểm và xếp hạng giải đấu. Quyết định đã chốt: golfer tự nhập điểm trong app hội viên và chủ cơ sở duyệt; xếp hạng Gross + Net theo HCP, có nhóm A/B/C, nhiều vòng; làm đủ nhập điểm, xếp hạng công khai và "thẻ điểm của tôi".
 - **Ảnh tham chiếu:** ảnh mẫu "SaiGon Indoor Golf CUP – Bảng xếp hạng" do chủ hệ thống gửi trong phiên (chưa lưu file vào `hinh-anh/thiet-ke/`). Dựng theo phong cách tối của luồng khách hàng đã duyệt thay vì nền sáng của ảnh mẫu, để đồng bộ với trang chủ và các trang khách hàng.

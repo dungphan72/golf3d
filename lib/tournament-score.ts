@@ -11,7 +11,8 @@ export const DEFAULT_PARS_18 = [4, 4, 3, 5, 4, 4, 3, 4, 5, 4, 4, 3, 5, 4, 4, 3, 
 export const defaultPars = (holes: Holes) => DEFAULT_PARS_18.slice(0, holes);
 
 export type Score = number | null;
-export type RoundDef = { id: string; no: number; name: string; holes: Holes; pars: number[] };
+export type RoundDef = { id: string; no: number; name: string; holes: Holes; pars: number[]; date?: string };
+export const validRoundDate = (d: unknown) => d === '' || (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
 export type PlayerDef = { id: string; name: string; hcp10: number; group: string };
 export type ScoreRow = { roundId: string; playerId: string; holes: Score[]; status: string };
 
@@ -124,4 +125,21 @@ export function leaderboard(
   });
   const rest = rows.filter((r) => r.net == null).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   return [...done, ...rest];
+}
+
+/** Ranking rows as table rows for a CSV file (header first). */
+export function boardCsvRows(rows: BoardRow[]): (string | number)[][] {
+  return [
+    ['Hạng', 'Golfer', 'Nhóm', 'HCP', 'Số vòng', 'Gross', 'Net', '±Par'],
+    ...rows.map((r) => [
+      r.rank ?? '',
+      r.name,
+      r.group,
+      hcpText(r.hcp10),
+      r.rounds,
+      r.gross ?? '',
+      r.net ?? '',
+      r.toPar == null ? '' : toParText(r.toPar),
+    ]),
+  ];
 }

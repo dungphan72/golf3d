@@ -12,6 +12,7 @@ import {
   leaderboard,
   parsProblem,
   strokesProblem,
+  validRoundDate,
   type Holes,
   type PlayerDef,
   type RoundDef,
@@ -28,7 +29,7 @@ type EventRow = {
   place: string;
   status: string;
 };
-type RoundRaw = { id: string; round_no: number; name: string; holes: number; pars: string };
+type RoundRaw = { id: string; round_no: number; name: string; holes: number; pars: string; play_date: string };
 type PlayerRaw = { id: string; name: string; phone: string; hcp10: number; grp: string };
 type ScoreRaw = {
   id: string;
@@ -57,6 +58,7 @@ const toRound = (r: RoundRaw): RoundDef => ({
   name: r.name,
   holes: r.holes as Holes,
   pars: json<number[]>(r.pars, []),
+  date: r.play_date,
 });
 
 async function eventOf(tenant: string, postId: string, publicOnly: boolean) {
@@ -73,7 +75,7 @@ async function eventOf(tenant: string, postId: string, publicOnly: boolean) {
 async function load(tenant: string, postId: string) {
   const [rounds, players] = await Promise.all([
     db()
-      .prepare('SELECT id,round_no,name,holes,pars FROM tournament_rounds WHERE tenant=? AND post_id=? ORDER BY round_no')
+      .prepare('SELECT id,round_no,name,holes,pars,play_date FROM tournament_rounds WHERE tenant=? AND post_id=? ORDER BY round_no')
       .bind(tenant, postId)
       .all<RoundRaw>(),
     db()
@@ -243,8 +245,8 @@ export async function adminState(actor: AuthUser, postId: string): Promise<Servi
 }
 
 export type StaffAction =
-  | { action: 'round-add'; postId: string; name?: string; holes: number; pars?: number[] }
-  | { action: 'round-update'; id: string; name: string; pars: number[] }
+  | { action: 'round-add'; postId: string; name?: string; holes: number; pars?: number[]; date?: string }
+  | { action: 'round-update'; id: string; name: string; pars: number[]; date?: string }
   | { action: 'round-delete'; id: string }
   | { action: 'player-add'; postId: string; name: string; phone: string; hcp10: number; group?: string }
   | { action: 'player-import'; postId: string }
@@ -285,9 +287,10 @@ export async function staffAction(actor: AuthUser, a: StaffAction): Promise<Serv
           .first<{ n: number | null }>())?.n ?? 0) + 1;
       if (next > 10) return fail('Tối đa 10 vòng đấu');
       const name = (a.name ?? '').trim().slice(0, 60) || `Vòng ${next}`;
+      if (!validRoundDate(a.date ?? '')) return fail('Ngày thi đấu không hợp lệ');
       await db()
-        .prepare('INSERT INTO tournament_rounds(id,tenant,post_id,round_no,name,holes,pars,created) VALUES (?,?,?,?,?,?,?,?)')
-        .bind(crypto.randomUUID(), t, a.postId, next, name, a.holes, JSON.stringify(pars), now)
+        .prepare('INSERT INTO tournament_rounds(id,tenant,post_id,round_no,name,holes,pars,play_date,created) VALUES (?,?,?,?,?,?,?,?,?)')
+        .bind(crypto.randomUUID(), t, a.postId, next, name, a.holes, JSON.stringify(pars), a.date ?? '', now)
         .run();
       await audit(t, 'Thêm vòng đấu', `${e.title} · ${name}`);
       return ok();
@@ -298,9 +301,10 @@ export async function staffAction(actor: AuthUser, a: StaffAction): Promise<Serv
       const p = parsProblem(r.holes, a.pars);
       if (p) return fail(p);
       const name = a.name.trim().slice(0, 60) || r.name;
+      if (a.date !== undefined && !validRoundDate(a.date)) return fail('Ngày thi đấu không hợp lệ');
       await db()
-        .prepare('UPDATE tournament_rounds SET name=?,pars=? WHERE tenant=? AND id=?')
-        .bind(name, JSON.stringify(a.pars), t, a.id)
+        .prepare('UPDATE tournament_rounds SET name=?,pars=?,play_date=COALESCE(?,play_date) WHERE tenant=? AND id=?')
+        .bind(name, JSON.stringify(a.pars), a.date ?? null, t, a.id)
         .run();
       await audit(t, 'Sửa vòng đấu', name);
       return ok();

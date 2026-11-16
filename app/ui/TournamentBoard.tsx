@@ -1,7 +1,9 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Flag, Info, ListOrdered, MapPin, Minus, Plus, Trophy, User, X } from 'lucide-react';
+import { toCsv } from '../../lib/csv';
 import {
+  boardCsvRows,
   holeTone,
   hcpText,
   sumPars,
@@ -356,6 +358,7 @@ export function TournamentBoard({ initial, postHref }: { initial: BoardData; pos
                     {rounds.map((r) => (
                       <option key={r.id} value={r.id}>
                         {r.name}
+                        {r.date ? ` (${r.date.split('-').reverse().join('/')})` : ''}
                       </option>
                     ))}
                   </select>
@@ -373,6 +376,23 @@ export function TournamentBoard({ initial, postHref }: { initial: BoardData; pos
                 </label>
               </div>
             </header>
+            <p className="tb-export">
+              <button
+                type="button"
+                className="tb-btn"
+                disabled={!data.rows.length}
+                onClick={() => {
+                  const url = URL.createObjectURL(new Blob([toCsv(boardCsvRows(data.rows))], { type: 'text/csv;charset=utf-8' }));
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'bang-xep-hang.csv';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+              >
+                Tải bảng xếp hạng (CSV)
+              </button>
+            </p>
             <div className="tb-table-wrap">
               <table className="tb-table">
                 <thead>
@@ -430,7 +450,11 @@ export function TournamentBoard({ initial, postHref }: { initial: BoardData; pos
             {rounds.map((r) => (
               <article key={r.id}>
                 <h3>
-                  {r.name} <small>{r.holes} hố · Par {sumPars(r.pars)}</small>
+                  {r.name}{' '}
+                  <small>
+                    {r.date ? `${r.date.split('-').reverse().join('/')} · ` : ''}
+                    {r.holes} hố · Par {sumPars(r.pars)}
+                  </small>
                 </h3>
                 <Half start={0} pars={r.pars} holes={[]} />
                 {r.holes === 18 && <Half start={9} pars={r.pars} holes={[]} />}

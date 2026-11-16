@@ -115,3 +115,20 @@ test('all rounds are added up; a round and a group can be picked', () => {
   const groupB = leaderboard(players, [r1, r2], scores, { group: 'B' });
   assert.deepEqual(groupB.map((r) => r.name), ['Bình']);
 });
+
+import { boardCsvRows, validRoundDate } from '../lib/tournament-score.ts';
+test('round date: empty or YYYY-MM-DD', () => {
+  assert.ok(validRoundDate(''));
+  assert.ok(validRoundDate('2026-11-21'));
+  assert.ok(!validRoundDate('21/11/2026'));
+  assert.ok(!validRoundDate(20261121));
+});
+test('csv rows: header, rank, to-par text, blanks for unplayed', () => {
+  const rows = boardCsvRows([
+    { playerId: 'a', name: 'An', group: 'A', hcp10: 85, rounds: 1, gross: 72, net: 64, toPar: 0, rank: 1 },
+    { playerId: 'b', name: 'Bình', group: 'B', hcp10: 150, rounds: 0, gross: null, net: null, toPar: null, rank: null },
+  ]);
+  assert.deepEqual(rows[0], ['Hạng', 'Golfer', 'Nhóm', 'HCP', 'Số vòng', 'Gross', 'Net', '±Par']);
+  assert.deepEqual(rows[1], [1, 'An', 'A', '8.5', 1, 72, 64, 'E']);
+  assert.deepEqual(rows[2], ['', 'Bình', 'B', '15', 0, '', '', '']);
+});

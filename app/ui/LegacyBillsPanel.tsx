@@ -70,6 +70,7 @@ export function LegacyBillsPanel({ onChanged }: { onChanged?: () => void }) {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Bill | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -213,6 +214,11 @@ export function LegacyBillsPanel({ onChanged }: { onChanged?: () => void }) {
                 </button>
               )}
               {b.status === 'pending' && (
+                <button type="button" className="lb-ghost" onClick={() => setEditing(b)}>
+                  Sửa
+                </button>
+              )}
+              {b.status === 'pending' && (
                 <button
                   type="button"
                   className="lb-ghost danger"
@@ -230,12 +236,17 @@ export function LegacyBillsPanel({ onChanged }: { onChanged?: () => void }) {
         {data && !data.bills.length && <li className="lb-empty">Chưa có bill cũ nào.</li>}
       </ul>
 
-      {open && data && (
+      {(open || editing) && data && (
         <BillForm
           canApprove={data.canApprove}
-          onClose={() => setOpen(false)}
+          initial={editing}
+          onClose={() => {
+            setOpen(false);
+            setEditing(null);
+          }}
           onSaved={async (msg) => {
             setOpen(false);
+            setEditing(null);
             setNotice(msg);
             await load();
             onChanged?.();
@@ -248,24 +259,32 @@ export function LegacyBillsPanel({ onChanged }: { onChanged?: () => void }) {
 
 function BillForm({
   canApprove,
+  initial,
   onClose,
   onSaved,
 }: {
   canApprove: boolean;
+  initial: Bill | null;
   onClose: () => void;
   onSaved: (msg: string) => Promise<void>;
 }) {
   const [today] = useState(() => vnDate(Date.now()));
-  const [date, setDate] = useState(() => vnDate(Date.now() - 86_400_000));
-  const [time, setTime] = useState('12:00');
-  const [code, setCode] = useState('');
-  const [customer, setCustomer] = useState('');
-  const [phone, setPhone] = useState('');
-  const [room, setRoom] = useState('');
-  const [service, setService] = useState<LegacyService>('gdr');
-  const [method, setMethod] = useState<LegacyMethod>('cash');
-  const [note, setNote] = useState('');
-  const [lines, setLines] = useState<Draft[]>([emptyLine()]);
+  const [date, setDate] = useState(() => (initial ? vnDate(initial.bill_at) : vnDate(Date.now() - 86_400_000)));
+  const [time, setTime] = useState(() =>
+    initial ? new Date(initial.bill_at + 7 * 3_600_000).toISOString().slice(11, 16) : '12:00',
+  );
+  const [code, setCode] = useState(initial?.code ?? '');
+  const [customer, setCustomer] = useState(initial?.customer ?? '');
+  const [phone, setPhone] = useState(initial?.phone ?? '');
+  const [room, setRoom] = useState(initial?.room ?? '');
+  const [service, setService] = useState<LegacyService>((initial?.service as LegacyService) ?? 'gdr');
+  const [method, setMethod] = useState<LegacyMethod>((initial?.method as LegacyMethod) ?? 'cash');
+  const [note, setNote] = useState(initial?.note ?? '');
+  const [lines, setLines] = useState<Draft[]>(() =>
+    initial
+      ? initial.lines.map((l) => ({ name: l.name, qty: String(l.qty), price: String(l.price), fnb: !!l.fnb }))
+      : [emptyLine()],
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -291,7 +310,8 @@ function BillForm({
     setError('');
     try {
       const v = (await api({
-        action: 'create',
+        action: initial ? 'update' : 'create',
+        ...(initial ? { id: initial.id } : {}),
         date,
         time,
         code,
@@ -304,7 +324,9 @@ function BillForm({
         note,
       })) as { status?: string };
       await onSaved(
-        v.status === 'approved'
+        initial
+          ? 'Đã cập nhật bill.'
+          : v.status === 'approved'
           ? 'Đã lưu và duyệt bill. Doanh thu được cộng vào đúng ngày của bill.'
           : 'Đã gửi bill, chờ chủ cơ sở duyệt.',
       );
@@ -318,7 +340,7 @@ function BillForm({
   return (
     <div className="lb-backdrop" onClick={onClose}>
       <form className="lb-modal" onClick={(e) => e.stopPropagation()} onSubmit={save} aria-label="Nhập bill cũ">
-        <h3>Nhập bill cũ</h3>
+        <h3>{initial ? 'Sửa bill cũ' : 'Nhập bill cũ'}</h3>
         <p className="lb-hint">
           {canApprove
             ? 'Bill do chủ cơ sở nhập được duyệt ngay.'
@@ -435,7 +457,7 @@ function BillForm({
             Hủy
           </button>
           <button type="submit" className="lb-primary" disabled={busy}>
-            {busy ? 'Đang lưu…' : canApprove ? 'Lưu và duyệt' : 'Gửi chờ duyệt'}
+            {busy ? 'Đang lưu…' : initial ? 'Lưu thay đổi' : canApprove ? 'Lưu và duyệt' : 'Gửi chờ duyệt'}
           </button>
         </div>
       </form>

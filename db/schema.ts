@@ -1110,6 +1110,7 @@ export const tournamentRounds = sqliteTable(
     name: text('name').notNull(),
     holes: integer('holes').notNull(),
     pars: text('pars').notNull(),
+    playDate: text('play_date').notNull().default(''),
     created: integer('created').notNull(),
   },
   (t) => [uniqueIndex('tournament_round_no').on(t.tenant, t.postId, t.roundNo)],

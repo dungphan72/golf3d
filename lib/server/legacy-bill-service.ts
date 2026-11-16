@@ -91,22 +91,32 @@ export type LegacyInput = {
   note?: string;
 };
 
-/** The owner's bills are approved straight away; everybody else's wait for the owner. */
-export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Promise<ServiceResult> {
-  if (!can(actor.role, 'legacy.enter')) return fail('Bạn không có quyền nhập bill cũ', 403);
+type Clean = {
+  at: number;
+  customer: string;
+  phone: string;
+  room: string;
+  service: string;
+  method: string;
+  note: string;
+  lines: LegacyLine[];
+  code: string;
+};
+
+/** Checks a typed bill and returns the cleaned fields, or the message to show. */
+function clean(input: LegacyInput): { error: string } | Clean {
   const at = billMoment(input.date, input.time);
-  if (at == null) return fail('Ngày giờ của bill không hợp lệ');
-  const now = Date.now();
-  const when = momentProblem(at, now);
-  if (when) return fail(when);
+  if (at == null) return { error: 'Ngày giờ của bill không hợp lệ' };
+  const when = momentProblem(at, Date.now());
+  if (when) return { error: when };
   const customer = input.customer.trim().slice(0, 100);
-  if (customer.length < 2) return fail('Vui lòng nhập tên khách');
+  if (customer.length < 2) return { error: 'Vui lòng nhập tên khách' };
   const rawPhone = (input.phone ?? '').trim();
   const phone = rawPhone ? normalizePhone(rawPhone) : '';
-  if (phone && !validPhone(phone)) return fail('Số điện thoại không hợp lệ');
-  if (!(LEGACY_SERVICES as readonly string[]).includes(input.service)) return fail('Dịch vụ không hợp lệ');
+  if (phone && !validPhone(phone)) return { error: 'Số điện thoại không hợp lệ' };
+  if (!(LEGACY_SERVICES as readonly string[]).includes(input.service)) return { error: 'Dịch vụ không hợp lệ' };
   if (!(LEGACY_METHODS as readonly string[]).includes(input.method))
-    return fail('Hình thức thanh toán không hợp lệ');
+    return { error: 'Hình thức thanh toán không hợp lệ' };
   const lines: LegacyLine[] = input.lines.map((l) => ({
     name: l.name.trim().slice(0, 120),
     qty: l.qty,
@@ -114,8 +124,27 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
     ...(l.fnb ? { fnb: true } : {}),
   }));
   const problem = linesProblem(lines);
-  if (problem) return fail(problem);
-  const code = (input.code ?? '').trim().slice(0, 40);
+  if (problem) return { error: problem };
+  return {
+    at,
+    customer,
+    phone,
+    room: (input.room ?? '').trim().slice(0, 40),
+    service: input.service,
+    method: input.method,
+    note: (input.note ?? '').trim().slice(0, 500),
+    lines,
+    code: (input.code ?? '').trim().slice(0, 40),
+  };
+}
+
+/** The owner's bills are approved straight away; everybody else's wait for the owner. */
+export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Promise<ServiceResult> {
+  if (!can(actor.role, 'legacy.enter')) return fail('Bạn không có quyền nhập bill cũ', 403);
+  const c = clean(input);
+  if ('error' in c) return fail(c.error);
+  const { at, customer, phone, lines, code } = c;
+  const now = Date.now();
   if (code) {
     const dup = await db()
       .prepare('SELECT 1 AS x FROM legacy_bills WHERE tenant=? AND code=?')
@@ -139,13 +168,13 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
         at,
         customer,
         phone,
-        (input.room ?? '').trim().slice(0, 40),
-        input.service,
+        c.room,
+        c.service,
         JSON.stringify(lines),
         total,
         linesFood(lines),
-        input.method,
-        (input.note ?? '').trim().slice(0, 500),
+        c.method,
+        c.note,
         owner ? 'approved' : 'pending',
         actor.userId,
         actor.name,
@@ -162,7 +191,7 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
   await audit(
     actor.tenant,
     owner ? 'Nhập bill cũ' : 'Nhập bill cũ (chờ duyệt)',
-    `${code ? code + ' · ' : ''}${customer} · ${LEGACY_SERVICE_LABEL[input.service as LegacyService]} · ${total} ₫ · ${input.date}`,
+    `${code ? code + ' · ' : ''}${customer} · ${LEGACY_SERVICE_LABEL[c.service as LegacyService]} · ${total} ₫ · ${input.date}`,
   );
   return ok({ id, status: owner ? 'approved' : 'pending' });
 }
@@ -204,6 +233,39 @@ export async function reviewLegacyBill(
     input.decision === 'approve' ? 'Duyệt bill cũ' : input.decision === 'reject' ? 'Không duyệt bill cũ' : 'Thu hồi bill cũ',
     `${row.customer} · ${row.total} ₫${note ? ' · ' + note : ''}`,
   );
+  return ok();
+}
+
+/** The person who typed a bill (or the owner) corrects it while it still waits for approval. */
+export async function updateLegacyBill(actor: AuthUser, id: string, input: LegacyInput): Promise<ServiceResult> {
+  const row = await db()
+    .prepare('SELECT status,created_by FROM legacy_bills WHERE tenant=? AND id=?')
+    .bind(actor.tenant, id)
+    .first<{ status: string; created_by: string }>();
+  if (!row) return fail('Không tìm thấy bill', 404);
+  if (row.status !== 'pending') return fail('Chỉ sửa được bill đang chờ duyệt. Hãy thu hồi bill đã duyệt rồi nhập lại.', 409);
+  if (row.created_by !== actor.userId && !can(actor.role, 'legacy.approve'))
+    return fail('Bạn chỉ sửa được bill do chính mình nhập', 403);
+  const c = clean(input);
+  if ('error' in c) return fail(c.error);
+  if (c.code) {
+    const dup = await db()
+      .prepare('SELECT 1 AS x FROM legacy_bills WHERE tenant=? AND code=? AND id<>?')
+      .bind(actor.tenant, c.code, id)
+      .first();
+    if (dup) return fail('Số bill này đã được nhập trước đó', 409);
+  }
+  try {
+    await db()
+      .prepare(
+        "UPDATE legacy_bills SET code=?,bill_at=?,customer=?,phone=?,room=?,service=?,lines=?,total=?,food=?,method=?,note=? WHERE tenant=? AND id=? AND status='pending'",
+      )
+      .bind(c.code, c.at, c.customer, c.phone, c.room, c.service, JSON.stringify(c.lines), linesTotal(c.lines), linesFood(c.lines), c.method, c.note, actor.tenant, id)
+      .run();
+  } catch {
+    return fail('Số bill này đã được nhập trước đó', 409);
+  }
+  await audit(actor.tenant, 'Sửa bill cũ chờ duyệt', `${c.customer} · ${linesTotal(c.lines)} ₫`);
   return ok();
 }
 

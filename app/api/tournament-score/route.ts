@@ -11,8 +11,15 @@ const input = z.discriminatedUnion('action', [
     name: z.string().max(60).optional(),
     holes: z.number().int(),
     pars: z.array(z.number().int()).max(18).optional(),
+    date: z.string().max(10).optional(),
   }),
-  z.object({ action: z.literal('round-update'), id, name: z.string().max(60), pars: z.array(z.number().int()).max(18) }),
+  z.object({
+    action: z.literal('round-update'),
+    id,
+    name: z.string().max(60),
+    pars: z.array(z.number().int()).max(18),
+    date: z.string().max(10).optional(),
+  }),
   z.object({ action: z.literal('round-delete'), id }),
   z.object({
     action: z.literal('player-add'),

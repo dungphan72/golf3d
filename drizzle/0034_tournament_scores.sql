@@ -6,6 +6,7 @@ CREATE TABLE `tournament_rounds` (
 	`name` text NOT NULL,
 	`holes` integer NOT NULL,
 	`pars` text NOT NULL,
+	`play_date` text DEFAULT '' NOT NULL,
 	`created` integer NOT NULL
 );--> statement-breakpoint
 CREATE UNIQUE INDEX `tournament_round_no` ON `tournament_rounds` (`tenant`,`post_id`,`round_no`);--> statement-breakpoint

@@ -2,6 +2,17 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — Màn Đổi mật khẩu nhân viên theo mẫu mới (nhánh `fix/p0-data-integrity`)
+- **Lý do:** chủ hệ thống yêu cầu thiết kế lại màn đổi mật khẩu của nhân viên theo mẫu (desktop và điện thoại).
+- **Ảnh tham chiếu:** hai ảnh mẫu "Đổi mật khẩu" (desktop có hình minh họa bên phải; điện thoại hình minh họa ở trên) do chủ hệ thống gửi trong phiên; chưa lưu file vào `hinh-anh/thiet-ke/`.
+- **File:** `app/ui/PasswordChange.tsx` (mới), `app/password-change.css` (mới), `app/ui/AccountPanel.tsx` (màn bắt buộc đổi mật khẩu tạm ở lần đăng nhập đầu), `app/ui/SystemSettingsHub.tsx` (thẻ "Đổi mật khẩu, bảo mật" trong Cài đặt).
+- **Nội dung màn:** 3 ô mật khẩu có nút hiện/ẩn, thanh độ mạnh 4 mức (Yếu → Mạnh), danh sách điều kiện (tối thiểu 10 ký tự, chữ hoa, chữ thường, số), ô xác nhận báo khi không khớp, nút Hủy (khi dùng trong Cài đặt) và Cập nhật mật khẩu.
+- **Quy tắc:** máy chủ vẫn chỉ bắt buộc tối thiểu 10 ký tự và các kiểm tra cũ; chữ hoa/thường/số chỉ là gợi ý hiển thị độ mạnh, không đổi quy tắc nghiệp vụ.
+- **Sửa kèm:** trong Cài đặt, ba ô mật khẩu cũ chưa nối với chức năng nào (nhập xong không đổi được gì); nay gọi `/api/auth/password` thật.
+- **Không làm:** menu con "Thông tin tài khoản / Bảo mật 2 lớp (2FA) / Thông báo" và ảnh đại diện trong mẫu chưa có chức năng tương ứng nên không dựng.
+- **Screenshot:** chụp trong phiên ở 1440 và 390 (lần đăng nhập đầu); chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch; e2e thủ công trên bản build: đăng nhập bằng mật khẩu tạm hiện đúng màn, xác nhận không khớp khóa nút, đổi thành công rồi đăng nhập được bằng mật khẩu mới. Chưa chụp thẻ trong Cài đặt.
+
 ## 2026-11-16 — Phiếu thanh toán: logo, logo chìm, mẫu miễn phí gửi xe, gửi Zalo bằng ảnh (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu chèn logo đầu hóa đơn, logo chìm giữa hóa đơn, mẫu "Miễn phí gửi xe" cuối hóa đơn (ngày tự điền theo ngày hệ thống) và gửi bill qua Zalo bằng hình ảnh.
 - **Ảnh tham chiếu:** logo SaiGon Indoor Golf Club và mẫu "MIỄN PHÍ GỬI XE" do chủ hệ thống gửi trong phiên (chưa lưu file vào `hinh-anh/thiet-ke/`). Logo dùng file thật `public/logo.webp`.

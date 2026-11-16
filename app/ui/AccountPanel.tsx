@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { PasswordChange } from './PasswordChange';
 
 type Me = {
   name: string;
@@ -58,6 +59,25 @@ export function AccountPanel({
     } finally {
       setBusy(false);
     }
+  }
+  if (me?.via === 'password' && !me.needsPassword) {
+    return (
+      <div className="pwc-page">
+        <p className="pwc-page-note">
+          {me.name} · {me.email}
+        </p>
+        <PasswordChange
+          note={forced ? 'Bạn cần đặt mật khẩu mới trước khi sử dụng hệ thống.' : undefined}
+          onSubmit={async (cur, nxt) => {
+            await post('/api/auth/password', { action: 'change', current: cur, next: nxt });
+            onChanged();
+          }}
+        />
+        <button type="button" className="pwc-logout" onClick={onLogout}>
+          Đăng xuất
+        </button>
+      </div>
+    );
   }
   return (
     <section className="account-panel">

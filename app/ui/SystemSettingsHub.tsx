@@ -1,5 +1,6 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
+import { PasswordChange } from './PasswordChange';
 import { useState, useMemo, useEffect } from 'react';
 import {
   Building2,
@@ -1885,11 +1886,6 @@ function SettingsCardModal({
   });
 
   // Security
-  const [formSecurity, setFormSecurity] = useState({
-    oldPassword: '',
-    newPassword: '',
-    confirmPassword: '',
-  });
 
   // Marketing tools
   const [formMarketing, setFormMarketing] = useState({
@@ -3154,37 +3150,17 @@ function SettingsCardModal({
 
           {cardId === 'security_backup' && (
             <div>
-              <div className="ar-form-grid">
-                <div className="ar-field ar-form-grid-full">
-                  <label>Mật khẩu quản trị hiện tại</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={formSecurity.oldPassword}
-                    onChange={(e) => setFormSecurity({ ...formSecurity, oldPassword: e.target.value })}
-                  />
-                </div>
-                <div className="ar-field">
-                  <label>Mật khẩu mới</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={formSecurity.newPassword}
-                    onChange={(e) => setFormSecurity({ ...formSecurity, newPassword: e.target.value })}
-                  />
-                </div>
-                <div className="ar-field">
-                  <label>Nhập lại mật khẩu mới</label>
-                  <input
-                    type="password"
-                    placeholder="••••••••"
-                    value={formSecurity.confirmPassword}
-                    onChange={(e) =>
-                      setFormSecurity({ ...formSecurity, confirmPassword: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
+              <PasswordChange
+                onSubmit={async (current, next) => {
+                  const r = await fetch('/api/auth/password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'change', current, next }),
+                  });
+                  const v = (await r.json().catch(() => ({}))) as { error?: string };
+                  if (!r.ok) throw new Error(v.error || 'Không đổi được mật khẩu');
+                }}
+              />
 
               <div
                 style={{

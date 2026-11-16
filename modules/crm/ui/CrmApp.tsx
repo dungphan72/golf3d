@@ -1960,10 +1960,9 @@ export function CrmModule({
             <HelpCircle size={18} />
           </button>
           <div className="crm2-top-admin">
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Admin"
-            />
+            <span className="crm2-initials crm2-initials--admin" aria-hidden="true">
+              A
+            </span>
             <div>
               <strong>Admin</strong>
               <small>Quản trị hệ thống</small>
@@ -2118,7 +2117,9 @@ export function CrmModule({
                         aria-label={`Chọn ${cust.name}`}
                       />
                       <div className="crm2-cust-identity">
-                        <img src={cust.avatar} alt={cust.name} className="crm2-avatar" />
+                        <span className="crm2-avatar crm2-initials" aria-hidden="true">
+                          {initialsOf(cust.name)}
+                        </span>
                         <div className="crm2-cust-name-wrap">
                           <strong className="crm2-cust-name">{cust.name}</strong>
                           <span className="crm2-cust-phone">{cust.phone}</span>
@@ -2190,11 +2191,9 @@ export function CrmModule({
                 {/* Profile Header */}
                 <div className="crm2-profile-top">
                   <div className="crm2-profile-identity">
-                    <img
-                      src={activeCustomer.avatar}
-                      alt={activeCustomer.name}
-                      className="crm2-profile-avatar"
-                    />
+                    <span className="crm2-profile-avatar crm2-initials" aria-hidden="true">
+                      {initialsOf(activeCustomer.name)}
+                    </span>
                     <div>
                       <div className="crm2-profile-name-row">
                         <h2>{activeCustomer.name}</h2>
@@ -3919,4 +3918,10 @@ export function CrmModule({
     </div>
   );
 }
+/** Two-letter avatar from a name (the stock photos it replaces failed to load and are not the customers' own). */
+const initialsOf = (name: string) => {
+  const w = name.trim().split(/\s+/).filter(Boolean);
+  return ((w.length > 1 ? w[0][0] + w[w.length - 1][0] : (w[0] ?? '?').slice(0, 2)) || '?').toLocaleUpperCase('vi-VN');
+};
+
 export default CrmModule;

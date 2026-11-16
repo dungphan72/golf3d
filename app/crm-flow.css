@@ -866,7 +866,7 @@
 /* Split Grid inside Thông tin tab */
 .crm2-info-split {
   display: grid;
-  grid-template-columns: 1fr 1.05fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
   gap: 16px;
 }
 
@@ -1014,7 +1014,7 @@
 
 .crm2-perks-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
   gap: 6px;
   margin-bottom: 14px;
 }
@@ -1081,7 +1081,7 @@
 
 .crm2-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 10px;
 }
 
@@ -1563,4 +1563,29 @@
   padding: 14px 20px;
   background: #f8fafc;
   border-top: 1px solid #e2e8f0;
+}
+
+/* Initials avatars (no external photos) */
+.crm2-initials {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2563eb, #0ea5e9);
+  color: #fff;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.crm2-initials--admin {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 14px;
+}
+.crm2-field-val {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+.crm2-field-item {
+  grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
 }

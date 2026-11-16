@@ -2,6 +2,14 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-16 — CRM Khách hàng: sửa chữ xếp dọc và ảnh đại diện lỗi (nhánh `fix/p0-data-integrity`)
+- **Lý do:** ở màn hồ sơ khách hàng, khung "Thông tin cơ bản" bị ép hẹp nên SĐT, email, địa chỉ xếp từng ký tự theo chiều dọc; ảnh đại diện (ảnh stock ngoài) không tải được nên hiện ảnh vỡ.
+- **Ảnh tham chiếu:** ảnh chụp lỗi do chủ hệ thống gửi trong phiên.
+- **File:** `modules/crm/ui/CrmApp.tsx` (ảnh đại diện thành chữ cái đầu tên), `app/crm-flow.css` (cột thông tin tự xuống hàng khi hẹp, lưới quyền lợi và chỉ số tự co).
+- **Screenshot:** chụp trong phiên ở 1920 và 1440; chưa lưu file trong repo.
+- **Kiểm thử:** `tsc` sạch, build đạt, kiểm tra bằng mắt trên bản build.
+- **Chưa làm:** màn này vẫn dùng dữ liệu mẫu cứng trong `CrmApp.tsx` (1.248 khách, tên, SĐT mẫu), trái quy tắc không dùng dữ liệu giả; cần quyết định riêng để nối dữ liệu thật.
+
 ## 2026-11-16 — Luồng khách hàng theo phong cách trang chủ Dark Premium Golf (nhánh `fix/p0-data-integrity`)
 - **Lý do:** chủ hệ thống yêu cầu đồng bộ phong cách toàn bộ luồng khách hàng với trang chủ mới; chỉ đổi giao diện, không đổi nghiệp vụ, API, dữ liệu.
 - **Ảnh tham chiếu:** trang chủ Dark Premium Golf (chưa lưu file ảnh vào `hinh-anh/thiet-ke/`). Thay hoàn toàn các thiết kế sáng cũ: poster Bảng giá nền kem, đăng nhập/đăng ký nền trắng, app hội viên nền sáng, trang tin tức/đặt sân.

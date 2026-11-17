@@ -365,11 +365,25 @@ export function minChargeOffer(
     } catch {
       segs = [];
     }
+    // If segments array is empty but we have finished and start times
+    if (segs.length === 0 && (b as any).finished) {
+      const startTime = (b as any).started || (b as any).start;
+      if (startTime && (b as any).finished > startTime) {
+        segs.push({ start: startTime, end: (b as any).finished });
+      }
+    }
+
     if (segs.length > 0) {
       const minMinutes = snap.config?.minBillMinutes ?? 60;
       if (minMinutes > 0) {
         const playedMs = segs.reduce((sum, s) => sum + Math.max(0, s.end - s.start), 0);
         const playedMinutes = Math.round(playedMs / 60_000);
+
+        // CRITICAL RULE: If the customer played 60 minutes or more, DO NOT ASK!
+        if (playedMinutes >= minMinutes) {
+          return null;
+        }
+
         if (playedMs > 0 && playedMinutes < minMinutes) {
           const config = snap.config ?? defaults;
           const actualBill = quote(segs, config, snap.vip);
@@ -383,10 +397,12 @@ export function minChargeOffer(
             };
           }
         }
+        return null;
       }
     }
   }
 
+  // Legacy fallback ONLY when no segments are available
   if (b.golf_amount <= 0 || b.golf_amount >= MIN_HOURLY_CHARGE) return null;
   return { golf: b.golf_amount, to: MIN_HOURLY_CHARGE };
 }

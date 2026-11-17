@@ -2207,30 +2207,39 @@ export function ModernPosFlow({
             <small>Khách: {activeBooking.customer}</small>
           </div>
           <div className="pos-m3-roundup" role="alertdialog" aria-labelledby="pos-roundup-title">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Clock size={20} color="#b45309" />
-              <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 16, color: '#92400e', fontWeight: 700 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
+              <Clock size={18} color="#b45309" />
+              <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 15, color: '#92400e', fontWeight: 700 }}>
                 Giới hạn tối thiểu {minMins} phút
               </h4>
             </div>
-            <p style={{ margin: '8px 0', fontSize: 14, color: '#78350f', lineHeight: 1.5 }}>
-              Khách chơi thực tế <strong>{playedMins} phút</strong> (tương ứng <strong>{money(roundOffer.golf)}</strong>), chưa đủ mức tối thiểu <strong>{minMins} phút</strong> (tương ứng <strong>{money(roundOffer.to)}</strong>).
+            <p style={{ margin: '4px 0', fontSize: 13.5, color: '#78350f', lineHeight: 1.4 }}>
+              Thực tế <strong>{playedMins} phút</strong> (tương ứng <strong>{money(roundOffer.golf)}</strong>)
             </p>
-            <p style={{ margin: '4px 0 12px', fontSize: 14, fontWeight: 600, color: '#92400e' }}>
-              Hệ thống hỏi: Bạn muốn thanh toán theo số tiền tối thiểu hay theo số tiền khách chơi thực tế?
+            <p style={{ margin: '4px 0 10px', fontSize: 13.5, fontWeight: 600, color: '#92400e' }}>
+              Bạn muốn thanh toán theo số tiền nào?
             </p>
-            <div className="pos-m3-roundup-actions" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="pos-m3-roundup-actions" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <button
                 type="button"
-                className="pos-m3-btn-primary pos-m3-btn-lg"
+                className="pos-m3-btn-primary"
                 disabled={saving}
-                style={{ justifyContent: 'center', textAlign: 'center', padding: '12px 16px', height: 'auto', whiteSpace: 'normal', lineHeight: 1.3 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '11px 14px',
+                  borderRadius: 5,
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  height: 'auto',
+                }}
                 onClick={async () => {
                   setSaving(true);
                   try {
                     const ok = await onMutate({ action: 'round-min', id: activeBooking.id });
                     if (ok) {
-                      setNotice(`Đã chọn thanh toán số tiền tối thiểu ${minMins} phút (${money(roundOffer.to)})`);
+                      setNotice(`Đã chọn thanh toán số tiền tối thiểu (${money(roundOffer.to)})`);
                       await reloadBill();
                       await onRefresh();
                     }
@@ -2239,20 +2248,35 @@ export function ModernPosFlow({
                   }
                 }}
               >
-                <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
-                <span>Thanh toán số tiền tối thiểu ({minMins} phút): <strong>{money(roundOffer.to)}</strong></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <CheckCircle2 size={16} />
+                  Số tiền tối thiểu:
+                </span>
+                <strong style={{ fontSize: 14.5 }}>{money(roundOffer.to)}</strong>
               </button>
               <button
                 type="button"
-                className="pos-m3-btn-outline pos-m3-btn-lg"
+                className="pos-m3-btn-outline"
                 disabled={saving}
-                style={{ justifyContent: 'center', textAlign: 'center', padding: '12px 16px', height: 'auto', whiteSpace: 'normal', lineHeight: 1.3, borderColor: '#d97706', color: '#92400e', background: '#fff' }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '11px 14px',
+                  borderRadius: 5,
+                  fontSize: 13.5,
+                  fontWeight: 600,
+                  borderColor: '#d97706',
+                  color: '#92400e',
+                  background: '#ffffff',
+                  height: 'auto',
+                }}
                 onClick={async () => {
                   setSaving(true);
                   try {
                     await onMutate({ action: 'keep-actual', id: activeBooking.id });
                     setKeepShort((cur) => new Set(cur).add(activeBooking.id));
-                    setNotice(`Đã chọn thanh toán theo thực tế ${playedMins} phút (${money(roundOffer.golf)})`);
+                    setNotice(`Đã chọn thanh toán theo thực tế (${money(roundOffer.golf)})`);
                     await reloadBill();
                     await onRefresh();
                   } finally {
@@ -2260,8 +2284,11 @@ export function ModernPosFlow({
                   }
                 }}
               >
-                <Clock size={18} style={{ flexShrink: 0 }} />
-                <span>Thanh toán số tiền khách chơi thực tế ({playedMins} phút): <strong>{money(roundOffer.golf)}</strong></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Clock size={16} />
+                  Số tiền thực tế:
+                </span>
+                <strong style={{ fontSize: 14.5 }}>{money(roundOffer.golf)}</strong>
               </button>
             </div>
           </div>

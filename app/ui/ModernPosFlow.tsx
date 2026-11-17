@@ -621,6 +621,8 @@ export function ModernPosFlow({
       : grossTotal - discountAmount,
   );
 
+  const roundOffer = useMemo(() => (activeBooking ? minChargeOffer(activeBooking) : null), [activeBooking]);
+
   const elapsedMs = useMemo(() => {
     if (!activeBooking) return 0;
     if (
@@ -2160,9 +2162,9 @@ export function ModernPosFlow({
       );
     }
 
-    const roundOffer = minChargeOffer(activeBooking);
     if (roundOffer && !keepShort.has(activeBooking.id)) {
-      const add = roundOffer.to - roundOffer.golf;
+      const minMins = roundOffer.minMinutes ?? 60;
+      const playedMins = roundOffer.playedMinutes ?? 1;
       return (
         <div className="pos-m3-pay-section">
           <div className="pos-m3-pay-total-banner">
@@ -2171,36 +2173,61 @@ export function ModernPosFlow({
             <small>Khách: {activeBooking.customer}</small>
           </div>
           <div className="pos-m3-roundup" role="alertdialog" aria-labelledby="pos-roundup-title">
-            <h4 id="pos-roundup-title">Làm tròn lên {money(roundOffer.to)}?</h4>
-            <p>
-              Khách chơi theo giờ, tiền chơi chỉ <strong>{money(roundOffer.golf)}</strong>, chưa đến{' '}
-              {money(MIN_HOURLY_CHARGE)}. Làm tròn tiền chơi lên {money(roundOffer.to)} (cộng thêm{' '}
-              {money(add)})?
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Clock size={20} color="#b45309" />
+              <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 16, color: '#92400e', fontWeight: 700 }}>
+                Giới hạn tối thiểu {minMins} phút
+              </h4>
+            </div>
+            <p style={{ margin: '8px 0', fontSize: 14, color: '#78350f', lineHeight: 1.5 }}>
+              Khách chơi thực tế <strong>{playedMins} phút</strong> (tương ứng <strong>{money(roundOffer.golf)}</strong>), chưa đủ mức tối thiểu <strong>{minMins} phút</strong> (tương ứng <strong>{money(roundOffer.to)}</strong>).
             </p>
-            <div className="pos-m3-roundup-actions">
+            <p style={{ margin: '4px 0 12px', fontSize: 14, fontWeight: 600, color: '#92400e' }}>
+              Hệ thống hỏi: Bạn muốn thanh toán theo số tiền tối thiểu hay theo số tiền khách chơi thực tế?
+            </p>
+            <div className="pos-m3-roundup-actions" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
                 type="button"
                 className="pos-m3-btn-primary pos-m3-btn-lg"
                 disabled={saving}
+                style={{ justifyContent: 'center', textAlign: 'center', padding: '12px 16px', height: 'auto', whiteSpace: 'normal', lineHeight: 1.3 }}
                 onClick={async () => {
                   setSaving(true);
                   try {
                     const ok = await onMutate({ action: 'round-min', id: activeBooking.id });
-                    if (ok) setNotice(`Đã làm tròn tiền chơi lên ${money(roundOffer.to)}`);
+                    if (ok) {
+                      setNotice(`Đã chọn thanh toán số tiền tối thiểu ${minMins} phút (${money(roundOffer.to)})`);
+                      await reloadBill();
+                      await onRefresh();
+                    }
                   } finally {
                     setSaving(false);
                   }
                 }}
               >
-                Làm tròn lên {money(roundOffer.to)}
+                <CheckCircle2 size={18} style={{ flexShrink: 0 }} />
+                <span>Thanh toán số tiền tối thiểu ({minMins} phút): <strong>{money(roundOffer.to)}</strong></span>
               </button>
               <button
                 type="button"
                 className="pos-m3-btn-outline pos-m3-btn-lg"
                 disabled={saving}
-                onClick={() => setKeepShort((cur) => new Set(cur).add(activeBooking.id))}
+                style={{ justifyContent: 'center', textAlign: 'center', padding: '12px 16px', height: 'auto', whiteSpace: 'normal', lineHeight: 1.3, borderColor: '#d97706', color: '#92400e', background: '#fff' }}
+                onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await onMutate({ action: 'keep-actual', id: activeBooking.id });
+                    setKeepShort((cur) => new Set(cur).add(activeBooking.id));
+                    setNotice(`Đã chọn thanh toán theo thực tế ${playedMins} phút (${money(roundOffer.golf)})`);
+                    await reloadBill();
+                    await onRefresh();
+                  } finally {
+                    setSaving(false);
+                  }
+                }}
               >
-                Giữ nguyên {money(roundOffer.golf)}
+                <Clock size={18} style={{ flexShrink: 0 }} />
+                <span>Thanh toán số tiền khách chơi thực tế ({playedMins} phút): <strong>{money(roundOffer.golf)}</strong></span>
               </button>
             </div>
           </div>
@@ -3543,7 +3570,14 @@ export function ModernPosFlow({
               {/* Bill Summary Breakdown */}
               <div className="pos-m3-card pos-m3-bill-summary-card">
                 <div className="pos-m3-summary-line">
-                  <span>Phí giờ chơi ({selectedRoomObj.name})</span>
+                  <span>
+                    Phí giờ chơi ({selectedRoomObj.name})
+                    {roundOffer && !keepShort.has(activeBooking?.id || '') && (
+                      <span style={{ display: 'block', fontSize: 12, color: '#b45309', fontWeight: 500 }}>
+                        ⚠️ Chưa đủ tối thiểu {roundOffer.minMinutes}p (thực tế: {roundOffer.playedMinutes}p)
+                      </span>
+                    )}
+                  </span>
                   <strong>{money(golfTotal)}</strong>
                 </div>
                 <div className="pos-m3-summary-line">
@@ -4328,7 +4362,14 @@ export function ModernPosFlow({
                     {/* Bill Summary Box */}
                     <div className="pos-m3-panel-bill-box">
                       <div>
-                        <span>Tiền giờ chơi golf</span>
+                        <span>
+                          Tiền giờ chơi golf
+                          {roundOffer && !keepShort.has(activeBooking?.id || '') && (
+                            <span style={{ display: 'block', fontSize: 11, color: '#b45309', fontWeight: 500 }}>
+                              ⚠️ Chưa đủ tối thiểu {roundOffer.minMinutes}p (thực tế: {roundOffer.playedMinutes}p)
+                            </span>
+                          )}
+                        </span>
                         <strong>{money(golfTotal)}</strong>
                       </div>
                       <div>

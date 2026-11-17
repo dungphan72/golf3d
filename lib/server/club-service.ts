@@ -60,6 +60,7 @@ export const clubInput = z.object({
     'extend',
     'switch-service',
     'round-min',
+    'keep-actual',
     'walkin',
     'maintenance',
     'clean-test-data',
@@ -534,15 +535,29 @@ export async function runClubAction(
     // Staff confirmed, at payment, raising a short hourly session to the minimum charge.
     const offer = minChargeOffer(b);
     if (!offer) return fail('Phiếu này không áp dụng hoặc đã làm tròn tối thiểu', 409);
-    const next = { ...snap, minCharge: { from: offer.golf, to: offer.to, at: now, actor: 'staff' } };
+    const next = { ...snap, minCharge: { from: offer.golf, to: offer.to, minMinutes: offer.minMinutes, at: now, actor: 'staff' }, keepActual: false };
     const raised = await db()
       .prepare(
-        "UPDATE bookings SET golf_amount=?,amount=?+food_total,price=? WHERE tenant=? AND id=? AND status='finished' AND price=? AND golf_amount=?",
+        "UPDATE bookings SET golf_amount=?,amount=?+food_total,price=? WHERE tenant=? AND id=? AND status='finished'",
       )
-      .bind(offer.to, offer.to, JSON.stringify(next), tenant, b.id, b.price, offer.golf)
+      .bind(offer.to, offer.to, JSON.stringify(next), tenant, b.id)
       .run();
     if (!raised.meta.changes) return fail('Phiếu vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
     await audit(tenant, 'Làm tròn tối thiểu', `${b.id} ${offer.golf} → ${offer.to}`);
+    return ok();
+  } else if (input.action === 'keep-actual') {
+    // Staff confirmed, at payment, charging the actual played time (not raising to the minimum).
+    const offer = minChargeOffer(b);
+    const actualGolf = offer ? offer.golf : (b.golf_amount ?? 0);
+    const next = { ...snap, keepActual: true, minCharge: undefined };
+    const kept = await db()
+      .prepare(
+        "UPDATE bookings SET golf_amount=?,amount=?+food_total,price=? WHERE tenant=? AND id=? AND status='finished'",
+      )
+      .bind(actualGolf, actualGolf, JSON.stringify(next), tenant, b.id)
+      .run();
+    if (!kept.meta.changes) return fail('Phiếu vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    await audit(tenant, 'Thanh toán thực tế', `${b.id} ${actualGolf}`);
     return ok();
   } else if (input.action === 'pay') {
     return fail('Thanh toán phải được ghi vào sổ ca tại màn hình mới. Hãy tải lại ứng dụng.', 409);

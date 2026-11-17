@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { defaults, quote, sessionQuote, padToMinimum, type Config } from '../lib/club.ts';
+import { defaults, quote, sessionQuote, padToMinimum, minChargeOffer, type Config } from '../lib/club.ts';
 import { seedPriceRules } from '../lib/pricing.ts';
 
 const at = (s: string) => Date.parse(s + '+07:00');
@@ -63,4 +63,64 @@ test('cài 30 phút: chơi 10 phút tính 30 phút', () => {
   const c = { ...base, minBillMinutes: 30 };
   const t = sessionQuote('gdr', [{ start, end: start + 10 * MIN }], { config: c, base: 0 }).total;
   assert.equal(t, quote([{ start, end: start + 30 * MIN }], c, false).total);
+});
+
+test('thanh toán tối thiểu 60 phút: hệ thống hỏi khi chơi dưới 60 phút và cho phép chọn thực tế', () => {
+  const c = { ...base, minBillMinutes: 60 };
+  const segs = [{ start, end: start + 25 * MIN }];
+  const price = (extra: object = {}) => JSON.stringify({ config: c, base: 0, ...extra });
+  const actualBill = quote(segs, c, false);
+  const minBill = quote([{ start, end: start + 60 * MIN }], c, false);
+
+  // 1. Chơi 25 phút: hệ thống phát hiện và đề nghị 2 mức (thực tế vs tối thiểu 60 phút)
+  const offer = minChargeOffer({
+    status: 'finished',
+    service: 'gdr',
+    price: price(),
+    golf_amount: actualBill.total,
+    segments: JSON.stringify(segs),
+  });
+  assert.ok(offer != null);
+  assert.equal(offer.golf, actualBill.total);
+  assert.equal(offer.to, minBill.total);
+  assert.equal(offer.playedMinutes, 25);
+  assert.equal(offer.minMinutes, 60);
+
+  // 2. Chơi 75 phút (quá 60 phút): không hỏi, trả về null
+  const longOffer = minChargeOffer({
+    status: 'finished',
+    service: 'gdr',
+    price: price(),
+    golf_amount: quote([{ start, end: start + 75 * MIN }], c, false).total,
+    segments: JSON.stringify([{ start, end: start + 75 * MIN }]),
+  });
+  assert.equal(longOffer, null);
+
+  // 3. Khách chọn thanh toán thực tế: keepActual = true, sessionQuote trả về đúng tiền thực tế
+  const actualQuote = sessionQuote('gdr', segs, { config: c, base: 0, keepActual: true });
+  assert.equal(actualQuote.total, actualBill.total);
+  const afterKeepActual = minChargeOffer({
+    status: 'finished',
+    service: 'gdr',
+    price: price({ keepActual: true }),
+    golf_amount: actualBill.total,
+    segments: JSON.stringify(segs),
+  });
+  assert.equal(afterKeepActual, null);
+
+  // 4. Khách chọn thanh toán tối thiểu: minCharge được ghi lại, sessionQuote hiển thị dòng làm tròn
+  const raisedQuote = sessionQuote('gdr', segs, {
+    config: c,
+    base: 0,
+    minCharge: { from: actualBill.total, to: minBill.total, minMinutes: 60, at: start, actor: 'staff' },
+  });
+  assert.equal(raisedQuote.total, minBill.total);
+  const afterRoundMin = minChargeOffer({
+    status: 'finished',
+    service: 'gdr',
+    price: price({ minCharge: { from: actualBill.total, to: minBill.total, at: start, actor: 'staff' } }),
+    golf_amount: minBill.total,
+    segments: JSON.stringify(segs),
+  });
+  assert.equal(afterRoundMin, null);
 });

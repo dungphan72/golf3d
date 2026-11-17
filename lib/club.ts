@@ -258,11 +258,14 @@ export function padToMinimum(
 function baseSessionQuote(
   service: Service,
   segments: Segment[],
-  snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number },
+  snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number; keepActual?: boolean },
 ): Bill & { parts?: BillPart[] } {
   const prior = snap.prior ?? [];
   if (!prior.length) {
     if (service !== 'gdr') return wholeQuote(snap.base, snap.config, service);
+    if (snap.keepActual) {
+      return quote(segments, snap.config, snap.vip);
+    }
     const padded = padToMinimum(segments, snap.config.minBillMinutes ?? 0);
     const q = quote(padded.segments, snap.config, snap.vip);
     if (!padded.added || !q.lines.length) return q;
@@ -309,7 +312,7 @@ function baseSessionQuote(
  * switched between practice and a game.
  */
 export const MIN_HOURLY_CHARGE = 100_000;
-export type MinCharge = { from: number; to: number; at: number; actor: string };
+export type MinCharge = { from: number; to: number; minMinutes?: number; at: number; actor: string };
 
 export function sessionQuote(
   service: Service,
@@ -322,6 +325,7 @@ export function sessionQuote(
     prior?: PriorPart[];
     phaseFrom?: number;
     minCharge?: MinCharge;
+    keepActual?: boolean;
   },
 ): Bill & { parts?: BillPart[] } {
   const bill = baseSessionQuote(service, segments, snap);
@@ -334,7 +338,7 @@ export function sessionQuote(
       ...bill.lines,
       {
         date: '',
-        label: `Làm tròn tối thiểu ${money(m.to)}`,
+        label: `Làm tròn tối thiểu ${m.minMinutes ? m.minMinutes + ' phút ' : ''}${money(m.to)}`,
         minutes: 0,
         rate: 0,
         amount: m.to - bill.total,
@@ -347,16 +351,55 @@ export function sessionQuote(
 
 /** The raise to offer at payment, or null when it does not apply (not hourly, switched, already done, nothing owed). */
 export function minChargeOffer(
-  b: Pick<Booking, 'status' | 'service' | 'price' | 'golf_amount'>,
-): { golf: number; to: number } | null {
+  b: Pick<Booking, 'status' | 'service' | 'price' | 'golf_amount'> & {
+    segments?: string;
+  },
+): { golf: number; to: number; playedMinutes?: number; minMinutes?: number } | null {
   if (b.status !== 'finished' || b.service !== 'gdr' || b.golf_amount == null) return null;
-  let snap: { prior?: unknown[]; minCharge?: unknown };
+  let snap: {
+    config?: Config;
+    vip?: boolean;
+    prior?: unknown[];
+    minCharge?: unknown;
+    keepActual?: boolean;
+  };
   try {
     snap = JSON.parse(b.price);
   } catch {
     return null;
   }
-  if (snap.prior?.length || snap.minCharge) return null;
+  if (snap.prior?.length || snap.minCharge || snap.keepActual) return null;
+
+  // If segments are provided, compute based on the 60-minute (minBillMinutes) rule
+  if (b.segments) {
+    let segs: Segment[] = [];
+    try {
+      segs = JSON.parse(b.segments || '[]');
+    } catch {
+      segs = [];
+    }
+    if (segs.length > 0) {
+      const minMinutes = snap.config?.minBillMinutes ?? 60;
+      if (minMinutes > 0) {
+        const playedMs = segs.reduce((sum, s) => sum + Math.max(0, s.end - s.start), 0);
+        const playedMinutes = Math.round(playedMs / 60_000);
+        if (playedMs > 0 && playedMinutes < minMinutes) {
+          const config = snap.config ?? defaults;
+          const actualBill = quote(segs, config, snap.vip);
+          const minBill = quote(padToMinimum(segs, minMinutes).segments, config, snap.vip);
+          if (minBill.total > actualBill.total) {
+            return {
+              golf: actualBill.total,
+              to: minBill.total,
+              playedMinutes: Math.max(1, playedMinutes),
+              minMinutes,
+            };
+          }
+        }
+      }
+    }
+  }
+
   if (b.golf_amount <= 0 || b.golf_amount >= MIN_HOURLY_CHARGE) return null;
   return { golf: b.golf_amount, to: MIN_HOURLY_CHARGE };
 }

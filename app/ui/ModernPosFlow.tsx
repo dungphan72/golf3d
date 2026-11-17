@@ -86,6 +86,9 @@ import {
   printK80Receipt,
   sendBillImageToZalo,
 } from '../../lib/thermal-receipt';
+import { useServiceCalls } from './useServiceCalls';
+import { ServiceCallBanner } from './ServiceCallBanner';
+import { ServiceCallDrawer } from './ServiceCallDrawer';
 import '../pos-flow.css';
 
 export type MobileScreenId =
@@ -344,6 +347,10 @@ export function ModernPosFlow({
 
   // Header Notification Popover
   const [showBellPopover, setShowBellPopover] = useState(false);
+
+  // Service Call Management (Gọi phục vụ trực tuyến)
+  const serviceCallState = useServiceCalls();
+  const [showServiceCallDrawer, setShowServiceCallDrawer] = useState(false);
 
   // General busy & feedback state
   const [saving, setSaving] = useState(false);
@@ -710,6 +717,19 @@ export function ModernPosFlow({
         </span>
         <span className={`pos-m3-room-badge ${statusKey}`}>{statusLabel}</span>
         <span className="pos-m3-line-rate-frame">{getRoomRateLabel(r.vip)}</span>
+        {serviceCallState.activeCallsByRoom.has(r.id) && (
+          <span
+            className={`pos-m3-room-call-pill ${
+              serviceCallState.activeCallsByRoom.get(r.id)?.status === 'CREATED' ? 'pending' : 'progress'
+            }`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowServiceCallDrawer(true);
+            }}
+          >
+            🔔 {serviceCallState.activeCallsByRoom.get(r.id)?.status === 'CREATED' ? 'ĐANG GỌI' : 'ĐANG PHỤC VỤ'}
+          </span>
+        )}
         {rb ? (
           <span className="pos-m3-desk-info">
             <strong className="pos-m3-desk-cust">{rb.customer}</strong>
@@ -1612,7 +1632,8 @@ export function ModernPosFlow({
   const canDiscount = !data.permissions || data.permissions.includes('billing.discount');
   const canCancelBooking = !data.permissions || data.permissions.includes('booking.cancel');
   const newSupportRequests = data.requests?.filter((r) => r.status === 'new') ?? [];
-  const totalNotifications = newSupportRequests.length + (data.onlinePending ?? 0);
+  const totalNotifications =
+    newSupportRequests.length + serviceCallState.pendingCount + (data.onlinePending ?? 0);
 
   // ============================================================================
   // RENDER SHARED SHIFT & TRANSACTION MODALS / DRAWERS
@@ -2254,6 +2275,7 @@ export function ModernPosFlow({
     if (roundOffer && !keepShort.has(activeBooking.id)) {
       const minMins = roundOffer.minMinutes ?? 60;
       const playedMins = roundOffer.playedMinutes ?? 1;
+      const fmtVnd = (n: number) => new Intl.NumberFormat('vi-VN').format(Math.round(n || 0)) + ' VNĐ';
       return (
         <div className="pos-m3-pay-section">
           <div className="pos-m3-pay-total-banner">
@@ -2261,17 +2283,28 @@ export function ModernPosFlow({
             <strong>{money(payableTotal)}</strong>
             <small>Khách: {activeBooking.customer}</small>
           </div>
-          <div className="pos-m3-roundup" role="alertdialog" aria-labelledby="pos-roundup-title">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-              <Clock size={18} color="#b45309" />
-              <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 15, color: '#92400e', fontWeight: 700 }}>
+          <div
+            className="pos-m3-roundup"
+            role="alertdialog"
+            aria-labelledby="pos-roundup-title"
+            style={{
+              padding: '14px 16px',
+              borderRadius: 5,
+              background: '#fffdf5',
+              border: '1px solid #fde68a',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+              <Clock size={16} color="#b45309" />
+              <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 14.5, color: '#92400e', fontWeight: 700 }}>
                 Giới hạn tối thiểu {minMins} phút
               </h4>
             </div>
-            <p style={{ margin: '4px 0', fontSize: 13.5, color: '#78350f', lineHeight: 1.4 }}>
+            <p style={{ margin: '2px 0', fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
               Thực tế <strong>{playedMins} phút</strong> (tương ứng <strong>{money(roundOffer.golf)}</strong>)
             </p>
-            <p style={{ margin: '4px 0 10px', fontSize: 13.5, fontWeight: 600, color: '#92400e' }}>
+            <p style={{ margin: '4px 0 10px', fontSize: 13, fontWeight: 600, color: '#92400e' }}>
               Bạn muốn thanh toán theo số tiền nào?
             </p>
             <div className="pos-m3-roundup-actions" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -2283,7 +2316,7 @@ export function ModernPosFlow({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '11px 14px',
+                  padding: '10px 14px',
                   borderRadius: 5,
                   fontSize: 13.5,
                   fontWeight: 600,
@@ -2295,7 +2328,7 @@ export function ModernPosFlow({
                     const ok = await onMutate({ action: 'round-min', id: activeBooking.id });
                     if (ok) {
                       setKeepShort((cur) => new Set(cur).add(activeBooking.id));
-                      setNotice(`Đã chọn thanh toán số tiền tối thiểu (${money(roundOffer.to)})`);
+                      setNotice(`Đã chọn thanh toán số tiền tối thiểu (${fmtVnd(roundOffer.to)})`);
                       await reloadBill();
                       await onRefresh();
                     }
@@ -2308,7 +2341,7 @@ export function ModernPosFlow({
                   <CheckCircle2 size={16} />
                   Số tiền tối thiểu:
                 </span>
-                <strong style={{ fontSize: 14.5 }}>{money(roundOffer.to)}</strong>
+                <strong style={{ fontSize: 14 }}>{fmtVnd(roundOffer.to)}</strong>
               </button>
               <button
                 type="button"
@@ -2318,7 +2351,7 @@ export function ModernPosFlow({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '11px 14px',
+                  padding: '10px 14px',
                   borderRadius: 5,
                   fontSize: 13.5,
                   fontWeight: 600,
@@ -2332,7 +2365,7 @@ export function ModernPosFlow({
                   try {
                     await onMutate({ action: 'keep-actual', id: activeBooking.id });
                     setKeepShort((cur) => new Set(cur).add(activeBooking.id));
-                    setNotice(`Đã chọn thanh toán theo thực tế (${money(roundOffer.golf)})`);
+                    setNotice(`Đã chọn thanh toán theo thực tế (${fmtVnd(roundOffer.golf)})`);
                     await reloadBill();
                     await onRefresh();
                   } finally {
@@ -2344,7 +2377,7 @@ export function ModernPosFlow({
                   <Clock size={16} />
                   Số tiền thực tế:
                 </span>
-                <strong style={{ fontSize: 14.5 }}>{money(roundOffer.golf)}</strong>
+                <strong style={{ fontSize: 14 }}>{fmtVnd(roundOffer.golf)}</strong>
               </button>
             </div>
           </div>
@@ -2659,6 +2692,18 @@ export function ModernPosFlow({
           </div>
         </header>
 
+      {/* Realtime Service Call Banner */}
+      <ServiceCallBanner
+        call={serviceCallState.bannerCall}
+        onAcknowledge={serviceCallState.acknowledgeCall}
+        onOpenDetails={() => setShowServiceCallDrawer(true)}
+        onDismiss={serviceCallState.dismissBanner}
+        onNavigateToPayment={(roomId) => {
+          selectRoom(roomId);
+          setMobileScreen('M07');
+        }}
+      />
+
         {/* Feedback Banners */}
         {notice && (
           <div className="pos-m3-toast success" role="status">
@@ -2957,6 +3002,22 @@ export function ModernPosFlow({
                       <div className="pos-m3-line-rate-frame">
                         {getRoomRateLabel(r.vip)}
                       </div>
+
+                      {serviceCallState.activeCallsByRoom.has(r.id) && (
+                        <div style={{ margin: '4px 0 2px' }}>
+                          <span
+                            className={`pos-m3-room-call-pill ${
+                              serviceCallState.activeCallsByRoom.get(r.id)?.status === 'CREATED' ? 'pending' : 'progress'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowServiceCallDrawer(true);
+                            }}
+                          >
+                            🔔 {serviceCallState.activeCallsByRoom.get(r.id)?.status === 'CREATED' ? 'ĐANG GỌI' : 'ĐANG PHỤC VỤ'}
+                          </span>
+                        </div>
+                      )}
 
                       {rb ? (
                         <div className="pos-m3-room-card-body">
@@ -3993,10 +4054,26 @@ export function ModernPosFlow({
                     <X size={15} />
                   </button>
                 </div>
-                {newSupportRequests.length === 0 && !data.onlinePending ? (
+                {newSupportRequests.length === 0 && !data.onlinePending && serviceCallState.pendingCount === 0 ? (
                   <p className="pos-m3-empty-note">Không có yêu cầu hỗ trợ hay đặt sân mới.</p>
                 ) : (
                   <div className="pos-m3-bell-list">
+                    {serviceCallState.pendingCount > 0 && (
+                      <button
+                        type="button"
+                        className="pos-m3-bell-item"
+                        style={{ background: '#fef2f2', borderLeft: '3px solid #dc2626' }}
+                        onClick={() => {
+                          setShowBellPopover(false);
+                          setShowServiceCallDrawer(true);
+                        }}
+                      >
+                        <strong style={{ color: '#dc2626' }}>
+                          🔔 {serviceCallState.pendingCount} yêu cầu gọi phục vụ tại line
+                        </strong>
+                        <small>Nhấn để xem và tiếp nhận phục vụ</small>
+                      </button>
+                    )}
                     {(data.onlinePending ?? 0) > 0 && (
                       <button
                         type="button"
@@ -4033,6 +4110,18 @@ export function ModernPosFlow({
           </div>
         </div>
       </header>
+
+      {/* Realtime Service Call Banner */}
+      <ServiceCallBanner
+        call={serviceCallState.bannerCall}
+        onAcknowledge={serviceCallState.acknowledgeCall}
+        onOpenDetails={() => setShowServiceCallDrawer(true)}
+        onDismiss={serviceCallState.dismissBanner}
+        onNavigateToPayment={(roomId) => {
+          selectRoom(roomId);
+          setDesktopMode('payment');
+        }}
+      />
 
       {/* Toast Feedback */}
       {(notice || errorMsg) && (
@@ -4863,6 +4952,26 @@ export function ModernPosFlow({
           </footer>
         </aside>
       </div>
+
+      {/* Service Call Drawer (Quản lý gọi phục vụ trực tiếp) */}
+      <ServiceCallDrawer
+        isOpen={showServiceCallDrawer}
+        onClose={() => setShowServiceCallDrawer(false)}
+        calls={serviceCallState.calls}
+        onAcknowledge={serviceCallState.acknowledgeCall}
+        onStart={serviceCallState.startCall}
+        onComplete={serviceCallState.completeCall}
+        onCancel={serviceCallState.cancelCall}
+        onCreateProxy={serviceCallState.createProxyCall}
+        onNavigateToPayment={(roomId) => {
+          if (isMobile) {
+            selectRoom(roomId, 'M07');
+          } else {
+            selectRoom(roomId);
+            setDesktopMode('payment');
+          }
+        }}
+      />
     </div>
   );
 }

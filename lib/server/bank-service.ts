@@ -44,8 +44,8 @@ export async function receiveSepay(
   try {
     const parsed = sepayPayload.safeParse(raw);
     if (!parsed.success) {
-      console.warn('[SePay Webhook] Invalid payload schema:', parsed.error.format());
-      return error('Dữ liệu không hợp lệ');
+      console.warn('[SePay Webhook] Invalid payload schema:', JSON.stringify(parsed.error.format()), 'raw:', raw);
+      return error('Dữ liệu không hợp lệ: ' + JSON.stringify(parsed.error.issues));
     }
     const p = parsed.data;
 

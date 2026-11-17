@@ -2354,39 +2354,49 @@ export function ModernPosFlow({
               role="alertdialog"
               aria-labelledby="pos-roundup-title"
               style={{
-                padding: '14px 16px',
-                borderRadius: 5,
+                padding: '12px 14px',
+                borderRadius: 6,
                 background: '#fffdf5',
                 border: '1px solid #fde68a',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                <Clock size={16} color="#b45309" />
-                <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 14.5, color: '#92400e', fontWeight: 700 }}>
+                <Clock size={15} color="#b45309" />
+                <h4 id="pos-roundup-title" style={{ margin: 0, fontSize: 14, color: '#92400e', fontWeight: 700 }}>
                   Giới hạn tối thiểu {minMins} phút
                 </h4>
               </div>
-              <p style={{ margin: '2px 0', fontSize: 13, color: '#78350f', lineHeight: 1.4 }}>
+              <p style={{ margin: '2px 0', fontSize: 12.5, color: '#78350f', lineHeight: 1.4 }}>
                 Thực tế <strong>{playedMins} phút</strong> (tương ứng <strong>{money(roundOffer.golf)}</strong>)
               </p>
-              <p style={{ margin: '4px 0 10px', fontSize: 13, fontWeight: 600, color: '#92400e' }}>
+              <p style={{ margin: '4px 0 8px', fontSize: 12.5, fontWeight: 600, color: '#92400e' }}>
                 Bạn muốn thanh toán theo số tiền nào?
               </p>
-              <div className="pos-m3-roundup-actions" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div
+                className="pos-m3-roundup-actions"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                  gap: 8,
+                }}
+              >
                 <button
                   type="button"
                   className="pos-m3-btn-primary"
                   disabled={saving}
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: 5,
-                    fontSize: 13.5,
-                    fontWeight: 600,
+                    justifyContent: 'center',
+                    padding: '10px 8px',
+                    borderRadius: 6,
                     height: 'auto',
+                    textAlign: 'center',
+                    gap: 4,
+                    minWidth: 0,
+                    width: '100%',
                   }}
                   onClick={async () => {
                     setSaving(true);
@@ -2403,11 +2413,11 @@ export function ModernPosFlow({
                     }
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <CheckCircle2 size={16} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 600 }}>
+                    <CheckCircle2 size={15} />
                     Số tiền tối thiểu:
                   </span>
-                  <strong style={{ fontSize: 14 }}>{fmtVnd(roundOffer.to)}</strong>
+                  <strong style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px' }}>{fmtVnd(roundOffer.to)}</strong>
                 </button>
                 <button
                   type="button"
@@ -2415,16 +2425,19 @@ export function ModernPosFlow({
                   disabled={saving}
                   style={{
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: 5,
-                    fontSize: 13.5,
-                    fontWeight: 600,
+                    justifyContent: 'center',
+                    padding: '10px 8px',
+                    borderRadius: 6,
+                    height: 'auto',
+                    textAlign: 'center',
+                    gap: 4,
                     borderColor: '#d97706',
                     color: '#92400e',
                     background: '#ffffff',
-                    height: 'auto',
+                    minWidth: 0,
+                    width: '100%',
                   }}
                   onClick={async () => {
                     setSaving(true);
@@ -2439,11 +2452,13 @@ export function ModernPosFlow({
                     }
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <Clock size={16} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12.5, fontWeight: 600 }}>
+                    <Clock size={15} />
                     Số tiền thực tế:
                   </span>
-                  <strong style={{ fontSize: 14 }}>{fmtVnd(roundOffer.golf)}</strong>
+                  <strong style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-0.2px', color: '#92400e' }}>
+                    {fmtVnd(roundOffer.golf)}
+                  </strong>
                 </button>
               </div>
             </div>

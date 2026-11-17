@@ -8,9 +8,11 @@ export async function POST(req: Request) {
   let body: unknown;
   try {
     const text = await req.text();
+    console.log('[SePay Webhook Incoming Text]:', text);
     if (text.length > 20_000) return httpError('Yêu cầu quá lớn', 413);
     body = JSON.parse(text);
-  } catch {
+  } catch (err) {
+    console.error('[SePay Webhook JSON Error]:', err);
     return httpError('Dữ liệu không hợp lệ');
   }
   // Guessing the API key is slowed down per address; valid callers are never counted.
@@ -22,6 +24,7 @@ export async function POST(req: Request) {
     body,
     req.headers.get('x-api-key'),
   );
+  console.log('[SePay Webhook Result]:', result);
   if (result.status === 401 && ip !== 'unknown') await noteAttempt('sepay_fail', ip);
   return sendResult(result);
 }

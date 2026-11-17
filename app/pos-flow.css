@@ -716,6 +716,15 @@
   border-color: #94a3b8;
 }
 
+.pos-m3-desk-room-card.vip {
+  border-color: #fde68a;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdf5 100%);
+}
+
+.pos-m3-desk-room-card.vip:hover {
+  border-color: #f59e0b;
+}
+
 .pos-m3-desk-room-card.playing {
   background: var(--pos-m3-primary-surface);
   border-color: #4ade80;

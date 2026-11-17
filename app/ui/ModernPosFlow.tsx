@@ -553,12 +553,19 @@ export function ModernPosFlow({
 
   const filteredRooms = useMemo(() => {
     const q = roomSearch.trim().toLowerCase();
-    return roomStatuses.filter((r) => {
+    const list = roomStatuses.filter((r) => {
       const matchTab = roomFilter === 'all' || r.statusKey === roomFilter;
       if (!matchTab) return false;
       if (!q) return true;
       const bText = r.booking ? `${r.booking.customer} ${r.booking.phone} ${r.booking.id}` : '';
       return `${r.room.name} ${r.room.id} ${bText}`.toLowerCase().includes(q);
+    });
+    // 2 phòng VIP để đầu, sau đó đến các line tiêu chuẩn
+    return [...list].sort((a, b) => {
+      if (a.room.vip !== b.room.vip) {
+        return a.room.vip ? -1 : 1;
+      }
+      return 0;
     });
   }, [roomStatuses, roomFilter, roomSearch]);
 
@@ -4038,25 +4045,10 @@ export function ModernPosFlow({
             </div>
           </div>
 
-          {/* Standard Lines */}
+          {/* Sơ đồ Line & Phòng VIP: chung 1 ô, 2 phòng VIP để đầu */}
           <div className="pos-m3-floor-group">
-            <div className="pos-m3-floor-group-head">
-              <h3>Line Tiêu chuẩn</h3>
-            </div>
             <div className="pos-m3-desktop-line-grid">
-              {filteredRooms.filter((e) => !e.room.vip).map(renderDeskRoom)}
-            </div>
-          </div>
-
-          {/* VIP Rooms */}
-          <div className="pos-m3-floor-group vip-group">
-            <div className="pos-m3-floor-group-head">
-              <h3>
-                <Crown size={17} /> Phòng VIP
-              </h3>
-            </div>
-            <div className="pos-m3-desktop-vip-grid">
-              {filteredRooms.filter((e) => e.room.vip).map(renderDeskRoom)}
+              {filteredRooms.map(renderDeskRoom)}
             </div>
           </div>
         </section>

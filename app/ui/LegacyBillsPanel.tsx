@@ -15,6 +15,7 @@ import {
   type LegacyService,
 } from '../../lib/legacy-bill';
 import { askConfirm } from './kit';
+import { compressImage } from '../../lib/image-compress';
 import '../legacy-bills.css';
 
 type Bill = {
@@ -305,8 +306,9 @@ function BillForm({
     setUploading(true);
     setError('');
     try {
+      const optimized = await compressImage(file, { maxWidth: 1600, quality: 0.82 });
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', optimized);
       const res = await fetch('/api/upload', { method: 'POST', body: formData });
       const data = (await res.json()) as { url?: string; error?: string };
       if (!res.ok || !data.url) throw new Error(data.error || 'Tải ảnh thất bại');

@@ -33,6 +33,7 @@ import {
 } from '../../lib/tournament';
 import { askConfirm } from './kit';
 import { TournamentScorePanel } from './TournamentScorePanel';
+import { compressImage } from '../../lib/image-compress';
 import '../tournament-admin.css';
 
 /**
@@ -314,8 +315,9 @@ export function ContentPanel() {
     setBusy(true);
     setError('');
     try {
+      const optimized = await compressImage(file, { maxWidth: 1600, quality: 0.82 });
       const form = new FormData();
-      form.append('file', file);
+      form.append('file', optimized);
       const r = await fetch('/api/upload', { method: 'POST', body: form });
       const v = (await r.json()) as { ok?: boolean; url?: string; error?: string };
       if (!r.ok || !v.url) throw new Error(v.error || 'Tải ảnh thất bại');

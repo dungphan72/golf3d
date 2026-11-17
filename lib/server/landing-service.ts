@@ -1,5 +1,33 @@
 import { db } from './common';
 import { DEFAULT_LANDING_CONFIG, type LandingConfig } from '../landing-config';
+import { bookingSlug } from './online-service';
+import { publicPricing, type PublicPricing } from './pricing-service';
+import { publicTenant } from './member-account-service';
+import { publicContent, type Post } from './content-service';
+
+export type LandingData = {
+  slug: string | null;
+  pricing: PublicPricing;
+  tenant: string | null;
+  content: { news: Post[]; upcoming: Post[]; past: Post[] };
+};
+
+let cachedLanding: { data: LandingData; expires: number } | null = null;
+
+export async function getCachedLandingData(now = Date.now()): Promise<LandingData> {
+  if (cachedLanding && now < cachedLanding.expires) {
+    return cachedLanding.data;
+  }
+  const [slug, pricing, tenant] = await Promise.all([bookingSlug(), publicPricing(), publicTenant()]);
+  const content = tenant ? await publicContent(tenant, now) : { news: [], upcoming: [], past: [] };
+  const data: LandingData = { slug, pricing, tenant, content };
+  cachedLanding = { data, expires: now + 30_000 }; // Cache in memory for 30 seconds
+  return data;
+}
+
+export function invalidateLandingCache() {
+  cachedLanding = null;
+}
 
 export async function getPublicLandingConfig(): Promise<LandingConfig> {
   try {

@@ -21,6 +21,7 @@ import { FINISH_SESSION_SQL } from '../fnb-sql';
 import { normalizePhone, validPhone } from '../member';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 import { rooms } from '../club';
+import { invalidateLandingCache } from './landing-service';
 
 async function syncCustomerOnBooking(tenant: string, rawName: string, rawPhone: string, now: number) {
   const name = rawName.trim();
@@ -246,6 +247,7 @@ export async function runClubAction(
       .bind(tenant, JSON.stringify(v), c.pricingRevision)
       .run();
     if (!saved.meta.changes) return fail('Cấu hình vừa thay đổi; hãy tải lại trước khi lưu.', 409);
+    invalidateLandingCache();
     await audit(tenant, 'Cấu hình', 'Cập nhật thiết lập cơ sở');
     return ok();
   }

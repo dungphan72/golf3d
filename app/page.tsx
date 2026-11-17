@@ -22,10 +22,8 @@ import { BRAND } from '../lib/brand';
 import { rooms } from '../lib/club';
 import { packageBullets, type PackageItem, type PriceRow } from '../lib/price-table';
 import { STATUS_LABEL, tournamentStatus } from '../lib/tournament';
-import { publicPricing } from '../lib/server/pricing-service';
-import { bookingSlug } from '../lib/server/online-service';
-import { publicContent, type Post } from '../lib/server/content-service';
-import { publicTenant } from '../lib/server/member-account-service';
+import { getCachedLandingData } from '../lib/server/landing-service';
+import type { Post } from '../lib/server/content-service';
 import BookingPage from './ui/BookingPage';
 import QuickBook from './ui/QuickBook';
 import './home-reference.css';
@@ -114,8 +112,7 @@ function SectionHead({
 }
 
 export default async function LandingPage() {
-  const [slug, pricing, tenant] = await Promise.all([bookingSlug(), publicPricing(), publicTenant()]);
-  const content = tenant ? await publicContent(tenant) : { news: [], upcoming: [], past: [] };
+  const { slug, pricing, content } = await getCachedLandingData();
   const clubName = pricing.clubName || BRAND.name;
   const clubAddress = pricing.clubAddress || BRAND.address;
   const clubHotline = pricing.hotline || BRAND.hotline;

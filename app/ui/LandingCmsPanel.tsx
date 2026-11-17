@@ -40,6 +40,7 @@ import {
   type AmenityCard,
   type TestimonialItem,
 } from '../../lib/landing-config';
+import { compressImage } from '../../lib/image-compress';
 import './landing-cms.css';
 
 const AMENITY_ICONS = {
@@ -137,8 +138,9 @@ export default function LandingCmsPanel() {
 
     setUploading(true);
     try {
+      const optimized = await compressImage(file, { maxWidth: 1600, quality: 0.82 });
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', optimized);
 
       const res = await fetch('/api/upload', {
         method: 'POST',

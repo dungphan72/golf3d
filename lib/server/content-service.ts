@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { db, audit, ok, fail, type ServiceResult } from './common';
 import { normalizePhone, validPhone } from '../member';
+import { invalidateLandingCache } from './landing-service';
 
 /** News articles and events (tournaments) kept by the club and shown on the public site once published. */
 export type Post = {
@@ -75,6 +76,7 @@ export async function savePost(tenant: string, raw: unknown, actor: string): Pro
       .bind(v.kind, v.title, v.summary, v.body, v.image, v.kind === 'event' ? v.eventAt : null, v.place, v.status, now, tenant, v.id)
       .run();
     if (!changed.meta.changes) return fail('Không tìm thấy bài viết', 404);
+    invalidateLandingCache();
     await audit(tenant, 'Nội dung', `Sửa ${v.kind === 'event' ? 'sự kiện' : 'tin'}: ${v.title}`);
     return ok({ id: v.id });
   }
@@ -85,6 +87,7 @@ export async function savePost(tenant: string, raw: unknown, actor: string): Pro
     )
     .bind(id, tenant, v.kind, v.title, v.summary, v.body, v.image, v.kind === 'event' ? v.eventAt : null, v.place, v.status, now, now, actor)
     .run();
+  invalidateLandingCache();
   await audit(tenant, 'Nội dung', `Thêm ${v.kind === 'event' ? 'sự kiện' : 'tin'}: ${v.title}`);
   return ok({ id });
 }
@@ -96,6 +99,7 @@ export async function deletePost(tenant: string, id: string): Promise<ServiceRes
     .first<{ title: string }>();
   if (!row) return fail('Không tìm thấy bài viết', 404);
   await db().prepare('DELETE FROM posts WHERE tenant=? AND id=?').bind(tenant, id).run();
+  invalidateLandingCache();
   await audit(tenant, 'Nội dung', `Xóa: ${row.title}`);
   return ok();
 }

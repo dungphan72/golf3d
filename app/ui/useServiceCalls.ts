@@ -3,6 +3,36 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { type ServiceCall, type ResolutionType, type ServiceCallSettings } from '../../lib/service-call';
 
+// Shared AudioContext with user-gesture unlock for continuous bell
+let sharedAudioCtx: AudioContext | null = null;
+function getAudioContext(): AudioContext | null {
+  try {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioContextClass) return null;
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new AudioContextClass();
+    }
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume().catch(() => undefined);
+    }
+    return sharedAudioCtx;
+  } catch {
+    return null;
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const unlockAudio = () => {
+    getAudioContext();
+    window.removeEventListener('click', unlockAudio);
+    window.removeEventListener('keydown', unlockAudio);
+    window.removeEventListener('touchstart', unlockAudio);
+  };
+  window.addEventListener('click', unlockAudio, { once: true });
+  window.addEventListener('keydown', unlockAudio, { once: true });
+  window.addEventListener('touchstart', unlockAudio, { once: true });
+}
+
 /**
  * Web Audio Chime synthesizer:
  * Crisp, pleasant 2-tone bell chime (880Hz E5 -> 659Hz E4).
@@ -10,9 +40,8 @@ import { type ServiceCall, type ResolutionType, type ServiceCallSettings } from 
  */
 export function playServiceBellChime() {
   try {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AudioContextClass) return;
-    const ctx = new AudioContextClass();
+    const ctx = getAudioContext();
+    if (!ctx) return;
     if (ctx.state === 'suspended') {
       ctx.resume().catch(() => undefined);
     }
@@ -24,7 +53,7 @@ export function playServiceBellChime() {
     const gain1 = ctx.createGain();
     osc1.type = 'sine';
     osc1.frequency.setValueAtTime(880, now);
-    gain1.gain.setValueAtTime(0.3, now);
+    gain1.gain.setValueAtTime(0.4, now);
     gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
     osc1.connect(gain1);
     gain1.connect(ctx.destination);
@@ -36,7 +65,7 @@ export function playServiceBellChime() {
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
     osc2.frequency.setValueAtTime(659.25, now + 0.18);
-    gain2.gain.setValueAtTime(0.35, now + 0.18);
+    gain2.gain.setValueAtTime(0.45, now + 0.18);
     gain2.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
     osc2.connect(gain2);
     gain2.connect(ctx.destination);
@@ -88,6 +117,35 @@ export function useServiceCalls() {
       // Keep state on network glitch
     }
   }, []);
+
+  // Continuous bell ringing as long as any un-dismissed call is in 'CREATED' status
+  const continuousRingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    const hasCreatedCalls = calls.some((c) => c.status === 'CREATED' && !dismissedCallIds.has(c.id));
+    const soundEnabled = settings?.sound_alert_enabled ?? true;
+
+    if (hasCreatedCalls && soundEnabled) {
+      if (!continuousRingRef.current) {
+        playServiceBellChime();
+        continuousRingRef.current = setInterval(() => {
+          playServiceBellChime();
+        }, 3000);
+      }
+    } else {
+      if (continuousRingRef.current) {
+        clearInterval(continuousRingRef.current);
+        continuousRingRef.current = null;
+      }
+    }
+
+    return () => {
+      if (continuousRingRef.current) {
+        clearInterval(continuousRingRef.current);
+        continuousRingRef.current = null;
+      }
+    };
+  }, [calls, settings, dismissedCallIds]);
 
   // Adaptive interval: 3.5s if open calls exist, 12s if idle
   const hasOpenCalls = useMemo(
@@ -146,6 +204,10 @@ export function useServiceCalls() {
         });
         const data = (await res.json()) as any;
         if (data.ok) {
+          // Optimistically update status to stop ringing and update UI instantly
+          setCalls((prev) =>
+            prev.map((c) => (c.id === callId ? { ...c, status: 'ACKNOWLEDGED' } : c))
+          );
           await fetchLive();
           return true;
         }
@@ -169,6 +231,9 @@ export function useServiceCalls() {
         });
         const data = (await res.json()) as any;
         if (data.ok) {
+          setCalls((prev) =>
+            prev.map((c) => (c.id === callId ? { ...c, status: 'IN_PROGRESS' } : c))
+          );
           await fetchLive();
           return true;
         }
@@ -192,6 +257,9 @@ export function useServiceCalls() {
         });
         const data = (await res.json()) as any;
         if (data.ok) {
+          setCalls((prev) =>
+            prev.map((c) => (c.id === callId ? { ...c, status: 'COMPLETED' } : c))
+          );
           await fetchLive();
           return true;
         }
@@ -215,6 +283,9 @@ export function useServiceCalls() {
         });
         const data = (await res.json()) as any;
         if (data.ok) {
+          setCalls((prev) =>
+            prev.map((c) => (c.id === callId ? { ...c, status: 'CANCELLED' } : c))
+          );
           await fetchLive();
           return true;
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Bell,
   CheckCircle2,
@@ -54,12 +54,29 @@ type Props = {
 
 export function MemberServiceCallModal({ isOpen, onClose, activeBooking, onCallCreated }: Props) {
   const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [menuItems, setMenuItems] = useState<
+    Array<{ id: string; name: string; category: string; unit: string; price: number }>
+  >([]);
+  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
   const [selectedCat, setSelectedCat] = useState('STAFF');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [activeCall, setActiveCall] = useState<ServiceCall | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const totalOrderItems = useMemo(
+    () => Object.values(orderQuantities).reduce((a, b) => a + b, 0),
+    [orderQuantities]
+  );
+  const totalOrderAmount = useMemo(
+    () =>
+      Object.entries(orderQuantities).reduce((sum, [id, qty]) => {
+        const it = menuItems.find((m) => m.id === id);
+        return sum + (it?.price || 0) * qty;
+      }, 0),
+    [orderQuantities, menuItems]
+  );
 
   const loadStatus = useCallback(async () => {
     try {
@@ -71,6 +88,9 @@ export function MemberServiceCallModal({ isOpen, onClose, activeBooking, onCallC
             setCategories(data.categories);
           } else {
             setCategories(DEFAULT_CATEGORIES);
+          }
+          if (Array.isArray(data.menuItems)) {
+            setMenuItems(data.menuItems);
           }
           if (data.activeCall) {
             setActiveCall(data.activeCall);
@@ -109,18 +129,39 @@ export function MemberServiceCallModal({ isOpen, onClose, activeBooking, onCallC
     setErrorMsg('');
     setSubmitting(true);
     try {
+      const itemsToOrder =
+        selectedCat === 'FOOD_DRINK' || selectedCat === 'FNB'
+          ? Object.entries(orderQuantities)
+              .filter(([_, q]) => q > 0)
+              .map(([id, qty]) => {
+                const it = menuItems.find((m) => m.id === id);
+                return { itemId: id, qty, name: it?.name, price: it?.price, unit: it?.unit };
+              })
+          : [];
+
       const res = await fetch('/api/member/call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryCode: selectedCat,
           note: note.trim() || undefined,
-          roomId: activeBooking?.roomId,
+          roomId: activeBooking?.roomId || activeBooking?.room,
+          items: itemsToOrder.length > 0 ? itemsToOrder : undefined,
         }),
       });
       const data = (await res.json()) as any;
-      if (data.ok && data.call) {
-        setActiveCall(data.call);
+      if (data.ok && (data.call || data.callId)) {
+        setActiveCall(
+          data.call || {
+            id: data.callId,
+            status: 'CREATED',
+            category_code: selectedCat,
+            room_id: activeBooking?.roomId || activeBooking?.room || '',
+            created_at: data.createdAt || Date.now(),
+          }
+        );
+        setErrorMsg('');
+        setOrderQuantities({});
         onCallCreated?.();
       } else {
         setErrorMsg(data.error || 'Chưa gửi được yêu cầu gọi phục vụ');
@@ -377,6 +418,147 @@ export function MemberServiceCallModal({ isOpen, onClose, activeBooking, onCallC
                   );
                 })}
               </div>
+
+              {(selectedCat === 'FOOD_DRINK' || selectedCat === 'FNB') && (
+                <div style={{ marginBottom: 16 }}>
+                  <label
+                    style={{
+                      display: 'block',
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#34d399',
+                      marginBottom: 8,
+                    }}
+                  >
+                    🥤 Danh sách đồ uống phục vụ tận line:
+                  </label>
+                  {menuItems.length === 0 ? (
+                    <div style={{ fontSize: 12, color: '#9ca3af', fontStyle: 'italic', marginBottom: 8 }}>
+                      Đang tải danh sách đồ uống...
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6,
+                        maxHeight: 180,
+                        overflowY: 'auto',
+                        paddingRight: 4,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {menuItems.map((item) => {
+                        const qty = orderQuantities[item.id] || 0;
+                        return (
+                          <div
+                            key={item.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '8px 12px',
+                              borderRadius: 6,
+                              background: qty > 0 ? '#064e3b' : '#111d17',
+                              border: qty > 0 ? '1px solid #10b981' : '1px solid #1e3a2f',
+                            }}
+                          >
+                            <div>
+                              <strong style={{ fontSize: 13, color: '#f3f4f6', display: 'block' }}>
+                                {item.name}
+                              </strong>
+                              <span style={{ fontSize: 11.5, color: '#34d399' }}>
+                                {item.price.toLocaleString('vi-VN')} ₫ / {item.unit || 'phần'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <button
+                                type="button"
+                                disabled={qty <= 0}
+                                onClick={() =>
+                                  setOrderQuantities((prev) => ({
+                                    ...prev,
+                                    [item.id]: Math.max(0, (prev[item.id] || 0) - 1),
+                                  }))
+                                }
+                                style={{
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 4,
+                                  border: '1px solid #374151',
+                                  background: '#1f2937',
+                                  color: qty > 0 ? '#fff' : '#6b7280',
+                                  cursor: qty > 0 ? 'pointer' : 'default',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                -
+                              </button>
+                              <span
+                                style={{
+                                  minWidth: 16,
+                                  textAlign: 'center',
+                                  fontWeight: 700,
+                                  fontSize: 13.5,
+                                  color: qty > 0 ? '#34d399' : '#9ca3af',
+                                }}
+                              >
+                                {qty}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setOrderQuantities((prev) => ({
+                                    ...prev,
+                                    [item.id]: (prev[item.id] || 0) + 1,
+                                  }))
+                                }
+                                style={{
+                                  width: 26,
+                                  height: 26,
+                                  borderRadius: 4,
+                                  border: '1px solid #059669',
+                                  background: '#047857',
+                                  color: '#fff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                }}
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {totalOrderItems > 0 && (
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        padding: '6px 10px',
+                        background: 'rgba(16,185,129,0.1)',
+                        border: '1px dashed #059669',
+                        borderRadius: 4,
+                        fontSize: 12.5,
+                        fontWeight: 600,
+                        color: '#34d399',
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span>Đã chọn: {totalOrderItems} món</span>
+                      <span>Tổng: {totalOrderAmount.toLocaleString('vi-VN')} ₫</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ marginBottom: 18 }}>
                 <label

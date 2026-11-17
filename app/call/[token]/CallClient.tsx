@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Bell,
   Coffee,
@@ -46,6 +46,7 @@ type QrInfo = {
   hasActiveSession: boolean;
   activeBooking?: { customer: string; id: string } | null;
   categories: ServiceCallCategory[];
+  menuItems?: Array<{ id: string; name: string; category: string; unit: string; price: number }>;
 };
 
 type ActiveCallState = {
@@ -70,7 +71,21 @@ export function CallClient({ token }: { token: string }) {
   const [nameInput, setNameInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
   const [selectedCat, setSelectedCat] = useState<ServiceCallCategory | null>(null);
+  const [orderQuantities, setOrderQuantities] = useState<Record<string, number>>({});
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+
+  const totalOrderItems = useMemo(
+    () => Object.values(orderQuantities).reduce((a, b) => a + b, 0),
+    [orderQuantities]
+  );
+  const totalOrderAmount = useMemo(
+    () =>
+      Object.entries(orderQuantities).reduce((sum, [id, qty]) => {
+        const it = info?.menuItems?.find((m) => m.id === id);
+        return sum + (it?.price || 0) * qty;
+      }, 0),
+    [orderQuantities, info?.menuItems]
+  );
 
   // Active Call tracking
   const [activeCall, setActiveCall] = useState<ActiveCallState | null>(null);
@@ -200,6 +215,16 @@ export function CallClient({ token }: { token: string }) {
 
     setSubmitting(true);
     try {
+      const itemsToOrder =
+        selectedCat.code === 'FOOD_DRINK' || selectedCat.code === 'FNB'
+          ? Object.entries(orderQuantities)
+              .filter(([_, q]) => q > 0)
+              .map(([id, qty]) => {
+                const it = info?.menuItems?.find((m) => m.id === id);
+                return { itemId: id, qty, name: it?.name, price: it?.price, unit: it?.unit };
+              })
+          : [];
+
       const sess = await ensureSession(phoneInput.trim());
       const res = await fetch('/api/public/call/request', {
         method: 'POST',
@@ -211,6 +236,7 @@ export function CallClient({ token }: { token: string }) {
           customerName: nameInput.trim() || undefined,
           customerPhone: phoneInput.trim() || undefined,
           note: noteInput.trim() || undefined,
+          items: itemsToOrder.length > 0 ? itemsToOrder : undefined,
           idempotencyKey: `idemp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
         }),
       });
@@ -221,7 +247,7 @@ export function CallClient({ token }: { token: string }) {
       }
 
       setActiveCall({
-        id: data.callId,
+        id: data.callId || (data.call && data.call.id),
         categoryCode: selectedCat.code,
         categoryName: selectedCat[`name_${lang}`] || selectedCat.name_vi,
         status: 'CREATED',
@@ -229,6 +255,7 @@ export function CallClient({ token }: { token: string }) {
       });
       setShowPhoneModal(false);
       setNoteInput('');
+      setOrderQuantities({});
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Chưa gửi được yêu cầu');
     } finally {
@@ -465,6 +492,141 @@ export function CallClient({ token }: { token: string }) {
                 );
               })}
             </div>
+
+            {/* Drink/Food Menu Selection if Category is FOOD_DRINK */}
+            {(selectedCat?.code === 'FOOD_DRINK' || selectedCat?.code === 'FNB') && (
+              <div style={{ ...styles.formBox, marginBottom: 12 }}>
+                <label style={{ ...styles.fieldLabel, color: '#34d399', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>🥤</span>
+                  <span>
+                    {lang === 'en'
+                      ? 'Select drinks / food to be served at your bay:'
+                      : lang === 'ko'
+                        ? '타석으로 배달할 음료/스낵을 선택하세요:'
+                        : 'Chọn đồ uống / đồ ăn phục vụ tận line:'}
+                  </span>
+                </label>
+
+                {(!info?.menuItems || info.menuItems.length === 0) ? (
+                  <div style={{ fontSize: 13, color: '#9ca3af', fontStyle: 'italic', padding: '6px 0' }}>
+                    {lang === 'en' ? 'Loading menu items...' : lang === 'ko' ? '메뉴 불러오는 중...' : 'Đang tải thực đơn đồ uống...'}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 220, overflowY: 'auto', paddingRight: 2 }}>
+                    {info.menuItems.map((item) => {
+                      const qty = orderQuantities[item.id] || 0;
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 12px',
+                            borderRadius: 6,
+                            background: qty > 0 ? '#064e3b' : '#14221c',
+                            border: qty > 0 ? '1px solid #10b981' : '1px solid #1e3a2f',
+                          }}
+                        >
+                          <div>
+                            <strong style={{ fontSize: 13.5, color: '#f3f4f6', display: 'block' }}>
+                              {item.name}
+                            </strong>
+                            <span style={{ fontSize: 12, color: '#34d399', fontWeight: 600 }}>
+                              {item.price.toLocaleString('vi-VN')} ₫ / {item.unit || 'phần'}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <button
+                              type="button"
+                              disabled={qty <= 0}
+                              onClick={() =>
+                                setOrderQuantities((prev) => ({
+                                  ...prev,
+                                  [item.id]: Math.max(0, (prev[item.id] || 0) - 1),
+                                }))
+                              }
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 4,
+                                border: '1px solid #374151',
+                                background: '#1f2937',
+                                color: qty > 0 ? '#fff' : '#6b7280',
+                                cursor: qty > 0 ? 'pointer' : 'default',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: 14,
+                              }}
+                            >
+                              -
+                            </button>
+                            <span
+                              style={{
+                                minWidth: 18,
+                                textAlign: 'center',
+                                fontWeight: 700,
+                                fontSize: 14,
+                                color: qty > 0 ? '#34d399' : '#9ca3af',
+                              }}
+                            >
+                              {qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOrderQuantities((prev) => ({
+                                  ...prev,
+                                  [item.id]: (prev[item.id] || 0) + 1,
+                                }))
+                              }
+                              style={{
+                                width: 28,
+                                height: 28,
+                                borderRadius: 4,
+                                border: '1px solid #059669',
+                                background: '#047857',
+                                color: '#fff',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: 14,
+                              }}
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {totalOrderItems > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      background: 'rgba(16,185,129,0.12)',
+                      border: '1px dashed #059669',
+                      borderRadius: 6,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: '#34d399',
+                      marginTop: 10,
+                    }}
+                  >
+                    <span>{lang === 'en' ? 'Selected' : lang === 'ko' ? '선택됨' : 'Đã chọn'}: {totalOrderItems} {lang === 'en' ? 'items' : lang === 'ko' ? '개' : 'món'}</span>
+                    <span>{lang === 'en' ? 'Total' : lang === 'ko' ? '합계' : 'Tổng'}: {totalOrderAmount.toLocaleString('vi-VN')} ₫</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Optional Note & Customer Info */}
             <div style={styles.formBox}>

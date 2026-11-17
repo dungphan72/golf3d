@@ -1,6 +1,7 @@
 import { db, ok, fail, type ServiceResult } from './common';
 import { pushToTenant } from './webpush';
 import { rooms } from '../club';
+import { applyFnb } from './fnb-service';
 import {
   type ServiceCall,
   type ServiceCallSettings,
@@ -269,6 +270,8 @@ export async function resolveQrToken(tokenSecret: string) {
     .bind(qr.tenant, qr.room_id)
     .first<{ id: string; customer: string; phone: string; status: string }>();
 
+  const menuItems = await getActiveMenuItems(qr.tenant);
+
   return ok({
     tenant: qr.tenant,
     roomId: qr.room_id,
@@ -279,8 +282,21 @@ export async function resolveQrToken(tokenSecret: string) {
     hasActiveSession: !!activeBooking,
     activeBooking: activeBooking ? { customer: activeBooking.customer, id: activeBooking.id } : null,
     categories,
+    menuItems,
     qrToken: tokenSecret,
   });
+}
+
+export async function getActiveMenuItems(tenant: string) {
+  try {
+    const items = await db()
+      .prepare('SELECT id, name, category, unit, price FROM menu_items WHERE tenant=? AND active=1 ORDER BY category, name')
+      .bind(tenant)
+      .all<{ id: string; name: string; category: string; unit: string; price: number }>();
+    return items.results || [];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -347,8 +363,9 @@ export async function createServiceCall(input: {
   memberId?: string;
   note?: string;
   idempotencyKey?: string;
+  items?: Array<{ itemId: string; qty: number; name?: string; price?: number; unit?: string }>;
 }): Promise<ServiceResult> {
-  const { tenant, roomId, categoryCode, source, customerName, customerPhone, memberId, note, idempotencyKey } =
+  const { tenant, roomId, categoryCode, source, customerName, customerPhone, memberId, note, idempotencyKey, items } =
     input;
 
   const room = rooms.find((r) => r.id === roomId);
@@ -384,7 +401,7 @@ export async function createServiceCall(input: {
       .bind(tenant, idempotencyKey, now - 5 * 60_000)
       .first<ServiceCall>();
     if (existing) {
-      return ok({ call: existing, repeated: true });
+      return ok({ call: existing, callId: existing.id, repeated: true });
     }
   }
 
@@ -417,6 +434,45 @@ export async function createServiceCall(input: {
   const finalCustPhone = customerPhone || activeBooking?.phone || null;
   const bookingId = activeBooking?.id || null;
 
+  let finalNote = note?.trim() || '';
+  if (items && items.length > 0) {
+    const orderLinesText = items.map((i) => `${i.qty}x ${i.name || i.itemId}`).join(', ');
+    finalNote = finalNote
+      ? `[Món: ${orderLinesText}] · ${finalNote}`
+      : `[Món: ${orderLinesText}]`;
+  }
+
+  // Auto-record order into food_orders if session is active and items provided
+  if (items && items.length > 0 && activeBooking) {
+    try {
+      const lines: Array<{ itemId: string; qty: number; expectedVersion: number }> = [];
+      for (const it of items) {
+        const dbItem = await db()
+          .prepare('SELECT version FROM menu_items WHERE tenant=? AND id=? AND active=1')
+          .bind(tenant, it.itemId)
+          .first<{ version: number }>();
+        if (dbItem) {
+          lines.push({
+            itemId: it.itemId,
+            qty: Math.max(1, Math.min(99, it.qty)),
+            expectedVersion: dbItem.version,
+          });
+        }
+      }
+      if (lines.length > 0) {
+        await applyFnb(tenant, finalCustName, {
+          action: 'order',
+          requestId: 'scord_' + crypto.randomUUID().replace(/-/g, '').slice(0, 24),
+          bookingId: activeBooking.id,
+          note: `Khách gọi qua App/QR: ${finalNote}`,
+          lines,
+        });
+      }
+    } catch (err) {
+      console.error('Failed to auto-order fnb from service call:', err);
+    }
+  }
+
   await db().batch([
     db()
       .prepare(
@@ -437,7 +493,7 @@ export async function createServiceCall(input: {
         finalCustPhone,
         memberId || null,
         bookingId,
-        note || null,
+        finalNote || null,
         idempotencyKey || null,
         now
       ),
@@ -454,7 +510,7 @@ export async function createServiceCall(input: {
         source === 'staff_proxy' ? 'staff' : source === 'member_app' ? 'member' : 'guest',
         memberId || null,
         finalCustName,
-        note || `Khách gọi: ${cat.name_vi}`,
+        finalNote || `Khách gọi: ${cat.name_vi}`,
         now
       ),
   ]);
@@ -467,8 +523,35 @@ export async function createServiceCall(input: {
     url: '/quan-ly',
   }).catch(() => undefined);
 
+  const createdCall: ServiceCall = {
+    id: callId,
+    tenant,
+    room_id: roomId,
+    category_id: cat.id,
+    category_code: categoryCode,
+    source,
+    status: 'CREATED',
+    customer_name: finalCustName,
+    customer_phone: finalCustPhone,
+    member_id: memberId || null,
+    booking_id: bookingId,
+    note: finalNote || null,
+    assigned_staff_id: null,
+    assigned_staff_name: null,
+    resolution_type: null,
+    resolution_note: null,
+    idempotency_key: idempotencyKey || null,
+    created_at: now,
+    acknowledged_at: null,
+    started_at: null,
+    completed_at: null,
+    sla_ack_breached: 0,
+    sla_resolve_breached: 0,
+  };
+
   return ok({
     callId,
+    call: createdCall,
     status: 'CREATED',
     roomName: roomTitle,
     categoryName: cat.name_vi,

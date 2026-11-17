@@ -6,6 +6,7 @@ import {
   getServiceCallSettings,
   getServiceCallCategories,
   createServiceCall,
+  getActiveMenuItems,
 } from '../../../../lib/server/service-call-service';
 import { db } from '../../../../lib/server/common';
 import type { ServiceCall, ServiceCallCategory } from '../../../../lib/service-call';
@@ -19,6 +20,7 @@ export async function GET() {
 
   const categories = await getServiceCallCategories(user.tenant);
   const settings = await getServiceCallSettings(user.tenant);
+  const menuItems = await getActiveMenuItems(user.tenant);
 
   // Check active calls for this member phone or memberId
   const activeCall = await db()
@@ -33,6 +35,7 @@ export async function GET() {
     body: {
       ok: true,
       categories: categories.filter((c: ServiceCallCategory) => c.is_active),
+      menuItems,
       settings,
       activeCall: activeCall || null,
     },
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
     return httpError('Dữ liệu không hợp lệ', 400);
   }
 
-  const { categoryCode, note, roomId: requestedRoomId } = body;
+  const { categoryCode, note, roomId: requestedRoomId, items } = body;
   if (!categoryCode) return httpError('Vui lòng chọn loại yêu cầu', 400);
 
   // Find active playing booking for this member
@@ -80,6 +83,7 @@ export async function POST(req: Request) {
     customerPhone: user.phone,
     memberId: user.customerId,
     note,
+    items,
   });
 
   return sendResult(result);

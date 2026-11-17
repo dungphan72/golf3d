@@ -38,17 +38,18 @@ export async function POST(req: Request) {
     customerPhone?: unknown;
     note?: unknown;
     idempotencyKey?: unknown;
+    items?: unknown;
   };
 
   try {
     const raw = await req.text();
-    if (raw.length > 2000) return httpError('Dữ liệu quá lớn', 413);
+    if (raw.length > 5000) return httpError('Dữ liệu quá lớn', 413);
     body = JSON.parse(raw);
   } catch {
     return httpError('Dữ liệu không hợp lệ', 400);
   }
 
-  const { token, sessionToken, categoryCode, customerName, customerPhone, note, idempotencyKey } = body;
+  const { token, sessionToken, categoryCode, customerName, customerPhone, note, idempotencyKey, items } = body;
   if (typeof categoryCode !== 'string' || !categoryCode) {
     return httpError('Vui lòng chọn loại yêu cầu', 400);
   }
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
       customerPhone: verifiedPhone,
       note: typeof note === 'string' ? note.slice(0, 250) : undefined,
       idempotencyKey: typeof idempotencyKey === 'string' ? idempotencyKey.slice(0, 80) : undefined,
+      items: Array.isArray(items) ? (items as any) : undefined,
     })
   );
 }

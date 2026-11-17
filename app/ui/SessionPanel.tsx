@@ -613,13 +613,37 @@ export function SessionPanel({
         )}
 
         {b.status === 'paid' && (
-          <div className="pos-paid" role="status">
-            <Check size={22} />
-            <div>
-              <strong>Đã thanh toán</strong>
-              <small>{b.payment ? `Hình thức: ${PAY_LABEL[b.payment] ?? b.payment}` : 'Đã hoàn tất'}</small>
+          <>
+            <div className="pos-paid" role="status">
+              <Check size={22} />
+              <div>
+                <strong>Đã thanh toán</strong>
+                <small>{b.payment ? `Hình thức: ${PAY_LABEL[b.payment] ?? b.payment}` : 'Đã hoàn tất'}</small>
+              </div>
             </div>
-          </div>
+            <div className="pos-m3-parking-ticket" style={{ margin: '8px 0' }}>
+              <div className="pos-m3-parking-inner">
+                <div className="pos-m3-parking-club">SAIGON INDOOR GOLF CLUB</div>
+                <div className="pos-m3-parking-title">MIỄN PHÍ GỬI XE</div>
+                <div className="pos-m3-parking-date">
+                  Ngày:{' '}
+                  <strong>
+                    {new Intl.DateTimeFormat('en-GB', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      timeZone: 'Asia/Ho_Chi_Minh',
+                    })
+                      .format(new Date(b.finished || b.start))
+                      .replace(/\//g, ' / ')}
+                  </strong>
+                </div>
+                <div className="pos-m3-parking-note">
+                  Chỉ áp dụng cho khách sử dụng dịch vụ Golf
+                </div>
+              </div>
+            </div>
+          </>
         )}
         {zaloNotice && (
           <div className="pos-note" role="status">

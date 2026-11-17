@@ -2110,6 +2110,16 @@ export function ModernPosFlow({
                 </button>
               </div>
 
+              {/* Brand Header with Logo */}
+              <div className="pos-m3-receipt-brand-header mini">
+                <img
+                  src="/logo.webp"
+                  alt="SaiGon Indoor Golf Club"
+                  className="pos-m3-receipt-brand-logo small"
+                />
+                <h4 className="pos-m3-receipt-brand-title">SAIGON INDOOR GOLF CLUB</h4>
+              </div>
+
               <div className="pos-m3-detail-rows">
                 <div>
                   <span>Khách hàng</span>
@@ -2158,6 +2168,30 @@ export function ModernPosFlow({
                   ))}
                 </div>
               )}
+
+              {/* Vé miễn phí gửi xe */}
+              <div className="pos-m3-parking-ticket" style={{ marginTop: 10 }}>
+                <div className="pos-m3-parking-inner">
+                  <div className="pos-m3-parking-club">SAIGON INDOOR GOLF CLUB</div>
+                  <div className="pos-m3-parking-title">MIỄN PHÍ GỬI XE</div>
+                  <div className="pos-m3-parking-date">
+                    Ngày:{' '}
+                    <strong>
+                      {new Intl.DateTimeFormat('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        timeZone: 'Asia/Ho_Chi_Minh',
+                      })
+                        .format(new Date(historyBooking.finished || historyBooking.start))
+                        .replace(/\//g, ' / ')}
+                    </strong>
+                  </div>
+                  <div className="pos-m3-parking-note">
+                    Chỉ áp dụng cho khách sử dụng dịch vụ Golf
+                  </div>
+                </div>
+              </div>
 
               {/* Actions: Reprint, Pay (if finished), Refund (if paid & authorized), Cancel */}
               <div className="pos-m3-detail-actions">
@@ -3854,11 +3888,29 @@ export function ModernPosFlow({
           {mobileScreen === 'M08' && (
             <div className="pos-m3-screen-m08">
               <div className="pos-m3-receipt-card">
-                <div className="pos-m3-success-icon">
-                  <Check size={36} />
+                {/* Brand Header with Logo */}
+                <div className="pos-m3-receipt-brand-header">
+                  <img
+                    src="/logo.webp"
+                    alt="SaiGon Indoor Golf Club"
+                    className="pos-m3-receipt-brand-logo"
+                  />
+                  <h3 className="pos-m3-receipt-brand-title">SAIGON INDOOR GOLF CLUB</h3>
+                  <p className="pos-m3-receipt-brand-sub">
+                    250 Lương Định Của, Phường Bình Trưng, TP.HCM
+                  </p>
+                  <div className="pos-m3-receipt-badge">HÓA ĐƠN THANH TOÁN</div>
                 </div>
-                <h2>Thanh toán thành công!</h2>
-                <p>Đơn hàng đã được ghi nhận vào sổ ca và giải phóng line.</p>
+
+                <div className="pos-m3-success-icon" style={{ width: 52, height: 52, margin: '4px 0' }}>
+                  <Check size={28} />
+                </div>
+                <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--pos-m3-primary)' }}>
+                  Thanh toán thành công!
+                </h3>
+                <p style={{ margin: 0, fontSize: 12.5, color: 'var(--pos-m3-on-surface-variant)' }}>
+                  Đơn hàng đã được ghi nhận vào sổ ca và giải phóng line.
+                </p>
 
                 <div className="pos-m3-receipt-box">
                   <div>
@@ -3883,9 +3935,51 @@ export function ModernPosFlow({
                     <span>Phương thức</span>
                     <strong>{lastReceipt?.methodLabel || PAY_LABEL[payMethod]}</strong>
                   </div>
+                  {lastReceiptBooking?.golf_amount != null && lastReceiptBooking.golf_amount > 0 && (
+                    <div>
+                      <span>Tiền giờ chơi</span>
+                      <strong>{money(lastReceiptBooking.golf_amount)}</strong>
+                    </div>
+                  )}
+                  {lastReceiptBooking?.food_total != null && lastReceiptBooking.food_total > 0 && (
+                    <div>
+                      <span>F&B & Phụ kiện</span>
+                      <strong>{money(lastReceiptBooking.food_total)}</strong>
+                    </div>
+                  )}
+                  {historyBill?.discount && (
+                    <div>
+                      <span>Giảm giá ({historyBill.discount.reason})</span>
+                      <strong style={{ color: '#16a34a' }}>−{money(historyBill.discount.amount)}</strong>
+                    </div>
+                  )}
                   <div className="pos-m3-receipt-total">
                     <span>Tổng thanh toán</span>
                     <strong>{money(lastReceipt?.total ?? payableTotal)}</strong>
+                  </div>
+                </div>
+
+                {/* Vé miễn phí gửi xe */}
+                <div className="pos-m3-parking-ticket">
+                  <div className="pos-m3-parking-inner">
+                    <div className="pos-m3-parking-club">SAIGON INDOOR GOLF CLUB</div>
+                    <div className="pos-m3-parking-title">MIỄN PHÍ GỬI XE</div>
+                    <div className="pos-m3-parking-date">
+                      Ngày:{' '}
+                      <strong>
+                        {new Intl.DateTimeFormat('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                        })
+                          .format(new Date(lastReceipt?.at ?? Date.now()))
+                          .replace(/\//g, ' / ')}
+                      </strong>
+                    </div>
+                    <div className="pos-m3-parking-note">
+                      Chỉ áp dụng cho khách sử dụng dịch vụ Golf
+                    </div>
                   </div>
                 </div>
 
@@ -4864,11 +4958,21 @@ export function ModernPosFlow({
             {/* SUB-VIEW E: COMPLETED RECEIPT INLINE */}
             {desktopMode === 'receipt' && (
               <div className="pos-m3-panel-receipt">
-                <div className="pos-m3-success-icon">
-                  <Check size={32} />
+                <div className="pos-m3-receipt-brand-header">
+                  <img
+                    src="/logo.webp"
+                    alt="SaiGon Indoor Golf Club"
+                    className="pos-m3-receipt-brand-logo small"
+                  />
+                  <h4 className="pos-m3-receipt-brand-title">SAIGON INDOOR GOLF CLUB</h4>
+                  <div className="pos-m3-receipt-badge">HÓA ĐƠN THANH TOÁN</div>
                 </div>
-                <h4>Hoàn tất thanh toán!</h4>
-                <p>Line đã Sẵn sàng đón khách mới.</p>
+
+                <div className="pos-m3-success-icon" style={{ width: 48, height: 48 }}>
+                  <Check size={26} />
+                </div>
+                <h4 style={{ margin: 0, color: 'var(--pos-m3-primary)' }}>Hoàn tất thanh toán!</h4>
+                <p style={{ margin: 0, fontSize: 12.5, color: 'var(--pos-m3-on-surface-variant)' }}>Line đã Sẵn sàng đón khách mới.</p>
                 {lastReceipt && (
                   <div className="pos-m3-receipt-box">
                     <div>
@@ -4889,6 +4993,31 @@ export function ModernPosFlow({
                     </div>
                   </div>
                 )}
+
+                {/* Vé miễn phí gửi xe */}
+                <div className="pos-m3-parking-ticket">
+                  <div className="pos-m3-parking-inner">
+                    <div className="pos-m3-parking-club">SAIGON INDOOR GOLF CLUB</div>
+                    <div className="pos-m3-parking-title">MIỄN PHÍ GỬI XE</div>
+                    <div className="pos-m3-parking-date">
+                      Ngày:{' '}
+                      <strong>
+                        {new Intl.DateTimeFormat('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          timeZone: 'Asia/Ho_Chi_Minh',
+                        })
+                          .format(new Date(lastReceipt?.at ?? Date.now()))
+                          .replace(/\//g, ' / ')}
+                      </strong>
+                    </div>
+                    <div className="pos-m3-parking-note">
+                      Chỉ áp dụng cho khách sử dụng dịch vụ Golf
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pos-m3-receipt-actions">
                   <button
                     type="button"

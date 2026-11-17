@@ -99,6 +99,8 @@ export function formatBillZaloText({
   }
 
   lines.push('------------------------------------------');
+  lines.push(`🎫 MIỄN PHÍ GỬI XE: Áp dụng ngày ${dateStr} cho khách chơi`);
+  lines.push('------------------------------------------');
   lines.push('Cảm ơn Quý khách & Hẹn gặp lại!');
   lines.push(`Hotline: ${BRAND.hotline} · Website: ${BRAND.website}`);
 
@@ -372,6 +374,40 @@ export function generateK80Html({
 }
 
 export function printK80Receipt(html: string) {
+  // Mobile devices (iOS Safari / Android): hidden 0x0 iframes cannot trigger print dialog reliably.
+  // Open in a focused clean print window to display the bill (with logo & parking voucher) and trigger print.
+  const isMobile =
+    typeof navigator !== 'undefined' &&
+    /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  if (isMobile) {
+    const printWin = window.open('', '_blank');
+    if (printWin) {
+      printWin.document.open();
+      printWin.document.write(html);
+      printWin.document.close();
+
+      const loaded = Promise.all(
+        Array.from(printWin.document.images).map((im) =>
+          im.complete
+            ? Promise.resolve()
+            : new Promise<void>((r) => {
+                im.onload = im.onerror = () => r();
+              }),
+        ),
+      );
+      Promise.race([loaded, new Promise((r) => setTimeout(r, 1200))]).then(() => {
+        try {
+          printWin.focus();
+          printWin.print();
+        } catch {
+          // Keep window open for manual print / review
+        }
+      });
+      return;
+    }
+  }
+
   const existing = document.getElementById('k80-receipt-print-iframe') as HTMLIFrameElement | null;
   if (existing) {
     existing.remove();

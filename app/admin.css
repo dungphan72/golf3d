@@ -94,7 +94,7 @@ body:has(.app-shell) {
   background: var(--kv-orange);
   color: #fff;
 }
-.app-shell input,
+.app-shell input:not([type='checkbox']):not([type='radio']),
 .app-shell select,
 .app-shell textarea {
   border: 1px solid #c5d0c8;
@@ -103,7 +103,7 @@ body:has(.app-shell) {
   color: var(--kv-text);
   min-height: 34px;
 }
-.app-shell input:focus,
+.app-shell input:not([type='checkbox']):not([type='radio']):focus,
 .app-shell select:focus,
 .app-shell textarea:focus {
   outline: none;
@@ -961,7 +961,7 @@ html:has(.app-shell)::-webkit-scrollbar {
     border-radius: 5px;
     font-size: 15px;
   }
-  .app-shell input,
+  .app-shell input:not([type='checkbox']):not([type='radio']),
   .app-shell select,
   .app-shell textarea {
     min-height: 46px;

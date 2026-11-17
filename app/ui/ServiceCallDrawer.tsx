@@ -330,35 +330,38 @@ export function ServiceCallDrawer({
       {completingCall && (
         <div style={styles.subModalOverlay}>
           <div style={styles.subModalContent}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <strong style={{ fontSize: 16, color: '#0f172a' }}>
                 Xác nhận hoàn tất ({completingCall.room_name})
               </strong>
               <button
                 type="button"
                 onClick={() => setCompletingCall(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
               >
                 <X size={18} color="#64748b" />
               </button>
             </div>
 
             <label style={styles.fieldLabel}>Kết quả phục vụ:</label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
               {(['RESOLVED', 'NO_SHOW', 'CUSTOMER_CANCELLED', 'TRANSFERRED'] as ResolutionType[]).map((type) => (
                 <label
                   key={type}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 8,
-                    fontSize: 13.5,
-                    padding: '8px 10px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: 5,
+                    gap: 10,
+                    fontSize: 14,
+                    fontWeight: resolutionType === type ? 600 : 500,
+                    padding: '10px 12px',
+                    border: '1.5px solid',
+                    borderRadius: 6,
                     cursor: 'pointer',
                     background: resolutionType === type ? '#f0fdf4' : '#ffffff',
-                    borderColor: resolutionType === type ? '#047857' : '#e2e8f0',
+                    borderColor: resolutionType === type ? '#16a34a' : '#e2e8f0',
+                    color: resolutionType === type ? '#15803d' : '#334155',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   <input
@@ -366,8 +369,20 @@ export function ServiceCallDrawer({
                     name="resType"
                     checked={resolutionType === type}
                     onChange={() => setResolutionType(type)}
+                    style={{
+                      width: 18,
+                      height: 18,
+                      minHeight: 18,
+                      maxHeight: 18,
+                      minWidth: 18,
+                      maxWidth: 18,
+                      margin: 0,
+                      flexShrink: 0,
+                      accentColor: '#16a34a',
+                      cursor: 'pointer',
+                    }}
                   />
-                  <span>{RESOLUTION_LABELS[type].vi}</span>
+                  <span style={{ flex: 1, whiteSpace: 'nowrap' }}>{RESOLUTION_LABELS[type].vi}</span>
                 </label>
               ))}
             </div>
@@ -381,7 +396,7 @@ export function ServiceCallDrawer({
               style={styles.textInput}
             />
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
               <button
                 type="button"
                 style={styles.btnSecondary}
@@ -395,7 +410,7 @@ export function ServiceCallDrawer({
                 onClick={handleConfirmComplete}
                 disabled={busy}
               >
-                Lưu hoàn tất
+                {busy ? 'Đang lưu...' : 'Lưu hoàn tất'}
               </button>
             </div>
           </div>
@@ -774,9 +789,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   subModalContent: {
     background: '#ffffff',
-    borderRadius: 5,
-    padding: 18,
-    maxWidth: 380,
+    borderRadius: 8,
+    padding: 20,
+    maxWidth: 420,
     width: '100%',
     boxSizing: 'border-box',
     boxShadow: '0 10px 25px rgba(0,0,0,0.2)',

@@ -10,6 +10,11 @@ export const WALLET_TIERS = [
 ] as const;
 export const WALLET_MIN_TOPUP = 100_000;
 export const WALLET_MAX_TOPUP = 100_000_000;
+export const WALLET_LOW_BALANCE_THRESHOLD = 200_000;
+
+export function isWalletLow(balance: number): boolean {
+  return balance <= WALLET_LOW_BALANCE_THRESHOLD;
+}
 
 export function walletBonus(amount: number): number {
   let bonus = 0;

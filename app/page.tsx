@@ -400,7 +400,7 @@ export default async function LandingPage() {
                           {p.place && (
                             <li>
                               <MapPin size={15} />
-                              {p.place}
+                              {p.place.replace(/Lượng\s*Định\s*Của/gi, 'Lương Định Của')}
                             </li>
                           )}
                         </ul>

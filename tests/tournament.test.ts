@@ -34,3 +34,10 @@ test('trạng thái giải đấu theo ngày thi đấu giờ Việt Nam', () =>
   assert.equal(tournamentStatus({ status: 'published', event_at: at('2026-11-17T00:10:00') }, now), 'upcoming');
   assert.equal(tournamentStatus({ status: 'published', event_at: at('2026-11-15T20:00:00') }, now), 'ended');
 });
+
+test('địa chỉ giải đấu: chuẩn hóa chính tả Lượng Định Của thành Lương Định Của', () => {
+  const sanitize = (s: string) => (s || '').replace(/Lượng\s*Định\s*Của/gi, 'Lương Định Của');
+  assert.equal(sanitize('250 Lượng Định Của, TP. Thủ Đức'), '250 Lương Định Của, TP. Thủ Đức');
+  assert.equal(sanitize('CLB Saigon Golf, Lượng   Định   Của'), 'CLB Saigon Golf, Lương Định Của');
+  assert.equal(sanitize('250 Lương Định Của'), '250 Lương Định Của');
+});

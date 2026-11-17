@@ -25,6 +25,17 @@ const imageRef = z
   .max(300)
   .refine((v) => v === '' || /^\/img\/[\w./-]+$/.test(v) || /^https:\/\/[^\s"'<>]+$/.test(v), 'Địa chỉ ảnh không hợp lệ');
 
+function sanitizePlace(place: string): string {
+  return (place || '').replace(/Lượng\s*Định\s*Của/gi, 'Lương Định Của');
+}
+
+function cleanPost(p: Post): Post {
+  return {
+    ...p,
+    place: sanitizePlace(p.place),
+  };
+}
+
 export const postInput = z
   .object({
     id: z.string().max(100).optional(),
@@ -34,7 +45,7 @@ export const postInput = z
     body: z.string().max(8000).default(''),
     image: imageRef.default(''),
     eventAt: z.number().int().positive().nullable().default(null),
-    place: z.string().trim().max(160).default(''),
+    place: z.string().trim().max(160).default('').transform(sanitizePlace),
     status: z.enum(['draft', 'published']).default('draft'),
   })
   .refine((v) => v.kind === 'news' || v.eventAt != null, {
@@ -105,14 +116,19 @@ export async function publicContent(tenant: string, now = Date.now()) {
       .bind(tenant, now)
       .all<Post>(),
   ]);
-  return { news: news.results, upcoming: upcoming.results, past: past.results };
+  return {
+    news: news.results.map(cleanPost),
+    upcoming: upcoming.results.map(cleanPost),
+    past: past.results.map(cleanPost),
+  };
 }
 
 export async function publicPost(tenant: string, id: string): Promise<Post | null> {
-  return db()
+  const row = await db()
     .prepare(`SELECT ${COLUMNS} FROM posts WHERE tenant=? AND id=? AND status='published'`)
     .bind(tenant, id)
     .first<Post>();
+  return row ? cleanPost(row) : null;
 }
 
 export type Signup = { id: string; post_id: string; name: string; phone: string; note: string; created: number };

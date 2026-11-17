@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { money } from '../../lib/club';
-import { WALLET_TIERS, WALLET_MIN_TOPUP, walletBonus } from '../../lib/wallet';
+import { WALLET_TIERS, WALLET_MIN_TOPUP, walletBonus, WALLET_LOW_BALANCE_THRESHOLD, isWalletLow } from '../../lib/wallet';
 
 export type WalletEntry = {
   id: string;
@@ -45,11 +45,30 @@ export function WalletPanel({
   const customOk = customAmount >= WALLET_MIN_TOPUP && customAmount <= 100_000_000;
   return (
     <section className="member-wallet" aria-label="Ví hội viên" style={{ margin: '16px 0' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0 }}>Ví tiền</h3>
         <strong style={{ fontSize: 22 }} data-testid="wallet-balance">
           {money(balance)}
         </strong>
+        {isWalletLow(balance) && (
+          <span
+            data-testid="wallet-low-warning"
+            style={{
+              padding: '4px 10px',
+              borderRadius: '5px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: '#ef4444',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            ⚠️ Số dư ví thấp (≤ {money(WALLET_LOW_BALANCE_THRESHOLD)})
+          </span>
+        )}
       </div>
       {canTopUp && (
         <div style={{ marginTop: 10 }}>

@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, Loader2, Phone, RefreshCw } from 'lucide-react';
 import { money } from '../../lib/club';
 import { REQUEST_STATUS_LABELS } from '../../lib/online';
 import { BRAND } from '../../lib/brand';
@@ -110,6 +111,7 @@ export default function BookingPage({
   const shell = embedded ? 'booking-embed' : 'auth-screen';
   const [info, setInfo] = useState<Info | null>(null);
   const [loadError, setLoadError] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<Status | null>(null);
   const [form, setForm] = useState({
@@ -158,19 +160,42 @@ export default function BookingPage({
     }));
   }, []);
   useEffect(() => {
-    fetch('/api/public/booking?slug=' + encodeURIComponent(slug))
+    let cancelled = false;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+
+    fetch('/api/public/booking?slug=' + encodeURIComponent(slug), {
+      signal: controller.signal,
+    })
       .then(async (r) => {
+        clearTimeout(timer);
+        if (cancelled) return;
         const v = (await r.json()) as Info & { error?: string };
-        if (!r.ok) throw new Error(v.error || 'Không tải được thông tin');
+        if (!r.ok) throw new Error(v.error || 'Không tải được thông tin đặt sân');
         setInfo(v);
         // Start on the first service that has a price.
         if (v.services?.length)
           setForm((f) => (v.services!.includes(f.service) ? f : { ...f, service: v.services![0] }));
       })
-      .catch((e) => setLoadError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => {
+        clearTimeout(timer);
+        if (cancelled) return;
+        const msg =
+          e.name === 'AbortError'
+            ? 'Quá thời gian tải thông tin đặt sân (8 giây). Vui lòng thử lại.'
+            : e instanceof Error
+              ? e.message
+              : String(e);
+        setLoadError(msg);
+      });
 
     setCode(localStorage.getItem(storageKey + ':' + slug) ?? '');
-  }, [slug]);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [slug, retryCount]);
   useEffect(() => {
     if (!code) return;
     let live = true;
@@ -243,16 +268,148 @@ export default function BookingPage({
   if (loadError)
     return (
       <div className={shell}>
-        <div className="auth-card">
-          <h1>{BRAND.name}</h1>
-          <p>{loadError}</p>
-          <p className="hotline">
-            Hotline: <a href={'tel:' + BRAND.hotline}>{BRAND.hotline}</a>
+        <div
+          className="auth-card"
+          style={{
+            maxWidth: 480,
+            margin: '0 auto',
+            textAlign: 'center',
+            padding: '2rem 1.5rem',
+            background: 'rgba(15, 23, 42, 0.85)',
+            borderRadius: 8,
+            border: '1px solid rgba(239, 68, 68, 0.25)',
+          }}
+        >
+          <div
+            style={{
+              display: 'inline-flex',
+              padding: 10,
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.12)',
+              color: '#ef4444',
+              marginBottom: 12,
+            }}
+          >
+            <AlertCircle size={28} />
+          </div>
+          <h2 style={{ fontSize: '1.2rem', margin: '0 0 8px', color: '#f8fafc' }}>
+            Không thể tải thông tin đặt sân
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 20px', lineHeight: 1.5 }}>
+            {loadError}
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                setLoadError('');
+                setInfo(null);
+                setRetryCount((n) => n + 1);
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '9px 18px',
+                cursor: 'pointer',
+              }}
+            >
+              <RefreshCw size={15} />
+              Thử lại
+            </button>
+            <a
+              href={'tel:' + BRAND.hotline}
+              className="secondary"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '9px 18px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: 5,
+                color: '#f8fafc',
+                textDecoration: 'none',
+              }}
+            >
+              <Phone size={15} />
+              Gọi {BRAND.hotline}
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+
+  if (!info)
+    return (
+      <div className={shell}>
+        <div
+          className="auth-card"
+          style={{
+            maxWidth: 480,
+            margin: '0 auto',
+            textAlign: 'center',
+            padding: '2.5rem 1.5rem',
+            background: 'rgba(15, 23, 42, 0.85)',
+            borderRadius: 8,
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <Loader2
+            size={32}
+            style={{
+              margin: '0 auto 14px',
+              color: 'var(--brand, #10b981)',
+              animation: 'spin 1.2s linear infinite',
+            }}
+          />
+          <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.95rem' }}>
+            Đang tải biểu mẫu đặt sân...
           </p>
         </div>
       </div>
     );
-  if (!info) return <div className={shell}>Đang tải…</div>;
+
+  if (info.services && info.services.length === 0)
+    return (
+      <div className={shell}>
+        <div
+          className="auth-card"
+          style={{
+            maxWidth: 480,
+            margin: '0 auto',
+            textAlign: 'center',
+            padding: '2rem 1.5rem',
+            background: 'rgba(15, 23, 42, 0.85)',
+            borderRadius: 8,
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <h2 style={{ fontSize: '1.2rem', margin: '0 0 8px', color: '#f8fafc' }}>
+            Tạm dừng nhận đặt trực tuyến
+          </h2>
+          <p style={{ color: '#94a3b8', fontSize: '0.9rem', margin: '0 0 20px', lineHeight: 1.5 }}>
+            Hiện chưa có khung giờ khả dụng cho đặt sân trực tuyến qua website. Quý khách vui lòng
+            liên hệ trực tiếp hotline để được hỗ trợ sắp xếp line tốt nhất.
+          </p>
+          <a
+            href={'tel:' + BRAND.hotline}
+            className="primary"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '10px 20px',
+              textDecoration: 'none',
+              borderRadius: 5,
+            }}
+          >
+            <Phone size={15} />
+            Hotline đặt sân: {BRAND.hotline}
+          </a>
+        </div>
+      </div>
+    );
   return (
     <div className={shell}>
       <div className="booking-wrap">

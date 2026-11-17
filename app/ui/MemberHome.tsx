@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { BRAND } from '../../lib/brand';
 import { money, rooms } from '../../lib/club';
+import { isWalletLow } from '../../lib/wallet';
 import { parseBenefit } from '../../lib/member-benefits';
 import { TIER_LABEL, type Tier } from '../../lib/member-card';
 import type { Overview } from './MemberPortal';
@@ -186,7 +187,9 @@ export function MemberHome({
               {
                 icon: Coins,
                 label: 'Số dư ví',
-                value: data.profile.verified ? money(data.wallet ?? 0) : 'Đăng nhập',
+                value: data.profile.verified
+                  ? `${money(data.wallet ?? 0)}${isWalletLow(data.wallet ?? 0) ? ' (thấp)' : ''}`
+                  : 'Đăng nhập',
                 tab: 'packages',
               },
               {

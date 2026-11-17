@@ -49,6 +49,7 @@ __pycache__/
 *.py[cod]
 golf3d-backup-*.json
 backup-*.sql
+/backups/
 
 # E2E
 /.e2e-state/

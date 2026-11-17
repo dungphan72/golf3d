@@ -692,6 +692,7 @@ export function ModernPosFlow({
           {r.left && <em className="pos-m3-lh-tag">Trái/Phải</em>}
         </span>
         <span className={`pos-m3-room-badge ${statusKey}`}>{statusLabel}</span>
+        <span className="pos-m3-line-rate-frame">{getRoomRateLabel(r.vip)}</span>
         {rb ? (
           <span className="pos-m3-desk-info">
             <strong className="pos-m3-desk-cust">{rb.customer}</strong>
@@ -714,7 +715,11 @@ export function ModernPosFlow({
           <span className="pos-m3-desk-info">
             <span>{maint.reason || 'Tạm ngưng nhận khách'}</span>
           </span>
-        ) : null}
+        ) : (
+          <span className="pos-m3-desk-info pos-m3-desk-empty-info">
+            <span>Sẵn sàng đón khách</span>
+          </span>
+        )}
       </button>
     );
   };
@@ -2856,6 +2861,10 @@ export function ModernPosFlow({
                         </span>
                       </div>
 
+                      <div className="pos-m3-line-rate-frame">
+                        {getRoomRateLabel(r.vip)}
+                      </div>
+
                       {rb ? (
                         <div className="pos-m3-room-card-body">
                           <strong className="pos-m3-room-cust">{rb.customer}</strong>
@@ -2879,7 +2888,6 @@ export function ModernPosFlow({
                       ) : (
                         <div className="pos-m3-room-card-body">
                           <span className="pos-m3-room-ready">Sẵn sàng đón khách</span>
-                          <small>{getRoomRateLabel(r.vip)}</small>
                         </div>
                       )}
                     </button>
@@ -4030,24 +4038,22 @@ export function ModernPosFlow({
             </div>
           </div>
 
-          {/* Standard 10 Lines (Line 01 - Line 10) */}
+          {/* Standard Lines */}
           <div className="pos-m3-floor-group">
             <div className="pos-m3-floor-group-head">
-              <h3>Khu vực 10 Line Tiêu chuẩn (Line 01 – Line 10)</h3>
-              <span>Đơn giá tiêu chuẩn: {getRoomRateLabel(false)}</span>
+              <h3>Line Tiêu chuẩn</h3>
             </div>
             <div className="pos-m3-desktop-line-grid">
               {filteredRooms.filter((e) => !e.room.vip).map(renderDeskRoom)}
             </div>
           </div>
 
-          {/* 2 VIP Rooms (VIP 01 - VIP 02) */}
+          {/* VIP Rooms */}
           <div className="pos-m3-floor-group vip-group">
             <div className="pos-m3-floor-group-head">
               <h3>
-                <Crown size={17} /> Khu vực 2 Phòng VIP Riêng biệt (VIP 01 – VIP 02)
+                <Crown size={17} /> Phòng VIP
               </h3>
-              <span>Đơn giá phòng VIP: {getRoomRateLabel(true)}</span>
             </div>
             <div className="pos-m3-desktop-vip-grid">
               {filteredRooms.filter((e) => e.room.vip).map(renderDeskRoom)}
@@ -4658,7 +4664,7 @@ export function ModernPosFlow({
                   <Check size={32} />
                 </div>
                 <h4>Hoàn tất thanh toán!</h4>
-                <p>Line đã tự động chuyển về trạng thái Sẵn sàng đón khách mới.</p>
+                <p>Line đã Sẵn sàng đón khách mới.</p>
                 {lastReceipt && (
                   <div className="pos-m3-receipt-box">
                     <div>

@@ -752,7 +752,6 @@
   padding: 0;
 }
 
-.ar-card-item:hover .ar-card-mini-btn,
 .ar-card-item.is-managing .ar-card-mini-btn {
   display: inline-flex;
 }

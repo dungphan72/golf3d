@@ -1010,24 +1010,28 @@ export function SystemSettingsHub({
                         <p className="ar-card-subtitle">{card.subtitle}</p>
                       </div>
                       <div className="ar-card-actions-wrap">
-                        <button
-                          type="button"
-                          className="ar-card-mini-btn edit"
-                          title={`Sửa chức năng ${card.title}`}
-                          aria-label={`Sửa ${card.title}`}
-                          onClick={(e) => openEditCardModal(group.id, card, e)}
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          type="button"
-                          className="ar-card-mini-btn delete"
-                          title={`Xóa chức năng ${card.title}`}
-                          aria-label={`Xóa ${card.title}`}
-                          onClick={(e) => handleDeleteCard(group.id, card, e)}
-                        >
-                          <Trash2 size={14} />
-                        </button>
+                        {manageMode && (
+                          <>
+                            <button
+                              type="button"
+                              className="ar-card-mini-btn edit"
+                              title={`Sửa chức năng ${card.title}`}
+                              aria-label={`Sửa ${card.title}`}
+                              onClick={(e) => openEditCardModal(group.id, card, e)}
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="ar-card-mini-btn delete"
+                              title={`Xóa chức năng ${card.title}`}
+                              aria-label={`Xóa ${card.title}`}
+                              onClick={(e) => handleDeleteCard(group.id, card, e)}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </>
+                        )}
                         <ChevronRight className="ar-card-arrow" />
                       </div>
                     </div>

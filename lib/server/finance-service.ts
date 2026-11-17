@@ -249,17 +249,22 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     if (!booking) return error('Không tìm thấy phiếu', 404);
     if (booking.status !== 'finished' || booking.amount == null || booking.amount <= 0)
       return error('Chỉ thu phiếu đã kết thúc, có số tiền hợp lệ và chưa thanh toán', 409);
-    if (booking.amount !== input.expectedAmount)
+    const discountRow = await db
+      .prepare('SELECT amount FROM bill_discounts WHERE tenant=? AND booking_id=?')
+      .bind(tenant, input.bookingId)
+      .first<{ amount: number }>();
+    const discount = discountRow?.amount ?? 0;
+    const covered = await coveredByPackage(booking.id);
+    const netDue = Math.max(0, booking.amount - covered - discount);
+    if (netDue !== input.expectedAmount)
       return error('Tổng phiếu vừa thay đổi. Xem lại và nhận đủ tiền trước khi xác nhận.', 409);
     const shift = await db
       .prepare("SELECT id FROM shifts WHERE tenant=? AND status='open'")
       .bind(tenant)
       .first<{ id: string }>();
     if (!shift) return error('Hãy mở ca trước khi xác nhận thu tiền', 409);
-    // Golf already settled with a package use is not collected again (see package_redemptions).
-    const covered = await coveredByPackage(booking.id);
-    if (covered >= booking.amount) return error('Phiếu đã được trả đủ bằng gói', 409);
-    const due = booking.amount - covered;
+    if (covered + discount >= booking.amount) return error('Phiếu đã được thanh toán đủ', 409);
+    const due = netDue;
     if (input.action === 'pay-split') {
       const methods = new Set(input.parts.map((p) => p.method));
       if (methods.size !== input.parts.length)

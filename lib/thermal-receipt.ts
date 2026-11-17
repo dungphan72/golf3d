@@ -71,7 +71,9 @@ export function formatBillZaloText({
     lines.push(`• Giảm giá: -${money(bill.discount.amount)} (${bill.discount.reason})`);
   }
 
-  const total = booking.amount ?? q.total + (booking.food_total ?? 0);
+  const discountAmt = bill?.discount?.amount ?? 0;
+  const rawTotal = booking.amount ?? q.total + (booking.food_total ?? 0);
+  const total = Math.max(0, rawTotal - discountAmt);
   lines.push('------------------------------------------');
   lines.push(`TỔNG CỘNG: ${money(total)}`);
 
@@ -135,7 +137,9 @@ export function generateK80Html({
     timeZone: 'Asia/Ho_Chi_Minh',
   });
 
-  const total = booking.amount ?? q.total + (booking.food_total ?? 0);
+  const discountAmt = bill?.discount?.amount ?? 0;
+  const rawTotal = booking.amount ?? q.total + (booking.food_total ?? 0);
+  const total = Math.max(0, rawTotal - discountAmt);
   const logo =
     logoSrc ?? (typeof window !== 'undefined' ? window.location.origin : '') + BRAND.logo;
   // Parking voucher date: the system date in Vietnam, "dd / mm / yyyy".
@@ -276,7 +280,7 @@ export function generateK80Html({
       <tr>
         <td class="desc">
           ${l.label}
-          ${l.from != null && l.to != null ? `<span class="sub-desc">${new Date(l.from).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}–${new Date(l.to).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} (${l.minutes.toFixed(0)}p)</span>` : ''}
+          ${l.from != null && l.to != null ? `<span class="sub-desc">${new Date(l.from).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}–${new Date(l.to).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })} (${l.minutes < 1 ? '< 1p' : `${Math.round(l.minutes)}p`})</span>` : ''}
         </td>
         <td class="val">${money(Math.round(l.amount))}</td>
       </tr>`,

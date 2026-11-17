@@ -38,12 +38,21 @@ test('padToMinimum: đủ giờ, tắt (0), hoặc chưa chơi thì không đổ
   assert.equal(padToMinimum(none, 60).added, 0);
 });
 
-test('chơi 10 phút tính thành 1 giờ khi cài tối thiểu 60 phút', () => {
+test('chơi 10 phút: tính đúng số phút thực tế, và khi áp dụng minCharge thì nâng lên đủ 60 phút', () => {
   const c = { ...base, minBillMinutes: 60 };
-  const short = sessionQuote('gdr', [{ start, end: start + 10 * MIN }], { config: c, base: 0 });
+  const segs = [{ start, end: start + 10 * MIN }];
+  const actual = sessionQuote('gdr', segs, { config: c, base: 0 });
   const hour = quote([{ start, end: start + 60 * MIN }], c, false);
-  assert.equal(short.total, hour.total);
-  assert.match(short.lines.at(-1)!.label, /tối thiểu 60 phút/);
+  // Thực tế chơi 10 phút: tính đúng thời gian 10 phút
+  assert.equal(actual.total, quote(segs, c, false).total);
+  // Khi nhân viên xác nhận thanh toán tối thiểu (round-min): nâng lên mức 60 phút có dòng làm tròn
+  const raised = sessionQuote('gdr', segs, {
+    config: c,
+    base: 0,
+    minCharge: { from: actual.total, to: hour.total, minMinutes: 60, at: start, actor: 'staff' },
+  });
+  assert.equal(raised.total, hour.total);
+  assert.match(raised.lines.at(-1)!.label, /tối thiểu 60 phút/);
 });
 
 test('không cài (hoặc 0) thì tính đúng số phút đã chơi', () => {
@@ -59,10 +68,22 @@ test('chơi quá 1 giờ thì giữ nguyên, không cộng thêm', () => {
   assert.deepEqual(sessionQuote('gdr', segs, { config: c, base: 0 }), quote(segs, c, false));
 });
 
-test('cài 30 phút: chơi 10 phút tính 30 phút', () => {
+test('cài 30 phút: chơi 10 phút phát hiện chưa đủ tối thiểu 30 phút qua minChargeOffer', () => {
   const c = { ...base, minBillMinutes: 30 };
-  const t = sessionQuote('gdr', [{ start, end: start + 10 * MIN }], { config: c, base: 0 }).total;
-  assert.equal(t, quote([{ start, end: start + 30 * MIN }], c, false).total);
+  const segs = [{ start, end: start + 10 * MIN }];
+  const actual = quote(segs, c, false);
+  const minBill = quote([{ start, end: start + 30 * MIN }], c, false);
+  const offer = minChargeOffer({
+    status: 'finished',
+    service: 'gdr',
+    price: JSON.stringify({ config: c, base: 0 }),
+    golf_amount: actual.total,
+    segments: JSON.stringify(segs),
+  });
+  assert.ok(offer != null);
+  assert.equal(offer.golf, actual.total);
+  assert.equal(offer.to, minBill.total);
+  assert.equal(offer.minMinutes, 30);
 });
 
 test('thanh toán tối thiểu 60 phút: hệ thống hỏi khi chơi dưới 60 phút và cho phép chọn thực tế', () => {

@@ -84,10 +84,12 @@ export async function bankOverview(tenant: string, bookingId: string | null): Pr
     if (bookingId) {
       const code = paymentCode(bookingId);
       const rows = (await db().prepare(BANK_TX_FOR_CODE_SQL).bind(tenant, code).all()).results;
-      // Amount still to collect: the bill minus golf already covered by a package use.
+      // Amount still to collect: the bill minus golf already covered by a package use and any discounts.
       const bill = await db()
         .prepare(
-          `SELECT b.amount-COALESCE((SELECT r.covered FROM package_redemptions r WHERE r.tenant=b.tenant AND r.booking_id=b.id),0) AS due
+          `SELECT b.amount
+             - COALESCE((SELECT r.covered FROM package_redemptions r WHERE r.tenant=b.tenant AND r.booking_id=b.id),0)
+             - COALESCE((SELECT d.amount FROM bill_discounts d WHERE d.tenant=b.tenant AND d.booking_id=b.id),0) AS due
            FROM bookings b WHERE b.tenant=? AND b.id=?`,
         )
         .bind(tenant, bookingId)

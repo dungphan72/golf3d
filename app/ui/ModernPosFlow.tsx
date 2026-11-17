@@ -158,7 +158,7 @@ function GolfFeeRows({
           <strong>Phí chơi Golf ({SERVICE_LABEL[service] || service})</strong>
           <small>
             {bill.lines.length > 0
-              ? bill.lines.map((l) => (l.package ? l.label : `${l.label} (${Math.round(l.minutes)}p)`)).join(' · ')
+              ? bill.lines.map((l) => (l.package ? l.label : `${l.label} (${l.minutes < 1 ? '< 1p' : `${Math.round(l.minutes)}p`})`)).join(' · ')
               : fallback}
           </small>
         </div>
@@ -319,6 +319,7 @@ export function ModernPosFlow({
     at: number;
     cashier: string;
   } | null>(null);
+  const [lastReceiptBooking, setLastReceiptBooking] = useState<Booking | null>(null);
   const payKey = useRef(operationKey());
 
   // Shift Management state (M09)
@@ -1286,6 +1287,7 @@ export function ModernPosFlow({
         cashier: data.user || 'Thu ngân POS',
       };
       setLastReceipt(receiptObj);
+      setLastReceiptBooking(activeBooking);
 
       if (printOnConfirm) {
         handlePrintReceipt(activeBooking);
@@ -1300,16 +1302,26 @@ export function ModernPosFlow({
   }
 
   function handlePrintReceipt(targetBooking?: Booking | null) {
-    const bTarget = targetBooking ?? activeBooking;
+    const bTarget = targetBooking ?? lastReceiptBooking ?? activeBooking;
     if (!bTarget) return;
     const rName = rooms.find((r) => r.id === bTarget.room)?.name ?? bTarget.room;
+    let bQuote: Bill = sessionBill;
+    try {
+      const snap = JSON.parse(bTarget.price);
+      const seg: Segment[] = JSON.parse(bTarget.segments);
+      bQuote = sessionQuote(bTarget.service as Service, seg, snap);
+    } catch {
+      bQuote = sessionBill;
+    }
+    const bBill = bTarget.id === activeBooking?.id ? bill : historyBill;
+    const bFood = bTarget.id === activeBooking?.id ? food.data : null;
     printK80Receipt(
       generateK80Html({
         booking: bTarget,
-        quote: sessionBill,
-        bill,
+        quote: bQuote,
+        bill: bBill,
         roomName: rName,
-        food: food.data,
+        food: bFood,
       }),
     );
   }
@@ -1343,12 +1355,22 @@ export function ModernPosFlow({
   }
 
   async function handleSendZaloReceipt(targetBooking?: Booking | null) {
-    const bTarget = targetBooking ?? activeBooking;
+    const bTarget = targetBooking ?? lastReceiptBooking ?? activeBooking;
     if (!bTarget) return;
     const rName = rooms.find((r) => r.id === bTarget.room)?.name ?? bTarget.room;
+    let bQuote: Bill = sessionBill;
+    try {
+      const snap = JSON.parse(bTarget.price);
+      const seg: Segment[] = JSON.parse(bTarget.segments);
+      bQuote = sessionQuote(bTarget.service as Service, seg, snap);
+    } catch {
+      bQuote = sessionBill;
+    }
+    const bBill = bTarget.id === activeBooking?.id ? bill : historyBill;
+    const bFood = bTarget.id === activeBooking?.id ? food.data : null;
     await sendBillImageToZalo({
       phone: bTarget.phone,
-      bill: { booking: bTarget, quote: sessionBill, bill, roomName: rName, food: food.data },
+      bill: { booking: bTarget, quote: bQuote, bill: bBill, roomName: rName, food: bFood },
       fileName: `hoa-don-${bTarget.id.slice(-6)}.png`,
       onNotify: (msg) => setNotice(msg),
     });

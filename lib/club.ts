@@ -258,25 +258,12 @@ export function padToMinimum(
 function baseSessionQuote(
   service: Service,
   segments: Segment[],
-  snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number; keepActual?: boolean },
+  snap: { config: Config; vip?: boolean; base: number; promo?: { name: string } | null; prior?: PriorPart[]; phaseFrom?: number },
 ): Bill & { parts?: BillPart[] } {
   const prior = snap.prior ?? [];
   if (!prior.length) {
     if (service !== 'gdr') return wholeQuote(snap.base, snap.config, service);
-    if (snap.keepActual) {
-      return quote(segments, snap.config, snap.vip);
-    }
-    const padded = padToMinimum(segments, snap.config.minBillMinutes ?? 0);
-    const q = quote(padded.segments, snap.config, snap.vip);
-    if (!padded.added || !q.lines.length) return q;
-    // Say on the bill why more minutes than were played are charged.
-    const last = q.lines.length - 1;
-    return {
-      ...q,
-      lines: q.lines.map((l, i) =>
-        i === last ? { ...l, label: `${l.label} · tối thiểu ${snap.config.minBillMinutes} phút` } : l,
-      ),
-    };
+    return quote(segments, snap.config, snap.vip);
   }
   const lines: PriceLine[] = prior.flatMap((p) => p.lines);
   const parts: BillPart[] = prior.map((p) => ({
@@ -338,7 +325,7 @@ export function sessionQuote(
       ...bill.lines,
       {
         date: '',
-        label: `Làm tròn tối thiểu ${m.minMinutes ? m.minMinutes + ' phút ' : ''}${money(m.to)}`,
+        label: `Làm tròn tối thiểu ${m.minMinutes ? m.minMinutes + ' phút' : ''} (${money(m.to)})`.trim(),
         minutes: 0,
         rate: 0,
         amount: m.to - bill.total,

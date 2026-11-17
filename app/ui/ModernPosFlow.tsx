@@ -22,6 +22,7 @@ import {
   Home,
   Layers,
   LayoutGrid,
+  Loader2,
   Minus,
   MoreHorizontal,
   Package,
@@ -348,6 +349,8 @@ export function ModernPosFlow({
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  // Khóa mốc thời gian ngay lập tức khi bấm Kết thúc (ngăn đồng hồ nhảy giây trong lúc chờ mạng)
+  const [frozenBookingTimes, setFrozenBookingTimes] = useState<Record<string, number>>({});
 
   // Barcode scanner listener
   const barcodeBufferRef = useRef('');
@@ -633,16 +636,20 @@ export function ModernPosFlow({
 
   const elapsedMs = useMemo(() => {
     if (!activeBooking) return 0;
-    if (
-      activeBooking.started ||
-      activeBooking.status === 'paused' ||
-      activeBooking.status === 'finished' ||
-      activeBooking.status === 'paid'
-    ) {
+    const frozenAt =
+      frozenBookingTimes[activeBooking.id] ??
+      (activeBooking.room ? frozenBookingTimes[activeBooking.room] : undefined);
+    if (frozenAt) {
+      return playedMs(activeBooking, frozenAt);
+    }
+    if (activeBooking.status === 'finished' || activeBooking.status === 'paid') {
+      return playedMs(activeBooking, activeBooking.finished ?? 0);
+    }
+    if (activeBooking.started || activeBooking.status === 'paused') {
       return playedMs(activeBooking, tick);
     }
     return 0;
-  }, [activeBooking, tick]);
+  }, [activeBooking, tick, frozenBookingTimes]);
 
   // Hourly rate shown for a room: the price rule that applies right now, never a guess.
   const getRoomRateLabel = useCallback(
@@ -658,13 +665,16 @@ export function ModernPosFlow({
 
   // One room card on the floor plan (standard lines and VIP rooms share it).
   const renderDeskRoom = ({ room: r, statusKey, booking: rb, maint }: (typeof filteredRooms)[number]) => {
+    const frozenAt = rb
+      ? (frozenBookingTimes[rb.id] ?? (r.id ? frozenBookingTimes[r.id] : undefined))
+      : undefined;
     const liveAmt =
       rb && rb.status === 'playing' && rb.started
         ? (() => {
             try {
               const snap = JSON.parse(rb.price);
               const segs: Segment[] = JSON.parse(rb.segments);
-              segs.push({ start: rb.started, end: tick });
+              segs.push({ start: rb.started, end: frozenAt ?? tick });
               return sessionQuote(rb.service as Service, segs, snap).total + (rb.food_total ?? 0);
             } catch {
               return rb.amount ?? 0;
@@ -711,10 +721,12 @@ export function ModernPosFlow({
             <span className="pos-m3-desk-timer">
               <Clock size={13} />
               {rb.status === 'playing' || rb.status === 'paused'
-                ? clock(playedMs(rb, tick))
-                : rb.status === 'booked'
-                  ? `Hẹn ${time(rb.start)}`
-                  : time(rb.start)}
+                ? clock(playedMs(rb, frozenAt ?? tick))
+                : rb.status === 'finished'
+                  ? `Chơi ${clock(playedMs(rb, rb.finished ?? 0))}`
+                  : rb.status === 'booked'
+                    ? `Hẹn ${time(rb.start)}`
+                    : time(rb.start)}
             </span>
             {canSeeMoney && <strong className="pos-m3-desk-amt">{money(liveAmt)}</strong>}
           </span>
@@ -1189,39 +1201,57 @@ export function ModernPosFlow({
   }
 
   // Action 4: Finish session (chốt thời gian chơi, chuyển sang chờ thanh toán)
-  async function handleFinishSession(proceedToPay = false) {
+  async function handleFinishSession(proceedToPay = true) {
     if (!activeBooking || saving) return;
     setErrorMsg('');
 
-    // First commit any unsent cart items
-    if (cart.length > 0) {
-      const committed = await handleCommitCartToSession(activeBooking.id);
-      if (!committed) return;
-    }
+    const targetBooking = activeBooking;
+    const targetBookingId = targetBooking.id;
+    const nowFreeze = Date.now();
 
-    // Serve any pending kitchen orders so payment won't be blocked by unserved items
-    if (pendingKitchenOrders.length > 0) {
-      await handleServeAllPendingOrders();
-    }
+    // 1. Khóa đồng hồ ngay lập tức (0ms độ trễ)
+    setFrozenBookingTimes((prev) => ({
+      ...prev,
+      [targetBookingId]: nowFreeze,
+      ...(targetBooking.room ? { [targetBooking.room]: nowFreeze } : {}),
+    }));
 
-    if (activeBooking.status === 'playing' || activeBooking.status === 'paused') {
-      setSaving(true);
-      try {
-        const ok = await onMutate({ action: 'finish', id: activeBooking.id });
-        if (!ok) return;
-        await reloadBill();
-      } finally {
-        setSaving(false);
-      }
-    }
-
+    // 2. Chuyển sang màn hình thanh toán ngay lập tức (0ms độ trễ)
     if (proceedToPay) {
       payKey.current = operationKey();
       setDesktopMode('payment');
       setMobileScreen('M07');
-    } else {
-      setNotice('Đã kết thúc tính giờ chơi. Phiên đang chờ thanh toán.');
-      if (isMobile) setMobileScreen('M06');
+    }
+
+    setSaving(true);
+    try {
+      // First commit any unsent cart items
+      if (cart.length > 0) {
+        const committed = await handleCommitCartToSession(targetBookingId);
+        if (!committed) {
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Serve any pending kitchen orders so payment won't be blocked by unserved items
+      if (pendingKitchenOrders.length > 0) {
+        await handleServeAllPendingOrders();
+      }
+
+      if (targetBooking.status === 'playing' || targetBooking.status === 'paused') {
+        const ok = await onMutate({ action: 'finish', id: targetBookingId });
+        if (!ok) return;
+        await reloadBill();
+        await onRefresh();
+      }
+
+      if (!proceedToPay) {
+        setNotice('Đã kết thúc tính giờ chơi. Phiên đang chờ thanh toán.');
+        if (isMobile) setMobileScreen('M06');
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -1250,6 +1280,8 @@ export function ModernPosFlow({
       if (activeBooking.status === 'playing' || activeBooking.status === 'paused') {
         const finishedOk = await onMutate({ action: 'finish', id: activeBooking.id });
         if (!finishedOk) return;
+        await reloadBill();
+        await onRefresh();
       }
 
       // Fetch latest due from /api/bank?booking=ID to avoid any rounding mismatch
@@ -2196,6 +2228,29 @@ export function ModernPosFlow({
       );
     }
 
+    if (saving && ['playing', 'paused'].includes(activeBooking.status)) {
+      return (
+        <div
+          className="pos-m3-pay-section"
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: 280,
+            gap: 14,
+            padding: '30px 20px',
+          }}
+        >
+          <Loader2 size={32} className="pos-m3-spin" style={{ color: 'var(--brand-primary, #047857)' }} />
+          <div style={{ textAlign: 'center' }}>
+            <strong style={{ display: 'block', fontSize: 16, color: '#1e293b' }}>Đang chốt giờ chơi...</strong>
+            <span style={{ fontSize: 13, color: '#64748b' }}>Đang khóa đồng hồ và đồng bộ chi phí phiên</span>
+          </div>
+        </div>
+      );
+    }
+
     if (roundOffer && !keepShort.has(activeBooking.id)) {
       const minMins = roundOffer.minMinutes ?? 60;
       const playedMins = roundOffer.playedMinutes ?? 1;
@@ -2239,6 +2294,7 @@ export function ModernPosFlow({
                   try {
                     const ok = await onMutate({ action: 'round-min', id: activeBooking.id });
                     if (ok) {
+                      setKeepShort((cur) => new Set(cur).add(activeBooking.id));
                       setNotice(`Đã chọn thanh toán số tiền tối thiểu (${money(roundOffer.to)})`);
                       await reloadBill();
                       await onRefresh();
@@ -2859,13 +2915,16 @@ export function ModernPosFlow({
                 {filteredRooms.map(({ room: r, statusKey, booking: rb, maint }) => {
                   const isSelected = selectedRoomId === r.id;
                   const shortName = r.vip ? r.name : r.name.replace('Line ', 'L');
+                  const frozenAt = rb
+                    ? (frozenBookingTimes[rb.id] ?? (r.id ? frozenBookingTimes[r.id] : undefined))
+                    : undefined;
                   const liveQuote =
                     rb && rb.status === 'playing' && rb.started
                       ? (() => {
                           try {
                             const s = JSON.parse(rb.price);
                             const segs: Segment[] = JSON.parse(rb.segments);
-                            segs.push({ start: rb.started, end: tick });
+                            segs.push({ start: rb.started, end: frozenAt ?? tick });
                             return sessionQuote(rb.service as Service, segs, s).total + (rb.food_total ?? 0);
                           } catch {
                             return rb.amount ?? 0;
@@ -2905,7 +2964,11 @@ export function ModernPosFlow({
                           <div className="pos-m3-room-meta">
                             {rb.status === 'playing' || rb.status === 'paused' ? (
                               <span className="pos-m3-room-timer">
-                                <Clock size={12} /> {clock(playedMs(rb, tick))}
+                                <Clock size={12} /> {clock(playedMs(rb, frozenAt ?? tick))}
+                              </span>
+                            ) : rb.status === 'finished' ? (
+                              <span className="pos-m3-room-timer">
+                                <Clock size={12} /> {clock(playedMs(rb, rb.finished ?? 0))}
                               </span>
                             ) : (
                               <span>{time(rb.start)}</span>
@@ -4776,7 +4839,7 @@ export function ModernPosFlow({
                 !activeBooking ||
                 !['playing', 'paused'].includes(activeBooking.status)
               }
-              onClick={() => handleFinishSession(false)}
+              onClick={() => handleFinishSession(true)}
             >
               <Square size={16} />
               <span>Kết thúc chơi</span>

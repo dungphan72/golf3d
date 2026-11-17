@@ -2834,3 +2834,14 @@
   background: #e2e8f0;
   color: #475569;
 }
+
+@keyframes pos-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pos-m3-spin {
+  animation: pos-spin 0.9s linear infinite;
+}
+

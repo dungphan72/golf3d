@@ -9,7 +9,7 @@ export async function GET() {
   const qrList = await listQrCodes(auth.tenant);
   return sendResult({
     status: 200,
-    body: { ok: true, qrCodes: qrList },
+    body: { ok: true, qrCodes: qrList, qrs: qrList },
   });
 }
 

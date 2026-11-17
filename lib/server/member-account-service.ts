@@ -386,7 +386,7 @@ export async function memberOverview(user: MemberUser): Promise<R> {
       balances: p.balances ? (JSON.parse(p.balances) as { kind: string; remaining: number }[]) : [],
     })),
     usage: usage.results.map((u) => ({ ...u, room: roomName(u.room) })),
-    bookings: bookings.results.map((b) => ({ ...b, room: roomName(b.room) })),
+    bookings: bookings.results.map((b) => ({ ...b, roomId: b.room, room: roomName(b.room) })),
     requests: requests.results.map(({ quote, ...r }) => ({
       ...r,
       guests: (JSON.parse(quote) as { guests?: number }).guests ?? 0,

@@ -29,10 +29,16 @@ export function CallQrSheet({ slug }: { slug: string }) {
       const res = await fetch('/api/service-call/qr', { cache: 'no-store' });
       if (res.ok) {
         const data = (await res.json()) as any;
-        if (data.ok && Array.isArray(data.qrs)) {
+        const list = Array.isArray(data.qrCodes) ? data.qrCodes : Array.isArray(data.qrs) ? data.qrs : [];
+        if (data.ok && list.length > 0) {
           const map: Record<string, QrItem> = {};
-          for (const item of data.qrs) {
-            map[item.room_id] = item;
+          for (const item of list) {
+            map[item.room_id] = {
+              room_id: item.room_id,
+              token: item.token_secret || item.token,
+              version: item.version,
+              revoked: !item.is_active,
+            };
           }
           setQrMap(map);
         }

@@ -41,7 +41,9 @@ import {
   PhoneCall,
   Flame,
   ArrowRight,
+  Bell,
 } from 'lucide-react';
+import { MemberServiceCallModal } from './MemberServiceCallModal';
 
 type Balance = { kind: GrantKind; remaining: number };
 type Pack = {
@@ -507,6 +509,13 @@ export default function MemberPortal({
   const [now, setNow] = useState(() => Date.now());
   const [copiedCode, setCopiedCode] = useState(false);
   const [bookingExpanded, setBookingExpanded] = useState(false);
+  const [showServiceCallModal, setShowServiceCallModal] = useState(false);
+  const [selectedBookingForCall, setSelectedBookingForCall] = useState<{
+    id: string;
+    roomId?: string;
+    room: string;
+    service?: string;
+  } | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 60_000);
@@ -657,6 +666,7 @@ export default function MemberPortal({
   }
 
   // Reminders in the bell: bookings in the next day, cards about to expire, orders waiting for the club.
+  const activeSession = data.bookings?.find((b) => b.status === 'playing' || b.status === 'paused');
   const reminders: Reminder[] = [
     ...(data.bookings ?? [])
       .filter((b) => b.status === 'booked' && b.start > now && b.start < now + 24 * 3_600_000)
@@ -688,6 +698,68 @@ export default function MemberPortal({
         setBookingExpanded(true);
       }}
     >
+      {activeSession && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: '12px 18px',
+            borderRadius: 8,
+            background: 'linear-gradient(135deg, #064e3b 0%, #022c22 100%)',
+            border: '1.5px solid #10b981',
+            boxShadow: '0 4px 16px rgba(16,185,129,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: 10,
+                height: 10,
+                borderRadius: '50%',
+                background: '#34d399',
+                boxShadow: '0 0 10px #34d399',
+              }}
+            />
+            <div>
+              <strong style={{ color: '#ffffff', fontSize: 14 }}>
+                Bạn đang có buổi chơi tại {activeSession.room}
+              </strong>
+              <small style={{ display: 'block', color: '#a7f3d0', fontSize: 12 }}>
+                {SERVICE[activeSession.service] || activeSession.service} · {activeSession.people} Golfer
+              </small>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedBookingForCall(activeSession);
+              setShowServiceCallModal(true);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 16px',
+              borderRadius: 5,
+              border: 'none',
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(217,119,6,0.4)',
+            }}
+          >
+            <Bell size={15} />
+            <span>Gọi phục vụ</span>
+          </button>
+        </div>
+      )}
       {activeTab === 'overview' && (
         <MemberHome data={data} now={now} tier={tier} onTab={setActiveTab} />
       )}
@@ -839,9 +911,36 @@ export default function MemberPortal({
                         <span className="text-emerald">Giờ chơi: {when(b.start)}</span>
                       </div>
                     </div>
-                    <span className="mp-badge-confirmed">
-                      {BOOKING_STATUS[b.status] ?? b.status}
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {(b.status === 'playing' || b.status === 'paused') && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBookingForCall(b);
+                            setShowServiceCallModal(true);
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 4,
+                            padding: '4px 10px',
+                            borderRadius: 4,
+                            background: '#047857',
+                            border: '1px solid #10b981',
+                            color: '#ffffff',
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <Bell size={12} />
+                          <span>Gọi phục vụ</span>
+                        </button>
+                      )}
+                      <span className="mp-badge-confirmed">
+                        {BOOKING_STATUS[b.status] ?? b.status}
+                      </span>
+                    </div>
                   </li>
                 ))}
                 {!upcoming.length && (
@@ -1181,6 +1280,16 @@ export default function MemberPortal({
           <Settings data={data} onSaved={load} />
         </div>
       )}
+
+      {/* Member Service Call Modal */}
+      <MemberServiceCallModal
+        isOpen={showServiceCallModal}
+        onClose={() => setShowServiceCallModal(false)}
+        activeBooking={selectedBookingForCall}
+        onCallCreated={() => {
+          load();
+        }}
+      />
     </MemberShell>
   );
 }

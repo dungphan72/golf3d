@@ -62,6 +62,7 @@ import type { Data } from './shared';
 import { PackageCatalogManager } from './PackageEditor';
 import { SepaySettings } from './SepaySettings';
 import { StaffPanel } from './StaffPanel';
+import { ServiceCallSettingsPanel } from './ServiceCallSettingsPanel';
 import { SEPAY_BANKS, sepayQrUrl } from '../../lib/bank';
 import '../system-settings.css';
 
@@ -569,6 +570,7 @@ export function SystemSettingsHub({
   const effectiveTab = useMemo(() => {
     if (activeSub === 'facility') return 'operation';
     if (activeSub === 'hours') return 'operation';
+    if (activeSub === 'service_call') return 'operation';
     if (activeSub === 'pricing') return 'business';
     if (activeSub === 'packages') return 'business';
     if (activeSub === 'payment') return 'system';
@@ -902,6 +904,11 @@ export function SystemSettingsHub({
             onNotify={showToast}
           />
         </section>
+      )}
+
+      {/* Inline Service Call & QR Management Panel when activeSub === 'service_call' */}
+      {activeSub === 'service_call' && (
+        <ServiceCallSettingsPanel slug={config.onlineSlug || 'sigolf'} />
       )}
 
       {/* Inline SePay Payment Gateway Panel when activeSub === 'payment' */}

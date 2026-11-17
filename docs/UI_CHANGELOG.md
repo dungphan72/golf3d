@@ -2,6 +2,16 @@
 
 Mỗi mục phải có: lý do · ảnh tham chiếu · file thay đổi · screenshot trước/sau · kết quả kiểm thử.
 
+## 2026-11-17 — Khởi động chiến dịch Rà soát & Chuẩn hóa Toàn diện Giao diện Hệ thống SIGOLF (Master Prompt Audit)
+- **Lý do:** Chủ hệ thống yêu cầu rà soát, chuẩn hóa và đồng bộ giao diện của TOÀN BỘ hệ thống SIGOLF (trang chính, trang con, trang chi tiết, form, popup, modal, drawer, bảng dữ liệu và giao diện mobile). Không chỉ sửa bên ngoài, phải kiểm tra và hoàn thiện từng màn hình thực tế.
+- **Tài liệu bàn giao Giai đoạn 1 (Audit & Design System):**
+  1. `docs/UI_ROUTE_INVENTORY.md`: Bảng kiểm kê toàn bộ 52 màn hình/view/modal/drawer trên 12 phân hệ chính.
+  2. `docs/UI_AUDIT_REPORT.md`: Báo cáo chi tiết các vấn đề phát hiện (CRM 360° thiếu 4 tab con, StockPanel dùng CSS cũ, SplitPay chưa chuẩn hóa, thanh tiến độ gradient, hiển thị mobile).
+  3. `docs/DESIGN_SYSTEM.md`: Quy chuẩn thiết kế chính thức (Google Workspace / Material Design 3, màu thương hiệu `#0a5c1e`, bo góc 5px thống nhất, typography Be Vietnam Pro, touch target mobile ≥ 44px).
+  4. `docs/UI_REFACTOR_PLAN.md`: Kế hoạch và thứ tự thi công 11 phân hệ, cam kết bảo vệ 100% logic nghiệp vụ và dữ liệu.
+  5. `docs/UI_QA_CHECKLIST.md`: Bảng 10 tiêu chí nghiệm thu bắt buộc để đánh dấu PASS một màn hình.
+- **Tiến độ:** Đã hoàn thành Giai đoạn 1 (Audit & Lập kế hoạch); chuẩn bị bước vào Giai đoạn 2 & 3 bắt đầu từ Shared Components và phân hệ CRM 360°.
+
 ## 2026-11-17 — Đồng bộ giao diện Dark Premium Golf các trang con & hoàn thiện nghiệp vụ bill cũ, giải đấu, CRM (nhánh `fix/p0-data-integrity`)
 - **Đồng bộ trang con sang Dark Premium Golf:** đã hỏi ý kiến chủ hệ thống và áp dụng phương án đồng bộ toàn diện. Loại bỏ hoàn toàn tệp `home2.css` cũ khỏi các trang con (`/bang-gia`, `/thanh-vien`, `/tin-tuc`, `/tin-tuc/[id]`, `/book/[slug]`, `/tai-khoan`). Viết lại `app/bang-gia/poster.css` theo chuẩn Dark Premium Golf (`#08101f`, thẻ bo góc 5px chuẩn MD3 `#0f1c34`, viền xanh emerald `#34d399`, điểm nhấn vàng gold `#fbbf24`, font Be Vietnam Pro), xóa bỏ hoàn toàn nền giấy kem cũ `#f8f4ea`.
 - **Lịch sử khách hàng & Bill cũ:** hiển thị các bill cũ đã được duyệt (`legacy_bills`) và lịch sử chơi sân (`bookings`) trực tiếp trong hồ sơ chi tiết hội viên (`app/ui/MembersPanel.tsx`) và hồ sơ CRM (`modules/crm/server/customers.ts`).

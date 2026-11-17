@@ -3424,10 +3424,20 @@ export function ModernPosFlow({
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
                     placeholder="Tìm khách/hội viên theo tên, SĐT, mã thẻ..."
                   />
+                  {customerSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerSearchQuery('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#94a3b8' }}
+                      title="Xóa tìm kiếm"
+                    >
+                      <X size={15} />
+                    </button>
+                  )}
                 </div>
-                {customersList.length > 0 && (
+                {customerSearchQuery.trim().length > 0 && customersList.length > 0 && (
                   <div className="pos-m3-cust-suggestions">
-                    {customersList.slice(0, 4).map((c) => (
+                    {customersList.slice(0, 6).map((c) => (
                       <button
                         key={c.id}
                         type="button"
@@ -3435,6 +3445,7 @@ export function ModernPosFlow({
                         onClick={() => {
                           setCheckInCustomer(c.name);
                           setCheckInPhone(c.phone);
+                          setCustomerSearchQuery('');
                         }}
                       >
                         <UserCheck size={14} />
@@ -4759,10 +4770,20 @@ export function ModernPosFlow({
                     onChange={(e) => setCustomerSearchQuery(e.target.value)}
                     placeholder="Tra cứu nhanh hội viên / khách quen..."
                   />
+                  {customerSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomerSearchQuery('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#94a3b8' }}
+                      title="Xóa tìm kiếm"
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
                 </div>
-                {customersList.length > 0 && (
+                {customerSearchQuery.trim().length > 0 && customersList.length > 0 && (
                   <div className="pos-m3-cust-suggestions">
-                    {customersList.slice(0, 4).map((c) => (
+                    {customersList.slice(0, 6).map((c) => (
                       <button
                         key={c.id}
                         type="button"
@@ -4770,6 +4791,7 @@ export function ModernPosFlow({
                         onClick={() => {
                           setCheckInCustomer(c.name);
                           setCheckInPhone(c.phone);
+                          setCustomerSearchQuery('');
                         }}
                       >
                         <UserCheck size={13} />

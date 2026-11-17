@@ -95,39 +95,48 @@ test('chơi game rồi quay lại tập: chỉ tính thời gian tập sau lúc 
   assert.equal(bill.parts?.length, 2);
 });
 
-test('làm tròn tối thiểu: phiên tập ngắn được nâng lên 100.000, dòng làm tròn khớp tổng', () => {
+test('làm tròn tối thiểu: phiên tập ngắn được nâng lên mức tối thiểu, dòng làm tròn khớp tổng', () => {
   const segs = [{ start, end: start + 5 * 60_000 }];
   const plain = sessionQuote('gdr', segs, { config: c, base: 0 });
-  assert.ok(plain.total > 0 && plain.total < MIN_HOURLY_CHARGE);
+  const minBill = quote([{ start, end: start + 60 * 60_000 }], c, false);
+  assert.ok(plain.total > 0 && plain.total < minBill.total);
   const raised = sessionQuote('gdr', segs, {
     config: c,
     base: 0,
-    minCharge: { from: plain.total, to: MIN_HOURLY_CHARGE, at: start, actor: 'staff' },
+    minCharge: { from: plain.total, to: minBill.total, at: start, actor: 'staff' },
   });
-  assert.equal(raised.total, MIN_HOURLY_CHARGE);
+  assert.equal(raised.total, minBill.total);
   // lines (with the raise) + service fee + VAT add up to the new total
   const lines = raised.lines.reduce((n, l) => n + l.amount, 0);
-  assert.equal(lines + raised.fee + raised.vat, MIN_HOURLY_CHARGE);
-  assert.equal(raised.lines.at(-1)?.amount, MIN_HOURLY_CHARGE - plain.total);
+  assert.equal(lines + raised.fee + raised.vat, minBill.total);
+  assert.equal(raised.lines.at(-1)?.amount, minBill.total - plain.total);
   // A session already at or over the minimum is untouched.
   const long = [{ start, end: start + 120 * 60_000 }];
   const big = sessionQuote('gdr', long, { config: c, base: 0 });
   assert.deepEqual(
-    sessionQuote('gdr', long, { config: c, base: 0, minCharge: { from: 1, to: MIN_HOURLY_CHARGE, at: 0, actor: 'x' } }),
+    sessionQuote('gdr', long, { config: c, base: 0, minCharge: { from: 1, to: minBill.total, at: 0, actor: 'x' } }),
     big,
   );
 });
 
-test('làm tròn chỉ đề nghị cho phiên tính giờ đã kết thúc, chưa chuyển hình thức, dưới 100.000', () => {
+test('làm tròn chỉ đề nghị cho phiên tính giờ đã kết thúc, chưa chuyển hình thức, dưới mức tối thiểu theo khung giờ', () => {
   const price = (extra: object = {}) => JSON.stringify({ config: c, base: 0, ...extra });
-  const ok = { status: 'finished', service: 'gdr', price: price(), golf_amount: 60_000 };
-  assert.deepEqual(minChargeOffer(ok), { golf: 60_000, to: MIN_HOURLY_CHARGE });
-  assert.equal(minChargeOffer({ ...ok, golf_amount: 100_000 }), null);
+  const ok = { status: 'finished', service: 'gdr', price: price(), golf_amount: 60_000, start };
+  const minBill = quote([{ start, end: start + 60 * 60_000 }], c, false);
+  assert.deepEqual(minChargeOffer(ok), { golf: 60_000, to: minBill.total, playedMinutes: 0, minMinutes: 60 });
+  assert.equal(minChargeOffer({ ...ok, golf_amount: minBill.total }), null);
   assert.equal(minChargeOffer({ ...ok, golf_amount: 0 }), null);
   assert.equal(minChargeOffer({ ...ok, status: 'playing' }), null);
   assert.equal(minChargeOffer({ ...ok, service: '9' }), null);
   // switched between practice and a game: never rounded
   assert.equal(minChargeOffer({ ...ok, price: price({ prior: [{ service: '9', subtotal: 1, lines: [] }] }) }), null);
   // already rounded
-  assert.equal(minChargeOffer({ ...ok, price: price({ minCharge: { from: 1, to: 100000, at: 0, actor: 'x' } }) }), null);
+  assert.equal(minChargeOffer({ ...ok, price: price({ minCharge: { from: 1, to: minBill.total, at: 0, actor: 'x' } }) }), null);
+
+  // Buổi sáng (09:00) vs Buổi chiều (14:00) có mức tính 60 phút tối thiểu khác nhau theo khung giá
+  const morningStart = at('2026-11-02T09:00:00');
+  const morningMin = quote([{ start: morningStart, end: morningStart + 60 * 60_000 }], c, false);
+  const morningOffer = minChargeOffer({ ...ok, start: morningStart, golf_amount: 30_000 });
+  assert.equal(morningOffer?.to, morningMin.total);
+  assert.notEqual(morningMin.total, minBill.total);
 });

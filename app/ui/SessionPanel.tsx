@@ -255,7 +255,7 @@ export function SessionPanel({
                     const yes = await askConfirm({
                       title: `Chuyển sang ${label}?`,
                       message:
-                        'Phần đã chơi được giữ lại trên cùng một phiếu và cộng với hình thức mới. Không áp dụng làm tròn tối thiểu 100.000 ₫.',
+                        'Phần đã chơi được giữ lại trên cùng một phiếu và cộng với hình thức mới. Không áp dụng làm tròn tối thiểu.',
                       confirmLabel: 'Chuyển',
                     });
                     if (!yes) return;

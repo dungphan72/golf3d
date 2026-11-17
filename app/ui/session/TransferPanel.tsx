@@ -95,6 +95,14 @@ export function TransferPanel({
   const exact = txs.filter((t) => t.amount === effectiveAmount);
   const other = txs.filter((t) => t.amount !== effectiveAmount);
 
+  // Auto-confirm payment as soon as SePay reports an exact matched transaction!
+  useEffect(() => {
+    if (exact.length > 0 && !busy) {
+      const matched = exact[0];
+      onUse(matched.id);
+    }
+  }, [exact, busy, onUse]);
+
   function copyText(val: string, field: 'account' | 'code') {
     navigator.clipboard.writeText(val);
     setCopiedField(field);

@@ -340,6 +340,10 @@ export function sessionQuote(
 export function minChargeOffer(
   b: Pick<Booking, 'status' | 'service' | 'price' | 'golf_amount'> & {
     segments?: string;
+    started?: number | null;
+    start?: number;
+    finished?: number | null;
+    created?: number;
   },
 ): { golf: number; to: number; playedMinutes?: number; minMinutes?: number } | null {
   if (b.status !== 'finished' || b.service !== 'gdr' || b.golf_amount == null) return null;
@@ -357,54 +361,65 @@ export function minChargeOffer(
   }
   if (snap.prior?.length || snap.minCharge || snap.keepActual) return null;
 
-  // If segments are provided, compute based on the 60-minute (minBillMinutes) rule
-  if (b.segments) {
-    let segs: Segment[] = [];
-    try {
-      segs = JSON.parse(b.segments || '[]');
-    } catch {
-      segs = [];
-    }
-    // If segments array is empty but we have finished and start times
-    if (segs.length === 0 && (b as any).finished) {
-      const startTime = (b as any).started || (b as any).start;
-      if (startTime && (b as any).finished > startTime) {
-        segs.push({ start: startTime, end: (b as any).finished });
-      }
-    }
+  const config = snap.config ?? defaults;
+  const minMinutes = config.minBillMinutes ?? 60;
+  if (minMinutes <= 0) return null;
 
-    if (segs.length > 0) {
-      const minMinutes = snap.config?.minBillMinutes ?? 60;
-      if (minMinutes > 0) {
-        const playedMs = segs.reduce((sum, s) => sum + Math.max(0, s.end - s.start), 0);
-        const playedMinutes = Math.round(playedMs / 60_000);
-
-        // CRITICAL RULE: If the customer played 60 minutes or more, DO NOT ASK!
-        if (playedMinutes >= minMinutes) {
-          return null;
-        }
-
-        if (playedMs > 0 && playedMinutes < minMinutes) {
-          const config = snap.config ?? defaults;
-          const actualBill = quote(segs, config, snap.vip);
-          const minBill = quote(padToMinimum(segs, minMinutes).segments, config, snap.vip);
-          if (minBill.total > actualBill.total) {
-            return {
-              golf: actualBill.total,
-              to: minBill.total,
-              playedMinutes: Math.max(1, playedMinutes),
-              minMinutes,
-            };
-          }
-        }
-        return null;
-      }
+  let segs: Segment[] = [];
+  try {
+    segs = JSON.parse(b.segments || '[]');
+  } catch {
+    segs = [];
+  }
+  // If segments array is empty but we have finished and start times
+  if (segs.length === 0) {
+    const startTime = b.started || b.start || b.created;
+    if (startTime && b.finished && b.finished > startTime) {
+      segs.push({ start: startTime, end: b.finished });
     }
   }
 
-  // Legacy fallback ONLY when no segments are available
-  if (b.golf_amount <= 0 || b.golf_amount >= MIN_HOURLY_CHARGE) return null;
-  return { golf: b.golf_amount, to: MIN_HOURLY_CHARGE };
+  if (segs.length > 0) {
+    const playedMs = segs.reduce((sum, s) => sum + Math.max(0, s.end - s.start), 0);
+    const playedMinutes = Math.round(playedMs / 60_000);
+
+    // CRITICAL RULE: If the customer played 60 minutes or more, DO NOT ASK!
+    if (playedMinutes >= minMinutes) {
+      return null;
+    }
+
+    if (playedMs > 0 && playedMinutes < minMinutes) {
+      const actualBill = quote(segs, config, snap.vip);
+      const minBill = quote(padToMinimum(segs, minMinutes).segments, config, snap.vip);
+      if (minBill.total > actualBill.total) {
+        return {
+          golf: actualBill.total,
+          to: minBill.total,
+          playedMinutes: Math.max(1, playedMinutes),
+          minMinutes,
+        };
+      }
+    }
+    return null;
+  }
+
+  // Fallback when no segment details are available:
+  // Calculate dynamic 60-minute charge at the booking's time slot rate (morning vs afternoon vs weekend)
+  const time = b.started || b.start || b.created;
+  if (time && b.golf_amount > 0) {
+    const testSegs: Segment[] = [{ start: time, end: time + minMinutes * 60_000 }];
+    const minBill = quote(testSegs, config, snap.vip);
+    if (minBill.total > b.golf_amount) {
+      return {
+        golf: b.golf_amount,
+        to: minBill.total,
+        playedMinutes: 0,
+        minMinutes,
+      };
+    }
+  }
+
+  return null;
 }
 
 export function ready(c: Config) {

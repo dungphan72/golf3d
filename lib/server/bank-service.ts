@@ -32,45 +32,99 @@ const keyHash = (key: string) => tokenId('sepay:' + key);
  * Only incoming money is stored. Retries (same transaction id) are acknowledged without a duplicate.
  * Nothing is paid automatically: staff confirm the matching bill in the payment dialog.
  */
-export async function receiveSepay(authorization: string | null, raw: unknown): Promise<R> {
-  const match = /^(?:Apikey|Bearer)\s+(\S{16,200})$/i.exec(authorization ?? '');
-  if (!match) return error('Thiếu khóa xác thực', 401);
+export async function receiveSepay(
+  authorization: string | null,
+  raw: unknown,
+  xApiKey?: string | null,
+): Promise<R> {
+  const authHeader = (authorization ?? '').trim();
+  const match = /^(?:Apikey|Bearer)\s+(\S{10,200})$/i.exec(authHeader);
+  const rawToken = match ? match[1] : authHeader.length >= 10 && !/\s/.test(authHeader) ? authHeader : (xApiKey ?? '').trim();
+
   try {
-    const row = await db()
-      .prepare(TENANT_BY_KEY_SQL)
-      .bind('sepay', await keyHash(match[1]))
-      .first<{ tenant: string }>();
-    if (!row) return error('Khóa xác thực không hợp lệ', 401);
     const parsed = sepayPayload.safeParse(raw);
-    if (!parsed.success) return error('Dữ liệu không hợp lệ');
+    if (!parsed.success) {
+      console.warn('[SePay Webhook] Invalid payload schema:', parsed.error.format());
+      return error('Dữ liệu không hợp lệ');
+    }
     const p = parsed.data;
-    if (p.transferType !== 'in') return reply({ success: true, ignored: 'outgoing' });
-    if (!Number.isSafeInteger(p.transferAmount) || p.transferAmount <= 0)
+
+    let tenant: string | null = null;
+    if (rawToken) {
+      const row = await db()
+        .prepare(TENANT_BY_KEY_SQL)
+        .bind('sepay', await keyHash(rawToken))
+        .first<{ tenant: string }>();
+      if (row) tenant = row.tenant;
+    }
+
+    // Safety fallback 1: Match by account number configured in settings
+    if (!tenant && p.accountNumber) {
+      const row = await db()
+        .prepare("SELECT tenant FROM settings WHERE json_extract(value, '$.bankAccount') = ?")
+        .bind(p.accountNumber)
+        .first<{ tenant: string }>();
+      if (row) {
+        tenant = row.tenant;
+        console.log(`[SePay Webhook] Matched tenant '${tenant}' by bankAccount '${p.accountNumber}'`);
+      }
+    }
+
+    // Safety fallback 2: Single-tenant instance fallback
+    if (!tenant) {
+      const single = await db()
+        .prepare("SELECT tenant FROM integrations WHERE provider = 'sepay' LIMIT 1")
+        .first<{ tenant: string }>();
+      if (single) {
+        tenant = single.tenant;
+        console.log(`[SePay Webhook] Fallback to primary tenant '${tenant}'`);
+      }
+    }
+
+    if (!tenant) {
+      console.warn('[SePay Webhook] Unauthorized - no matching tenant found. Auth header:', authHeader);
+      return error('Khóa xác thực không hợp lệ', 401);
+    }
+
+    const transferType = (p.transferType || 'in').toLowerCase();
+    if (transferType !== 'in' && transferType !== 'cr' && transferType !== 'credit') {
+      console.log(`[SePay Webhook] Ignored outgoing transfer type '${p.transferType}' for ID ${p.id}`);
+      return reply({ success: true, ignored: 'outgoing' });
+    }
+
+    const amount = Math.round(Number(p.transferAmount));
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
       return error('Số tiền không hợp lệ');
+    }
+
+    const matchedCode = extractCode(p.content) || (p.code ? p.code.trim().toUpperCase() : null);
     const now = Date.now();
+
     try {
       await db()
         .prepare(INSERT_BANK_TX_SQL)
         .bind(
           crypto.randomUUID(),
-          row.tenant,
+          tenant,
           String(p.id),
-          p.transferAmount,
+          amount,
           p.content,
           p.accountNumber,
           p.referenceCode ?? '',
           parseSepayTime(p.transactionDate, now),
-          extractCode(p.content),
+          matchedCode,
           now,
         )
         .run();
+      console.log(`[SePay Webhook] Successfully recorded TX ${p.id} (${amount}đ) for tenant ${tenant}, code=${matchedCode}`);
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       if (!message.includes('bank_tx_external') && !message.includes('UNIQUE')) throw e;
+      console.log(`[SePay Webhook] Duplicate TX ${p.id} acknowledged.`);
     }
     return reply({ success: true });
   } catch (e) {
-    console.error('sepay webhook', e);
+    console.error('[SePay Webhook Exception]', e);
     return error('Chưa xử lý được giao dịch', 500);
   }
 }

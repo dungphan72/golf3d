@@ -17,7 +17,11 @@ export async function POST(req: Request) {
   const ip = clientIp(req);
   if (ip !== 'unknown' && (await recentAttempts('sepay_fail', ip, 10 * 60_000)) >= 20)
     return httpError('Quá nhiều yêu cầu, thử lại sau ít phút', 429);
-  const result = await receiveSepay(req.headers.get('authorization'), body);
+  const result = await receiveSepay(
+    req.headers.get('authorization'),
+    body,
+    req.headers.get('x-api-key'),
+  );
   if (result.status === 401 && ip !== 'unknown') await noteAttempt('sepay_fail', ip);
   return sendResult(result);
 }

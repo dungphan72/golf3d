@@ -15,8 +15,13 @@ export function paymentCode(bookingId: string) {
 }
 /** Finds a payment code inside a free-text transfer note (banks strip spaces and punctuation). */
 export function extractCode(content: string) {
-  const match = content.toUpperCase().match(new RegExp(CODE_PREFIX + '[A-Z0-9]{8}'));
-  return match ? match[0] : null;
+  if (!content) return null;
+  const upper = content.toUpperCase().replace(/[\s\-_.:]/g, '');
+  const match = upper.match(new RegExp(CODE_PREFIX + '([A-Z0-9]{8})'));
+  if (match) return CODE_PREFIX + match[1];
+  // Secondary check without stripping punctuation
+  const directMatch = content.toUpperCase().match(new RegExp(CODE_PREFIX + '[A-Z0-9]{8}'));
+  return directMatch ? directMatch[0] : null;
 }
 
 /** Supported NAPAS banks mapped to SePay bank codes (https://my.sepay.vn). */
@@ -83,9 +88,9 @@ export const sepayPayload = z
     accountNumber: z.string().max(40).default(''),
     code: z.string().max(100).nullable().optional(),
     content: z.string().max(500).default(''),
-    transferType: z.string().max(10),
-    transferAmount: z.number(),
-    accumulated: z.number().optional(),
+    transferType: z.string().max(20).default('in'),
+    transferAmount: z.coerce.number(),
+    accumulated: z.coerce.number().optional(),
     subAccount: z.string().max(100).nullable().optional(),
     referenceCode: z.string().max(100).nullable().optional(),
     description: z.string().max(1000).optional(),

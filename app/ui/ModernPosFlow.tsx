@@ -1213,9 +1213,9 @@ export function ModernPosFlow({
         } catch {
           gamePrice = `, cộng với giá ${SERVICE_LABEL[target]}`;
         }
-        detail = `Tiền tập theo giờ đến lúc này được giữ lại${gamePrice}. Không áp dụng làm tròn tối thiểu ${money(MIN_HOURLY_CHARGE)}.`;
+        detail = `Tiền tập theo giờ đến lúc này được giữ lại${gamePrice}. Không áp dụng làm tròn tối thiểu.`;
       } else {
-        detail = `Giá lượt ${SERVICE_LABEL[from]} đã chơi${snap.base ? ` (${money(snap.base)})` : ''} được giữ lại; tiền tập theo giờ tính từ lúc chuyển. Không áp dụng làm tròn tối thiểu ${money(MIN_HOURLY_CHARGE)}.`;
+        detail = `Giá lượt ${SERVICE_LABEL[from]} đã chơi${snap.base ? ` (${money(snap.base)})` : ''} được giữ lại; tiền tập theo giờ tính từ lúc chuyển. Không áp dụng làm tròn tối thiểu.`;
       }
       const yes = await askConfirm({
         title: `Chuyển từ ${SERVICE_LABEL[from] || from} sang ${SERVICE_LABEL[target]}?`,

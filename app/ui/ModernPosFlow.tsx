@@ -380,36 +380,46 @@ export function ModernPosFlow({
     });
   }, [data.bookings, data.maintenance, tick]);
 
-  // Auto-select first active booking or room on mount
+  // Initial selection on mount: pick first active room if available, otherwise default 'line-1'
+  const hasInitializedRoomRef = useRef(false);
   useEffect(() => {
-    if (activeBookingId) {
-      const stillExists = data.bookings.find((b) => b.id === activeBookingId);
-      if (stillExists && stillExists.status !== 'cancelled') return;
+    if (hasInitializedRoomRef.current) return;
+    hasInitializedRoomRef.current = true;
+    const firstActive = roomStatuses.find((r) => r.booking);
+    if (firstActive?.booking) {
+      setSelectedRoomId(firstActive.room.id);
+      setCheckInRoomId(firstActive.room.id);
+      setActiveBookingId(firstActive.booking.id);
+      setDesktopMode(firstActive.booking.status === 'finished' ? 'payment' : 'overview');
     }
-    const chosenRoom = roomStatuses.find((r) => r.room.id === selectedRoomId);
-    if (chosenRoom?.booking) {
-      setActiveBookingId(chosenRoom.booking.id);
-    } else {
-      const firstActive = roomStatuses.find((r) => r.booking);
-      if (firstActive?.booking) {
-        setSelectedRoomId(firstActive.room.id);
-        setActiveBookingId(firstActive.booking.id);
+  }, [roomStatuses]);
+
+  // Keep activeBookingId in sync with the currently selected room when bookings change
+  useEffect(() => {
+    if (!hasInitializedRoomRef.current) return;
+    const currentRoomStatus = roomStatuses.find((r) => r.room.id === selectedRoomId);
+    if (currentRoomStatus?.booking) {
+      if (activeBookingId !== currentRoomStatus.booking.id) {
+        setActiveBookingId(currentRoomStatus.booking.id);
       }
+    } else if (activeBookingId !== null) {
+      setActiveBookingId(null);
     }
-  }, [data.bookings, roomStatuses, activeBookingId, selectedRoomId]);
+  }, [data.bookings, roomStatuses, selectedRoomId, activeBookingId]);
 
   const activeBooking: Booking | null = useMemo(() => {
+    const rStatus = roomStatuses.find((r) => r.room.id === selectedRoomId);
+    if (!rStatus?.booking) return null;
     if (activeBookingId) {
-      const found = data.bookings.find((b) => b.id === activeBookingId);
+      const found = data.bookings.find((b) => b.id === activeBookingId && b.room === selectedRoomId);
       if (found) return found;
     }
-    const rStatus = roomStatuses.find((r) => r.room.id === selectedRoomId);
-    return rStatus?.booking ?? null;
+    return rStatus.booking;
   }, [activeBookingId, data.bookings, roomStatuses, selectedRoomId]);
 
   const selectedRoomObj = useMemo(
-    () => rooms.find((r) => r.id === (activeBooking?.room ?? selectedRoomId)) ?? rooms[0],
-    [activeBooking?.room, selectedRoomId],
+    () => rooms.find((r) => r.id === selectedRoomId) ?? rooms[0],
+    [selectedRoomId],
   );
 
   // Load F&B & Bill for active booking (or general menu when no booking)
@@ -1047,7 +1057,7 @@ export function ModernPosFlow({
   async function handleStartOrWalkIn() {
     if (saving) return;
     setErrorMsg('');
-    const targetRoom = checkInRoomId || selectedRoomId;
+    const targetRoom = selectedRoomId || checkInRoomId;
     const rStatus = roomStatuses.find((r) => r.room.id === targetRoom);
 
     // If there is a 'booked' reservation on this line, start it

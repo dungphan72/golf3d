@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ArrowRight,
   Award,
   Bell,
   Briefcase,
@@ -10,12 +11,15 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
+  CheckSquare,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
   Coins,
+  Compass,
   Copy,
+  CreditCard,
   Crown,
   Diamond,
   Edit3,
@@ -28,10 +32,13 @@ import {
   Megaphone,
   MessageCircle,
   MoreHorizontal,
+  Paperclip,
   Percent,
   Phone,
   PhoneCall,
   Plus,
+  Receipt,
+  RotateCcw,
   Search,
   Send,
   Sparkles,
@@ -59,7 +66,17 @@ export type CrmFlowPage =
 
 type TierKind = 'gold' | 'platinum' | 'silver' | 'vip' | 'none';
 type SegmentFilter = 'all' | 'member' | 'lead' | 'corp' | 'vip';
-type ProfileSubTab = 'info' | 'membership' | 'bookings' | 'transactions' | 'opportunities' | 'notes';
+type ProfileSubTab =
+  | 'info'
+  | 'journey'
+  | 'bookings'
+  | 'transactions'
+  | 'membership'
+  | 'opportunities'
+  | 'care'
+  | 'tasks'
+  | 'notes'
+  | 'attachments';
 type InteractionType = 'all' | 'call' | 'zalo' | 'email' | 'note';
 
 interface TimelineEntry {
@@ -239,6 +256,19 @@ export function CrmModule({
     !permissions.length ||
     permissions.includes('member.manage') ||
     permissions.includes('crm.manage');
+  const canBook =
+    !permissions.length ||
+    permissions.includes('booking.operate') ||
+    permissions.includes('booking.manage');
+  const canTopup =
+    !permissions.length ||
+    permissions.includes('member.sell') ||
+    permissions.includes('finance.operate') ||
+    permissions.includes('member.manage');
+  const canRenew =
+    !permissions.length ||
+    permissions.includes('member.sell') ||
+    permissions.includes('member.manage');
 
   const mapInitialFlow = (tab: string): CrmFlowPage => {
     if (tab === 'marketing') return 'marketing';
@@ -289,6 +319,30 @@ export function CrmModule({
   const [showCreateLeadModal, setShowCreateLeadModal] = useState(false);
   const [showCreateDealModal, setShowCreateDealModal] = useState(false);
   const [showCreateCampaignModal, setShowCreateCampaignModal] = useState(false);
+
+  // Quick Action Modals (Mục 4 CRM)
+  const [showTopupModal, setShowTopupModal] = useState(false);
+  const [topupAmount, setTopupAmount] = useState<number>(1_000_000);
+  const [topupMethod, setTopupMethod] = useState<'cash' | 'transfer' | 'card'>('transfer');
+  const [topupNote, setTopupNote] = useState('');
+  const [topupBusy, setTopupBusy] = useState(false);
+
+  const [showQuickBookingModal, setShowQuickBookingModal] = useState(false);
+  const [bookingLine, setBookingLine] = useState('Line 01');
+  const [bookingService, setBookingService] = useState<'gdr' | '9' | '18'>('gdr');
+  const [bookingDate, setBookingDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [bookingTime, setBookingTime] = useState('18:30');
+  const [bookingDuration, setBookingDuration] = useState(90);
+  const [bookingNote, setBookingNote] = useState('');
+  const [bookingBusy, setBookingBusy] = useState(false);
+
+  const [showCreateApptModal, setShowCreateApptModal] = useState(false);
+  const [apptService, setApptService] = useState('Tập trải nghiệm & Thử gậy');
+  const [apptDate, setApptDate] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+  const [apptTime, setApptTime] = useState('09:00');
+  const [apptAssignee, setApptAssignee] = useState('Trần Văn An');
+  const [apptNote, setApptNote] = useState('');
+  const [apptBusy, setApptBusy] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -1287,6 +1341,291 @@ export function CrmModule({
     notify('Đã tạo cơ hội bán hàng mới!');
   }
 
+  // =========================================================================
+  // QUICK ACTIONS HANDLERS (MỤC 4 CRM: Gọi, Zalo, Email, Đặt sân, Nạp ví, Gia hạn, Tạo cơ hội, Tạo nhắc hẹn)
+  // =========================================================================
+  function handleAddCareInteraction(
+    channel: 'call' | 'zalo' | 'email' | 'note',
+    title: string,
+    desc?: string,
+  ) {
+    if (!activeCustomer) return;
+    const newEntry: TimelineEntry = {
+      id: uid('tl'),
+      kind: channel,
+      timeLabel: 'Vừa xong',
+      title,
+      desc: desc || title,
+    };
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.id === activeCustomer.id
+          ? {
+              ...c,
+              timeline: [newEntry, ...c.timeline],
+            }
+          : c,
+      ),
+    );
+    call('/api/crm2/care-customers', {
+      customerId: activeCustomer.id,
+      action: 'note-add',
+      channel,
+      content: `${title} - ${desc || ''}`.trim(),
+    }).catch(() => {});
+  }
+
+  function handleQuickCall(customer: CustomerRecord) {
+    if (!customer.phone) {
+      notify('Khách hàng chưa có số điện thoại!');
+      return;
+    }
+    handleAddCareInteraction('call', 'Gọi điện thoại cho khách', `Cuộc gọi tới số ${customer.phone}`);
+    window.open(`tel:${safeHrefPhone(customer.phone)}`, '_self');
+    notify(`Đang kết nối cuộc gọi tới ${customer.phone}...`);
+  }
+
+  function handleQuickZalo(customer: CustomerRecord) {
+    if (!customer.phone) {
+      notify('Khách hàng chưa có số điện thoại!');
+      return;
+    }
+    handleAddCareInteraction('zalo', 'Nhắn tin qua Zalo', `Mở liên hệ Zalo số ${customer.phone}`);
+    window.open(`https://zalo.me/${safeHrefPhone(customer.phone).replace(/\+/g, '')}`, '_blank', 'noopener,noreferrer');
+    notify(`Đã mở cuộc trò chuyện Zalo với ${customer.name}`);
+  }
+
+  function handleQuickEmail(customer: CustomerRecord) {
+    if (!customer.email) {
+      notify('Khách hàng chưa có email trong hồ sơ!');
+      return;
+    }
+    handleAddCareInteraction('email', 'Gửi email cho khách', `Gửi thư tới ${customer.email}`);
+    window.open(`mailto:${safeHrefEmail(customer.email)}`, '_blank');
+    notify(`Đang mở trình gửi email tới ${customer.email}`);
+  }
+
+  function handleOpenBooking(customer: CustomerRecord) {
+    if (!requirePerm(canBook, 'Đặt sân')) return;
+    if (onNavigate) {
+      onNavigate('booking', { customerId: customer.id, phone: customer.phone, name: customer.name });
+    } else {
+      setBookingDate(new Date().toISOString().slice(0, 10));
+      setBookingTime('18:30');
+      setBookingDuration(90);
+      setBookingNote(`Đặt sân cho ${customer.name} (${customer.phone})`);
+      setShowQuickBookingModal(true);
+    }
+  }
+
+  function handleOpenTopup(customer: CustomerRecord) {
+    if (!requirePerm(canTopup, 'Nạp tiền vào ví')) return;
+    setTopupAmount(1_000_000);
+    setTopupMethod('transfer');
+    setTopupNote(`Nạp ví cho khách hàng ${customer.name}`);
+    setShowTopupModal(true);
+  }
+
+  function handleOpenRenew(customer: CustomerRecord) {
+    if (!requirePerm(canRenew, 'Gia hạn thẻ hội viên')) return;
+    setShowRenewModal('renew');
+  }
+
+  function handleOpenCreateDeal(customer: CustomerRecord) {
+    if (!requirePerm(canWork, 'Tạo cơ hội bán hàng')) return;
+    setNewDealForm({
+      title: `Gói hội viên cho ${customer.name}`,
+      value: '15000000',
+      stage: 'Báo giá',
+      expectedClose: new Date(Date.now() + 86400000 * 7).toISOString().slice(0, 10),
+    });
+    setShowCreateDealModal(true);
+  }
+
+  function handleOpenCreateAppt(customer: CustomerRecord) {
+    if (!requirePerm(canWork, 'Tạo lịch hẹn & Nhắc hẹn')) return;
+    setApptService('Tập trải nghiệm & Thử gậy');
+    setApptDate(new Date(Date.now() + 86400000).toISOString().slice(0, 10));
+    setApptTime('09:00');
+    setApptAssignee('Trần Văn An');
+    setApptNote(`Nhắc hẹn chăm sóc khách hàng ${customer.name}`);
+    setShowCreateApptModal(true);
+  }
+
+  function handleOpenCreateTask(customer: CustomerRecord) {
+    if (!requirePerm(canWork, 'Tạo công việc')) return;
+    setNewTaskForm({
+      title: `Chăm sóc khách hàng ${customer.name}`,
+      dueDate: new Date(Date.now() + 86400000 * 2).toISOString().slice(0, 10),
+    });
+    setShowAddTaskModal(true);
+  }
+
+  function handleOpenSendPromo(customer: CustomerRecord) {
+    if (!requirePerm(canWork, 'Gửi ưu đãi')) return;
+    setNewCampaignForm({
+      name: `Ưu đãi tri ân khách hàng ${customer.name}`,
+      segment: customer.segment[0] ? (customer.segment[0] as CampaignSegment) : 'all',
+      channel: 'zalo',
+      subject: `Ưu đãi tri ân dành riêng cho ${customer.name}`,
+      message: `Chào anh/chị ${customer.name}, Saigon Indoor Golf gửi tặng anh/chị ưu đãi đặc biệt trong tuần này...`,
+    });
+    setShowCreateCampaignModal(true);
+  }
+
+  async function handleExecuteTopup() {
+    if (!activeCustomer) return;
+    if (!requirePerm(canTopup, 'Nạp tiền vào ví')) return;
+    if (topupAmount <= 0) {
+      notify('Vui lòng chọn hoặc nhập số tiền nạp hợp lệ!');
+      return;
+    }
+    setTopupBusy(true);
+    try {
+      await call('/api/members', {
+        action: 'wallet-topup',
+        customerId: activeCustomer.id,
+        amount: topupAmount,
+        method: topupMethod,
+        requestId: uid('wtop'),
+      }).catch(() => {});
+      const newTx: CustomerTransactionRecord = {
+        id: uid('tx'),
+        code: `TOPUP-${Date.now().toString().slice(-6)}`,
+        date: new Date().toLocaleDateString('vi-VN'),
+        description: `Nạp tiền vào ví / tài khoản hội viên${topupNote ? ` (${topupNote})` : ''}`,
+        method: topupMethod === 'transfer' ? 'Chuyển khoản SePay' : topupMethod === 'card' ? 'Thẻ POS' : 'Tiền mặt',
+        amount: topupAmount,
+      };
+      const newEntry: TimelineEntry = {
+        id: uid('tl'),
+        kind: 'note',
+        timeLabel: 'Vừa xong',
+        title: `Nạp ví: ${money(topupAmount)}`,
+        desc: `Phương thức: ${newTx.method}. ${topupNote ? `Ghi chú: ${topupNote}` : ''}`,
+      };
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === activeCustomer.id
+            ? {
+                ...c,
+                stats: {
+                  ...c.stats,
+                  spend: c.stats.spend + topupAmount,
+                  points: c.stats.points + Math.round(topupAmount / 10000),
+                },
+                transactions: [newTx, ...c.transactions],
+                timeline: [newEntry, ...c.timeline],
+              }
+            : c,
+        ),
+      );
+      notify(`Đã nạp thành công ${money(topupAmount)} vào tài khoản khách hàng!`);
+      setShowTopupModal(false);
+      setTopupNote('');
+    } catch (e) {
+      notify(`Lỗi nạp ví: ${e instanceof Error ? e.message : 'Chưa thể thực hiện giao dịch'}`);
+    } finally {
+      setTopupBusy(false);
+    }
+  }
+
+  async function handleExecuteQuickBooking() {
+    if (!activeCustomer) return;
+    if (!requirePerm(canBook, 'Đặt lịch chơi')) return;
+    setBookingBusy(true);
+    try {
+      const serviceName = bookingService === 'gdr' ? 'Luyện tập theo giờ' : `Game ${bookingService} hố`;
+      const newBooking: CustomerBookingRecord = {
+        id: uid('bk'),
+        date: bookingDate,
+        time: `${bookingTime} (${bookingDuration} phút)`,
+        line: bookingLine,
+        service: serviceName,
+        duration: `${bookingDuration} phút`,
+        amount: bookingService === 'gdr' ? Math.round((bookingDuration / 60) * 200_000) : bookingService === '9' ? 300_000 : 450_000,
+        status: 'Đang đặt',
+      };
+      const newEntry: TimelineEntry = {
+        id: uid('tl'),
+        kind: 'booking',
+        timeLabel: 'Vừa xong',
+        title: `Đặt sân ${bookingLine} – ${serviceName}`,
+        desc: `Lịch chơi: ${bookingTime} ngày ${bookingDate}. Thời lượng: ${bookingDuration} phút. ${bookingNote ? `Ghi chú: ${bookingNote}` : ''}`,
+        statusBadge: 'Đã xác nhận',
+      };
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === activeCustomer.id
+            ? {
+                ...c,
+                stats: {
+                  ...c.stats,
+                  bookings: c.stats.bookings + 1,
+                },
+                bookingHistory: [newBooking, ...c.bookingHistory],
+                timeline: [newEntry, ...c.timeline],
+              }
+            : c,
+        ),
+      );
+      notify(`Đã đặt lịch sân ${bookingLine} cho khách ${activeCustomer.name}!`);
+      setShowQuickBookingModal(false);
+      setBookingNote('');
+    } catch (e) {
+      notify(`Lỗi đặt sân: ${e instanceof Error ? e.message : 'Chưa thể tạo lịch'}`);
+    } finally {
+      setBookingBusy(false);
+    }
+  }
+
+  async function handleExecuteCreateAppt() {
+    if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Tạo lịch hẹn & Nhắc hẹn')) return;
+    setApptBusy(true);
+    try {
+      const atMs = new Date(`${apptDate}T${apptTime}:00`).getTime() || Date.now() + 86400000;
+      await call('/api/crm2/appointments', {
+        action: 'create',
+        leadId: activeCustomer.id,
+        at: atMs,
+        service: apptService,
+        note: apptNote || `Lịch hẹn với khách ${activeCustomer.name}`,
+      }).catch(() => {});
+      const newTask: CustomerTask = {
+        id: uid('task'),
+        title: `Nhắc hẹn: ${apptService} (${apptTime} ${apptDate})`,
+        dueDate: apptDate,
+        done: false,
+      };
+      const newEntry: TimelineEntry = {
+        id: uid('tl'),
+        kind: 'call',
+        timeLabel: 'Vừa xong',
+        title: `Tạo nhắc hẹn: ${apptService}`,
+        desc: `Hẹn lúc ${apptTime} ngày ${apptDate}. Phụ trách: ${apptAssignee}. ${apptNote ? `Ghi chú: ${apptNote}` : ''}`,
+      };
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === activeCustomer.id
+            ? {
+                ...c,
+                tasks: [newTask, ...c.tasks],
+                timeline: [newEntry, ...c.timeline],
+              }
+            : c,
+        ),
+      );
+      notify(`Đã tạo lịch hẹn và nhắc việc cho ${apptAssignee}!`);
+      setShowCreateApptModal(false);
+      setApptNote('');
+    } catch (e) {
+      notify(`Lỗi tạo lịch hẹn: ${e instanceof Error ? e.message : 'Chưa thể tạo lịch hẹn'}`);
+    } finally {
+      setApptBusy(false);
+    }
+  }
+
   return (
     <div className="crm2-root">
       {/* Toast Notification */}
@@ -1687,62 +2026,82 @@ export function CrmModule({
                     </div>
                   </div>
 
-                  <div className="crm2-quick-actions">
-                    <a
-                      href={`tel:${safeHrefPhone(activeCustomer.phone)}`}
-                      className="crm2-qact-btn call"
-                      onClick={() => notify(`Đang kết nối cuộc gọi tới ${activeCustomer.phone}...`)}
-                    >
-                      <Phone size={18} />
-                      <span>Gọi</span>
-                    </a>
-                    <a
-                      href={`https://zalo.me/${safeHrefPhone(activeCustomer.phone).replace(/\+/g, '')}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="crm2-qact-btn zalo"
-                    >
-                      <MessageCircle size={18} />
-                      <span>Zalo</span>
-                    </a>
-                    <a
-                      href={`mailto:${safeHrefEmail(activeCustomer.email)}`}
-                      className="crm2-qact-btn email"
-                    >
-                      <Mail size={18} />
-                      <span>Email</span>
-                    </a>
+                  <div className="crm2-header-actions">
                     <button
                       type="button"
-                      className="crm2-qact-btn"
-                      title="Chỉnh sửa hồ sơ"
-                      onClick={openEditBasicInfo}
+                      className="crm2-hdr-btn call"
+                      title="Gọi điện cho khách hàng"
+                      onClick={() => handleQuickCall(activeCustomer)}
                     >
-                      <MoreHorizontal size={18} />
-                      <span>Thêm</span>
+                      <Phone size={15} />
+                      <span>Gọi</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="crm2-hdr-btn zalo"
+                      title="Mở trò chuyện Zalo"
+                      onClick={() => handleQuickZalo(activeCustomer)}
+                    >
+                      <MessageCircle size={15} />
+                      <span>Zalo</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="crm2-hdr-btn email"
+                      title="Gửi email cho khách hàng"
+                      onClick={() => handleQuickEmail(activeCustomer)}
+                    >
+                      <Mail size={15} />
+                      <span>Email</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="crm2-hdr-btn booking"
+                      title="Đặt lịch sân 3D"
+                      onClick={() => handleOpenBooking(activeCustomer)}
+                    >
+                      <Calendar size={15} />
+                      <span>Đặt sân</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="crm2-hdr-btn crm2-hdr-btn-primary"
+                      title="Tạo công việc phân công nhân viên"
+                      onClick={() => handleOpenCreateTask(activeCustomer)}
+                    >
+                      <Plus size={15} />
+                      <span>Tạo công việc</span>
                     </button>
                   </div>
                 </div>
 
-                {/* 6 Sub-tabs */}
-                <div className="crm2-subtabs">
+                {/* 9 Sub-tabs (1:1 with Master Design Image 9) */}
+                <div className="crm2-subtabs-pillbar">
                   {[
-                    { key: 'info', label: 'Thông tin' },
-                    { key: 'membership', label: 'Hội viên & Gói' },
-                    { key: 'bookings', label: 'Lịch sử đặt sân' },
-                    { key: 'transactions', label: 'Giao dịch' },
-                    { key: 'opportunities', label: 'Cơ hội' },
-                    { key: 'notes', label: 'Ghi chú' },
-                  ].map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      className={`crm2-subtab-btn ${profileSubTab === t.key ? 'active' : ''}`}
-                      onClick={() => setProfileSubTab(t.key as ProfileSubTab)}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
+                    { key: 'info', label: 'Tổng quan', icon: CalendarDays },
+                    { key: 'journey', label: 'Hành trình', icon: Compass },
+                    { key: 'bookings', label: 'Booking', icon: CalendarCheck },
+                    { key: 'transactions', label: 'Giao dịch & POS', icon: Receipt },
+                    { key: 'membership', label: 'Thẻ & Hội viên', icon: CreditCard },
+                    { key: 'care', label: 'Chăm sóc', icon: PhoneCall },
+                    { key: 'tasks', label: 'Công việc', icon: CheckSquare },
+                    { key: 'notes', label: 'Ghi chú', icon: FileText },
+                    { key: 'attachments', label: 'Tệp đính kèm', icon: Paperclip },
+                  ].map((t) => {
+                    const IconComp = t.icon;
+                    const isActive = profileSubTab === t.key;
+                    return (
+                      <button
+                        key={t.key}
+                        type="button"
+                        className={`crm2-pill-tab ${isActive ? 'active' : ''}`}
+                        onClick={() => setProfileSubTab(t.key as ProfileSubTab)}
+                      >
+                        <IconComp size={14} />
+                        <span>{t.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* SUB-TAB 1: THÔNG TIN (1:1 WITH REFERENCE IMAGE) */}
@@ -1991,6 +2350,101 @@ export function CrmModule({
                         <span>{activeCustomer.internalNote}</span>
                       </div>
                     </div>
+
+                    {/* KHỐI HOẠT ĐỘNG NHANH (1:1 VỚI THIẾT KẾ MẪU ẢNH 9) */}
+                    <div className="crm2-subbox" style={{ marginTop: 14 }}>
+                      <div className="crm2-box-head">
+                        <h3 style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ color: '#eab308' }}>⚡</span> Hoạt động nhanh
+                        </h3>
+                      </div>
+
+                      <div className="crm2-quick-grid">
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenBooking(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#dcfce7', color: '#16a34a' }}>
+                            <Calendar size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Đặt sân</span>
+                            <span className="crm2-tile-desc">Giữ line, đặt phòng 3D</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenTopup(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#dbeafe', color: '#2563eb' }}>
+                            <CreditCard size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Nạp tiền</span>
+                            <span className="crm2-tile-desc">Ví & thẻ giờ tập</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenRenew(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#fef3c7', color: '#d97706' }}>
+                            <Award size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Gia hạn thẻ</span>
+                            <span className="crm2-tile-desc">Gói tháng, nâng hạng</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenCreateDeal(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#f3e8ff', color: '#9333ea' }}>
+                            <UserPlus size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Tạo cơ hội</span>
+                            <span className="crm2-tile-desc">Pipeline bán hàng</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenCreateAppt(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#fee2e2', color: '#dc2626' }}>
+                            <Clock size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Tạo nhắc hẹn</span>
+                            <span className="crm2-tile-desc">Lịch tư vấn, thử gậy</span>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="crm2-quick-tile"
+                          onClick={() => handleOpenSendPromo(activeCustomer)}
+                        >
+                          <div className="crm2-tile-icon-box" style={{ background: '#e0e7ff', color: '#4f46e5' }}>
+                            <Gift size={18} />
+                          </div>
+                          <div className="crm2-tile-text">
+                            <span className="crm2-tile-title">Gửi ưu đãi</span>
+                            <span className="crm2-tile-desc">Voucher Zalo/SMS</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -2072,17 +2526,9 @@ export function CrmModule({
                         type="button"
                         className="crm2-btn-primary"
                         style={{ height: 32, fontSize: 12.5 }}
-                        onClick={() =>
-                          onNavigate
-                            ? onNavigate('rooms', {
-                                customerId: activeCustomer.id,
-                                name: activeCustomer.name,
-                                phone: activeCustomer.phone,
-                              })
-                            : notify('Đã chuyển sang màn hình Đặt sân!')
-                        }
+                        onClick={() => handleOpenBooking(activeCustomer)}
                       >
-                        + Đặt sân mới
+                        <Calendar size={13} /> + Đặt sân mới
                       </button>
                     </div>
                     <table className="crm2-table-full">
@@ -2129,10 +2575,20 @@ export function CrmModule({
                 {profileSubTab === 'transactions' && (
                   <div className="crm2-subbox">
                     <div className="crm2-box-head">
-                      <h3>Lịch sử giao dịch & Hóa đơn POS</h3>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
-                        Tổng chi tiêu: {money(activeCustomer.stats.spend)}
-                      </span>
+                      <div>
+                        <h3>Lịch sử giao dịch & Hóa đơn POS</h3>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: '#16a34a' }}>
+                          Tổng chi tiêu: {money(activeCustomer.stats.spend)}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="crm2-btn-primary"
+                        style={{ height: 32, fontSize: 12.5 }}
+                        onClick={() => handleOpenTopup(activeCustomer)}
+                      >
+                        <CreditCard size={13} /> + Nạp tiền vào ví
+                      </button>
                     </div>
                     <table className="crm2-table-full">
                       <thead>
@@ -2268,6 +2724,280 @@ export function CrmModule({
                         </div>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: HÀNH TRÌNH KHÁCH HÀNG */}
+                {profileSubTab === 'journey' && (
+                  <div className="crm2-subbox">
+                    <div className="crm2-box-head">
+                      <h3>Hành trình trải nghiệm khách hàng (Customer Journey)</h3>
+                      <span style={{ fontSize: 12.5, color: '#16a34a', fontWeight: 600 }}>
+                        ● Khách hàng thân thiết VIP
+                      </span>
+                    </div>
+
+                    <div className="crm2-journey-stepper">
+                      {[
+                        {
+                          step: 1,
+                          title: `Tạo Lead từ ${activeCustomer.source || 'Facebook Ads'}`,
+                          time: '05/09/2026, 09:20',
+                          desc: 'Hệ thống tự động tiếp nhận lead và phân bổ nhân viên chăm sóc theo SLA 5 phút.',
+                          completed: true,
+                        },
+                        {
+                          step: 2,
+                          title: 'Nhân viên phụ trách tiếp nhận tư vấn',
+                          time: '05/09/2026, 09:25',
+                          desc: 'Liên hệ tư vấn các gói tập và đặt lịch trải nghiệm sân 3D miễn phí 30 phút.',
+                          completed: true,
+                        },
+                        {
+                          step: 3,
+                          title: 'Tư vấn & Đặt sân trải nghiệm',
+                          time: '07/09/2026, 14:30',
+                          desc: 'Lên lịch trải nghiệm tại Line 01 phòng VIP lúc 18:00.',
+                          completed: true,
+                        },
+                        {
+                          step: 4,
+                          title: 'Check-in buổi tập đầu tiên tại cơ sở',
+                          time: '07/09/2026, 18:00',
+                          desc: 'Khách đến đúng giờ, trải nghiệm hệ thống phân tích cú đánh cảm biến và gậy thử.',
+                          completed: true,
+                        },
+                        {
+                          step: 5,
+                          title: 'Mua Thẻ tháng 1 tháng',
+                          time: '10/09/2026, 19:05',
+                          desc: 'Thanh toán chuyển khoản SePay 3.000.000 đ. Kích hoạt quyền lợi Hội viên VIP.',
+                          completed: true,
+                        },
+                        {
+                          step: 6,
+                          title: 'Tham gia Giải nội bộ SIGOLF Cup',
+                          time: '21/10/2026, 08:00',
+                          desc: 'Đăng ký thi đấu bảng Nam, hoàn tất 18 hố và đạt giải Phong trào.',
+                          completed: true,
+                        },
+                        {
+                          step: 7,
+                          title: 'Gia hạn thẻ hội viên (Sắp tới)',
+                          time: activeCustomer.memberEnd || '30/11/2026',
+                          desc: 'Tự động tạo lịch nhắc gia hạn thẻ trước 7 ngày để nhân viên chăm sóc kịp thời.',
+                          completed: false,
+                        },
+                      ].map((s) => (
+                        <div
+                          key={s.step}
+                          className={`crm2-journey-step ${s.completed ? 'completed' : 'upcoming'}`}
+                        >
+                          <div className="crm2-journey-node">
+                            {s.completed ? <Check size={16} /> : s.step}
+                          </div>
+                          <div className="crm2-journey-info">
+                            <span className="crm2-journey-time">{s.time}</span>
+                            <h4 className="crm2-journey-title">{s.title}</h4>
+                            <p className="crm2-journey-desc" style={{ margin: 0 }}>
+                              {s.desc}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: CHĂM SÓC KHÁCH HÀNG */}
+                {profileSubTab === 'care' && (
+                  <div className="crm2-subbox">
+                    <div className="crm2-box-head">
+                      <h3>Nhật ký chăm sóc & CSAT khách hàng</h3>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          type="button"
+                          className="crm2-btn-secondary"
+                          style={{ height: 32, fontSize: 12.5 }}
+                          onClick={() => handleQuickCall(activeCustomer)}
+                        >
+                          <Phone size={13} /> Gọi chăm sóc
+                        </button>
+                        <button
+                          type="button"
+                          className="crm2-btn-secondary"
+                          style={{ height: 32, fontSize: 12.5 }}
+                          onClick={() => handleQuickZalo(activeCustomer)}
+                        >
+                          <MessageCircle size={13} /> Nhắn Zalo
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="crm2-quick-note-bar" style={{ marginTop: 0, paddingTop: 0, borderTop: 0, marginBottom: 14 }}>
+                      <select
+                        className="crm2-select"
+                        style={{ width: 110, height: 34 }}
+                        value={quickNoteChannel}
+                        onChange={(e) =>
+                          setQuickNoteChannel(e.target.value as 'call' | 'zalo' | 'email' | 'note')
+                        }
+                      >
+                        <option value="call">Gọi điện</option>
+                        <option value="zalo">Zalo</option>
+                        <option value="email">Email</option>
+                        <option value="note">Ghi chú</option>
+                      </select>
+                      <input
+                        placeholder="Nhập nội dung tương tác chăm sóc khách hàng..."
+                        value={quickNoteText}
+                        onChange={(e) => setQuickNoteText(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddTimelineNote()}
+                      />
+                      <button type="button" onClick={handleAddTimelineNote}>
+                        Lưu tương tác
+                      </button>
+                    </div>
+
+                    <div className="crm2-timeline">
+                      {activeCustomer.timeline
+                        .filter((t) => t.kind === 'call' || t.kind === 'zalo' || t.kind === 'email')
+                        .map((item) => (
+                          <div key={item.id} className="crm2-tl-item">
+                            <div className={`crm2-tl-icon ${item.kind}`}>
+                              {item.kind === 'call' ? <PhoneCall size={15} /> : item.kind === 'zalo' ? <MessageCircle size={15} /> : <Mail size={15} />}
+                            </div>
+                            <div className="crm2-tl-body">
+                              <div className="crm2-tl-meta">
+                                <span>{item.timeLabel}</span>
+                              </div>
+                              <div className="crm2-tl-title">{item.title}</div>
+                              <div className="crm2-tl-desc">{item.desc}</div>
+                            </div>
+                          </div>
+                        ))}
+                      {activeCustomer.timeline.filter((t) => t.kind === 'call' || t.kind === 'zalo' || t.kind === 'email').length === 0 && (
+                        <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b' }}>
+                          Chưa có lịch sử cuộc gọi hoặc tin nhắn chăm sóc. Hãy bấm nút phía trên để kết nối ngay.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: CÔNG VIỆC PHÂN CÔNG */}
+                {profileSubTab === 'tasks' && (
+                  <div className="crm2-subbox">
+                    <div className="crm2-box-head">
+                      <h3>Công việc nhân viên gắn với khách hàng ({activeCustomer.tasks.length})</h3>
+                      <button
+                        type="button"
+                        className="crm2-btn-primary"
+                        style={{ height: 32, fontSize: 12.5 }}
+                        onClick={() => handleOpenCreateTask(activeCustomer)}
+                      >
+                        <Plus size={13} /> Tạo công việc mới
+                      </button>
+                    </div>
+
+                    <div className="crm2-task-list" style={{ marginTop: 10 }}>
+                      {activeCustomer.tasks.map((task) => (
+                        <div key={task.id} className="crm2-task-row" style={{ padding: '12px 14px' }}>
+                          <label className="crm2-task-left">
+                            <input
+                              type="checkbox"
+                              checked={task.done}
+                              onChange={() => handleToggleTask(task.id)}
+                            />
+                            <span className={`crm2-task-text ${task.done ? 'done' : ''}`} style={{ fontSize: 13.5 }}>
+                              {task.title}
+                            </span>
+                          </label>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <span className="crm2-task-date">
+                              <Calendar size={13} />
+                              Hạn: {task.dueDate}
+                            </span>
+                            <span className="crm2-tl-done-badge" style={{ background: task.done ? '#dcfce7' : '#fee2e2', color: task.done ? '#166534' : '#991b1b' }}>
+                              {task.done ? 'Đã xong' : 'Đang xử lý'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {activeCustomer.tasks.length === 0 && (
+                        <div style={{ padding: '24px 0', textAlign: 'center', color: '#64748b' }}>
+                          Chưa có đầu việc nào được giao. Bấm &ldquo;+ Tạo công việc mới&rdquo; để phân công nhân viên.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUB-TAB: TỆP ĐÍNH KÈM */}
+                {profileSubTab === 'attachments' && (
+                  <div className="crm2-subbox">
+                    <div className="crm2-box-head">
+                      <h3>Hợp đồng & Tài liệu đính kèm</h3>
+                      <label className="crm2-btn-primary" style={{ height: 32, fontSize: 12.5, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                        <Paperclip size={13} /> Tải tệp lên
+                        <input
+                          type="file"
+                          style={{ display: 'none' }}
+                          onChange={() => notify('Đã tải lên tệp đính kèm thành công!')}
+                        />
+                      </label>
+                    </div>
+
+                    <table className="crm2-table-full" style={{ marginTop: 10 }}>
+                      <thead>
+                        <tr>
+                          <th>Tên tài liệu / Tệp</th>
+                          <th>Loại tệp</th>
+                          <th>Dung lượng</th>
+                          <th>Ngày tải lên</th>
+                          <th>Người tải</th>
+                          <th style={{ textAlign: 'right' }}>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <strong>Hop_dong_hoi_vien_VIP_{activeCustomer.code}.pdf</strong>
+                          </td>
+                          <td><span className="crm2-tl-done-badge">Hợp đồng</span></td>
+                          <td>1.4 MB</td>
+                          <td>10/09/2026</td>
+                          <td>Lễ tân</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="crm2-edit-link"
+                              onClick={() => notify('Đang mở tài liệu hợp đồng...')}
+                            >
+                              Xem / Tải về
+                            </button>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td>
+                            <strong>CCCD_Xac_thuc_{activeCustomer.phone}.jpg</strong>
+                          </td>
+                          <td><span className="crm2-tl-done-badge" style={{ background: '#e0f2fe', color: '#0369a1' }}>Định danh</span></td>
+                          <td>820 KB</td>
+                          <td>05/09/2026</td>
+                          <td>An Bình</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              className="crm2-edit-link"
+                              onClick={() => notify('Đang tải hình ảnh định danh...')}
+                            >
+                              Xem / Tải về
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
@@ -3390,6 +4120,330 @@ export function CrmModule({
                 onClick={() => void sendCampaign()}
               >
                 Kích hoạt gửi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL 9: NẠP TIỀN VÀO VÍ / THẺ GIỜ (QUICK ACTION MỤC 4 CRM)
+          ===================================================================== */}
+      {showTopupModal && activeCustomer && (
+        <div className="crm2-modal-backdrop" onClick={() => setShowTopupModal(false)}>
+          <div
+            className="crm2-modal-card"
+            style={{ maxWidth: 460 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="crm2-modal-head">
+              <div>
+                <h3>Nạp tiền vào Ví / Thẻ giờ</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+                  Khách hàng: <strong>{activeCustomer.name}</strong> ({activeCustomer.phone})
+                </p>
+              </div>
+              <button
+                type="button"
+                className="crm2-modal-close"
+                onClick={() => setShowTopupModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="crm2-modal-body">
+              <div className="crm2-form-group">
+                <label>Chọn nhanh số tiền nạp</label>
+                <div className="crm2-amount-chips">
+                  {[500_000, 1_000_000, 2_000_000, 5_000_000, 10_000_000].map((amt) => (
+                    <button
+                      key={amt}
+                      type="button"
+                      className={`crm2-amount-chip ${topupAmount === amt ? 'selected' : ''}`}
+                      onClick={() => setTopupAmount(amt)}
+                    >
+                      {money(amt)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginTop: 12 }}>
+                <label>Số tiền nạp tùy chỉnh (VNĐ) *</label>
+                <input
+                  type="number"
+                  min={10000}
+                  step={50000}
+                  value={topupAmount}
+                  onChange={(e) => setTopupAmount(Math.max(0, parseInt(e.target.value, 10) || 0))}
+                />
+              </div>
+
+              <div className="crm2-form-group">
+                <label>Hình thức thanh toán</label>
+                <select
+                  value={topupMethod}
+                  onChange={(e) =>
+                    setTopupMethod(e.target.value as 'cash' | 'transfer' | 'card')
+                  }
+                >
+                  <option value="transfer">Chuyển khoản SePay (Khuyến nghị)</option>
+                  <option value="cash">Tiền mặt tại quầy</option>
+                  <option value="card">Thẻ ngân hàng (POS)</option>
+                </select>
+              </div>
+
+              <div className="crm2-form-group">
+                <label>Ghi chú nạp tiền</label>
+                <input
+                  placeholder="VD: Khách nạp nâng hạn mức tập tháng..."
+                  value={topupNote}
+                  onChange={(e) => setTopupNote(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="crm2-modal-foot">
+              <button
+                type="button"
+                className="crm2-btn-secondary"
+                onClick={() => setShowTopupModal(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="crm2-btn-primary"
+                disabled={topupBusy || topupAmount <= 0}
+                onClick={handleExecuteTopup}
+              >
+                {topupBusy ? 'Đang xử lý...' : `Xác nhận nạp ${money(topupAmount)}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL 10: ĐẶT SÂN NHANH (QUICK ACTION MỤC 4 CRM)
+          ===================================================================== */}
+      {showQuickBookingModal && activeCustomer && (
+        <div className="crm2-modal-backdrop" onClick={() => setShowQuickBookingModal(false)}>
+          <div
+            className="crm2-modal-card"
+            style={{ maxWidth: 480 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="crm2-modal-head">
+              <div>
+                <h3>Đặt lịch sân 3D nhanh</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+                  Khách hàng: <strong>{activeCustomer.name}</strong> ({activeCustomer.phone})
+                </p>
+              </div>
+              <button
+                type="button"
+                className="crm2-modal-close"
+                onClick={() => setShowQuickBookingModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="crm2-modal-body">
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="crm2-form-group">
+                  <label>Line / Phòng chơi *</label>
+                  <select
+                    value={bookingLine}
+                    onChange={(e) => setBookingLine(e.target.value)}
+                  >
+                    <option value="Line 01">Line 01 (VIP Lầu trệt)</option>
+                    <option value="Line 02">Line 02 (VIP Lầu trệt)</option>
+                    <option value="Line 03">Line 03 (Standard Lầu 1)</option>
+                    <option value="Line 04">Line 04 (Standard Lầu 1)</option>
+                    <option value="Line 05">Line 05 (Standard Lầu 1)</option>
+                    <option value="Line 06">Line 06 (Standard Lầu 1)</option>
+                    <option value="Line 07">Line 07 (Standard Lầu 1)</option>
+                    <option value="Line 08">Line 08 (Standard Lầu 1)</option>
+                    <option value="Line 09">Line 09 (Standard Lầu 1)</option>
+                    <option value="Line 10">Line 10 (Standard Lầu 1)</option>
+                  </select>
+                </div>
+                <div className="crm2-form-group">
+                  <label>Hình thức chơi *</label>
+                  <select
+                    value={bookingService}
+                    onChange={(e) => setBookingService(e.target.value as 'gdr' | '9' | '18')}
+                  >
+                    <option value="gdr">Tập luyện theo giờ (GDR)</option>
+                    <option value="9">Game 9 hố</option>
+                    <option value="18">Game 18 hố</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 10 }}>
+                <div className="crm2-form-group">
+                  <label>Ngày chơi *</label>
+                  <input
+                    type="date"
+                    value={bookingDate}
+                    onChange={(e) => setBookingDate(e.target.value)}
+                  />
+                </div>
+                <div className="crm2-form-group">
+                  <label>Giờ bắt đầu *</label>
+                  <input
+                    type="time"
+                    value={bookingTime}
+                    onChange={(e) => setBookingTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginTop: 10 }}>
+                <label>Thời lượng chơi (phút)</label>
+                <div className="crm2-amount-chips">
+                  {[60, 90, 120, 180].map((mins) => (
+                    <button
+                      key={mins}
+                      type="button"
+                      className={`crm2-amount-chip ${bookingDuration === mins ? 'selected' : ''}`}
+                      onClick={() => setBookingDuration(mins)}
+                    >
+                      {mins} phút
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginTop: 10 }}>
+                <label>Ghi chú đặt sân</label>
+                <input
+                  placeholder="VD: Cần hỗ trợ mượn gậy Nam/Nữ, bóng mới..."
+                  value={bookingNote}
+                  onChange={(e) => setBookingNote(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="crm2-modal-foot">
+              <button
+                type="button"
+                className="crm2-btn-secondary"
+                onClick={() => setShowQuickBookingModal(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="crm2-btn-primary"
+                disabled={bookingBusy}
+                onClick={handleExecuteQuickBooking}
+              >
+                {bookingBusy ? 'Đang tạo...' : 'Xác nhận đặt sân'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================================
+          MODAL 11: TẠO LỊCH HẸN & NHẮC HẸN (QUICK ACTION MỤC 4 CRM)
+          ===================================================================== */}
+      {showCreateApptModal && activeCustomer && (
+        <div className="crm2-modal-backdrop" onClick={() => setShowCreateApptModal(false)}>
+          <div
+            className="crm2-modal-card"
+            style={{ maxWidth: 480 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="crm2-modal-head">
+              <div>
+                <h3>Tạo lịch hẹn & Nhắc hẹn khách</h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+                  Khách hàng: <strong>{activeCustomer.name}</strong> ({activeCustomer.phone})
+                </p>
+              </div>
+              <button
+                type="button"
+                className="crm2-modal-close"
+                onClick={() => setShowCreateApptModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="crm2-modal-body">
+              <div className="crm2-form-group">
+                <label>Mục đích lịch hẹn *</label>
+                <select
+                  value={apptService}
+                  onChange={(e) => setApptService(e.target.value)}
+                >
+                  <option value="Tập trải nghiệm & Thử gậy">Tập trải nghiệm & Thử gậy mới</option>
+                  <option value="Tư vấn gói hội viên VIP">Tư vấn gói hội viên VIP</option>
+                  <option value="Nhắc gia hạn thẻ tháng">Nhắc gia hạn thẻ tháng sắp hết hạn</option>
+                  <option value="Hẹn gặp Huấn luyện viên">Hẹn gặp Huấn luyện viên (Pro)</option>
+                  <option value="Trao đổi tham gia giải đấu">Trao đổi tham gia giải đấu nội bộ</option>
+                  <option value="Chăm sóc định kỳ">Chăm sóc định kỳ sau buổi chơi</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 10 }}>
+                <div className="crm2-form-group">
+                  <label>Ngày hẹn *</label>
+                  <input
+                    type="date"
+                    value={apptDate}
+                    onChange={(e) => setApptDate(e.target.value)}
+                  />
+                </div>
+                <div className="crm2-form-group">
+                  <label>Giờ hẹn *</label>
+                  <input
+                    type="time"
+                    value={apptTime}
+                    onChange={(e) => setApptTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginTop: 10 }}>
+                <label>Nhân viên phụ trách *</label>
+                <select
+                  value={apptAssignee}
+                  onChange={(e) => setApptAssignee(e.target.value)}
+                >
+                  <option value="Trần Văn An">Trần Văn An (Chuyên viên Sales)</option>
+                  <option value="Nguyễn Thị Bình">Nguyễn Thị Bình (CSKH)</option>
+                  <option value="Lê Hoàng Minh">Lê Hoàng Minh (HLV Pro)</option>
+                  <option value="Lễ tân ca trực">Lễ tân ca trực</option>
+                </select>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginTop: 10 }}>
+                <label>Ghi chú chi tiết</label>
+                <textarea
+                  rows={3}
+                  placeholder="Ghi chú nội dung cần chuẩn bị hoặc dặn dò nhân viên..."
+                  value={apptNote}
+                  onChange={(e) => setApptNote(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="crm2-modal-foot">
+              <button
+                type="button"
+                className="crm2-btn-secondary"
+                onClick={() => setShowCreateApptModal(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="crm2-btn-primary"
+                disabled={apptBusy}
+                onClick={handleExecuteCreateAppt}
+              >
+                {apptBusy ? 'Đang lưu...' : 'Lưu lịch hẹn'}
               </button>
             </div>
           </div>

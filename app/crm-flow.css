@@ -1589,3 +1589,283 @@
 .crm2-field-item {
   grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
 }
+
+/* ==========================================================================
+   CRM 360° — QUICK ACTIONS & 9 SUBTABS STYLES (MATCHING REFERENCE IMAGE 9)
+   ========================================================================== */
+
+/* Header quick action button bar */
+.crm2-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.crm2-hdr-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.crm2-hdr-btn:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.crm2-hdr-btn.call svg {
+  color: #16a34a;
+}
+
+.crm2-hdr-btn.zalo svg {
+  color: #0284c7;
+}
+
+.crm2-hdr-btn.email svg {
+  color: #6366f1;
+}
+
+.crm2-hdr-btn.booking svg {
+  color: #059669;
+}
+
+.crm2-hdr-btn-primary {
+  background: #0a5c1e !important;
+  color: #ffffff !important;
+  border-color: #0a5c1e !important;
+}
+
+.crm2-hdr-btn-primary:hover {
+  background: #084c18 !important;
+  border-color: #084c18 !important;
+}
+
+/* 9 Subtabs with green pill styling */
+.crm2-subtabs-pillbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid #e2e8f0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.crm2-pill-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.crm2-pill-tab:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.crm2-pill-tab.active {
+  background: #0a5c1e;
+  color: #ffffff;
+  border-color: #0a5c1e;
+  font-weight: 700;
+}
+
+.crm2-pill-tab.active svg {
+  color: #ffffff;
+}
+
+/* Quick Actions Tile Grid inside Tab 1 (Tổng quan) */
+.crm2-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.crm2-quick-tile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.crm2-quick-tile:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transform: translateY(-1px);
+}
+
+.crm2-tile-icon-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+.crm2-tile-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.crm2-tile-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.crm2-tile-desc {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Amount quick pick chips in Topup Modal */
+.crm2-amount-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.crm2-amount-chip {
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.crm2-amount-chip:hover {
+  border-color: #0a5c1e;
+  color: #0a5c1e;
+  background: #f0fdf4;
+}
+
+.crm2-amount-chip.selected {
+  border-color: #0a5c1e;
+  background: #0a5c1e;
+  color: #ffffff;
+}
+
+/* Customer Journey Stepper in Tab 2 */
+.crm2-journey-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 10px 0;
+}
+
+.crm2-journey-step {
+  display: flex;
+  gap: 14px;
+  position: relative;
+}
+
+.crm2-journey-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 32px;
+  bottom: -16px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.crm2-journey-step.completed:not(:last-child)::after {
+  background: #16a34a;
+}
+
+.crm2-journey-node {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 1;
+}
+
+.crm2-journey-step.completed .crm2-journey-node {
+  background: #16a34a;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.crm2-journey-step.upcoming .crm2-journey-node {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #2563eb;
+}
+
+.crm2-journey-info {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 12px 14px;
+}
+
+.crm2-journey-step.completed .crm2-journey-info {
+  border-left: 3px solid #16a34a;
+}
+
+.crm2-journey-time {
+  font-size: 11.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.crm2-journey-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 2px 0 4px;
+}
+
+.crm2-journey-desc {
+  font-size: 12.5px;
+  color: #475569;
+}
+

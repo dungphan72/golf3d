@@ -1,0 +1,275 @@
+/* PWA Floating Install Banner — Reference style: crm.khaidien.vn */
+.yadcrm-pwa-install[hidden],
+.yadcrm-pwa-guide[hidden],
+.sg-pwa-install[hidden],
+.sg-pwa-guide[hidden] {
+  display: none !important;
+}
+
+.yadcrm-pwa-install,
+.sg-pwa-install {
+  position: fixed;
+  left: 14px;
+  bottom: 16px;
+  z-index: 999970;
+  width: min(390px, calc(100vw - 28px));
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px 12px 12px;
+  border: 1px solid rgba(23, 105, 224, 0.16);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 16px 42px rgba(16, 36, 75, 0.22);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transform: translate3d(-115%, 0, 0);
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.25s ease;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  box-sizing: border-box;
+}
+
+.yadcrm-pwa-install.is-visible,
+.sg-pwa-install.is-visible {
+  transform: translate3d(0, 0, 0);
+  opacity: 1;
+}
+
+.yadcrm-pwa-icon,
+.sg-pwa-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(23, 105, 224, 0.18);
+  flex-shrink: 0;
+}
+
+.yadcrm-pwa-icon img,
+.sg-pwa-icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.yadcrm-pwa-copy,
+.sg-pwa-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.yadcrm-pwa-copy strong,
+.sg-pwa-copy strong {
+  font-size: 14.5px;
+  color: #17223b;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.yadcrm-pwa-copy span,
+.sg-pwa-copy span {
+  font-size: 12px;
+  color: #65708a;
+  line-height: 1.35;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yadcrm-pwa-install-btn,
+.sg-pwa-install-btn {
+  border: 0;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #1d4ed8, #4f46e5);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 9px 16px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 5px 14px rgba(29, 78, 216, 0.28);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+  outline: none;
+}
+
+.yadcrm-pwa-install-btn:hover,
+.sg-pwa-install-btn:hover {
+  box-shadow: 0 7px 18px rgba(29, 78, 216, 0.35);
+  transform: translateY(-1px);
+}
+
+.yadcrm-pwa-install-btn:active,
+.sg-pwa-install-btn:active {
+  transform: scale(0.97);
+}
+
+.yadcrm-pwa-dismiss,
+.sg-pwa-dismiss {
+  position: absolute;
+  right: -6px;
+  top: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid #e1e7f0;
+  background: #ffffff;
+  color: #65708a;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(16, 24, 40, 0.14);
+  transition: color 0.15s ease, background 0.15s ease;
+  outline: none;
+}
+
+.yadcrm-pwa-dismiss:hover,
+.sg-pwa-dismiss:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+/* iOS Guide Bottom Sheet */
+.yadcrm-pwa-guide,
+.sg-pwa-guide {
+  position: fixed;
+  inset: 0;
+  z-index: 999990;
+  background: rgba(13, 22, 41, 0.44);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+}
+
+.yadcrm-pwa-guide.is-visible,
+.sg-pwa-guide.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.yadcrm-pwa-guide-card,
+.sg-pwa-guide-card {
+  position: relative;
+  width: min(430px, 100%);
+  background: #ffffff;
+  border-radius: 22px;
+  padding: 24px 22px 20px;
+  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.25);
+  transform: translateY(28px);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+}
+
+.yadcrm-pwa-guide.is-visible .yadcrm-pwa-guide-card,
+.sg-pwa-guide.is-visible .sg-pwa-guide-card {
+  transform: translateY(0);
+}
+
+.yadcrm-pwa-guide-card strong,
+.sg-pwa-guide-card strong {
+  display: block;
+  font-size: 17px;
+  color: #17223b;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.yadcrm-pwa-guide-card p,
+.sg-pwa-guide-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #56627a;
+  margin: 0 0 18px;
+}
+
+.yadcrm-pwa-guide-ok,
+.sg-pwa-guide-ok {
+  width: 100%;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #1d4ed8, #4f46e5);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 4px 14px rgba(29, 78, 216, 0.25);
+}
+
+.yadcrm-pwa-guide-close,
+.sg-pwa-guide-close {
+  position: absolute;
+  right: 14px;
+  top: 14px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 20px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  outline: none;
+}
+
+/* Adjust position when mobile bottom navigation (.mnav) is present */
+@media (max-width: 768px) {
+  body:has(.mnav) .yadcrm-pwa-install,
+  body:has(.mnav) .sg-pwa-install {
+    bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 520px) {
+  .yadcrm-pwa-install,
+  .sg-pwa-install {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    left: 10px;
+    bottom: 12px;
+    width: calc(100vw - 20px);
+    padding: 10px 12px;
+    border-radius: 16px;
+    gap: 10px;
+  }
+  .yadcrm-pwa-icon,
+  .sg-pwa-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 11px;
+  }
+  .yadcrm-pwa-copy strong,
+  .sg-pwa-copy strong {
+    font-size: 13.5px;
+  }
+  .yadcrm-pwa-copy span,
+  .sg-pwa-copy span {
+    font-size: 11.5px;
+  }
+  .yadcrm-pwa-install-btn,
+  .sg-pwa-install-btn {
+    font-size: 12px;
+    padding: 8px 13px;
+  }
+}

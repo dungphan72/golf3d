@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from 'next';
 import MobileAppNavBar from './ui/MobileAppNavBar';
+import PwaFloatingInstallBanner from './ui/PwaFloatingInstallBanner';
 import './tokens.css';
 import './globals.css';
+import './pwa-floating.css';
 // Global design-system standards (font, radius, placeholder, wrapping, scrollbars): keep last.
 import './ds-global.css';
 export const metadata: Metadata = {
@@ -41,6 +43,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <body>
         {children}
         <MobileAppNavBar />
+        <PwaFloatingInstallBanner />
       </body>
     </html>
   );

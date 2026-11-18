@@ -89,3 +89,19 @@ test('5. Shared PWA 7-day snooze logic and standalone check', () => {
   const snoozeUntil = now + SNOOZE_DAYS * 24 * 60 * 60 * 1000;
   assert.equal(snoozeUntil - now, 604800000, 'Snooze duration must be exactly 7 days in milliseconds');
 });
+
+test('6. PWA Floating Install Banner matches crm.khaidien.vn reference and is rendered in root layout', () => {
+  const layoutContent = fs.readFileSync(path.resolve(process.cwd(), 'app/layout.tsx'), 'utf8');
+  assert.ok(layoutContent.includes('PwaFloatingInstallBanner'), 'app/layout.tsx must render PwaFloatingInstallBanner');
+  assert.ok(layoutContent.includes('pwa-floating.css'), 'app/layout.tsx must import pwa-floating.css');
+
+  const bannerPath = path.resolve(process.cwd(), 'app/ui/PwaFloatingInstallBanner.tsx');
+  assert.ok(fs.existsSync(bannerPath), 'app/ui/PwaFloatingInstallBanner.tsx must exist');
+
+  const bannerContent = fs.readFileSync(bannerPath, 'utf8');
+  assert.ok(bannerContent.includes('Tạo như một ứng dụng'), 'Banner must have title "Tạo như một ứng dụng"');
+  assert.ok(bannerContent.includes('Mở SiGolf nhanh từ màn hình điện thoại.'), 'Banner must have subtitle "Mở SiGolf nhanh từ màn hình điện thoại."');
+  assert.ok(bannerContent.includes('Cài ngay'), 'Banner must have button "Cài ngay"');
+  assert.ok(bannerContent.includes('yadcrm-pwa-install') || bannerContent.includes('sg-pwa-install'), 'Must have reference install class');
+  assert.ok(bannerContent.includes('yadcrm-pwa-dismiss') || bannerContent.includes('sg-pwa-dismiss'), 'Must have dismiss button');
+});

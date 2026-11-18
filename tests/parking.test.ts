@@ -47,7 +47,7 @@ test('0. Setup test environment', async () => {
     .run();
   await db()
     .prepare(
-      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR customer_name LIKE 'Khách Golf%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%' OR spot_code IN ('P65', 'P10', 'P11', 'P20', 'P30', 'P99')",
+      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR customer_name LIKE 'Khách Golf%' OR customer_name LIKE 'Khách SePay%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%' OR license_plate LIKE '51K-999%' OR spot_code IN ('P65', 'P10', 'P11', 'P12', 'P20', 'P30', 'P99')",
     )
     .run();
 });
@@ -515,6 +515,38 @@ test('10. SePay Webhook Auto-confirmation, Spot Lock & Camera Gate Checkout', as
   );
   const freedSpot = finalGrid.spots.find((s) => s.code === 'P10');
   assert.equal(freedSpot?.stateForWindow, 'available');
+
+  // 7. Verify SePay auto-confirmation when transfer note contains license plate instead of PK-xxxx
+  const plateTicket = await holdSpot(TENANT, {
+    spotCode: 'P12',
+    licensePlate: '51K-999.88',
+    customerName: 'Khách SePay Plate Test',
+    expectedIn: Date.now() + 1800000,
+    expectedOut: Date.now() + 7200000,
+  });
+  assert.equal(plateTicket.status, 'holding');
+
+  const sepayPlatePayload = {
+    id: Date.now() + 1,
+    gateway: 'MBBank',
+    transactionDate: new Date().toISOString(),
+    accountNumber: '0877834888',
+    subAccount: null,
+    transferType: 'in',
+    transferAmount: 30000,
+    accumulated: 1030000,
+    code: null,
+    content: '51K99988 CHUYEN TIEN GUI XE GOPICK',
+    referenceCode: `FT${Date.now() + 1}`,
+    description: '51K99988 CHUYEN TIEN GUI XE GOPICK',
+  };
+  await receiveSepay(null, sepayPlatePayload);
+
+  const verifiedPlateTicket = await db()
+    .prepare('SELECT * FROM parking_tickets WHERE ticket_code=?')
+    .bind(plateTicket.ticketCode)
+    .first<any>();
+  assert.equal(verifiedPlateTicket.status, 'confirmed');
 });
 
 test('11. End-to-end P65 booking, single ID mapping, and legacy spot retirement', async () => {

@@ -98,6 +98,24 @@ export async function receiveSepay(
       }
     }
 
+    // Safety fallback 4: Match tenant by license plate in note
+    if (!tenant && p.content) {
+      const cleanContent = (p.content || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (cleanContent.length >= 6) {
+        const recentTicket = await db()
+          .prepare("SELECT tenant, license_plate FROM parking_tickets WHERE status IN ('holding', 'pending_review') ORDER BY created_at DESC LIMIT 15")
+          .all<{ tenant: string; license_plate: string }>();
+        for (const t of (recentTicket?.results || [])) {
+          const cleanPlate = (t.license_plate || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+          if (cleanPlate && cleanPlate.length >= 6 && cleanContent.includes(cleanPlate)) {
+            tenant = t.tenant;
+            console.log(`[SePay Webhook] Matched tenant '${tenant}' by parking ticket plate '${t.license_plate}'`);
+            break;
+          }
+        }
+      }
+    }
+
     if (!tenant) {
       console.warn('[SePay Webhook] Unauthorized - no matching tenant found. Auth header:', authHeader);
       return error('Khóa xác thực không hợp lệ', 401);
@@ -140,7 +158,7 @@ export async function receiveSepay(
       console.log(`[SePay Webhook] Duplicate TX ${p.id} acknowledged.`);
     }
 
-    // Auto-confirm & lock spot for Parking tickets if note contains PK-xxxx or PKxxxx
+    // Auto-confirm & lock spot for Parking tickets if note contains PK-xxxx or PKxxxx, or license plate
     const parkingMatch = (p.content || '').toUpperCase().match(/\bPK[-\s]?([0-9]{4})\b/i);
     if (parkingMatch) {
       const parkingTicketCode = `PK-${parkingMatch[1]}`;
@@ -160,6 +178,31 @@ export async function receiveSepay(
         }
       } catch (parkingErr) {
         console.error(`[SePay Webhook] Error auto-confirming parking ticket ${parkingTicketCode}:`, parkingErr);
+      }
+    } else {
+      // Fallback: Check if note contains a license plate of a holding ticket
+      try {
+        const cleanContent = (p.content || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (cleanContent.length >= 6) {
+          const holdingTickets = await db()
+            .prepare("SELECT * FROM parking_tickets WHERE status IN ('holding', 'pending_review') ORDER BY created_at DESC LIMIT 15")
+            .all<any>();
+          for (const row of (holdingTickets?.results || [])) {
+            const cleanPlate = (row.license_plate || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (cleanPlate && cleanPlate.length >= 6 && cleanContent.includes(cleanPlate)) {
+              console.log(`[SePay Webhook] Matched holding parking ticket ${row.ticket_code} by license plate ${row.license_plate} in note: "${p.content}"`);
+              await confirmTicket(row.tenant, {
+                ticketCode: row.ticket_code,
+                paymentMethod: 'sepay',
+                paymentRef: String(p.id || p.referenceCode || Date.now()),
+              });
+              console.log(`[SePay Webhook] Auto-confirmed & locked spot for Parking Ticket ${row.ticket_code}!`);
+              break;
+            }
+          }
+        }
+      } catch (plateErr) {
+        console.error('[SePay Webhook] Error checking holding ticket by plate:', plateErr);
       }
     }
 

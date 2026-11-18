@@ -35,8 +35,10 @@ import {
   Save,
   Edit2,
   Trash2,
+  Printer,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
+import { sepayQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
 import { extractVietnamesePlate, formatVietnamesePlate } from '../core/plate-recognition';
 import '../../../app/parking.css';
@@ -109,6 +111,15 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   const [showPaperModal, setShowPaperModal] = useState<boolean>(false);
   const [paperPlate, setPaperPlate] = useState<string>('');
   const [paperNo, setPaperNo] = useState<string>('');
+  const [gatePaymentMethod, setGatePaymentMethod] = useState<'cash' | 'vietqr'>('cash');
+  const [showPrintSlipModal, setShowPrintSlipModal] = useState<boolean>(false);
+  const [ticketToPrint, setTicketToPrint] = useState<ParkingTicket | null>(null);
+  const [bank, setBank] = useState<{ bin: string; account: string; holder: string; bankName: string }>({
+    bin: '970422',
+    account: '0877834888',
+    holder: 'SAIGON INDOOR GOLF',
+    bankName: 'MBBank (Quân Đội)',
+  });
 
   // Active parked cars for instant 1-touch select
   const [activeLotTickets, setActiveLotTickets] = useState<ParkingTicket[]>([]);
@@ -212,6 +223,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         }
         if (data.spots) setSpots(data.spots);
         if (data.summary) setMapSummary(data.summary);
+        if (data.bank) setBank(data.bank);
       } else {
         setMapError(data.error || 'Lỗi tải sơ đồ');
       }
@@ -600,7 +612,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           action: 'gate-checkout',
           tenant,
           ticketCode: gateFoundTicket.ticketCode,
-          paymentMethod: 'cash',
+          paymentMethod: gatePaymentMethod,
           staffName: 'Bảo vệ cổng',
         }),
       });
@@ -646,6 +658,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         setPaperPlate('');
         setPaperNo('');
         setGateFoundTicket(data.ticket);
+        setTicketToPrint(data.ticket);
+        setShowPrintSlipModal(true);
         void loadConfigAndSpots();
       } else {
         notify(data.error || 'Không thể tạo vé giấy');
@@ -2063,7 +2077,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                         const otMins = getOvertimeMinutes(gateFoundTicket);
                         if (otMins <= 15) return null;
                         const surchargeHours = Math.ceil((otMins - 15) / 60);
-                        const surcharge = surchargeHours * 15000;
+                        const rate = config?.overtimeRatePerHour || 15000;
+                        const surcharge = surchargeHours * rate;
                         return (
                           <div
                             style={{
@@ -2076,46 +2091,131 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                             }}
                           >
                             ⚠️ <strong>Xe quá giờ {otMins} phút</strong> (vượt quá 15 phút ân hạn).
-                            <div>Phụ thu ngoài giờ: <strong>{money(surcharge)}</strong> ({surchargeHours} giờ x 15.000 đ)</div>
+                            <div>Phụ thu ngoài giờ: <strong>{money(surcharge)}</strong> ({surchargeHours} giờ x {money(rate)})</div>
                           </div>
                         );
                       })()}
 
                       {(() => {
+                        const otMins = getOvertimeMinutes(gateFoundTicket);
+                        const surchargeHours = (gateFoundTicket.status === 'active' && otMins > 15) ? Math.ceil((otMins - 15) / 60) : 0;
+                        const rate = config?.overtimeRatePerHour || 15000;
+                        const estimatedSurcharge = surchargeHours * rate;
                         const paid = (gateFoundTicket.paidAmount || 0) + (gateFoundTicket.sponsoredAmount || 0);
-                        const due = Math.max(0, (gateFoundTicket.totalAmount || 0) - paid);
+                        const due = Math.max(0, (gateFoundTicket.totalAmount || 0) + estimatedSurcharge - paid);
                         return (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu tại cổng</span>
-                            <strong style={{ fontSize: 15, color: due > 0 ? '#dc2626' : '#0f172a' }}>
-                              {money(due)}
-                            </strong>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu tại cổng</span>
+                              <strong style={{ fontSize: 16, color: due > 0 ? '#dc2626' : '#0f172a' }}>
+                                {money(due)}
+                              </strong>
+                            </div>
+
+                            {gateMode === 'out' && due > 0 && (
+                              <div style={{ background: '#f8fafc', padding: 10, borderRadius: 6, border: '1px solid #e2e8f0', marginTop: 4 }}>
+                                <div style={{ fontSize: 12, fontWeight: 700, color: '#334155', marginBottom: 6 }}>
+                                  Hình thức thu phụ thu {money(due)}:
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setGatePaymentMethod('cash')}
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 10px',
+                                      border: '1px solid',
+                                      borderColor: gatePaymentMethod === 'cash' ? 'var(--pk-primary)' : '#cbd5e1',
+                                      background: gatePaymentMethod === 'cash' ? '#f0fdf4' : '#ffffff',
+                                      color: gatePaymentMethod === 'cash' ? 'var(--pk-primary)' : '#475569',
+                                      borderRadius: 4,
+                                      fontWeight: 700,
+                                      fontSize: 12,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    💵 Tiền mặt
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setGatePaymentMethod('vietqr')}
+                                    style={{
+                                      flex: 1,
+                                      padding: '6px 10px',
+                                      border: '1px solid',
+                                      borderColor: gatePaymentMethod === 'vietqr' ? 'var(--pk-primary)' : '#cbd5e1',
+                                      background: gatePaymentMethod === 'vietqr' ? '#f0fdf4' : '#ffffff',
+                                      color: gatePaymentMethod === 'vietqr' ? 'var(--pk-primary)' : '#475569',
+                                      borderRadius: 4,
+                                      fontWeight: 700,
+                                      fontSize: 12,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    📲 Quét VietQR
+                                  </button>
+                                </div>
+
+                                {gatePaymentMethod === 'vietqr' && (
+                                  <div style={{ textAlign: 'center', marginTop: 10, padding: 8, background: '#ffffff', borderRadius: 6, border: '1px dashed #cbd5e1' }}>
+                                    <img
+                                      src={sepayQrUrl({
+                                        bin: bank.bin,
+                                        account: bank.account,
+                                        holder: bank.holder,
+                                        amount: due,
+                                        note: `${gateFoundTicket.ticketCode.replace('-', '')} PHUTHU`,
+                                      })}
+                                      alt="QR Thu phụ thu"
+                                      style={{ width: 130, height: 130, margin: '0 auto', display: 'block', borderRadius: 4 }}
+                                    />
+                                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>
+                                      MBBank: <strong>{bank.account}</strong> · {bank.holder}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         );
                       })()}
 
-                      <div style={{ marginTop: 8 }}>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                         {gateMode === 'out' ? (
                           <button
                             type="button"
                             className="pk-btn-primary"
                             onClick={handleGateCheckOut}
-                            style={{ height: 46, fontSize: 15, fontWeight: 800, background: '#16a34a' }}
+                            style={{ flex: 1, height: 46, fontSize: 14, fontWeight: 800, background: '#16a34a', gap: 6 }}
                           >
                             <Check size={18} strokeWidth={3} />
-                            <span>Xác nhận xe ra (Mở Barie & Giải phóng ô)</span>
+                            <span>Xác nhận xe ra (Mở Barie)</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             className="pk-btn-primary"
                             onClick={handleGateCheckIn}
-                            style={{ height: 46, fontSize: 15, fontWeight: 800 }}
+                            style={{ flex: 1, height: 46, fontSize: 14, fontWeight: 800, gap: 6 }}
                           >
                             <Check size={18} strokeWidth={3} />
                             <span>Xác nhận xe vào (Mở Barie)</span>
                           </button>
                         )}
+
+                        <button
+                          type="button"
+                          className="pk-btn-secondary"
+                          onClick={() => {
+                            setTicketToPrint(gateFoundTicket);
+                            setShowPrintSlipModal(true);
+                          }}
+                          style={{ height: 46, padding: '0 14px', display: 'flex', alignItems: 'center', gap: 6, width: 'auto' }}
+                          title="In phiếu gửi xe / phiếu xuất bãi"
+                        >
+                          <Printer size={16} />
+                          <span>In phiếu</span>
+                        </button>
                       </div>
                     </div>
                   ) : (
@@ -2314,6 +2414,57 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   >
                     <RefreshCw size={14} />
                   </button>
+                </div>
+              </div>
+
+              {/* Thống kê hiệu suất & Tỷ lệ lấp đầy bãi xe */}
+              <div
+                className="pk-card"
+                style={{
+                  padding: '16px 20px',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+                  border: '1px solid #cbd5e1',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Car size={16} color="var(--pk-primary)" />
+                    <span>Hiệu suất lấp đầy bãi xe GoPick (65 ô)</span>
+                  </div>
+                  <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--pk-primary)' }}>
+                    {Math.round((activeLotTickets.length / 65) * 100)}% Lấp đầy
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div style={{ width: '100%', height: 10, background: '#e2e8f0', borderRadius: 5, overflow: 'hidden', marginBottom: 12 }}>
+                  <div
+                    style={{
+                      width: `${Math.min(100, Math.round((activeLotTickets.length / 65) * 100))}%`,
+                      height: '100%',
+                      background: activeLotTickets.length > 55 ? '#dc2626' : 'var(--pk-primary)',
+                      transition: 'width 0.3s ease',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10, fontSize: 12 }}>
+                  <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: 11 }}>Đang đỗ trong bãi</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a' }}>{activeLotTickets.length} xe</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: 11 }}>Ô còn trống</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#16a34a' }}>{Math.max(0, 65 - activeLotTickets.length)} ô</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: 11 }}>Giao dịch hôm nay</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#0284c7' }}>{reconData?.transactions?.length || 0} lượt</div>
+                  </div>
+                  <div style={{ background: '#ffffff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e2e8f0' }}>
+                    <div style={{ color: '#64748b', fontSize: 11 }}>Khung cao điểm</div>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: '#854d0e' }}>17:00 – 21:00</div>
+                  </div>
                 </div>
               </div>
 
@@ -3235,6 +3386,100 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 onClick={handleSaveSpot}
               >
                 Lưu ô đỗ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POS Thermal Printer (58mm/80mm) Slip Modal */}
+      {showPrintSlipModal && ticketToPrint && (
+        <div className="pk-modal-overlay" onClick={() => setShowPrintSlipModal(false)}>
+          <div
+            className="pk-modal-card pk-thermal-slip"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: 380,
+              background: '#ffffff',
+              padding: 24,
+              borderRadius: 8,
+              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+              fontFamily: "'Courier New', Courier, monospace",
+            }}
+          >
+            <div style={{ textAlign: 'center', borderBottom: '1px dashed #333', paddingBottom: 12, marginBottom: 12 }}>
+              <div style={{ fontSize: 16, fontWeight: 900, textTransform: 'uppercase', color: '#000000' }}>
+                {config?.facilityName || 'BÃI XE GOPICK'}
+              </div>
+              <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>
+                {config?.address || '250 Lương Định Của, P. An Phú, Thủ Đức'}
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8, color: '#000000' }}>
+                {ticketToPrint.status === 'completed'
+                  ? '--- PHIẾU XUẤT BÃI & THU PHÍ ---'
+                  : '--- VÉ GỬI XE (CỔNG VÀO) ---'}
+              </div>
+            </div>
+
+            <div style={{ fontSize: 12, lineHeight: 1.7, color: '#000000' }}>
+              <div>Mã vé: <strong>{ticketToPrint.ticketCode}</strong></div>
+              <div>Biển số: <strong style={{ fontSize: 16 }}>{ticketToPrint.licensePlate}</strong></div>
+              <div>Vị trí đỗ: <strong style={{ fontSize: 14 }}>Ô {ticketToPrint.spotCode}</strong> ({ticketToPrint.section || 'GoPick'})</div>
+              <div>
+                Giờ vào: {ticketToPrint.actualIn ? new Date(ticketToPrint.actualIn).toLocaleString('vi-VN') : new Date(ticketToPrint.expectedIn).toLocaleString('vi-VN')}
+              </div>
+              <div>
+                Giờ ra: {ticketToPrint.actualOut ? new Date(ticketToPrint.actualOut).toLocaleString('vi-VN') : new Date(ticketToPrint.expectedOut).toLocaleString('vi-VN')}
+              </div>
+              <div style={{ borderTop: '1px dashed #888', margin: '8px 0' }} />
+              <div>Cước đỗ xe: <strong>{money(ticketToPrint.totalAmount || 0)}</strong></div>
+              {ticketToPrint.feePayer === 'gopick_sponsored' ? (
+                <div>Quyền lợi: <strong>GoPick tài trợ 100% (0 đ)</strong></div>
+              ) : (
+                <div>
+                  Thanh toán: <strong>{money(ticketToPrint.paidAmount || 0)}</strong> ({ticketToPrint.paymentMethod === 'cash' ? 'Tiền mặt' : 'VietQR/SePay'})
+                </div>
+              )}
+              {(ticketToPrint.overtimeAmount || 0) > 0 && (
+                <div style={{ color: '#b91c1c' }}>
+                  Phụ thu quá giờ: <strong>{money(ticketToPrint.overtimeAmount || 0)}</strong>
+                </div>
+              )}
+            </div>
+
+            <div style={{ textAlign: 'center', margin: '14px 0' }}>
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(
+                  `SIGOLF_PARKING:${ticketToPrint.ticketCode}:${ticketToPrint.accessToken || 'VERIFIED'}`,
+                )}`}
+                alt="QR đối soát"
+                style={{ width: 110, height: 110, margin: '0 auto', display: 'block' }}
+              />
+              <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Quét QR để kiểm tra tính hợp lệ của vé</div>
+            </div>
+
+            <div style={{ textAlign: 'center', borderTop: '1px dashed #333', paddingTop: 10, fontSize: 11, color: '#333' }}>
+              <div>Quý khách vui lòng giữ vé và xuất trình khi ra bãi.</div>
+              <div>Hotline: 0877 834 888 · Chúc quý khách an toàn & vui vẻ!</div>
+            </div>
+
+            <div className="no-print" style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+              <button
+                type="button"
+                className="pk-btn-secondary"
+                onClick={() => setShowPrintSlipModal(false)}
+                style={{ flex: 1 }}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="pk-btn-primary"
+                onClick={() => window.print()}
+                style={{ flex: 1, gap: 6, background: '#0284c7', borderColor: '#0284c7' }}
+              >
+                <Printer size={16} />
+                <span>In máy nhiệt</span>
               </button>
             </div>
           </div>

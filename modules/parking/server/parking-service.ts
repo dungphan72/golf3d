@@ -198,8 +198,8 @@ async function seedGoPickSpots(tenant: string) {
  */
 export async function getSpotGrid(
   tenant: string = DEFAULT_PARKING_TENANT,
-  expectedIn: number,
-  expectedOut: number,
+  expectedIn: number = Date.now(),
+  expectedOut: number = Date.now() + 2.5 * 3600 * 1000,
   mode: 'now' | 'slot' = 'slot',
   now: number = Date.now(),
 ): Promise<{

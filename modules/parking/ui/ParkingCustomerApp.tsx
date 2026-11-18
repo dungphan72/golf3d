@@ -30,6 +30,7 @@ import {
   FileText,
   Copy,
   Zap,
+  Bell,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
@@ -365,6 +366,40 @@ export default function ParkingCustomerApp({
   const [myTickets, setMyTickets] = useState<ParkingTicket[]>([]);
   const [lookupQuery, setLookupQuery] = useState<string>('');
   const [fullScreenQrTicket, setFullScreenQrTicket] = useState<ParkingTicket | null>(null);
+  const [reminderNotice, setReminderNotice] = useState<string>('');
+
+  // Handle notification reminder for expiring ticket
+  async function handleEnableReminder(tItem: ParkingTicket) {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setReminderNotice('Trình duyệt của bạn không hỗ trợ tính năng thông báo.');
+      setTimeout(() => setReminderNotice(''), 4000);
+      return;
+    }
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        setReminderNotice('✓ Đã bật nhắc nhở! Hệ thống sẽ thông báo trước giờ ra 15 phút.');
+        const expOut = new Date(tItem.expectedOut).getTime();
+        const remindTime = expOut - 15 * 60 * 1000;
+        const msUntil = remindTime - Date.now();
+        if (msUntil > 0) {
+          setTimeout(() => {
+            try {
+              new Notification('SiGolf · Bãi xe GoPick', {
+                body: `Sắp hết giờ đỗ xe! Xe ${tItem.licensePlate} tại ô ${tItem.spotCode} còn 15 phút (hết hạn lúc ${new Date(tItem.expectedOut).toTimeString().slice(0, 5)}).`,
+                icon: '/favicon.ico',
+              });
+            } catch {}
+          }, msUntil);
+        }
+      } else {
+        setReminderNotice('Chưa cấp quyền thông báo trên trình duyệt.');
+      }
+    } catch {
+      setReminderNotice('Không thể kích hoạt thông báo.');
+    }
+    setTimeout(() => setReminderNotice(''), 4000);
+  }
 
   // Ref for plate input auto-scroll
   const plateInputRef = useRef<HTMLInputElement>(null);
@@ -1607,6 +1642,52 @@ export default function ParkingCustomerApp({
                   </div>
                 </div>
 
+                {/* Đếm ngược thời gian & Nhắc nhở trước khi hết hạn */}
+                {(() => {
+                  const now = Date.now();
+                  const expOut = new Date(ticket.expectedOut).getTime();
+                  const diffMins = Math.floor((expOut - now) / 60000);
+                  if (diffMins > 15) {
+                    const hours = Math.floor(diffMins / 60);
+                    const mins = diffMins % 60;
+                    return (
+                      <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12.5, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>⏱ Thời gian còn lại: <strong>{hours > 0 ? `${hours}h ${mins}m` : `${mins} phút`}</strong> (Đến {new Date(ticket.expectedOut).toTimeString().slice(0, 5)})</span>
+                        <button
+                          type="button"
+                          onClick={() => handleEnableReminder(ticket)}
+                          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: 'var(--pk-primary)', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                        >
+                          <Bell size={12} />
+                          <span>Bật nhắc nhở</span>
+                        </button>
+                      </div>
+                    );
+                  }
+                  if (diffMins > 0 && diffMins <= 15) {
+                    return (
+                      <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#854d0e' }}>
+                        ⚠️ <strong>Sắp hết giờ đỗ xe:</strong> Còn {diffMins} phút là đến giờ xe ra ({new Date(ticket.expectedOut).toTimeString().slice(0, 5)}). Quý khách vui lòng ra bãi đúng giờ để tránh phát sinh phụ thu ngoài giờ.
+                      </div>
+                    );
+                  }
+                  if (diffMins <= 0) {
+                    const otMins = Math.abs(diffMins);
+                    return (
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#991b1b' }}>
+                        ⚠️ <strong>Đã quá giờ đỗ {otMins} phút:</strong> Phụ thu ngoài giờ (sau 15 phút ân hạn) sẽ được tính tại cổng khi quý khách xuất bãi.
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {reminderNotice && (
+                  <div style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '6px 12px', borderRadius: 6, fontSize: 12, marginTop: 8, textAlign: 'center', fontWeight: 600 }}>
+                    {reminderNotice}
+                  </div>
+                )}
+
                 <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button
                     type="button"
@@ -1704,6 +1785,52 @@ export default function ParkingCustomerApp({
                   </div>
                 </div>
               </div>
+
+              {/* Đếm ngược thời gian & Nhắc nhở */}
+              {(() => {
+                const now = Date.now();
+                const expOut = new Date(activeTicket.expectedOut).getTime();
+                const diffMins = Math.floor((expOut - now) / 60000);
+                if (diffMins > 15) {
+                  const hours = Math.floor(diffMins / 60);
+                  const mins = diffMins % 60;
+                  return (
+                    <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: 8, padding: '8px 12px', marginTop: 10, fontSize: 12, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>⏱ Còn: <strong>{hours > 0 ? `${hours}h ${mins}m` : `${mins} phút`}</strong> (Đến {new Date(activeTicket.expectedOut).toTimeString().slice(0, 5)})</span>
+                      <button
+                        type="button"
+                        onClick={() => handleEnableReminder(activeTicket)}
+                        style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: 'var(--pk-primary)', borderRadius: 4, padding: '3px 8px', fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                      >
+                        <Bell size={12} />
+                        <span>Bật nhắc nhở</span>
+                      </button>
+                    </div>
+                  );
+                }
+                if (diffMins > 0 && diffMins <= 15) {
+                  return (
+                    <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: 8, padding: '8px 12px', marginTop: 10, fontSize: 12, color: '#854d0e' }}>
+                      ⚠️ <strong>Sắp hết giờ:</strong> Còn {diffMins} phút là đến giờ xe ra ({new Date(activeTicket.expectedOut).toTimeString().slice(0, 5)}).
+                    </div>
+                  );
+                }
+                if (diffMins <= 0) {
+                  const otMins = Math.abs(diffMins);
+                  return (
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', marginTop: 10, fontSize: 12, color: '#991b1b' }}>
+                      ⚠️ <strong>Đã quá giờ {otMins} phút:</strong> Phụ thu ngoài giờ sẽ tính tại cổng khi xuất bãi.
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
+              {reminderNotice && (
+                <div style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '6px 12px', borderRadius: 6, fontSize: 12, marginTop: 8, textAlign: 'center', fontWeight: 600 }}>
+                  {reminderNotice}
+                </div>
+              )}
 
               <div style={{ marginTop: 12 }}>
                 <button

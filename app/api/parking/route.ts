@@ -51,7 +51,17 @@ export async function GET(req: Request) {
       const mode = (url.searchParams.get('mode') as 'now' | 'slot') || 'slot';
 
       const data = await getSpotGrid(tenant, expectedIn, expectedOut, mode);
-      return Response.json({ ok: true, ...data });
+      const clubConfig = await loadConfig(tenant).catch(() => null);
+      return Response.json({
+        ok: true,
+        ...data,
+        bank: {
+          bin: clubConfig?.bankBin || '970422',
+          account: clubConfig?.bankAccount || '0877834888',
+          holder: clubConfig?.bankHolder || 'SAIGON INDOOR GOLF',
+          bankName: 'MBBank (Quân Đội)',
+        },
+      });
     }
 
     if (action === 'ticket') {

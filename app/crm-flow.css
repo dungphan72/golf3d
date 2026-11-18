@@ -1965,4 +1965,118 @@
   color: #ffffff;
 }
 
+/* ==========================================================================
+   CRM 360° — AUTOMATION ENGINE & SLA (MỤC 6)
+   ========================================================================== */
+
+.crm2-consent-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.crm2-consent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.crm2-consent-status.opted-in {
+  color: #16a34a;
+}
+
+.crm2-consent-status.opted-out {
+  color: #dc2626;
+}
+
+.crm2-consent-btn {
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.crm2-consent-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.crm2-auto-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 900px) {
+  .crm2-auto-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .crm2-auto-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crm2-auto-card {
+  padding: 11px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.crm2-auto-icon-box {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.crm2-auto-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.crm2-auto-timing {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.crm2-auto-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-top: 4px;
+}
+
+
 

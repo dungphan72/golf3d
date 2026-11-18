@@ -60,10 +60,17 @@ test('the message uses the task facts, the club name and the package balances', 
 test('rule names and which rules are promotions', () => {
   assert.equal(careRuleName('welcome'), 'Chào mừng khách mới');
   assert.equal(careRuleName('complaint'), 'Xử lý phản ánh');
+  assert.equal(careRuleName('booking_reminder'), 'Nhắc lịch đặt sân');
+  assert.equal(careRuleName('wallet_low'), 'Cảnh báo số dư ví thấp');
+  assert.equal(careRuleName('pkg_expiring_steps'), 'Nhắc hết hạn thẻ 7/3/1 ngày');
+  assert.equal(careRuleName('retention_stages'), 'Chăm sóc khách không quay lại 7/14/30 ngày');
   assert.equal(careRuleName('lạ'), 'lạ');
   assert.ok(MARKETING_RULES.has('comeback'));
+  assert.ok(MARKETING_RULES.has('wallet_low'));
+  assert.ok(MARKETING_RULES.has('retention_stages'));
   assert.ok(!MARKETING_RULES.has('welcome'));
   assert.ok(!MARKETING_RULES.has('thanks'));
+  assert.ok(!MARKETING_RULES.has('booking_reminder'));
 });
 
 test('segments follow the visit history and the VIP spend', async () => {

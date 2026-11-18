@@ -66,6 +66,42 @@ export const CARE_RULES = [
     template:
       'Chào {ten}, anh/chị đã có {diem} điểm, đủ đổi một lượt chơi miễn phí tại {cs}. Anh/chị ghé đổi lượt giúp em nhé!',
   },
+  {
+    id: 'booking_reminder',
+    name: 'Nhắc lịch đặt sân',
+    help: 'Nhắc lịch chơi tự động trước giờ chơi (mặc định 2 tiếng).',
+    param: { label: 'Nhắc trước (giờ)', min: 1, max: 24 },
+    def: { enabled: true, value: 2 },
+    template:
+      'Chào {ten}, Saigon Indoor Golf xin nhắc anh/chị có lịch đặt sân tại {phong} lúc {gio} ngày {ngay}. Chúc anh/chị buổi chơi vui vẻ!',
+  },
+  {
+    id: 'wallet_low',
+    name: 'Cảnh báo số dư ví thấp',
+    help: 'Cảnh báo nhắc nạp khi số dư ví tiền dưới ngưỡng (mặc định <= 200.000đ).',
+    param: { label: 'Ngưỡng số dư (VNĐ)', min: 50000, max: 2000000 },
+    def: { enabled: true, value: 200000 },
+    template:
+      'Chào {ten}, số dư ví của anh/chị tại {cs} hiện còn {so_du}đ. Anh/chị nạp thêm để tiếp tục nhận ưu đãi giờ chơi nhé ạ.',
+  },
+  {
+    id: 'pkg_expiring_steps',
+    name: 'Nhắc hết hạn thẻ 7/3/1 ngày',
+    help: 'Cảnh báo tự động đa mốc: trước 7 ngày, 3 ngày và 1 ngày trước khi thẻ hội viên hết hạn.',
+    param: null,
+    def: { enabled: true, value: 0 },
+    template:
+      'Chào {ten}, thẻ {goi} của anh/chị sắp hết hạn sau {so_ngay} ngày nữa (ngày {han}). Anh/chị gia hạn sớm để giữ giờ nhé!',
+  },
+  {
+    id: 'retention_stages',
+    name: 'Chăm sóc khách không quay lại 7/14/30 ngày',
+    help: 'Tự động kích hoạt kịch bản chăm sóc theo 3 mốc: 7 ngày, 14 ngày, 30 ngày không ghé chơi.',
+    param: null,
+    def: { enabled: true, value: 0 },
+    template:
+      'Chào {ten}, đã {so_ngay} ngày anh/chị chưa ghé {cs}. Đang có nhiều khung giờ đẹp và ưu đãi, anh/chị ghé chơi nhé ạ!',
+  },
 ] as const;
 
 export type CareRuleId = (typeof CARE_RULES)[number]['id'];
@@ -82,6 +118,8 @@ export const MARKETING_RULES: ReadonlySet<string> = new Set([
   'pkg_low',
   'points',
   'birthday',
+  'wallet_low',
+  'retention_stages',
 ]);
 
 export const CARE_CHANNELS = ['call', 'zalo', 'sms', 'visit', 'email'] as const;

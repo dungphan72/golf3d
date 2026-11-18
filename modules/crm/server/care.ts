@@ -159,6 +159,111 @@ export async function generateCareTasks(tenant: string, now: number) {
         )
         .bind(now, POINTS_PER_FREE_ROUND, now, tenant, POINTS_PER_FREE_ROUND),
     );
+
+  // 1. Nhắc lịch đặt sân (trước giờ chơi)
+  if (on('booking_reminder')) {
+    const hours = s.rules.booking_reminder.value || 2;
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, b.tenant, NULL, 'Nhắc lịch đặt sân: '||upper(b.room)||' ('||strftime('%H:%M',(b.start+${VN})/1000,'unixepoch')||')', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'bookrem:'||b.id, ?, c.id, 'booking_reminder', json_object('ten',c.name,'phong',upper(b.room),'dich_vu',b.service,'gio',strftime('%H:%M',(b.start+${VN})/1000,'unixepoch'),'ngay',strftime('%d/%m/%Y',(b.start+${VN})/1000,'unixepoch')), '', '', ''
+           FROM bookings b JOIN customers c ON c.tenant=b.tenant AND c.phone=${NORM}
+           WHERE b.tenant=? AND b.status IN ('booked','confirmed')
+           AND b.start > ? AND b.start <= ?`,
+        )
+        .bind(now, now, tenant, now, now + hours * 3_600_000),
+    );
+  }
+
+  // 2. Cảnh báo số dư ví thấp (<= 200.000đ)
+  if (on('wallet_low')) {
+    const threshold = s.rules.wallet_low.value || 200_000;
+    const week = new Date(now + VN).toISOString().slice(0, 10);
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, c.tenant, NULL, 'Cảnh báo số dư ví thấp (<= 200.000đ)', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'wlow:'||c.id||':'||?, ?, c.id, 'wallet_low', json_object('ten',c.name,'so_du',wb.balance), '', '', ''
+           FROM wallet_balances wb JOIN customers c ON c.tenant=wb.tenant AND c.id=wb.customer_id
+           WHERE wb.tenant=? AND wb.balance > 0 AND wb.balance <= ? AND COALESCE(c.marketing_consent,1) <> 0`,
+        )
+        .bind(now, week, now, tenant, threshold),
+    );
+  }
+
+  // 3. Nhắc gia hạn thẻ trước 7 / 3 / 1 ngày
+  if (on('pkg_expiring_steps')) {
+    const m7 = 7 * DAY;
+    const m3 = 3 * DAY;
+    const m1 = 1 * DAY;
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, cp.tenant, NULL, 'Nhắc gia hạn thẻ: còn 7 ngày', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'pkg_exp7:'||cp.id, ?, c.id, 'pkg_expiring_steps', json_object('ten',c.name,'goi',cp.name,'so_ngay',7,'han',${dateOf('cp.expires')}), '', '', ''
+           FROM customer_packages cp JOIN customers c ON c.id=cp.customer_id AND c.tenant=cp.tenant
+           WHERE cp.tenant=? AND cp.expires >= ? AND cp.expires <= ?`,
+        )
+        .bind(now, now, tenant, now, now + m7),
+    );
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, cp.tenant, NULL, 'Nhắc gia hạn thẻ: còn 3 ngày', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'pkg_exp3:'||cp.id, ?, c.id, 'pkg_expiring_steps', json_object('ten',c.name,'goi',cp.name,'so_ngay',3,'han',${dateOf('cp.expires')}), '', '', ''
+           FROM customer_packages cp JOIN customers c ON c.id=cp.customer_id AND c.tenant=cp.tenant
+           WHERE cp.tenant=? AND cp.expires >= ? AND cp.expires <= ?`,
+        )
+        .bind(now, now, tenant, now, now + m3),
+    );
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, cp.tenant, NULL, 'Khẩn cấp: Thẻ hội viên hết hạn trong 24h', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'pkg_exp1:'||cp.id, ?, c.id, 'pkg_expiring_steps', json_object('ten',c.name,'goi',cp.name,'so_ngay',1,'han',${dateOf('cp.expires')}), '', '', ''
+           FROM customer_packages cp JOIN customers c ON c.id=cp.customer_id AND c.tenant=cp.tenant
+           WHERE cp.tenant=? AND cp.expires >= ? AND cp.expires <= ?`,
+        )
+        .bind(now, now, tenant, now, now + m1),
+    );
+  }
+
+  // 4. Chăm sóc khách không quay lại 7 / 14 / 30 ngày (tôn trọng opt-out)
+  if (on('retention_stages')) {
+    const week = new Date(now + VN).toISOString().slice(0, 10);
+    const month = new Date(now + VN).toISOString().slice(0, 7);
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, c.tenant, NULL, 'Chăm sóc khách 7 ngày chưa quay lại', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'ret7:'||c.id||':'||?, ?, c.id, 'retention_stages', json_object('ten',c.name,'so_ngay',7,'ngay_cuoi',${dateOf('lv.last')}), '', '', ''
+           FROM customers c JOIN (SELECT tenant,customer_id,MAX(finished) AS last FROM crm_visits GROUP BY tenant,customer_id) lv ON lv.tenant=c.tenant AND lv.customer_id=c.id
+           WHERE c.tenant=? AND lv.last <= ? AND lv.last > ? AND COALESCE(c.marketing_consent,1) <> 0`,
+        )
+        .bind(now, week, now, tenant, now - 7 * DAY, now - 14 * DAY),
+    );
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, c.tenant, NULL, 'Chăm sóc khách 14 ngày chưa quay lại', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'ret14:'||c.id||':'||?, ?, c.id, 'retention_stages', json_object('ten',c.name,'so_ngay',14,'ngay_cuoi',${dateOf('lv.last')}), '', '', ''
+           FROM customers c JOIN (SELECT tenant,customer_id,MAX(finished) AS last FROM crm_visits GROUP BY tenant,customer_id) lv ON lv.tenant=c.tenant AND lv.customer_id=c.id
+           WHERE c.tenant=? AND lv.last <= ? AND lv.last > ? AND COALESCE(c.marketing_consent,1) <> 0`,
+        )
+        .bind(now, week, now, tenant, now - 14 * DAY, now - 21 * DAY),
+    );
+    stmts.push(
+      d
+        .prepare(
+          `INSERT OR IGNORE INTO crm2_tasks(${COLS})
+           SELECT ${ID}, c.tenant, NULL, 'Kéo khách ngủ đông (30 ngày chưa chơi lại)', 'CALL', ?, NULL, NULL, 'Hệ thống', NULL, 'ret30:'||c.id||':'||?, ?, c.id, 'retention_stages', json_object('ten',c.name,'so_ngay',30,'ngay_cuoi',${dateOf('lv.last')}), '', '', ''
+           FROM customers c JOIN (SELECT tenant,customer_id,MAX(finished) AS last FROM crm_visits GROUP BY tenant,customer_id) lv ON lv.tenant=c.tenant AND lv.customer_id=c.id
+           WHERE c.tenant=? AND lv.last <= ? AND lv.last > ? AND COALESCE(c.marketing_consent,1) <> 0`,
+        )
+        .bind(now, month, now, tenant, now - 30 * DAY, now - 60 * DAY),
+    );
+  }
   const results = await d.batch(stmts);
   // The first statement only makes sure customers exist; the rest are the care tasks created now.
   return results.slice(1).reduce((n, r) => n + (r.meta.changes ?? 0), 0);

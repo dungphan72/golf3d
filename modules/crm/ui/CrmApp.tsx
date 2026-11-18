@@ -51,6 +51,7 @@ import {
   UserCheck,
   UserPlus,
   Users,
+  Wallet,
   X,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
@@ -167,6 +168,7 @@ interface CustomerRecord {
   bookingHistory: CustomerBookingRecord[];
   transactions: CustomerTransactionRecord[];
   opportunities: CustomerOpportunity[];
+  marketingConsent?: boolean;
 }
 
 /** No sample customers: the list is filled only from the club's own data (members, bookings, care list). */
@@ -589,6 +591,7 @@ export function CrmModule({
             spend?: number;
             points?: number;
             note?: string;
+            marketing_consent?: number;
           }
         >();
 
@@ -620,10 +623,14 @@ export function CrmModule({
           // Also enrich existing customers with live booking history & transactions if phone matches
           const updatedPrev = prev.map((cust) => {
             const norm = cust.phone.replace(/\D+/g, '');
+            const raw = mergedRaw.get(norm);
+            const nextConsent = raw?.marketing_consent !== undefined ? raw.marketing_consent !== 0 : cust.marketingConsent;
             const custBookings = allBookings.filter(
               (b) => b.phone && b.phone.replace(/\D+/g, '') === norm,
             );
-            if (!custBookings.length) return cust;
+            if (!custBookings.length) {
+              return raw ? { ...cust, marketingConsent: nextConsent ?? true } : cust;
+            }
             const liveHistory: CustomerBookingRecord[] = custBookings.slice(0, 15).map((b) => {
               const d = new Date(b.start);
               const e = new Date(b.end);
@@ -646,6 +653,7 @@ export function CrmModule({
             });
             return {
               ...cust,
+              marketingConsent: nextConsent ?? true,
               bookingHistory: liveHistory.length ? liveHistory : cust.bookingHistory,
             };
           });
@@ -676,6 +684,7 @@ export function CrmModule({
               extra.push({
                 id: raw.id,
                 code: raw.code || `KH${raw.id.slice(-6).toUpperCase()}`,
+                marketingConsent: raw.marketing_consent !== undefined ? raw.marketing_consent !== 0 : true,
                 memberCode: 'Chưa cấp thẻ',
                 name: raw.name,
                 gender: '',
@@ -996,6 +1005,31 @@ export function CrmModule({
     }
     setQuickNoteText('');
     notify('Đã thêm lịch sử tương tác mới!');
+  }
+
+  async function handleToggleConsent() {
+    if (!activeCustomer) return;
+    if (!requirePerm(canWork, 'Thay đổi trạng thái tiếp thị')) return;
+    const nextConsent = activeCustomer.marketingConsent === false;
+    try {
+      await call('/api/crm2/care-customers', {
+        action: 'consent-set',
+        customerId: activeCustomer.id,
+        consent: nextConsent,
+      });
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === activeCustomer.id ? { ...c, marketingConsent: nextConsent } : c,
+        ),
+      );
+      notify(
+        nextConsent
+          ? 'Đã kích hoạt đồng ý nhận tin cho khách hàng'
+          : 'Đã chuyển sang từ chối nhận tin (Opt-out)',
+      );
+    } catch (e) {
+      notify(errText(e));
+    }
   }
 
   function handleToggleTask(taskId: string) {
@@ -2980,6 +3014,87 @@ export function CrmModule({
                         >
                           <MessageCircle size={13} /> Nhắn Zalo
                         </button>
+                      </div>
+                    </div>
+
+                    {/* Consent status bar */}
+                    <div className="crm2-consent-bar">
+                      <div className="crm2-consent-status">
+                        <span>Trạng thái tiếp thị & tự động hóa:</span>
+                        <strong className={activeCustomer.marketingConsent !== false ? 'crm2-consent-status opted-in' : 'crm2-consent-status opted-out'}>
+                          {activeCustomer.marketingConsent !== false ? '✓ Đồng ý nhận tin chăm sóc & ưu đãi' : '✕ Đã từ chối nhận tin tự động (Opt-out)'}
+                        </strong>
+                      </div>
+                      <button
+                        type="button"
+                        className="crm2-consent-btn"
+                        onClick={handleToggleConsent}
+                      >
+                        {activeCustomer.marketingConsent !== false ? 'Chuyển sang Từ chối (Opt-out)' : 'Kích hoạt lại Đồng ý nhận tin'}
+                      </button>
+                    </div>
+
+                    {/* Automation Engine status & rules */}
+                    <div className="crm2-auto-grid">
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#ecfdf5', color: '#059669' }}>
+                          <Clock size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">SLA Phân bổ Lead 5 phút</div>
+                          <div className="crm2-auto-timing">Báo động khi quá hạn 5p chưa liên hệ</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
+                      </div>
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                          <Calendar size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">Nhắc lịch trước 2 giờ</div>
+                          <div className="crm2-auto-timing">Tự động nhắc lịch đặt phòng/line chơi</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
+                      </div>
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#fef3c7', color: '#d97706' }}>
+                          <Star size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">Chăm sóc sau chơi & CSAT</div>
+                          <div className="crm2-auto-timing">Gửi khảo sát & hỏi thăm sau buổi chơi</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
+                      </div>
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#fef2f2', color: '#dc2626' }}>
+                          <Wallet size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">Cảnh báo ví ≤ 200.000đ</div>
+                          <div className="crm2-auto-timing">Nhắc nạp ví để giữ ưu đãi giờ chơi</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
+                      </div>
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#f5f3ff', color: '#7c3aed' }}>
+                          <CreditCard size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">Nhắc thẻ hết hạn 7/3/1 ngày</div>
+                          <div className="crm2-auto-timing">Đa mốc trước ngày hết hạn thẻ hội viên</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
+                      </div>
+                      <div className="crm2-auto-card">
+                        <div className="crm2-auto-icon-box" style={{ background: '#fff7ed', color: '#ea580c' }}>
+                          <UserCheck size={16} />
+                        </div>
+                        <div>
+                          <div className="crm2-auto-title">Giữ chân khách 7/14/30 ngày</div>
+                          <div className="crm2-auto-timing">Kích hoạt kịch bản kéo khách ngủ đông</div>
+                          <span className="crm2-auto-status">Đang tự động hóa</span>
+                        </div>
                       </div>
                     </div>
 

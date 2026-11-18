@@ -32,6 +32,9 @@ import {
   Video,
   Zap,
   Sparkles,
+  Save,
+  Edit2,
+  Trash2,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
@@ -137,6 +140,28 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   const [showChangeSpotModal, setShowChangeSpotModal] = useState<boolean>(false);
   const [targetNewSpot, setTargetNewSpot] = useState<string>('');
 
+  // Cài đặt bãi xe (Settings) Form & Modal States
+  const [formSettings, setFormSettings] = useState<Partial<ParkingSettings>>({});
+  const [savingSettings, setSavingSettings] = useState<boolean>(false);
+  const [settingsSectionFilter, setSettingsSectionFilter] = useState<string>('all');
+  const [showSpotModal, setShowSpotModal] = useState<boolean>(false);
+  const [spotModalMode, setSpotModalMode] = useState<'create' | 'edit'>('create');
+  const [editingSpot, setEditingSpot] = useState<{
+    code: string;
+    section: string;
+    spotType: string;
+    rowIndex: number;
+    colIndex: number;
+    status: string;
+  }>({
+    code: '',
+    section: 'Dãy P1',
+    spotType: 'car',
+    rowIndex: 1,
+    colIndex: 1,
+    status: 'active',
+  });
+
   // Auto-clear notification
   function notify(msg: string) {
     setNotifyMsg(msg);
@@ -181,7 +206,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       const res = await fetch(url);
       const data: any = await res.json();
       if (data.ok) {
-        if (data.settings) setConfig(data.settings);
+        if (data.settings) {
+          setConfig(data.settings);
+          setFormSettings((prev) => (Object.keys(prev).length === 0 ? data.settings : prev));
+        }
         if (data.spots) setSpots(data.spots);
         if (data.summary) setMapSummary(data.summary);
       } else {
@@ -712,6 +740,119 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     } finally {
       setIsClosingShift(false);
     }
+  }
+
+  // Action: Save Parking Facility Settings
+  async function handleSaveSettings() {
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/parking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update-settings',
+          tenant,
+          ...formSettings,
+        }),
+      });
+      const data: any = await res.json();
+      if (data.ok && data.settings) {
+        setConfig(data.settings);
+        setFormSettings(data.settings);
+        notify('✓ Đã lưu cài đặt bãi xe thành công!');
+        void loadConfigAndSpots();
+      } else {
+        notify(data.error || 'Lỗi lưu cài đặt');
+      }
+    } catch {
+      notify('Lỗi kết nối khi lưu cài đặt');
+    } finally {
+      setSavingSettings(false);
+    }
+  }
+
+  // Action: Save Parking Spot (Add / Edit)
+  async function handleSaveSpot() {
+    const code = (editingSpot.code || '').trim().toUpperCase();
+    if (!code) {
+      notify('Vui lòng nhập mã ô đỗ (VD: P66)');
+      return;
+    }
+    try {
+      const res = await fetch('/api/parking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save-spot',
+          tenant,
+          ...editingSpot,
+          code,
+        }),
+      });
+      const data: any = await res.json();
+      if (data.ok) {
+        notify(`✓ Đã lưu thông tin ô ${code}`);
+        setShowSpotModal(false);
+        void loadConfigAndSpots();
+      } else {
+        notify(data.error || 'Lỗi lưu ô đỗ');
+      }
+    } catch {
+      notify('Lỗi kết nối khi lưu ô đỗ');
+    }
+  }
+
+  // Action: Delete/Deactivate Spot
+  async function handleDeleteSpot(code: string) {
+    if (!confirm(`Xác nhận ngừng sử dụng ô đỗ ${code}?`)) return;
+    try {
+      const res = await fetch('/api/parking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete-spot',
+          tenant,
+          code,
+        }),
+      });
+      const data: any = await res.json();
+      if (data.ok) {
+        notify(`✓ Đã ngừng hoạt động ô ${code}`);
+        void loadConfigAndSpots();
+      } else {
+        notify(data.error || 'Không thể xóa ô đỗ');
+      }
+    } catch {
+      notify('Lỗi xóa ô đỗ');
+    }
+  }
+
+  function openCreateSpotModal() {
+    const nextNum = spots.length + 1;
+    const defaultCode = `P${String(nextNum).padStart(2, '0')}`;
+    setEditingSpot({
+      code: defaultCode,
+      section: 'Dãy P6',
+      spotType: 'car',
+      rowIndex: 6,
+      colIndex: (spots.length % 12) + 1,
+      status: 'active',
+    });
+    setSpotModalMode('create');
+    setShowSpotModal(true);
+  }
+
+  function openEditSpotModal(spot: ParkingSpot) {
+    setEditingSpot({
+      code: spot.code,
+      section: spot.section || 'Dãy P1',
+      spotType: spot.spotType || 'car',
+      rowIndex: spot.rowIndex || 1,
+      colIndex: spot.colIndex || 1,
+      status: spot.status || 'active',
+    });
+    setSpotModalMode('edit');
+    setShowSpotModal(true);
   }
 
   // Car visual color helper
@@ -2477,74 +2618,368 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           )}
 
           {/* ===================================================================
-              TAB 5: CÀI ĐẶT BÃI XE (Mặt bằng 65 ô GoPick thực tế)
+              TAB 5: CÀI ĐẶT TOÀN BỘ CHỨC NĂNG BÃI XE (Settings & Layout Management)
               =================================================================== */}
           {activeTab === 'settings' && (
-            <div className="pk-card" style={{ padding: 20 }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 16px' }}>
-                Cài đặt & Mặt bằng Bãi xe GoPick
-              </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Header Thanh công cụ */}
+              <div
+                className="pk-card"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '16px 20px',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <Sliders size={20} color="var(--pk-primary)" />
+                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>
+                      Cài đặt & Vận hành Bãi đậu xe {formSettings.facilityName || config?.facilityName}
+                    </h2>
+                  </div>
+                  <p style={{ fontSize: 12.5, color: 'var(--pk-text-muted)', margin: '4px 0 0' }}>
+                    Tùy biến toàn bộ tham số: Bật/tắt bãi xe, bảng giá, giờ miễn phí Golf, thời gian giữ chỗ, vé giấy và quản lý từng ô đỗ mặt bằng.
+                  </p>
+                </div>
 
+                <button
+                  type="button"
+                  className="pk-btn-primary"
+                  style={{ width: 'auto', padding: '0 20px', height: 40 }}
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                >
+                  <Save size={16} />
+                  <span>{savingSettings ? 'Đang lưu cài đặt...' : 'Lưu tất cả cài đặt'}</span>
+                </button>
+              </div>
+
+              {/* Grid 2 cột: Cấu hình thông số */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <div className="pk-input-group">
-                  <label className="pk-label">Tên bãi đậu xe</label>
-                  <input
-                    type="text"
-                    className="pk-input"
-                    value={config?.facilityName || 'Bãi xe GoPick'}
-                    readOnly
-                  />
+                {/* Khung 1: Trạng thái & Cơ sở */}
+                <div className="pk-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>
+                    <strong style={{ fontSize: 14 }}>1. Trạng thái hoạt động & Cơ sở</strong>
+                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+                      <input
+                        type="checkbox"
+                        checked={formSettings.isEnabled ?? config?.isEnabled ?? true}
+                        onChange={(e) => setFormSettings((prev) => ({ ...prev, isEnabled: e.target.checked }))}
+                        style={{ width: 18, height: 18, accentColor: 'var(--pk-primary)', cursor: 'pointer' }}
+                      />
+                      <span style={{ color: (formSettings.isEnabled ?? config?.isEnabled ?? true) ? '#16a34a' : '#dc2626' }}>
+                        {(formSettings.isEnabled ?? config?.isEnabled ?? true) ? '● Đang mở bãi' : '○ Tạm khóa bãi'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Tên bãi đậu xe</label>
+                    <input
+                      type="text"
+                      className="pk-input"
+                      value={formSettings.facilityName ?? config?.facilityName ?? ''}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, facilityName: e.target.value }))}
+                      placeholder="VD: Bãi xe GoPick"
+                    />
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Địa chỉ cơ sở</label>
+                    <input
+                      type="text"
+                      className="pk-input"
+                      value={formSettings.address ?? config?.address ?? ''}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, address: e.target.value }))}
+                      placeholder="VD: 250 Lương Định Của, TP. Thủ Đức"
+                    />
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Đường dẫn Google Maps / Chỉ đường</label>
+                    <input
+                      type="text"
+                      className="pk-input"
+                      value={formSettings.directionsUrl ?? config?.directionsUrl ?? ''}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, directionsUrl: e.target.value }))}
+                      placeholder="https://maps.google.com/?q=..."
+                    />
+                  </div>
                 </div>
 
-                <div className="pk-input-group">
-                  <label className="pk-label">Đơn giá tiêu chuẩn</label>
-                  <input
-                    type="text"
-                    className="pk-input"
-                    value={money(config?.defaultHourlyRate || 30000)}
-                    readOnly
-                  />
+                {/* Khung 2: Bảng giá & Phụ thu */}
+                <div className="pk-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>
+                    <strong style={{ fontSize: 14 }}>2. Bảng giá & Phụ thu quá hạn</strong>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Đơn giá đỗ xe tiêu chuẩn (VNĐ / lượt đỗ)</label>
+                    <input
+                      type="number"
+                      className="pk-input"
+                      value={formSettings.defaultHourlyRate ?? config?.defaultHourlyRate ?? 30000}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, defaultHourlyRate: Number(e.target.value) }))}
+                    />
+                    <span style={{ fontSize: 11.5, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                      Mức phí khách vãng lai thanh toán qua SePay VietQR hoặc nộp tại cổng ({money(formSettings.defaultHourlyRate ?? config?.defaultHourlyRate ?? 30000)})
+                    </span>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Đơn giá phụ thu quá hạn (VNĐ / giờ)</label>
+                    <input
+                      type="number"
+                      className="pk-input"
+                      value={formSettings.overtimeRatePerHour ?? config?.overtimeRatePerHour ?? 30000}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, overtimeRatePerHour: Number(e.target.value) }))}
+                    />
+                    <span style={{ fontSize: 11.5, color: '#b45309', marginTop: 2 }}>
+                      Ân hạn 15 phút đầu miễn phí. Sau 15 phút quá giờ, hệ thống bắt đầu tính phụ thu theo đơn giá này.
+                    </span>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Vé giấy cho khách vãng lai</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', marginTop: 4 }}>
+                      <input
+                        type="checkbox"
+                        checked={formSettings.allowPaperTickets ?? config?.allowPaperTickets ?? true}
+                        onChange={(e) => setFormSettings((prev) => ({ ...prev, allowPaperTickets: e.target.checked }))}
+                        style={{ width: 16, height: 16, accentColor: 'var(--pk-primary)' }}
+                      />
+                      <span>Cho phép bảo vệ cổng phát hành vé giấy nhanh (khách không dùng smartphone)</span>
+                    </label>
+                  </div>
                 </div>
 
-                <div className="pk-input-group">
-                  <label className="pk-label">Số giờ miễn phí cho khách Golf (Tài trợ)</label>
-                  <input
-                    type="text"
-                    className="pk-input"
-                    value={`${config?.golfFreeHours || 3} giờ`}
-                    readOnly
-                  />
+                {/* Khung 3: Quyền lợi khách chơi Golf */}
+                <div className="pk-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>
+                    <strong style={{ fontSize: 14 }}>3. Quyền lợi tài trợ cho khách Golf</strong>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Số giờ đỗ miễn phí cho khách Golf (giờ)</label>
+                    <input
+                      type="number"
+                      className="pk-input"
+                      value={formSettings.golfFreeHours ?? config?.golfFreeHours ?? 3}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, golfFreeHours: Number(e.target.value) }))}
+                    />
+                    <span style={{ fontSize: 11.5, color: '#166534', marginTop: 2 }}>
+                      GoPick tài trợ 100% chi phí đậu xe trong khung giờ này cho khách có lịch phòng Golf hợp lệ.
+                    </span>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Số xe tối đa được tài trợ trên mỗi booking Golf</label>
+                    <input
+                      type="number"
+                      className="pk-input"
+                      value={formSettings.golfSlotsPerBooking ?? config?.golfSlotsPerBooking ?? 1}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, golfSlotsPerBooking: Number(e.target.value) }))}
+                    />
+                    <span style={{ fontSize: 11.5, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                      Mỗi lịch chơi Golf tại cơ sở được áp dụng quyền lợi miễn phí cho tối đa số lượng xe này.
+                    </span>
+                  </div>
                 </div>
 
-                <div className="pk-input-group">
-                  <label className="pk-label">Thời gian giữ chỗ tạm (Hold timeout)</label>
-                  <input
-                    type="text"
-                    className="pk-input"
-                    value={`${(config?.holdTimeoutSeconds || 300) / 60} phút`}
-                    readOnly
-                  />
+                {/* Khung 4: Giữ chỗ & Vận hành */}
+                <div className="pk-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>
+                    <strong style={{ fontSize: 14 }}>4. Thời gian giữ chỗ & Thời gian đệm</strong>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Thời gian giữ chỗ tạm khi chưa thanh toán</label>
+                    <select
+                      className="pk-select"
+                      value={formSettings.holdTimeoutSeconds ?? config?.holdTimeoutSeconds ?? 300}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, holdTimeoutSeconds: Number(e.target.value) }))}
+                    >
+                      <option value={180}>3 phút (180 giây)</option>
+                      <option value={300}>5 phút (300 giây - Khuyến nghị)</option>
+                      <option value={600}>10 phút (600 giây)</option>
+                      <option value={900}>15 phút (900 giây)</option>
+                    </select>
+                    <span style={{ fontSize: 11.5, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                      Nếu khách không thanh toán trong thời gian này, ô đỗ sẽ tự động giải phóng để đón khách khác.
+                    </span>
+                  </div>
+
+                  <div className="pk-input-group">
+                    <label className="pk-label">Thời gian đệm dọn xe giữa 2 lượt</label>
+                    <select
+                      className="pk-select"
+                      value={formSettings.bufferMinutes ?? config?.bufferMinutes ?? 0}
+                      onChange={(e) => setFormSettings((prev) => ({ ...prev, bufferMinutes: Number(e.target.value) }))}
+                    >
+                      <option value={0}>0 phút (Liên tục, tối ưu công suất)</option>
+                      <option value={5}>5 phút đệm</option>
+                      <option value={10}>10 phút đệm</option>
+                      <option value={15}>15 phút đệm</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Thông tin mặt bằng 65 ô */}
-              <div
-                style={{
-                  marginTop: 20,
-                  padding: 16,
-                  background: '#f8fafc',
-                  border: '1px solid var(--pk-border)',
-                  borderRadius: 'var(--pk-radius)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <Info size={16} color="var(--pk-primary)" />
-                  <strong style={{ fontSize: 13.5 }}>Phương án bố trí mặt bằng bãi xe GoPick (65 xe)</strong>
+              {/* Khung 5: Quản lý danh sách từng ô đỗ mặt bằng */}
+              <div className="pk-card" style={{ padding: 20 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: 14,
+                    paddingBottom: 12,
+                    borderBottom: '1px solid var(--pk-border)',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>
+                      Quản lý danh sách ô đỗ mặt bằng ({spots.length} ô)
+                    </h3>
+                    <div style={{ fontSize: 12, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                      Mặt bằng GoPick gồm 65 ô vật lý (P01 - P65). Quản lý có thể cấu hình tọa độ, dãy, loại xe hoặc thêm ô mới.
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pk-btn-primary"
+                    style={{ width: 'auto', padding: '0 16px', height: 34, fontSize: 12.5 }}
+                    onClick={openCreateSpotModal}
+                  >
+                    <Plus size={14} />
+                    <span>Thêm ô đỗ mới</span>
+                  </button>
                 </div>
-                <p style={{ fontSize: 12.5, color: 'var(--pk-text-muted)', margin: 0 }}>
-                  Kích thước mỗi xe: 2,5m x 5,0m · Cổng vào: theo đường hiện trạng (6,5m) · Tổng sức chứa: 65 xe (P01 - P65).
-                  Mặt bằng bãi xe GoPick gồm 65 ô vật lý (P01 - P65) theo phương án bố trí đã duyệt. Đã ngừng mở bán các ô mẫu cũ A01-A10 và đồng bộ một mã ID cho toàn bộ hệ thống.
-                </p>
+
+                {/* Bộ lọc theo dãy */}
+                <div className="pk-filter-chips" style={{ marginBottom: 14 }}>
+                  <button
+                    type="button"
+                    className={`pk-filter-chip ${settingsSectionFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setSettingsSectionFilter('all')}
+                  >
+                    Tất cả ({spots.length})
+                  </button>
+                  {Object.entries(groupedSections).map(([secName, secSpots]) => (
+                    <button
+                      key={secName}
+                      type="button"
+                      className={`pk-filter-chip ${settingsSectionFilter === secName ? 'active' : ''}`}
+                      onClick={() => setSettingsSectionFilter(secName)}
+                    >
+                      {secName} ({secSpots.length})
+                    </button>
+                  ))}
+                </div>
+
+                {/* Bảng danh sách ô */}
+                <div style={{ overflowX: 'auto', maxHeight: 480, overflowY: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--pk-border)', position: 'sticky', top: 0, zIndex: 1 }}>
+                        <th style={{ padding: '8px 12px' }}>Mã ô</th>
+                        <th style={{ padding: '8px 12px' }}>Dãy</th>
+                        <th style={{ padding: '8px 12px' }}>Loại xe</th>
+                        <th style={{ padding: '8px 12px' }}>Tọa độ (Hàng - Cột)</th>
+                        <th style={{ padding: '8px 12px' }}>Trạng thái</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {spots
+                        .filter((s) => settingsSectionFilter === 'all' || s.section === settingsSectionFilter)
+                        .map((spot) => (
+                          <tr key={spot.id} style={{ borderBottom: '1px solid var(--pk-border)' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 800 }}>{spot.code}</td>
+                            <td style={{ padding: '8px 12px' }}>{spot.section}</td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <span style={{ fontSize: 11.5, background: '#f1f5f9', padding: '2px 6px', borderRadius: 4 }}>
+                                {spot.spotType === 'car' ? '🚗 Ô tô' : '🏍 Xe máy'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 12px', color: '#64748b' }}>
+                              Hàng {spot.rowIndex} · Cột {spot.colIndex}
+                            </td>
+                            <td style={{ padding: '8px 12px' }}>
+                              <span
+                                className={`pk-badge-status ${
+                                  spot.status === 'maintenance' ? 'pk-badge-maintenance' : 'pk-badge-confirmed'
+                                }`}
+                              >
+                                {spot.status === 'maintenance' ? 'Bảo trì' : 'Hoạt động'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '8px 12px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: 6 }}>
+                                <button
+                                  type="button"
+                                  className="pk-btn-secondary"
+                                  style={{ height: 28, padding: '0 8px', fontSize: 11.5 }}
+                                  onClick={() => openEditSpotModal(spot)}
+                                  title="Chỉnh sửa ô đỗ"
+                                >
+                                  <Edit2 size={12} />
+                                  <span>Sửa</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="pk-btn-secondary"
+                                  style={{ height: 28, padding: '0 8px', fontSize: 11.5 }}
+                                  onClick={() => {
+                                    const newStatus = spot.status === 'maintenance' ? 'active' : 'maintenance';
+                                    fetch('/api/parking', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        action: 'set-spot-status',
+                                        tenant,
+                                        spotCode: spot.code,
+                                        status: newStatus,
+                                      }),
+                                    }).then(() => {
+                                      notify(`Đã cập nhật ô ${spot.code}`);
+                                      void loadConfigAndSpots();
+                                    });
+                                  }}
+                                >
+                                  {spot.status === 'maintenance' ? 'Mở lại' : 'Khóa'}
+                                </button>
+                                <button
+                                  type="button"
+                                  style={{
+                                    height: 28,
+                                    padding: '0 8px',
+                                    fontSize: 11.5,
+                                    border: '1px solid #fca5a5',
+                                    background: '#fee2e2',
+                                    color: '#b91c1c',
+                                    borderRadius: 'var(--pk-radius)',
+                                    cursor: 'pointer',
+                                  }}
+                                  onClick={() => handleDeleteSpot(spot.code)}
+                                  title="Ngừng sử dụng ô này"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -2691,6 +3126,121 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         </div>
       )}
 
+      {/* Modal: Thêm / Chỉnh sửa ô đỗ */}
+      {showSpotModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setShowSpotModal(false)}
+        >
+          <div
+            className="pk-card"
+            style={{ width: '100%', maxWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 14px', fontSize: 16 }}>
+              {spotModalMode === 'create' ? 'Thêm ô đỗ mới' : `Chỉnh sửa ô đỗ ${editingSpot.code}`}
+            </h3>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="pk-input-group">
+                <label className="pk-label">Mã ô đỗ (VD: P66, P12)</label>
+                <input
+                  type="text"
+                  className="pk-input"
+                  value={editingSpot.code}
+                  onChange={(e) => setEditingSpot((prev) => ({ ...prev, code: e.target.value.toUpperCase() }))}
+                  disabled={spotModalMode === 'edit'}
+                  placeholder="VD: P66"
+                />
+              </div>
+
+              <div className="pk-input-group">
+                <label className="pk-label">Tên dãy</label>
+                <input
+                  type="text"
+                  className="pk-input"
+                  value={editingSpot.section}
+                  onChange={(e) => setEditingSpot((prev) => ({ ...prev, section: e.target.value }))}
+                  placeholder="VD: Dãy P1, Dãy P6"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="pk-input-group">
+                  <label className="pk-label">Hàng tọa độ (Row)</label>
+                  <input
+                    type="number"
+                    className="pk-input"
+                    value={editingSpot.rowIndex}
+                    onChange={(e) => setEditingSpot((prev) => ({ ...prev, rowIndex: Number(e.target.value) }))}
+                  />
+                </div>
+                <div className="pk-input-group">
+                  <label className="pk-label">Cột tọa độ (Col)</label>
+                  <input
+                    type="number"
+                    className="pk-input"
+                    value={editingSpot.colIndex}
+                    onChange={(e) => setEditingSpot((prev) => ({ ...prev, colIndex: Number(e.target.value) }))}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div className="pk-input-group">
+                  <label className="pk-label">Loại phương tiện</label>
+                  <select
+                    className="pk-select"
+                    value={editingSpot.spotType}
+                    onChange={(e) => setEditingSpot((prev) => ({ ...prev, spotType: e.target.value }))}
+                  >
+                    <option value="car">🚗 Ô tô (2.5m x 5m)</option>
+                    <option value="motorcycle">🏍 Xe máy</option>
+                  </select>
+                </div>
+                <div className="pk-input-group">
+                  <label className="pk-label">Trạng thái ô</label>
+                  <select
+                    className="pk-select"
+                    value={editingSpot.status}
+                    onChange={(e) => setEditingSpot((prev) => ({ ...prev, status: e.target.value }))}
+                  >
+                    <option value="active">Hoạt động</option>
+                    <option value="maintenance">Bảo trì</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18 }}>
+              <button
+                type="button"
+                className="pk-btn-secondary"
+                onClick={() => setShowSpotModal(false)}
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                className="pk-btn-primary"
+                onClick={handleSaveSpot}
+              >
+                Lưu ô đỗ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Mobile Bottom Navigation for Staff / Guard */}
       <nav className="pk-bottom-nav" aria-label="Thanh điều hướng nhân viên bãi xe">
         <button
@@ -2727,6 +3277,15 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         >
           <TrendingUp size={18} />
           <span>Đối soát ca</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+        >
+          <Sliders size={18} />
+          <span>Cài đặt</span>
         </button>
       </nav>
     </div>

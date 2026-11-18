@@ -1105,6 +1105,169 @@ export async function closeShift(
 }
 
 /**
+ * Updates parking facility configuration.
+ */
+export async function updateParkingSettings(
+  tenant: string = DEFAULT_PARKING_TENANT,
+  input: Partial<ParkingSettings>,
+  staffName?: string,
+): Promise<ParkingSettings> {
+  const current = await ensureParkingInitialized(tenant);
+  const now = Date.now();
+
+  const isEnabled = input.isEnabled !== undefined ? (input.isEnabled ? 1 : 0) : (current.isEnabled ? 1 : 0);
+  const facilityName = (input.facilityName ?? current.facilityName).trim() || 'Bãi xe GoPick';
+  const address = (input.address ?? current.address).trim();
+  const directionsUrl = (input.directionsUrl ?? current.directionsUrl).trim();
+  const defaultHourlyRate = Number(input.defaultHourlyRate) >= 0 ? Number(input.defaultHourlyRate) : current.defaultHourlyRate;
+  const bufferMinutes = Number(input.bufferMinutes) >= 0 ? Number(input.bufferMinutes) : current.bufferMinutes;
+  const holdTimeoutSeconds = Number(input.holdTimeoutSeconds) > 0 ? Number(input.holdTimeoutSeconds) : current.holdTimeoutSeconds;
+  const golfFreeHours = Number(input.golfFreeHours) >= 0 ? Number(input.golfFreeHours) : current.golfFreeHours;
+  const golfSlotsPerBooking = Number(input.golfSlotsPerBooking) > 0 ? Number(input.golfSlotsPerBooking) : current.golfSlotsPerBooking;
+  const overtimeRatePerHour = Number(input.overtimeRatePerHour) >= 0 ? Number(input.overtimeRatePerHour) : current.overtimeRatePerHour;
+  const allowPaperTickets = input.allowPaperTickets !== undefined ? (input.allowPaperTickets ? 1 : 0) : (current.allowPaperTickets ? 1 : 0);
+
+  await db()
+    .prepare(
+      `UPDATE parking_settings SET
+        is_enabled=?,
+        facility_name=?,
+        address=?,
+        directions_url=?,
+        default_hourly_rate=?,
+        buffer_minutes=?,
+        hold_timeout_seconds=?,
+        golf_free_hours=?,
+        golf_slots_per_booking=?,
+        overtime_rate_per_hour=?,
+        allow_paper_tickets=?,
+        updated_at=?
+      WHERE tenant=?`
+    )
+    .bind(
+      isEnabled,
+      facilityName,
+      address,
+      directionsUrl,
+      defaultHourlyRate,
+      bufferMinutes,
+      holdTimeoutSeconds,
+      golfFreeHours,
+      golfSlotsPerBooking,
+      overtimeRatePerHour,
+      allowPaperTickets,
+      now,
+      tenant,
+    )
+    .run();
+
+  await audit(
+    tenant,
+    'CẬP_NHẬT_CÀI_ĐẶT_BÃI_XE',
+    `${staffName || 'Quản lý'} cập nhật cấu hình bãi xe ${facilityName} (Giá: ${defaultHourlyRate}đ, Quá giờ: ${overtimeRatePerHour}đ, Miễn phí Golf: ${golfFreeHours}h, Vé giấy: ${allowPaperTickets ? 'Bật' : 'Tắt'})`
+  );
+
+  return ensureParkingInitialized(tenant);
+}
+
+/**
+ * Saves (creates or updates) a parking spot.
+ */
+export async function saveParkingSpot(
+  tenant: string = DEFAULT_PARKING_TENANT,
+  input: {
+    code: string;
+    section: string;
+    spotType?: string;
+    rowIndex?: number;
+    colIndex?: number;
+    isActive?: boolean;
+    status?: string;
+    sortOrder?: number;
+  },
+  staffName?: string,
+): Promise<any> {
+  const code = (input.code || '').trim().toUpperCase();
+  if (!code) throw new Error('Vui lòng nhập mã ô đỗ');
+  const section = (input.section || 'Dãy chung').trim();
+  const spotType = input.spotType || 'car';
+  const rowIndex = Number(input.rowIndex) || 1;
+  const colIndex = Number(input.colIndex) || 1;
+  const isActive = input.isActive !== false ? 1 : 0;
+  const status = input.status === 'maintenance' ? 'maintenance' : 'active';
+  const sortOrder = Number(input.sortOrder) || (rowIndex * 100 + colIndex);
+
+  const existing = await db()
+    .prepare('SELECT id FROM parking_spots WHERE tenant=? AND code=?')
+    .bind(tenant, code)
+    .first<any>();
+
+  if (existing) {
+    await db()
+      .prepare(
+        `UPDATE parking_spots SET
+          section=?,
+          spot_type=?,
+          row_index=?,
+          col_index=?,
+          is_active=?,
+          status=?,
+          sort_order=?
+        WHERE tenant=? AND code=?`
+      )
+      .bind(section, spotType, rowIndex, colIndex, isActive, status, sortOrder, tenant, code)
+      .run();
+
+    await audit(tenant, 'CẬP_NHẬT_Ô_ĐỖ', `${staffName || 'Quản lý'} cập nhật ô ${code} (${section}, Hàng ${rowIndex}, Cột ${colIndex}, ${status})`);
+  } else {
+    const spotId = `spot-${tenant}-${code}`;
+    await db()
+      .prepare(
+        `INSERT INTO parking_spots (
+          id, tenant, code, section, spot_type, row_index, col_index, is_active, status, sort_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(spotId, tenant, code, section, spotType, rowIndex, colIndex, isActive, status, sortOrder)
+      .run();
+
+    await audit(tenant, 'THÊM_Ô_ĐỖ', `${staffName || 'Quản lý'} thêm mới ô ${code} (${section})`);
+  }
+
+  return { ok: true, code, section, spotType, rowIndex, colIndex, isActive, status };
+}
+
+/**
+ * Deactivates or removes a parking spot if no active tickets exist.
+ */
+export async function deleteParkingSpot(
+  tenant: string = DEFAULT_PARKING_TENANT,
+  code: string,
+  staffName?: string,
+): Promise<{ code: string; status: string; isActive: boolean }> {
+  const cleanCode = (code || '').trim().toUpperCase();
+  const activeTickets = await db()
+    .prepare(
+      `SELECT COUNT(*) as count FROM parking_tickets 
+       WHERE tenant=? AND spot_code=? AND status IN ('holding', 'confirmed', 'active')`
+    )
+    .bind(tenant, cleanCode)
+    .first<{ count: number }>();
+
+  if ((activeTickets?.count ?? 0) > 0) {
+    throw new Error(`Ô ${cleanCode} đang có ${activeTickets?.count} vé hiệu lực. Không thể xóa ô này.`);
+  }
+
+  await db()
+    .prepare('UPDATE parking_spots SET is_active=0, status=? WHERE tenant=? AND code=?')
+    .bind('maintenance', tenant, cleanCode)
+    .run();
+
+  await audit(tenant, 'XÓA_Ô_ĐỖ', `${staffName || 'Quản lý'} đã ngừng hoạt động ô ${cleanCode}`);
+
+  return { code: cleanCode, status: 'maintenance', isActive: false };
+}
+
+/**
  * Internal mapper for parking ticket row.
  */
 function mapDbTicket(r: any): ParkingTicket {

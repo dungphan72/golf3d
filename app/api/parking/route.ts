@@ -14,6 +14,9 @@ import {
   getShiftReconciliation,
   closeShift,
   changeTicketSpot,
+  updateParkingSettings,
+  saveParkingSpot,
+  deleteParkingSpot,
 } from '../../../modules/parking/server/parking-service';
 
 export const dynamic = 'force-dynamic';
@@ -411,6 +414,21 @@ export async function POST(req: Request) {
       await audit(tenant, 'CẬP_NHẬT_TRẠNG_THÁI_Ô', `Cập nhật ô ${spotCode} thành ${status}`);
 
       return Response.json({ ok: true, spotCode, status });
+    }
+
+    if (action === 'update-settings') {
+      const updated = await updateParkingSettings(tenant, body, auth?.name);
+      return Response.json({ ok: true, settings: updated });
+    }
+
+    if (action === 'save-spot') {
+      const res = await saveParkingSpot(tenant, body, auth?.name);
+      return Response.json(res);
+    }
+
+    if (action === 'delete-spot') {
+      await deleteParkingSpot(tenant, body.code, auth?.name);
+      return Response.json({ ok: true });
     }
 
     return Response.json({ error: 'Hành động không hợp lệ' }, { status: 400 });

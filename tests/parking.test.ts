@@ -21,6 +21,9 @@ import {
   changeTicketSpot,
   getShiftReconciliation,
   closeShift,
+  updateParkingSettings,
+  saveParkingSpot,
+  deleteParkingSpot,
 } from '../modules/parking/server/parking-service.ts';
 import { db } from '../lib/server/common.ts';
 import { receiveSepay } from '../lib/server/bank-service.ts';
@@ -37,9 +40,14 @@ const OTHER_TENANT = 'facility-test-isolated';
 // Clean test data before running
 test('0. Setup test environment', async () => {
   await ensureParkingInitialized(TENANT);
+  await db().prepare("DELETE FROM parking_spots WHERE code = 'P99'").run();
+  await db()
+    .prepare("UPDATE parking_settings SET default_hourly_rate = 30000, facility_name = 'Bãi xe GoPick', overtime_rate_per_hour = 15000, hold_timeout_seconds = 300, buffer_minutes = 5, golf_free_hours = 3 WHERE tenant = ?")
+    .bind(TENANT)
+    .run();
   await db()
     .prepare(
-      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR customer_name LIKE 'Khách Golf%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%' OR spot_code IN ('P65', 'P10', 'P11', 'P20', 'P30')",
+      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR customer_name LIKE 'Khách Golf%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%' OR spot_code IN ('P65', 'P10', 'P11', 'P20', 'P30', 'P99')",
     )
     .run();
 });
@@ -670,3 +678,75 @@ test('14. Overtime calculation with grace period', async () => {
   assert.equal(otExceed.overtimeHours, 1);
   assert.equal(otExceed.overtimeAmount, 15000);
 });
+
+test('15. Parking settings and spot management (CRUD)', async () => {
+  // Update facility settings
+  const updatedConfig = await updateParkingSettings(
+    TENANT,
+    {
+      facilityName: 'Bãi xe SiGolf GoPick VIP',
+      defaultHourlyRate: 35000,
+      overtimeRatePerHour: 20000,
+      holdTimeoutSeconds: 600,
+      bufferMinutes: 10,
+      golfFreeHours: 4,
+      allowPaperTickets: true,
+    },
+    'Admin Test'
+  );
+
+  assert.equal(updatedConfig.facilityName, 'Bãi xe SiGolf GoPick VIP');
+  assert.equal(updatedConfig.defaultHourlyRate, 35000);
+  assert.equal(updatedConfig.overtimeRatePerHour, 20000);
+  assert.equal(updatedConfig.holdTimeoutSeconds, 600);
+  assert.equal(updatedConfig.bufferMinutes, 10);
+  assert.equal(updatedConfig.golfFreeHours, 4);
+
+  // Create new spot P99
+  const newSpot = await saveParkingSpot(
+    TENANT,
+    {
+      code: 'P99',
+      section: 'Dãy VIP',
+      spotType: 'car',
+      rowIndex: 10,
+      colIndex: 1,
+      isActive: true,
+      status: 'active',
+      sortOrder: 99,
+    },
+    'Admin Test'
+  );
+  assert.equal(newSpot.code, 'P99');
+  assert.equal(newSpot.section, 'Dãy VIP');
+
+  // Verify in spot grid
+  const grid = await getSpotGrid(TENANT);
+  const foundSpot = grid.spots.find((s) => s.code === 'P99');
+  assert.ok(foundSpot, 'New spot P99 must appear in spot grid');
+
+  // Deactivate spot P99
+  const deactivated = await deleteParkingSpot(TENANT, 'P99', 'Admin Test');
+  assert.equal(deactivated.code, 'P99');
+  assert.equal(deactivated.status, 'maintenance');
+  assert.equal(deactivated.isActive, false);
+
+  // Clean up P99 from DB
+  await db().prepare("DELETE FROM parking_spots WHERE code = 'P99'").run();
+
+  // Restore facility settings to standard default
+  await updateParkingSettings(
+    TENANT,
+    {
+      facilityName: 'Bãi xe GoPick',
+      defaultHourlyRate: 30000,
+      overtimeRatePerHour: 15000,
+      holdTimeoutSeconds: 300,
+      bufferMinutes: 5,
+      golfFreeHours: 3,
+      allowPaperTickets: true,
+    },
+    'Admin Test'
+  );
+});
+

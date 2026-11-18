@@ -356,6 +356,7 @@ export default function ClubApp() {
               {view === 'parking' && allowed('parking') && (
                 <ParkingAdminApp
                   tenant="gopick"
+                  role={data?.role}
                   onNavigate={go}
                 />
               )}

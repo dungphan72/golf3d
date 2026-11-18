@@ -1,11 +1,8 @@
-import '../sub.css';
-import '../parking.css';
 import ParkingCustomerApp from '../../modules/parking/ui/ParkingCustomerApp';
-import { FONT_URL, SiteFooter, SiteHeader } from '../ui/SiteChrome';
 
 export const metadata = {
-  title: 'Đặt chỗ đậu xe — SaiGon Indoor Golf Club',
-  description: 'Đặt chỗ đậu xe thông minh tại bãi xe SIGOLF GoPick, liên kết lịch chơi Golf và kiểm tra quyền miễn phí.',
+  title: 'Bãi xe GoPick — Đặt chỗ đậu xe SIGOLF',
+  description: 'Đặt chỗ đậu xe thông minh tại bãi xe SIGOLF GoPick, liên kết lịch chơi Golf và nhận vé QR tự động.',
 };
 
 export default async function ParkingPage({
@@ -27,22 +24,14 @@ export default async function ParkingPage({
   const facility = typeof sp.facility === 'string' ? sp.facility : 'gopick';
 
   return (
-    <div className="sg-page hd-home hd-inner">
-      <link rel="stylesheet" href={FONT_URL} />
-      <SiteHeader />
-      <main className="sg-solo" style={{ padding: '20px 0', background: '#f1f5f9' }}>
-        <ParkingCustomerApp
-          initialTenant={facility}
-          initialBookingId={bookingId}
-          initialRoom={room}
-          initialStart={start}
-          initialEnd={end}
-          initialCustomerName={customerName}
-          initialCustomerPhone={customerPhone}
-        />
-      </main>
-      <SiteFooter />
-    </div>
+    <ParkingCustomerApp
+      initialTenant={facility}
+      initialBookingId={bookingId}
+      initialRoom={room}
+      initialStart={start}
+      initialEnd={end}
+      initialCustomerName={customerName}
+      initialCustomerPhone={customerPhone}
+    />
   );
 }
-

@@ -805,3 +805,233 @@
   background: #e0f2fe;
   color: #0284c7;
 }
+
+/* ==========================================================================
+   MOBILE-FIRST PARKING APP SHELL & NAVIGATION
+   ========================================================================== */
+
+.pk-isolated-root {
+  min-height: 100vh;
+  background: #f8fafc;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--pk-text-main);
+  margin: 0;
+  padding: 0;
+}
+
+.pk-app-header {
+  background: var(--pk-primary);
+  color: #ffffff;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.pk-app-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.pk-app-logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pk-primary);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+/* Desktop Navigation Bar */
+.pk-desktop-nav {
+  display: none;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .pk-desktop-nav {
+    display: flex;
+  }
+}
+
+.pk-desktop-nav-link {
+  color: rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--pk-radius);
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+}
+
+.pk-desktop-nav-link:hover,
+.pk-desktop-nav-link.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  font-weight: 700;
+}
+
+/* Mobile Bottom Navigation Bar */
+.pk-bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #ffffff;
+  border-top: 1px solid var(--pk-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  z-index: 90;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 768px) {
+  .pk-bottom-nav {
+    display: none;
+  }
+}
+
+.pk-bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 100%;
+  color: #64748b;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pk-bottom-nav-item.active {
+  color: var(--pk-primary);
+  font-weight: 700;
+}
+
+.pk-bottom-nav-badge {
+  position: absolute;
+  top: 6px;
+  right: calc(50% - 14px);
+  width: 8px;
+  height: 8px;
+  background: #16a34a;
+  border: 1.5px solid #ffffff;
+  border-radius: 50%;
+}
+
+.pk-content-with-bottom-nav {
+  padding-bottom: calc(75px + env(safe-area-inset-bottom));
+}
+
+/* Floating Spot Selection Bottom Bar */
+.pk-spot-selection-bar {
+  position: sticky;
+  bottom: calc(60px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-top: 2px solid var(--pk-primary);
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  z-index: 85;
+  animation: pk-slide-up 0.2s ease-out;
+}
+
+@media (min-width: 768px) {
+  .pk-spot-selection-bar {
+    bottom: 0;
+  }
+}
+
+@keyframes pk-slide-up {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Language Switcher Button */
+.pk-lang-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--pk-radius);
+  padding: 2px;
+  gap: 2px;
+}
+
+.pk-lang-btn {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pk-lang-btn.active {
+  background: #ffffff;
+  color: var(--pk-primary);
+}
+
+/* Fullscreen QR Modal */
+.pk-qr-fullscreen-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  padding: 20px;
+}
+
+.pk-qr-card-fullscreen {
+  background: #ffffff;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+

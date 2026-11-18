@@ -45,7 +45,8 @@ export default function MobileAppNavBar() {
   if (
     pathname.startsWith('/quan-ly') ||
     pathname.startsWith('/api') ||
-    pathname.startsWith('/goi/')
+    pathname.startsWith('/goi/') ||
+    pathname.startsWith('/parking')
   ) {
     return null;
   }

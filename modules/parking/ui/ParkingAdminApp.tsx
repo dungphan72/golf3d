@@ -27,6 +27,7 @@ import {
   RefreshCw,
   Info,
   Compass,
+  ArrowLeft,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
@@ -34,12 +35,16 @@ import '../../../app/parking.css';
 
 interface Props {
   tenant?: string;
+  role?: string;
   onNavigate?: (view: string, extra?: Record<string, unknown>) => void;
 }
 
-export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props) {
+export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onNavigate }: Props) {
   // Navigation tabs: 'map' | 'schedule' | 'gate' | 'reconciliation' | 'settings'
-  const [activeTab, setActiveTab] = useState<'map' | 'schedule' | 'gate' | 'reconciliation' | 'settings'>('map');
+  const isGuard = role === 'guard' || role === 'security';
+  const [activeTab, setActiveTab] = useState<'map' | 'schedule' | 'gate' | 'reconciliation' | 'settings'>(
+    isGuard ? 'gate' : 'map',
+  );
 
   // Config & Status
   const [config, setConfig] = useState<ParkingSettings | null>(null);
@@ -403,21 +408,46 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
           justifyContent: 'space-between',
           background: 'var(--pk-primary)',
           color: '#ffffff',
-          padding: '12px 20px',
+          padding: '12px 16px',
           borderRadius: 'var(--pk-radius)',
           marginBottom: 16,
+          flexWrap: 'wrap',
+          gap: 10,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Car size={24} />
-          <h1 style={{ fontSize: 18, fontWeight: 800, margin: 0 }}>
+          {onNavigate && (
+            <button
+              type="button"
+              onClick={() => onNavigate('rooms')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                background: 'rgba(255,255,255,0.2)',
+                color: '#ffffff',
+                border: 'none',
+                padding: '6px 10px',
+                borderRadius: 'var(--pk-radius)',
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: 'pointer',
+              }}
+              title="Quay lại bán hàng POS hoặc Đặt sân"
+            >
+              <ArrowLeft size={15} />
+              <span>Về quản lý SIGOLF</span>
+            </button>
+          )}
+          <Car size={22} />
+          <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>
             SIGOLF · Bãi xe GoPick
           </h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 13, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 4 }}>
-            Quản lý bãi xe
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 12.5, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 4 }}>
+            {isGuard ? 'Bảo vệ trực cổng' : 'Quản lý bãi xe'}
           </span>
           <button
             type="button"
@@ -1555,6 +1585,45 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation for Staff / Guard */}
+      <nav className="pk-bottom-nav" aria-label="Thanh điều hướng nhân viên bãi xe">
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gate')}
+        >
+          <Car size={18} />
+          <span>Cổng vào/ra</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'map' ? 'active' : ''}`}
+          onClick={() => setActiveTab('map')}
+        >
+          <MapPin size={18} />
+          <span>Sơ đồ 65 ô</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
+          onClick={() => setActiveTab('schedule')}
+        >
+          <Calendar size={18} />
+          <span>Tra vé / Lịch</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('reconciliation')}
+        >
+          <TrendingUp size={18} />
+          <span>Đối soát ca</span>
+        </button>
+      </nav>
     </div>
   );
 }

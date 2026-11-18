@@ -30,6 +30,7 @@ export interface ParkingSettings {
   golfSlotsPerBooking: number;    // Số xe tối đa được tài trợ trên mỗi booking Golf (VD: 1 xe)
   overtimeRatePerHour: number;    // Đơn giá phụ thu quá giờ (VD: 30.000 đ/giờ)
   allowPaperTickets: boolean;     // Cho phép bảo vệ phát hành vé giấy
+  totalSpots?: number;            // Sức chứa quy hoạch của bãi (GoPick: 65)
   updatedAt: number;
 }
 
@@ -44,6 +45,7 @@ export interface ParkingSpot {
   isActive: boolean;
   status: 'active' | 'maintenance' | 'inactive';
   sortOrder: number;
+  hasCoordinates?: boolean;
   // Computed runtime states for the requested time window
   currentVehiclePlate?: string;   // Biển số xe thực tế đang đỗ (nếu có)
   stateForWindow?: 'available' | 'held' | 'booked' | 'occupied' | 'maintenance';
@@ -76,6 +78,8 @@ export interface ParkingTicket {
   paidAmount: number;             // Khách đã trả
   overtimeAmount: number;         // Phụ thu quá giờ
   totalAmount: number;            // Tổng tiền vé
+  customerAmount?: number;         // Khoản thực tế khách cần trả (sau khi trừ tài trợ)
+  isGolfSponsored?: boolean;      // Được tài trợ bởi lượt chơi golf
   refundAmount: number;           // Số tiền hoàn
   feePayer: FeePayer;
   holdExpiresAt: number;          // Server timestamp hết hạn hold

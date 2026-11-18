@@ -71,6 +71,7 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
       overtimeRatePerHour: 30000,
       allowPaperTickets: true,
       updatedAt: now,
+      totalSpots: 65,
     };
   } else {
     settings = {
@@ -87,12 +88,28 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
       overtimeRatePerHour: existing.overtime_rate_per_hour,
       allowPaperTickets: Boolean(existing.allow_paper_tickets),
       updatedAt: existing.updated_at,
+      totalSpots: tenant === 'gopick' ? 65 : 10,
     };
+  }
+
+  // Ensure legacy A01-A10 demo spots are deactivated for GoPick so they are no longer sold
+  if (tenant === 'gopick') {
+    await db()
+      .prepare("UPDATE parking_spots SET is_active=0 WHERE tenant='gopick' AND code LIKE 'A%'")
+      .run();
+
+    // Enforce normalized row_index, col_index and section matching approved 65-slot GoPick plan
+    await db().prepare("UPDATE parking_spots SET row_index=1, col_index=CAST(SUBSTR(code, 2) AS INTEGER), section='Dãy chéo P1' WHERE tenant='gopick' AND code BETWEEN 'P01' AND 'P09'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=2, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 9, section='Dãy P2' WHERE tenant='gopick' AND code BETWEEN 'P10' AND 'P20'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=3, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 20, section='Dãy P3' WHERE tenant='gopick' AND code BETWEEN 'P21' AND 'P31'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=4, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 31, section='Dãy P4' WHERE tenant='gopick' AND code BETWEEN 'P32' AND 'P42'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=5, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 42, section='Dãy P5' WHERE tenant='gopick' AND code BETWEEN 'P43' AND 'P53'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=6, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 53, section='Dãy P6' WHERE tenant='gopick' AND code BETWEEN 'P54' AND 'P65'").run();
   }
 
   // Seed default spots if none exist
   const spotCount = await db()
-    .prepare('SELECT COUNT(*) as cnt FROM parking_spots WHERE tenant=?')
+    .prepare('SELECT COUNT(*) as cnt FROM parking_spots WHERE tenant=? AND is_active=1')
     .bind(tenant)
     .first<{ cnt: number }>();
 
@@ -104,57 +121,47 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
 }
 
 /**
- * Seeds both demo layout (A01-A10) and physical layout (P01-P65) for GoPick.
+ * Seeds the official 65-slot layout (P01-P65) for GoPick based on approved plan.
  */
 async function seedGoPickSpots(tenant: string) {
-  // 1. Mobile demo layout A01-A10 (Row 1: A01-A05, Row 2: A06-A10)
-  for (let i = 1; i <= 10; i++) {
-    const code = `A${String(i).padStart(2, '0')}`;
-    const id = `spot-${tenant}-${code}`;
-    const row = i <= 5 ? 1 : 2;
-    const col = i <= 5 ? i : i - 5;
-    await db()
-      .prepare(
-        `INSERT OR IGNORE INTO parking_spots (
-          id, tenant, code, section, spot_type, row_index, col_index, is_active, status, sort_order
-        ) VALUES (?, ?, ?, 'Dãy A', 'car', ?, ?, 1, 'active', ?)`
-      )
-      .bind(id, tenant, code, row, col, i)
-      .run();
-  }
-
-  // 2. Physical 65-slot GoPick layout (P01-P65)
   for (let p = 1; p <= 65; p++) {
     const code = `P${String(p).padStart(2, '0')}`;
     const id = `spot-${tenant}-${code}`;
-    let section = 'Dãy P1';
+    let section = 'Dãy chéo P1';
     let row = 1;
+    let col = p;
     if (p <= 9) {
       section = 'Dãy chéo P1';
       row = 1;
+      col = p; // 1..9
     } else if (p <= 20) {
       section = 'Dãy P2';
       row = 2;
+      col = p - 9; // 1..11
     } else if (p <= 31) {
       section = 'Dãy P3';
       row = 3;
+      col = p - 20; // 1..11
     } else if (p <= 42) {
       section = 'Dãy P4';
       row = 4;
+      col = p - 31; // 1..11
     } else if (p <= 53) {
       section = 'Dãy P5';
       row = 5;
+      col = p - 42; // 1..11
     } else {
       section = 'Dãy P6';
       row = 6;
+      col = p - 53; // 1..12
     }
     await db()
       .prepare(
-        `INSERT OR IGNORE INTO parking_spots (
+        `INSERT OR REPLACE INTO parking_spots (
           id, tenant, code, section, spot_type, row_index, col_index, is_active, status, sort_order
         ) VALUES (?, ?, ?, ?, 'car', ?, ?, 1, 'active', ?)`
       )
-      .bind(id, tenant, code, section, row, p, 100 + p)
+      .bind(id, tenant, code, section, row, col, p)
       .run();
   }
 }
@@ -184,7 +191,7 @@ export async function getSpotGrid(
 
   const rawSpots = (
     await db()
-      .prepare('SELECT * FROM parking_spots WHERE tenant=? ORDER BY sort_order ASC')
+      .prepare('SELECT * FROM parking_spots WHERE tenant=? AND is_active=1 ORDER BY sort_order ASC')
       .bind(tenant)
       .all<any>()
   ).results;
@@ -222,6 +229,7 @@ export async function getSpotGrid(
       isActive: Boolean(r.is_active),
       status: r.status,
       sortOrder: r.sort_order,
+      hasCoordinates: Boolean(r.row_index && r.col_index && r.section),
     };
 
     const evaluation = evaluateSpotState(
@@ -951,6 +959,8 @@ function mapDbTicket(r: any): ParkingTicket {
     paidAmount: r.paid_amount || 0,
     overtimeAmount: r.overtime_amount || 0,
     totalAmount: r.total_amount || 0,
+    customerAmount: Math.max(0, (r.total_amount || 0) - (r.sponsored_amount || 0)),
+    isGolfSponsored: r.fee_payer === 'gopick_sponsored' || Boolean(r.sponsored_amount > 0),
     refundAmount: r.refund_amount || 0,
     feePayer: r.fee_payer || 'customer',
     holdExpiresAt: r.hold_expires_at,

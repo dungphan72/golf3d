@@ -249,6 +249,106 @@
 }
 
 /* Parking Lot Visual Map */
+.pk-filter-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 0 10px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.pk-filter-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pk-filter-chip:hover {
+  border-color: var(--pk-primary);
+  background: #f8fafc;
+}
+
+.pk-filter-chip.active {
+  background: var(--pk-primary);
+  color: #ffffff;
+  border-color: var(--pk-primary);
+}
+
+.pk-gopick-lot {
+  background: #2d3748;
+  border-radius: var(--pk-radius);
+  padding: 14px 10px;
+  position: relative;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 3px solid #1a202c;
+  overflow-x: auto;
+}
+
+.pk-lot-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.2);
+}
+
+.pk-gate-entrance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #166534;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid #22c55e;
+}
+
+.pk-north-compass {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pk-section-card {
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pk-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.pk-spots-row-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
 .pk-lot-map {
   background: #374151;
   border-radius: var(--pk-radius);
@@ -328,6 +428,19 @@
   background: var(--pk-primary) !important;
   border: 2px solid var(--pk-primary) !important;
   color: #ffffff;
+}
+
+.pk-spot-cell.highlighted {
+  box-shadow: 0 0 0 3px #16a34a, 0 0 14px rgba(22, 163, 74, 0.9) !important;
+  border: 2px solid #16a34a !important;
+  animation: pk-pulse-highlight 1.5s infinite;
+  z-index: 10;
+}
+
+@keyframes pk-pulse-highlight {
+  0% { box-shadow: 0 0 0 2px #16a34a, 0 0 6px rgba(22, 163, 74, 0.5); }
+  50% { box-shadow: 0 0 0 5px #22c55e, 0 0 16px rgba(34, 197, 94, 0.9); }
+  100% { box-shadow: 0 0 0 2px #16a34a, 0 0 6px rgba(22, 163, 74, 0.5); }
 }
 
 .pk-spot-cell.selected .pk-spot-code {

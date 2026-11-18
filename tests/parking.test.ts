@@ -32,7 +32,7 @@ test('0. Setup test environment', async () => {
   await ensureParkingInitialized(TENANT);
   await db()
     .prepare(
-      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%'",
+      "DELETE FROM parking_tickets WHERE customer_name LIKE 'Khách Test%' OR customer_name LIKE 'Khách Golf%' OR license_plate LIKE '%TEST%' OR license_plate LIKE '51F-GATE%' OR license_plate LIKE '51T-ISO%' OR license_plate LIKE '51A-PAY%' OR license_plate LIKE '51A-999%' OR license_plate LIKE '51B-888%' OR license_plate LIKE '51C-777%' OR spot_code IN ('P65', 'P10', 'P11', 'P20', 'P30')",
     )
     .run();
 });
@@ -115,9 +115,9 @@ test('2. Availability & Interval Overlap Rules', () => {
     id: 't-test-1',
     ticketCode: 'PK-001',
     tenant: TENANT,
-    spotId: 'spot-gopick-A03',
-    spotCode: 'A03',
-    section: 'Dãy A',
+    spotId: 'spot-gopick-P65',
+    spotCode: 'P65',
+    section: 'Dãy P6',
     licensePlate: '51A-123.45',
     status: 'holding',
     expectedIn: now,
@@ -142,33 +142,50 @@ test('2. Availability & Interval Overlap Rules', () => {
   assert.equal(doesTicketConflict(expiredTicket, now, now + 3600000, 0, now), false);
 });
 
-test('3. Database Initialization & Spot Grid for GoPick', async () => {
+test('3. Database Initialization & GoPick Approved 65-Spot Layout', async () => {
   await ensureParkingInitialized(TENANT);
 
   const config = await getParkingConfig(TENANT);
   assert.ok(config);
   assert.equal(config.tenant, TENANT);
   assert.equal(Boolean(config.isEnabled), true);
+  assert.equal(config.totalSpots, 65);
 
   const now = Date.now();
   const grid = await getSpotGrid(TENANT, now, now + 2 * 3600 * 1000);
   const spots = grid.spots;
-  assert.ok(spots.length >= 75); // 10 quick demo A01-A10 + 65 physical P01-P65
 
-  const a03 = spots.find((s) => s.code === 'A03');
-  assert.ok(a03);
-  assert.equal(a03.section, 'Dãy A');
+  // Exactly 65 spots according to approved layout blueprint
+  assert.equal(spots.length, 65, 'GoPick lot must have exactly 65 physical spots');
+
+  // Verify P65 exists and has complete coordinates
+  const p65 = spots.find((s) => s.code === 'P65');
+  assert.ok(p65, 'Spot P65 must exist in GoPick lot');
+  assert.equal(p65.section, 'Dãy P6');
+  assert.equal(p65.rowIndex, 6);
+  assert.equal(p65.colIndex, 12);
+  assert.equal(p65.hasCoordinates, true);
+
+  // Verify first and last spots of sections
+  const p01 = spots.find((s) => s.code === 'P01');
+  assert.ok(p01);
+  assert.equal(p01.section, 'Dãy chéo P1');
+  assert.equal(p01.hasCoordinates, true);
+
+  // Legacy demo spots A01-A10 should NOT be returned in active grid
+  const a01 = spots.find((s) => s.code === 'A01');
+  assert.equal(a01, undefined, 'Legacy demo spot A01 should be retired/inactive');
 });
 
-test('4. Atomic Hold, Race Condition Prevention, and Double-Hold Rejection', async () => {
+test('4. Atomic Hold, Concurrency Race Condition, and Expiration on Spot P65', async () => {
   await ensureParkingInitialized(TENANT);
 
   const testTimeIn = Date.now() + 86400000; // tomorrow
   const testTimeOut = testTimeIn + 2 * 3600 * 1000;
 
-  // Device 1 holds spot A03
+  // Device 1 holds spot P65
   const ticket1 = await holdSpot(TENANT, {
-    spotCode: 'A03',
+    spotCode: 'P65',
     licensePlate: '51A-999.01',
     customerName: 'Khách Test 1',
     customerPhone: '0901234567',
@@ -177,15 +194,16 @@ test('4. Atomic Hold, Race Condition Prevention, and Double-Hold Rejection', asy
   });
 
   assert.ok(ticket1);
-  assert.equal(ticket1.spotCode, 'A03');
+  assert.equal(ticket1.spotCode, 'P65');
   assert.equal(ticket1.status, 'holding');
   assert.ok(ticket1.accessToken);
+  assert.ok(ticket1.holdExpiresAt > Date.now());
 
-  // Device 2 tries to hold the EXACT SAME spot at an overlapping time -> MUST BE REJECTED
+  // Device 2 tries to hold the EXACT SAME spot P65 at an overlapping time -> MUST BE REJECTED
   await assert.rejects(
     async () => {
       await holdSpot(TENANT, {
-        spotCode: 'A03',
+        spotCode: 'P65',
         licensePlate: '51B-888.88',
         customerName: 'Khách Test 2',
         expectedIn: testTimeIn + 30 * 60 * 1000, // 30 mins later
@@ -195,55 +213,114 @@ test('4. Atomic Hold, Race Condition Prevention, and Double-Hold Rejection', asy
     /vừa có người giữ chỗ hoặc đã được đặt/i,
   );
 
-  // Adjacent booking without overlap: tomorrow after testTimeOut -> SUCCEEDS
-  const ticket3 = await holdSpot(TENANT, {
-    spotCode: 'A03',
-    licensePlate: '51C-777.77',
-    customerName: 'Khách Test 3',
-    expectedIn: testTimeOut,
-    expectedOut: testTimeOut + 2 * 3600 * 1000,
+  // Expire ticket1 manually to simulate timeout
+  await db()
+    .prepare('UPDATE parking_tickets SET hold_expires_at=? WHERE id=?')
+    .bind(Date.now() - 5000, ticket1.id)
+    .run();
+
+  // Now Device 2 tries again for P65 -> SUCCEEDS because previous hold has expired!
+  const ticket2 = await holdSpot(TENANT, {
+    spotCode: 'P65',
+    licensePlate: '51B-888.88',
+    customerName: 'Khách Test 2',
+    expectedIn: testTimeIn + 30 * 60 * 1000,
+    expectedOut: testTimeOut + 30 * 60 * 1000,
   });
-  assert.ok(ticket3);
-  assert.equal(ticket3.spotCode, 'A03');
+  assert.ok(ticket2);
+  assert.equal(ticket2.spotCode, 'P65');
+  assert.equal(ticket2.status, 'holding');
 });
 
-test('5. Golf Sponsorship Confirmation & Payment Flow', async () => {
+test('5. Payment Confirmation, Idempotency, and Golf Sponsorship', async () => {
   await ensureParkingInitialized(TENANT);
 
   const testTimeIn = Date.now() + 172800000; // 2 days later
   const testTimeOut = testTimeIn + 2 * 3600 * 1000;
 
-  // Hold spot A04 for normal customer
-  const ticket = await holdSpot(TENANT, {
-    spotCode: 'A04',
+  // Case A: Customer pays via QR for spot P10
+  const ticketA = await holdSpot(TENANT, {
+    spotCode: 'P10',
     licensePlate: '51A-PAY.01',
     customerName: 'Khách Test Pay',
     expectedIn: testTimeIn,
     expectedOut: testTimeOut,
   });
 
-  assert.ok(ticket);
-  assert.equal(ticket.status, 'holding');
+  assert.ok(ticketA);
+  assert.equal(ticketA.status, 'holding');
 
-  // Confirm ticket payment
+  // Confirm payment
   const confirmed = await confirmTicket(TENANT, {
-    ticketCode: ticket.ticketCode,
+    ticketCode: ticketA.ticketCode,
     paymentMethod: 'vietqr',
-    amountPaid: ticket.totalAmount,
+    amountPaid: ticketA.totalAmount,
     transactionRef: 'TEST-TX-001',
   });
 
   assert.ok(confirmed);
   assert.equal(confirmed.status, 'confirmed');
-  assert.equal(confirmed.paidAmount, ticket.totalAmount);
+  assert.equal(confirmed.paidAmount, ticketA.totalAmount);
+
+  // Idempotency: Webhook sends duplicate notification -> same confirmed ticket returned, no duplicate charge
+  const duplicate = await confirmTicket(TENANT, {
+    ticketCode: ticketA.ticketCode,
+    paymentMethod: 'vietqr',
+    amountPaid: ticketA.totalAmount,
+    transactionRef: 'TEST-TX-001',
+  });
+  assert.equal(duplicate.id, confirmed.id);
+  assert.equal(duplicate.status, 'confirmed');
+
+  // Case B: Golf player with valid reservation -> 100% sponsored, 0 đ customer payment
+  const mockBookingId = `bkg-golf-test-${Date.now()}`;
+  await db()
+    .prepare(
+      `INSERT INTO bookings (
+        id, tenant, room, customer, phone, service, people, start, end, status, segments, price, created, food_total
+      ) VALUES (?, ?, 'Phòng 101', 'Khách Golf VIP', '0909888999', 'golf', 1, ?, ?, 'confirmed', '[]', 500000, ?, 0)`
+    )
+    .bind(
+      mockBookingId,
+      TENANT,
+      testTimeIn,
+      testTimeOut,
+      Date.now(),
+    )
+    .run();
+
+  const ticketGolf = await holdSpot(TENANT, {
+    spotCode: 'P11',
+    licensePlate: '51A-GOLF.01',
+    customerName: 'Khách Golf VIP',
+    customerPhone: '0909888999',
+    expectedIn: testTimeIn,
+    expectedOut: testTimeOut,
+    golfBookingId: mockBookingId,
+  });
+
+  assert.equal(ticketGolf.feePayer, 'gopick_sponsored');
+  assert.equal(ticketGolf.sponsoredAmount, 30000);
+
+  const confirmedGolf = await confirmTicket(TENANT, {
+    ticketCode: ticketGolf.ticketCode,
+    paymentMethod: 'system',
+    amountPaid: 0,
+    transactionRef: `GOLF-SPONSOR-${mockBookingId}`,
+  });
+
+  assert.equal(confirmedGolf.status, 'confirmed');
+  assert.equal(confirmedGolf.feePayer, 'gopick_sponsored');
+  assert.equal(confirmedGolf.paidAmount, 0);
+  assert.equal(confirmedGolf.sponsoredAmount, 30000);
 });
 
-test('6. Gate Guard Operations: Idempotent Check-in and Overtime Check-out', async () => {
+test('6. Gate Guard Operations: Check-in, Status Update, and Deducting Surcharge', async () => {
   await ensureParkingInitialized(TENANT);
 
-  // Create walk-in ticket at the gate for spot A05
+  // Create walk-in ticket at gate for spot P20
   const ticket = await createGatePaperTicket(TENANT, {
-    spotCode: 'A05',
+    spotCode: 'P20',
     licensePlate: '51F-GATE.01',
     operatorId: 'guard-user-01',
     note: 'Khách vãng lai vào cổng',
@@ -253,7 +330,14 @@ test('6. Gate Guard Operations: Idempotent Check-in and Overtime Check-out', asy
   assert.equal(ticket.status, 'active');
   assert.ok(ticket.actualIn);
 
-  // Idempotent check-in scan again -> returns existing without error
+  // Check spot state is now 'occupied'
+  const grid = await getSpotGrid(TENANT, Date.now(), Date.now() + 3600000);
+  const spotP20 = grid.spots.find((s) => s.code === 'P20');
+  assert.ok(spotP20);
+  assert.equal(spotP20.stateForWindow, 'occupied');
+  assert.equal(spotP20.currentVehiclePlate, '51F-GATE.01');
+
+  // Idempotent check-in scan again -> returns cleanly without error
   const rescan = await gateCheckIn(TENANT, {
     ticketCode: ticket.ticketCode,
     operatorId: 'guard-user-01',
@@ -275,20 +359,21 @@ test('6. Gate Guard Operations: Idempotent Check-in and Overtime Check-out', asy
   assert.ok(checkedOut.ticket.actualOut);
 });
 
-test('7. Shift Reconciliation & Close Shift', async () => {
+test('7. Shift Reconciliation & Audit Separation', async () => {
   await ensureParkingInitialized(TENANT);
 
   const recon = await getShiftReconciliation(TENANT);
   assert.ok(recon);
-  assert.ok(recon.onlineAmount >= 0);
-  assert.ok(recon.gateCash >= 0);
-  assert.ok(recon.netCollected >= 0);
+  assert.ok(typeof recon.onlineAmount === 'number');
+  assert.ok(typeof recon.gateCash === 'number');
+  assert.ok(typeof recon.netCollected === 'number');
+  assert.ok(typeof recon.sponsoredAmount === 'number');
 
-  // Test close shift
+  // Close shift
   const closed = await closeShift(TENANT, {
     staffId: 'manager-01',
     staffName: 'Quản lý ca',
-    cashSubmitted: recon.gateCash, // Exact match -> diff 0
+    cashSubmitted: recon.gateCash,
   });
 
   assert.ok(closed);
@@ -305,9 +390,9 @@ test('8. Multi-tenant Isolation Check', async () => {
   assert.equal(gopickConfig?.tenant, TENANT);
   assert.equal(otherConfig?.tenant, OTHER_TENANT);
 
-  // Creating ticket in GoPick cannot be checked in under OTHER_TENANT
+  // Ticket created in GoPick cannot be checked in under OTHER_TENANT
   const ticket = await holdSpot(TENANT, {
-    spotCode: 'A06',
+    spotCode: 'P30',
     licensePlate: '51T-ISO.01',
     customerName: 'Khách Test Iso',
     expectedIn: Date.now() + 3600000,

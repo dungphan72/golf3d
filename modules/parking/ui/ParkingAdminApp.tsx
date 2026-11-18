@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   RefreshCw,
   Info,
+  Compass,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
@@ -49,14 +50,31 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
   const [mapMode, setMapMode] = useState<'now' | 'slot'>('now');
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
+  const [adminSectionFilter, setAdminSectionFilter] = useState<string>('all');
   const [mapSummary, setMapSummary] = useState({
-    total: 10,
-    available: 2,
+    total: 65,
+    available: 65,
     held: 0,
-    booked: 1,
-    occupied: 7,
+    booked: 0,
+    occupied: 0,
     maintenance: 0,
   });
+
+  // Group spots by section
+  const groupedSections = useMemo(() => {
+    const groups: Record<string, ParkingSpot[]> = {};
+    for (const spot of spots) {
+      const sec = spot.section || 'Dãy chung';
+      if (!groups[sec]) groups[sec] = [];
+      groups[sec].push(spot);
+    }
+    return groups;
+  }, [spots]);
+
+  // Spots with unconfigured coordinates
+  const unconfiguredSpots = useMemo(() => {
+    return spots.filter((s) => !s.hasCoordinates);
+  }, [spots]);
 
   // Lịch đặt chỗ States
   const [ticketsList, setTicketsList] = useState<ParkingTicket[]>([]);
@@ -171,7 +189,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
         if (listData.ok && listData.tickets?.length > 0) {
           setGateFoundTicket(listData.tickets[0]);
         } else {
-          notify(`Không tìm thấy vé hoặc xe "${gateInput}"`);
+          notify(`Không tìm thấy vé, biển số hoặc ô "${gateInput}"`);
           setGateFoundTicket(null);
         }
       }
@@ -359,10 +377,20 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
 
   // Car visual color helper
   const getCarVisualClass = (code: string) => {
-    if (code === 'A01' || code === 'A04') return '#ffffff';
-    if (code === 'A02' || code === 'A07') return '#1e293b';
-    if (code === 'A09') return '#0284c7';
-    return '#64748b';
+    const colors = ['#ffffff', '#1e293b', '#0284c7', '#475569', '#dc2626', '#16a34a'];
+    const num = parseInt(code.replace(/\D/g, '') || '0', 10);
+    return colors[num % colors.length];
+  };
+
+  // Scroll spot into view when selected
+  const handleSelectSpot = (spot: ParkingSpot) => {
+    setSelectedSpot(spot);
+    setTimeout(() => {
+      const el = document.getElementById(`admin-spot-${spot.code}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }, 50);
   };
 
   return (
@@ -547,112 +575,142 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
                   </div>
                 </div>
 
-                {/* Bản đồ bãi xe SIGOLF trực quan */}
-                <div className="pk-lot-map" style={{ padding: '20px 16px' }}>
-                  {/* Dãy A (A01 - A05) */}
-                  <div className="pk-lot-row" style={{ gap: 10 }}>
-                    {spots
-                      .filter((s) => ['A01', 'A02', 'A03', 'A04', 'A05'].includes(s.code))
-                      .map((spot) => {
-                        const isSelected = selectedSpot?.code === spot.code;
-                        const isOccupied = spot.stateForWindow === 'occupied';
-                        const isBooked = spot.stateForWindow === 'booked';
-                        const isHeld = spot.stateForWindow === 'held';
+                {/* Cảnh báo ô chưa cấu hình tọa độ / mặt bằng nếu có */}
+                {unconfiguredSpots.length > 0 && (
+                  <div
+                    style={{
+                      background: '#fffbeb',
+                      border: '1px solid #fde68a',
+                      color: '#b45309',
+                      padding: '10px 14px',
+                      borderRadius: 'var(--pk-radius)',
+                      marginBottom: 12,
+                      fontSize: 12.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
+                  >
+                    <AlertTriangle size={16} />
+                    <span>
+                      <strong>Chú ý:</strong> Phát hiện {unconfiguredSpots.length} ô chưa hoàn thiện cấu hình tọa độ / vị trí (hàng/cột/dãy). Vui lòng cập nhật cài đặt để hiển thị chuẩn xác trên sơ đồ.
+                    </span>
+                  </div>
+                )}
 
-                        return (
-                          <div
-                            key={spot.id}
-                            className={`pk-spot-cell ${isSelected ? 'selected' : ''} ${
-                              isOccupied ? 'occupied' : ''
-                            } ${isBooked ? 'booked' : ''} ${isHeld ? 'held' : ''}`}
-                            style={{ height: 80 }}
-                            onClick={() => setSelectedSpot(spot)}
-                          >
-                            {isOccupied ? (
-                              <div
-                                className="pk-car-icon"
-                                style={{ background: getCarVisualClass(spot.code), height: 46 }}
-                              />
-                            ) : isSelected ? (
-                              <div
-                                style={{
-                                  width: 26,
-                                  height: 26,
-                                  borderRadius: '50%',
-                                  background: '#ffffff',
-                                  color: 'var(--pk-primary)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  marginTop: 12,
-                                }}
-                              >
-                                <Check size={16} strokeWidth={3} />
-                              </div>
-                            ) : (
-                              <div style={{ height: 32 }} />
-                            )}
-                            <span className="pk-spot-code">{spot.code}</span>
+                {/* Bộ lọc theo dãy */}
+                <div className="pk-filter-chips" style={{ marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    className={`pk-filter-chip ${adminSectionFilter === 'all' ? 'active' : ''}`}
+                    onClick={() => setAdminSectionFilter('all')}
+                  >
+                    Tất cả ({spots.length})
+                  </button>
+                  {Object.entries(groupedSections).map(([secName, secSpots]) => {
+                    return (
+                      <button
+                        key={secName}
+                        type="button"
+                        className={`pk-filter-chip ${adminSectionFilter === secName ? 'active' : ''}`}
+                        onClick={() => setAdminSectionFilter(secName)}
+                      >
+                        {secName} ({secSpots.length})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Bản đồ bãi xe SIGOLF trực quan GoPick 65 ô */}
+                <div className="pk-gopick-lot" style={{ padding: '16px' }}>
+                  {/* Cổng vào & La bàn */}
+                  <div className="pk-lot-header-bar">
+                    <div className="pk-gate-entrance">
+                      <span>🚧 CỔNG VÀO</span>
+                      <span style={{ fontSize: 10, opacity: 0.8 }}>(Đường vào 6.5m)</span>
+                    </div>
+                    <div className="pk-north-compass">
+                      <Compass size={14} />
+                      <span>HƯỚNG BẮC (N)</span>
+                    </div>
+                  </div>
+
+                  {/* Render các dãy GoPick P1 - P6 */}
+                  {Object.entries(groupedSections)
+                    .filter(([secName]) => adminSectionFilter === 'all' || adminSectionFilter === secName)
+                    .map(([secName, secSpots], idx) => {
+                      const isDiagonal = secName.includes('chéo');
+
+                      return (
+                        <div key={secName} className="pk-section-card">
+                          <div className="pk-section-title">
+                            <span>{secName}</span>
+                            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>
+                              {secSpots.filter((s) => s.stateForWindow === 'available').length}/{secSpots.length} ô trống
+                            </span>
                           </div>
-                        );
-                      })}
-                  </div>
 
-                  {/* Làn di chuyển xe ở giữa */}
-                  <div className="pk-lot-lane" style={{ height: 60 }}>
-                    <div className="pk-lot-lane-stripes-left" />
-                    <span className="pk-lot-lane-arrow" style={{ fontSize: 26 }}>➔</span>
-                    <div className="pk-lot-lane-stripes-right" />
-                  </div>
+                          <div className="pk-spots-row-scroll">
+                            {secSpots.map((spot) => {
+                              const isSelected = selectedSpot?.code === spot.code;
+                              const isOccupied = spot.stateForWindow === 'occupied';
+                              const isBooked = spot.stateForWindow === 'booked';
+                              const isHeld = spot.stateForWindow === 'held';
+                              const isMaint = spot.status === 'maintenance';
 
-                  {/* Dãy A dưới (A06 - A10) */}
-                  <div className="pk-lot-row" style={{ gap: 10 }}>
-                    {spots
-                      .filter((s) => ['A06', 'A07', 'A08', 'A09', 'A10'].includes(s.code))
-                      .map((spot) => {
-                        const isSelected = selectedSpot?.code === spot.code;
-                        const isOccupied = spot.stateForWindow === 'occupied';
-                        const isBooked = spot.stateForWindow === 'booked';
-                        const isHeld = spot.stateForWindow === 'held';
+                              return (
+                                <div
+                                  key={spot.id}
+                                  id={`admin-spot-${spot.code}`}
+                                  className={`pk-spot-cell ${isSelected ? 'selected highlighted' : ''} ${
+                                    isOccupied ? 'occupied' : ''
+                                  } ${isBooked ? 'booked' : ''} ${isHeld ? 'held' : ''} ${
+                                    isMaint ? 'maintenance' : ''
+                                  } ${isDiagonal ? 'diagonal' : ''}`}
+                                  onClick={() => handleSelectSpot(spot)}
+                                  title={`${spot.code} (${spot.section}) - ${spot.stateForWindow}${
+                                    !spot.hasCoordinates ? ' [Chưa cấu hình tọa độ]' : ''
+                                  }`}
+                                >
+                                  <span className="pk-spot-code">{spot.code}</span>
 
-                        return (
-                          <div
-                            key={spot.id}
-                            className={`pk-spot-cell ${isSelected ? 'selected' : ''} ${
-                              isOccupied ? 'occupied' : ''
-                            } ${isBooked ? 'booked' : ''} ${isHeld ? 'held' : ''}`}
-                            style={{ height: 80 }}
-                            onClick={() => setSelectedSpot(spot)}
-                          >
-                            <span className="pk-spot-code">{spot.code}</span>
-                            {isOccupied ? (
-                              <div
-                                className="pk-car-icon"
-                                style={{ background: getCarVisualClass(spot.code), height: 46 }}
-                              />
-                            ) : isSelected ? (
-                              <div
-                                style={{
-                                  width: 26,
-                                  height: 26,
-                                  borderRadius: '50%',
-                                  background: '#ffffff',
-                                  color: 'var(--pk-primary)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  marginBottom: 8,
-                                }}
-                              >
-                                <Check size={16} strokeWidth={3} />
-                              </div>
-                            ) : (
-                              <div style={{ height: 32 }} />
-                            )}
+                                  {isOccupied ? (
+                                    <div
+                                      className="pk-car-icon"
+                                      style={{ background: getCarVisualClass(spot.code) }}
+                                    />
+                                  ) : isSelected ? (
+                                    <div
+                                      style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: '50%',
+                                        background: '#ffffff',
+                                        color: 'var(--pk-primary)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginBottom: 4,
+                                      }}
+                                    >
+                                      <Check size={14} strokeWidth={3} />
+                                    </div>
+                                  ) : (
+                                    <div style={{ height: 26 }} />
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                  </div>
+
+                          {idx < 5 && (
+                            <div style={{ textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 4 }}>
+                              {idx % 2 === 0 ? 'Làn lưu thông 6.5m ➔' : '⬅ Làn lưu thông 6.5m'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
 
                 {/* Chi tiết ô đã bấm */}
@@ -667,13 +725,20 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: 10,
                     }}
                   >
                     <div>
                       <strong style={{ fontSize: 14 }}>Ô đỗ {selectedSpot.code} ({selectedSpot.section})</strong>
-                      <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
-                        Trạng thái: {selectedSpot.stateForWindow === 'available' ? 'Trống' : selectedSpot.stateForWindow === 'occupied' ? 'Đang có xe' : 'Đã đặt'}
-                        {selectedSpot.currentVehiclePlate && ` · Xe: ${selectedSpot.currentVehiclePlate}`}
+                      <div style={{ fontSize: 12, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                        Trạng thái: <strong>{selectedSpot.stateForWindow === 'available' ? 'Trống' : selectedSpot.stateForWindow === 'occupied' ? 'Đang có xe' : selectedSpot.stateForWindow === 'held' ? 'Đang giữ' : 'Đã đặt'}</strong>
+                        {selectedSpot.currentVehiclePlate && ` · Biển số: ${selectedSpot.currentVehiclePlate}`}
+                      </div>
+                      <div style={{ fontSize: 11.5, color: selectedSpot.hasCoordinates ? '#64748b' : '#b45309', marginTop: 2 }}>
+                        {selectedSpot.hasCoordinates
+                          ? `📍 Tọa độ: Dãy ${selectedSpot.section} · Hàng ${selectedSpot.rowIndex} · Cột ${selectedSpot.colIndex}`
+                          : '⚠️ Chưa cấu hình tọa độ / vị trí trên mặt bằng'}
                       </div>
                     </div>
 
@@ -694,7 +759,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
                               status: newStatus,
                             }),
                           }).then(() => {
-                            notify(`Đã cập nhật ô ${selectedSpot.code}`);
+                            notify(`Đã cập nhật trạng thái ô ${selectedSpot.code}`);
                             void loadConfigAndSpots();
                           });
                         }}
@@ -1082,18 +1147,39 @@ export default function ParkingAdminApp({ tenant = 'gopick', onNavigate }: Props
                           borderTop: '1px solid var(--pk-border)',
                         }}
                       >
-                        <span style={{ color: 'var(--pk-primary)', fontWeight: 700, fontSize: 13 }}>
-                          ✓ Đã thu online
-                        </span>
-                        <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>
-                          {money(gateFoundTicket.paidAmount || gateFoundTicket.totalAmount)}
-                        </strong>
+                        {gateFoundTicket.feePayer === 'gopick_sponsored' ? (
+                          <>
+                            <span style={{ color: 'var(--pk-primary)', fontWeight: 700, fontSize: 13 }}>
+                              🏌️ GoPick tài trợ (100%)
+                            </span>
+                            <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>
+                              {money(gateFoundTicket.sponsoredAmount || gateFoundTicket.totalAmount)}
+                            </strong>
+                          </>
+                        ) : (
+                          <>
+                            <span style={{ color: 'var(--pk-primary)', fontWeight: 700, fontSize: 13 }}>
+                              ✓ Đã thu online
+                            </span>
+                            <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>
+                              {money(gateFoundTicket.paidAmount || gateFoundTicket.totalAmount)}
+                            </strong>
+                          </>
+                        )}
                       </div>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu</span>
-                        <strong style={{ fontSize: 15, color: '#0f172a' }}>0 đ</strong>
-                      </div>
+                      {(() => {
+                        const paid = (gateFoundTicket.paidAmount || 0) + (gateFoundTicket.sponsoredAmount || 0);
+                        const due = Math.max(0, (gateFoundTicket.totalAmount || 0) - paid);
+                        return (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu</span>
+                            <strong style={{ fontSize: 15, color: due > 0 ? '#dc2626' : '#0f172a' }}>
+                              {money(due)}
+                            </strong>
+                          </div>
+                        );
+                      })()}
 
                       <div style={{ marginTop: 8 }}>
                         {gateMode === 'in' ? (

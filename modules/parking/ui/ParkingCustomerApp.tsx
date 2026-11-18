@@ -55,9 +55,9 @@ const DICT: Record<Lang, Record<string, string>> = {
     navMyTickets: 'Vé của tôi',
     navInfo: 'Thông tin bãi',
     step1: 'Thời gian',
-    step2: 'Chọn ô',
+    step2: 'Ô đỗ',
     step3: 'Thanh toán',
-    step4: 'Vé xe',
+    step4: 'Vé',
     pageTitle1: 'Đặt chỗ đậu xe',
     pageSub1: 'Chọn khoảng thời gian dự kiến để tra cứu ô đỗ xe trống tại GoPick.',
     parkingLot: 'Bãi đậu xe',
@@ -90,7 +90,7 @@ const DICT: Record<Lang, Record<string, string>> = {
     confirmBooking: 'Xác nhận đặt chỗ',
     confirmPaid: 'Xác nhận đã chuyển',
     checkingTx: 'Đang kiểm tra giao dịch...',
-    ticketConfirmed: 'Đã xác nhận đặt chỗ',
+    ticketConfirmed: 'Đã xác nhận',
     ticketStubTitle: 'Bãi xe GoPick — 250 Lương Định Của',
     qrScanNotice: 'Đưa mã QR cho bảo vệ khi vào/ra cổng',
     directions: 'Chỉ đường đến bãi xe',
@@ -907,6 +907,22 @@ export default function ParkingCustomerApp({
                       />
                     </div>
                   </div>
+
+                  {/* Biển số xe */}
+                  <div className="pk-input-group" style={{ marginTop: 10, marginBottom: 0 }}>
+                    <label className="pk-label">
+                      <Car size={14} color="var(--pk-primary)" />
+                      {t.plateNumber}
+                    </label>
+                    <input
+                      type="text"
+                      className="pk-input"
+                      placeholder={t.platePlaceholder}
+                      value={licensePlate}
+                      onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                      style={{ fontWeight: 700, letterSpacing: 0.5 }}
+                    />
+                  </div>
                 </div>
 
                 {/* Thẻ Liên kết lịch Golf */}
@@ -1211,18 +1227,55 @@ export default function ParkingCustomerApp({
                       </div>
                     </div>
 
-                    {/* Ô nhập biển số xe */}
-                    <div style={{ marginBottom: 10 }}>
-                      <input
-                        ref={plateInputRef}
-                        type="text"
-                        className="pk-input"
-                        placeholder={t.platePlaceholder}
-                        value={licensePlate}
-                        onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                        style={{ height: 42, fontSize: 14, fontWeight: 700, textAlign: 'center', letterSpacing: 1 }}
-                      />
-                    </div>
+                    {/* Biển số xe: hiển thị tóm tắt nếu đã nhập ở bước 1, hoặc hiển thị ô nhập nếu chưa có */}
+                    {licensePlate.trim() ? (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#f8fafc',
+                          padding: '6px 10px',
+                          borderRadius: 'var(--pk-radius)',
+                          marginBottom: 8,
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <span style={{ color: 'var(--pk-text-muted)' }}>
+                          🚗 {t.plateNumber}: <strong style={{ color: '#0f172a' }}>{licensePlate}</strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLicensePlate('');
+                            setTimeout(() => plateInputRef.current?.focus(), 80);
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--pk-primary)',
+                            fontSize: 11.5,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            textDecoration: 'underline',
+                          }}
+                        >
+                          Đổi
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ marginBottom: 10 }}>
+                        <input
+                          ref={plateInputRef}
+                          type="text"
+                          className="pk-input"
+                          placeholder={t.platePlaceholder}
+                          value={licensePlate}
+                          onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                          style={{ height: 42, fontSize: 14, fontWeight: 700, textAlign: 'center', letterSpacing: 1 }}
+                        />
+                      </div>
+                    )}
 
                     <button
                       type="button"

@@ -315,6 +315,23 @@ export function AdminReferenceShell({
               {profile && (
                 <div className="ar-pop">
                   <strong>{data?.user}</strong>
+                  <a
+                    href="/app"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '8px 12px',
+                      color: '#0a5c1e',
+                      fontWeight: 600,
+                      fontSize: 13,
+                      textDecoration: 'none',
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Home size={16} />
+                    Về SiGolf (/app)
+                  </a>
                   <button
                     type="button"
                     onClick={() => {

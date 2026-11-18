@@ -13,6 +13,7 @@ import {
 import { KIND_LABELS, UNLIMITED, type GrantKind } from '../../lib/member';
 import { PACKAGE_ROOM_LABELS, type PackageRoom } from '../../lib/package-use';
 import { type Rank, TIER_LABEL } from '../../lib/member-card';
+import { PwaInstallProvider, PwaInstallCard } from './PwaInstallPrompt';
 import { MemberCard } from './MemberCard';
 import { MemberShell, type MemberTab, type Reminder } from './MemberShell';
 import { MemberHome } from './MemberHome';
@@ -595,7 +596,14 @@ export default function MemberPortal({
         </MemberShell>
       );
     }
-    return <MemberAuth onDone={load} first={registerFirst ? 'register' : 'login'} />;
+    return (
+      <PwaInstallProvider>
+        <div style={{ maxWidth: 440, margin: '0 auto 16px' }}>
+          <PwaInstallCard />
+        </div>
+        <MemberAuth onDone={load} first={registerFirst ? 'register' : 'login'} />
+      </PwaInstallProvider>
+    );
   }
 
   const act = async (task: () => Promise<unknown>, done: string) => {
@@ -686,19 +694,23 @@ export default function MemberPortal({
   ];
 
   return (
-    <MemberShell
-      tab={activeTab}
-      onTab={setActiveTab}
-      name={data.profile.name}
-      tier={tier}
-      reminders={reminders}
-      onLogout={logout}
-      onBook={() => {
-        setActiveTab('booking');
-        setBookingExpanded(true);
-      }}
-    >
-      {activeSession && (
+    <PwaInstallProvider>
+      <MemberShell
+        tab={activeTab}
+        onTab={setActiveTab}
+        name={data.profile.name}
+        tier={tier}
+        reminders={reminders}
+        onLogout={logout}
+        onBook={() => {
+          setActiveTab('booking');
+          setBookingExpanded(true);
+        }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <PwaInstallCard />
+        </div>
+        {activeSession && (
         <div
           style={{
             marginBottom: 20,
@@ -1290,6 +1302,7 @@ export default function MemberPortal({
           load();
         }}
       />
-    </MemberShell>
+      </MemberShell>
+    </PwaInstallProvider>
   );
 }

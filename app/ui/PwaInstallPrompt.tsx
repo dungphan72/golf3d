@@ -194,7 +194,7 @@ export function PwaInstallCard() {
             Thêm SiGolf vào màn hình chính
           </div>
           <p className="ao-install-card-desc">
-            Cài đặt web app quản lý <strong>SiGolf</strong> để mở nhanh POS bán hàng, bãi xe GoPick và vận hành ca trực chỉ với 1 chạm.
+            Mở nhanh tài khoản, lịch đặt sân và vé đậu xe.
           </p>
         </div>
       </div>
@@ -206,7 +206,7 @@ export function PwaInstallCard() {
           onClick={openInstall}
         >
           <Download size={15} />
-          <span>{hasDeferredPrompt ? 'Cài SiGolf' : isIos ? 'Xem hướng dẫn cài' : 'Xem hướng dẫn cài'}</span>
+          <span>Cài SiGolf</span>
         </button>
 
         <button

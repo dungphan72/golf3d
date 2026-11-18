@@ -6,10 +6,15 @@ import './globals.css';
 import './ds-global.css';
 export const metadata: Metadata = {
   metadataBase: new URL('https://sigolf.vn'),
-  title: 'SaiGon Indoor Golf Club — Play. Connect. Repeat.',
+  title: 'SiGolf — Play. Connect. Repeat.',
   description:
-    'SaiGon Indoor Golf Club — golf 3D Foresight GC3 tại 250 Lương Định Của, Bình Trưng, TP.HCM. Hotline 0877834888.',
+    'SiGolf — golf 3D Foresight GC3 tại 250 Lương Định Của, Bình Trưng, TP.HCM. Hotline 0877834888.',
   manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SiGolf',
+  },
   icons: {
     icon: [{ url: '/favicon-64.png', sizes: '64x64', type: 'image/png' }],
     apple: '/apple-touch-icon.png',

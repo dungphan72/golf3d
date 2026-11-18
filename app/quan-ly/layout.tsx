@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next';
 export const metadata: Metadata = {
   title: 'Quản lý — SiGolf',
   description: 'Hệ thống quản lý SiGolf — POS, Đặt sân, CRM & Bãi xe.',
-  manifest: '/manifest-quan-ly.webmanifest',
+  manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
@@ -29,7 +29,7 @@ export const viewport: Viewport = {
 export default function QuanLyLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <link rel="manifest" href="/manifest-quan-ly.webmanifest" />
+      <link rel="manifest" href="/manifest.webmanifest" />
       <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       <meta name="apple-mobile-web-app-title" content="SiGolf" />
       <meta name="apple-mobile-web-app-capable" content="yes" />

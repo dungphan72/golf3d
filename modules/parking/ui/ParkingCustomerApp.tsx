@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import type { ParkingSpot, ParkingTicket, ParkingSettings } from '../core/types';
+import { PwaInstallProvider, PwaInstallCard } from '../../../app/ui/PwaInstallPrompt';
 import '../../../app/parking.css';
 
 interface Props {
@@ -50,7 +51,7 @@ const DICT: Record<Lang, Record<string, string>> = {
   vi: {
     brand: 'SIGOLF',
     facilityName: 'Bãi xe GoPick',
-    backToSigolf: 'Về SIGOLF',
+    backToSigolf: 'Về SiGolf',
     navBooking: 'Đặt chỗ',
     navMyTickets: 'Vé của tôi',
     navInfo: 'Thông tin bãi',
@@ -119,7 +120,7 @@ const DICT: Record<Lang, Record<string, string>> = {
   en: {
     brand: 'SIGOLF',
     facilityName: 'GoPick Parking',
-    backToSigolf: 'Back to SIGOLF',
+    backToSigolf: 'Back to SiGolf',
     navBooking: 'Book Spot',
     navMyTickets: 'My Tickets',
     navInfo: 'Parking Info',
@@ -188,7 +189,7 @@ const DICT: Record<Lang, Record<string, string>> = {
   ko: {
     brand: 'SIGOLF',
     facilityName: 'GoPick 주차장',
-    backToSigolf: 'SIGOLF 메인',
+    backToSigolf: 'SiGolf 메인',
     navBooking: '주차 예약',
     navMyTickets: '내 주차권',
     navInfo: '주차장 안내',
@@ -706,7 +707,8 @@ export default function ParkingCustomerApp({
   }, [myTickets]);
 
   return (
-    <div className="pk-container" style={{ position: 'relative' }}>
+    <PwaInstallProvider>
+      <div className="pk-container" style={{ position: 'relative' }}>
       {/* =====================================================================
           HEADER DÀNH RIÊNG CHO MODULE PARKING (Không có Menu Golf)
           ===================================================================== */}
@@ -783,7 +785,7 @@ export default function ParkingCustomerApp({
           </div>
 
           <a
-            href="/"
+            href="/app"
             title={t.backToSigolf}
             style={{
               display: 'inline-flex',
@@ -848,6 +850,11 @@ export default function ParkingCustomerApp({
                 <p style={{ fontSize: 13, color: 'var(--pk-text-muted)', marginTop: -6, marginBottom: 14 }}>
                   {t.pageSub1}
                 </p>
+
+                {/* Nhắc cài đặt SiGolf PWA ở trang đầu bãi xe */}
+                <div style={{ marginBottom: 12 }}>
+                  <PwaInstallCard />
+                </div>
 
                 <div className="pk-card">
                   {/* Bãi xe */}
@@ -1727,7 +1734,7 @@ export default function ParkingCustomerApp({
           </div>
 
           {/* Nội quy bãi xe */}
-          <div className="pk-card">
+          <div className="pk-card" style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 13, fontWeight: 700, borderBottom: '1px solid var(--pk-border)', paddingBottom: 6, marginBottom: 8 }}>
               {t.regulationsTitle}
             </div>
@@ -1736,6 +1743,34 @@ export default function ParkingCustomerApp({
               <li>{t.reg2}</li>
               <li>{t.reg3}</li>
             </ul>
+          </div>
+
+          {/* Mục Về SiGolf trong Thông tin bãi */}
+          <div className="pk-card" style={{ marginBottom: 12, background: '#f8fafc' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Home size={20} color="var(--pk-primary)" />
+                <div>
+                  <strong style={{ fontSize: 13.5 }}>Về SiGolf</strong>
+                  <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
+                    Quay lại màn hình mở ứng dụng (/app)
+                  </div>
+                </div>
+              </div>
+
+              <a
+                href="/app"
+                className="pk-btn-secondary"
+                style={{ width: 'auto', padding: '0 14px', height: 34, textDecoration: 'none', fontWeight: 700 }}
+              >
+                Mở /app
+              </a>
+            </div>
+          </div>
+
+          {/* Thẻ nhắc cài đặt ứng dụng SiGolf nếu chưa cài */}
+          <div style={{ marginBottom: 12 }}>
+            <PwaInstallCard />
           </div>
         </div>
       )}
@@ -1861,6 +1896,7 @@ export default function ParkingCustomerApp({
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </PwaInstallProvider>
   );
 }

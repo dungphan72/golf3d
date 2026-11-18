@@ -8,6 +8,11 @@ export const metadata: Metadata = {
   title: 'Bãi Đậu Xe SIGOLF — GoPick 250 Lương Định Của',
   description: 'Đặt chỗ đậu xe thông minh, xem sơ đồ vị trí ô đỗ trực quan, nhận vé QR và đối soát bãi xe GoPick SIGOLF.',
   manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SiGolf',
+  },
   icons: {
     icon: [{ url: '/favicon-64.png', sizes: '64x64', type: 'image/png' }],
     apple: '/apple-touch-icon.png',

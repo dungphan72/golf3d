@@ -9,6 +9,7 @@ import {
   ChartNoAxesColumnIncreasing,
   ChevronDown,
   Crown,
+  Download,
   GraduationCap,
   Grid2X2,
   Home,
@@ -28,6 +29,7 @@ import {
 import { BRAND } from '../../lib/brand';
 import { rooms, type Booking } from '../../lib/club';
 import type { Data } from './shared';
+import { usePwaInstall } from './PwaInstallPrompt';
 import '../admin-reference.css';
 
 export const ADMIN_NAV = [
@@ -105,6 +107,7 @@ export function AdminReferenceShell({
     [bell, setBell] = useState(false),
     [profile, setProfile] = useState(false),
     [search, setSearch] = useState('');
+  const { openInstall } = usePwaInstall();
   const active = view === 'online' ? 'bookings' : view === 'marketing' ? 'crmx' : view;
   const nav = ADMIN_NAV.filter((n) => visible(n.key));
   const hits = search.trim()
@@ -312,8 +315,18 @@ export function AdminReferenceShell({
               {profile && (
                 <div className="ar-pop">
                   <strong>{data?.user}</strong>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfile(false);
+                      openInstall();
+                    }}
+                  >
+                    <Download size={16} />
+                    Cài SiGolf
+                  </button>
                   <button onClick={onLogout}>
-                    <LogOut />
+                    <LogOut size={16} />
                     Đăng xuất
                   </button>
                 </div>

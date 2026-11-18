@@ -73,7 +73,7 @@ export function LoginScreen({ onDone, notice }: { onDone: () => void; notice?: s
           {busy ? 'Đang đăng nhập…' : 'Đăng nhập'}
         </button>
         {sitesLogin && (
-          <a className="auth-alt" href="/signin-with-chatgpt?return_to=%2F" target="_top">
+          <a className="auth-alt" href="/signin-with-chatgpt?return_to=%2Fquan-ly" target="_top">
             Đăng nhập bằng tài khoản nền tảng (chủ cơ sở)
           </a>
         )}

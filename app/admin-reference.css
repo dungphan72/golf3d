@@ -2547,3 +2547,337 @@ html body:has(.ar-shell) {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* =====================================================================
+   PWA INSTALL REMINDER & MODAL (SiGolf Management App)
+   ===================================================================== */
+.ao-install-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: var(--ds-radius, 5px);
+  padding: 14px 18px;
+  box-shadow: 0 2px 8px rgba(10, 92, 30, 0.06);
+  position: relative;
+  transition: all 0.2s ease;
+  margin-bottom: 6px;
+}
+
+.ao-install-card:hover {
+  border-color: #86efac;
+  box-shadow: 0 4px 12px rgba(10, 92, 30, 0.1);
+}
+
+.ao-install-card-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.ao-install-icon-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.ao-install-app-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  display: block;
+}
+
+.ao-install-app-badge {
+  position: absolute;
+  bottom: -4px;
+  right: -6px;
+  background: #0a5c1e;
+  color: #ffffff;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  letter-spacing: 0.5px;
+  border: 1px solid #ffffff;
+}
+
+.ao-install-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.ao-install-card-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0a5c1e;
+  line-height: 1.25;
+  margin-bottom: 3px;
+}
+
+.ao-install-card-desc {
+  font-size: 12.5px;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.ao-install-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ao-install-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0a5c1e;
+  color: #ffffff;
+  border: none;
+  border-radius: var(--ds-radius, 5px);
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.ao-install-btn-primary:hover {
+  background: #064e19;
+}
+
+.ao-install-btn-dismiss {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--ds-radius, 5px);
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.ao-install-btn-dismiss:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.ao-install-btn-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ao-install-btn-close:hover {
+  color: #475569;
+  background: #e2e8f0;
+}
+
+@media (max-width: 768px) {
+  .ao-install-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .ao-install-card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .ao-install-btn-primary {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+/* Modal */
+.ao-install-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.ao-install-modal {
+  background: #ffffff;
+  border-radius: 8px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: aoModalIn 0.2s ease-out;
+}
+
+@keyframes aoModalIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.ao-install-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.ao-install-modal-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 4px;
+}
+
+.ao-install-modal-close:hover {
+  background: #f1f5f9;
+}
+
+.ao-install-modal-body {
+  padding: 20px;
+}
+
+.ao-install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ao-install-step-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ao-install-step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #0a5c1e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ao-install-step-content {
+  font-size: 13.5px;
+  color: #1e293b;
+  line-height: 1.45;
+  flex: 1;
+}
+
+.ao-install-step-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 3px;
+}
+
+.ao-ios-share-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #0284c7;
+}
+
+.ao-install-modal-benefit {
+  margin-top: 18px;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: #166534;
+}
+
+.ao-install-modal-footer {
+  padding: 12px 20px 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid #e2e8f0;
+}
+
+.ao-install-modal-btn {
+  background: #0a5c1e;
+  color: #ffffff;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 5px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ao-install-modal-btn:hover {
+  background: #064e19;
+}
+
+/* Loading Screen during session check */
+.ar-auth-loading {
+  position: fixed;
+  inset: 0;
+  background: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+}
+
+.ar-auth-loading-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 36px 32px;
+  text-align: center;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  max-width: 360px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ar-auth-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #bbf7d0;
+  border-top-color: #0a5c1e;
+  border-radius: 50%;
+  animation: arSpin 0.8s linear infinite;
+}
+
+@keyframes arSpin {
+  to { transform: rotate(360deg); }
+}

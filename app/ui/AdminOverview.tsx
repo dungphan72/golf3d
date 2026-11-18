@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { time, type Data } from './shared';
+import { PwaInstallCard } from './PwaInstallPrompt';
 type Report = { days: { day: string; cash: number; transfer: number; card: number }[] };
 const vnDay = (ms: number) => new Date(ms + 7 * 3600000).toISOString().slice(0, 10);
 const status: Record<string, string> = {
@@ -167,6 +168,7 @@ export function AdminOverview({
           Hôm nay, {new Date(now).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}
         </span>
       </div>
+      <PwaInstallCard />
       <div className="ao-kpis">
         {kpis.map(({ label, value, icon: I, tone, hint, view }) => (
           <button className={'ao-kpi ao-tone-' + tone} key={label} onClick={() => onGo(view)}>

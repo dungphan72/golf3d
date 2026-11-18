@@ -16,6 +16,7 @@ import { AdminOverview } from './AdminOverview';
 import { SessionPanel } from './SessionPanel';
 import { LoginScreen } from './LoginScreen';
 import { AccountPanel } from './AccountPanel';
+import { PwaInstallProvider, SiGolfLoadingScreen } from './PwaInstallPrompt';
 import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
 import { ReportsPanel } from './ReportsPanel';
@@ -64,6 +65,7 @@ export default function ClubApp() {
     ),
     [crmSub, setCrmSub] = useState<string>('customers');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
+  const [checkingSession, setCheckingSession] = useState(true);
   async function load() {
     try {
       const r = await fetch('/api/club', { cache: 'no-store' });
@@ -82,6 +84,8 @@ export default function ClubApp() {
       setError('');
     } catch (e) {
       setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setCheckingSession(false);
     }
   }
   useEffect(() => {
@@ -192,6 +196,9 @@ export default function ClubApp() {
     setView(ADMIN_VIEWS.has(v) && allowed(v) ? v : 'dashboard');
   }
   const chosen = selected ? (b.find((x) => x.id === selected.id) ?? selected) : null;
+  if (checkingSession) {
+    return <SiGolfLoadingScreen />;
+  }
   if (authState === 'login') return <LoginScreen onDone={load} />;
   if (authState === 'change')
     return (
@@ -221,7 +228,8 @@ export default function ClubApp() {
     }
   };
   return (
-    <div className="ar-app">
+    <PwaInstallProvider>
+      <div className="ar-app">
       <AdminReferenceShell
         view={view}
         data={data}
@@ -458,5 +466,6 @@ export default function ClubApp() {
         )}
       </div>
     </div>
+    </PwaInstallProvider>
   );
 }

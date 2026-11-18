@@ -22,6 +22,7 @@ import { normalizePhone, validPhone } from '../member';
 import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } from './common';
 import { rooms } from '../club';
 import { invalidateLandingCache } from './landing-service';
+import { ensureProfile } from '../../modules/crm/server/customers';
 
 async function syncCustomerOnBooking(tenant: string, rawName: string, rawPhone: string, now: number) {
   const name = rawName.trim();
@@ -34,6 +35,7 @@ async function syncCustomerOnBooking(tenant: string, rawName: string, rawPhone: 
       )
       .bind(crypto.randomUUID(), tenant, name, phone, 'Đồng bộ tự động từ Đặt sân / POS', now)
       .run();
+    await ensureProfile(tenant, phone, 'booking-sync', now).catch(() => {});
   } catch (e) {
     // Booking must not fail because of the customer sync; keep the existing customer record untouched.
     console.error('syncCustomerOnBooking failed', e instanceof Error ? e.message : e);

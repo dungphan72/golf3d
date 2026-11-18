@@ -27,6 +27,7 @@ import {
   Filter,
   Gift,
   HelpCircle,
+  Link2,
   Mail,
   MapPin,
   Megaphone,
@@ -41,6 +42,7 @@ import {
   RotateCcw,
   Search,
   Send,
+  ShieldCheck,
   Sparkles,
   Star,
   Target,
@@ -343,6 +345,38 @@ export function CrmModule({
   const [apptAssignee, setApptAssignee] = useState('Trần Văn An');
   const [apptNote, setApptNote] = useState('');
   const [apptBusy, setApptBusy] = useState(false);
+
+  // Identity resolution & verification linking state
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [unlinkedBookings, setUnlinkedBookings] = useState<
+    Array<{
+      id: string;
+      room: string;
+      service: string;
+      customer: string;
+      phone: string;
+      start: number;
+      end: number;
+      amount: number | null;
+      status: string;
+      created: number;
+    }>
+  >([]);
+  const [unlinkedLeads, setUnlinkedLeads] = useState<
+    Array<{
+      id: string;
+      fullName: string;
+      phone: string;
+      email: string;
+      source: string;
+      targetService: string;
+      stage: string;
+      created: number;
+    }>
+  >([]);
+  const [verifyingBusy, setVerifyingBusy] = useState(false);
+  const [linkReason, setLinkReason] = useState('');
+  const [dupWarning, setDupWarning] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState('');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -497,6 +531,7 @@ export function CrmModule({
         call<{
           customers?: {
             id: string;
+            code?: string;
             name: string;
             phone: string;
             email?: string;
@@ -509,6 +544,7 @@ export function CrmModule({
         call<{
           customers?: {
             id: string;
+            code?: string;
             name: string;
             phone: string;
             note?: string;
@@ -544,6 +580,7 @@ export function CrmModule({
           string,
           {
             id: string;
+            code?: string;
             name: string;
             phone: string;
             email?: string;
@@ -565,6 +602,7 @@ export function CrmModule({
           const prev = mergedRaw.get(norm);
           mergedRaw.set(norm, {
             id: prev?.id || m.id,
+            code: prev?.code || m.code,
             name: m.name || prev?.name || 'Khách hàng',
             phone: m.phone || prev?.phone || '',
             email: prev?.email,
@@ -637,7 +675,7 @@ export function CrmModule({
                         : 'none';
               extra.push({
                 id: raw.id,
-                code: `KH${raw.id.slice(-6).toUpperCase()}`,
+                code: raw.code || `KH${raw.id.slice(-6).toUpperCase()}`,
                 memberCode: 'Chưa cấp thẻ',
                 name: raw.name,
                 gender: '',
@@ -1036,9 +1074,43 @@ export function CrmModule({
       notify('Ngày sinh cần đúng định dạng DD/MM/YYYY!');
       return;
     }
-    let id = uid('cust');
+
+    // Identity Resolution: Anti-duplicate verification check
     try {
-      const res = await call<{ id?: string }>('/api/crm2/care-customers', {
+      const dupCheck = await call<{
+        isDuplicate?: boolean;
+        confidence?: string;
+        reason?: string;
+        matchedCustomer?: { id: string; name: string; code: string; phone: string };
+      }>('/api/crm2/identity', {
+        action: 'check-duplicates',
+        phone: cleanPhone,
+        email: cleanEmail,
+      });
+
+      if (dupCheck.isDuplicate && dupCheck.matchedCustomer) {
+        notify(
+          `Cảnh báo trùng lặp: SĐT/Email đã thuộc về khách hàng ${dupCheck.matchedCustomer.name} (Mã: ${dupCheck.matchedCustomer.code}). Hệ thống không cho phép tạo trùng lặp!`,
+        );
+        const existing = customers.find(
+          (c) =>
+            c.id === dupCheck.matchedCustomer?.id ||
+            c.phone.replace(/\D+/g, '') === cleanPhone.replace(/\D+/g, ''),
+        );
+        if (existing) {
+          setSelectedId(existing.id);
+          setShowCreateCustomerModal(false);
+        }
+        return;
+      }
+    } catch {
+      /* continue if identity service busy */
+    }
+
+    let id = uid('cust');
+    let code = '';
+    try {
+      const res = await call<{ id?: string; code?: string }>('/api/crm2/care-customers', {
         action: 'customer-create',
         name: cleanName,
         phone: cleanPhone,
@@ -1047,23 +1119,25 @@ export function CrmModule({
         note: `Nguồn: ${newCustForm.source}`,
       });
       if (res.id) id = res.id;
+      if (res.code) code = res.code;
     } catch {
       /* fallback local id */
     }
     try {
-      await call('/api/members', {
+      const memRes = await call<{ ok?: boolean; id?: string; code?: string }>('/api/members', {
         action: 'customer-create',
         name: cleanName,
         phone: cleanPhone,
         note: `Nguồn CRM: ${newCustForm.source}`,
       });
+      if (memRes.code && !code) code = memRes.code;
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('sigolf:data-sync'));
       }
     } catch {
       /* already exists in members table */
     }
-    const code = 'KH00' + Math.floor(1000 + Math.random() * 9000);
+    if (!code) code = 'KH' + String(customers.length + 1).padStart(6, '0');
     const created: CustomerRecord = {
       id,
       code,
@@ -1626,6 +1700,72 @@ export function CrmModule({
     }
   }
 
+  async function handleOpenVerification() {
+    if (!activeCustomer) return;
+    setVerifyingBusy(true);
+    setShowVerificationModal(true);
+    try {
+      const res = await call<{
+        unlinkedBookings?: Array<{
+          id: string;
+          room: string;
+          service: string;
+          customer: string;
+          phone: string;
+          start: number;
+          end: number;
+          amount: number | null;
+          status: string;
+          created: number;
+        }>;
+        unlinkedLeads?: Array<{
+          id: string;
+          fullName: string;
+          phone: string;
+          email: string;
+          source: string;
+          targetService: string;
+          stage: string;
+          created: number;
+        }>;
+      }>(`/api/crm2/identity?customerId=${activeCustomer.id}`);
+      setUnlinkedBookings(res.unlinkedBookings ?? []);
+      setUnlinkedLeads(res.unlinkedLeads ?? []);
+    } catch {
+      notify('Chưa tải được danh sách đối soát liên kết');
+    } finally {
+      setVerifyingBusy(false);
+    }
+  }
+
+  async function handleExecuteLink(recordType: 'booking' | 'lead', recordId: string) {
+    if (!activeCustomer) return;
+    setVerifyingBusy(true);
+    try {
+      await call('/api/crm2/identity', {
+        action: 'link-record',
+        customerId: activeCustomer.id,
+        recordType,
+        recordId,
+        reason: linkReason || 'Xác nhận thông tin khách hàng trùng khớp',
+        confirmed: true,
+      });
+      notify(
+        `Đã xác minh và liên kết thành công ${recordType === 'booking' ? 'lượt đặt sân' : 'Lead'} vào hồ sơ!`,
+      );
+      if (recordType === 'booking') {
+        setUnlinkedBookings((prev) => prev.filter((b) => b.id !== recordId));
+      } else {
+        setUnlinkedLeads((prev) => prev.filter((l) => l.id !== recordId));
+      }
+      setLinkReason('');
+    } catch (e) {
+      notify(`Lỗi liên kết: ${e instanceof Error ? e.message : 'Thao tác không thành công'}`);
+    } finally {
+      setVerifyingBusy(false);
+    }
+  }
+
   return (
     <div className="crm2-root">
       {/* Toast Notification */}
@@ -2062,6 +2202,15 @@ export function CrmModule({
                     >
                       <Calendar size={15} />
                       <span>Đặt sân</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="crm2-hdr-btn"
+                      title="Đối soát & xác minh liên kết lượt chơi, Lead"
+                      onClick={handleOpenVerification}
+                    >
+                      <Link2 size={15} />
+                      <span>Đối soát liên kết</span>
                     </button>
                     <button
                       type="button"
@@ -4444,6 +4593,143 @@ export function CrmModule({
                 onClick={handleExecuteCreateAppt}
               >
                 {apptBusy ? 'Đang lưu...' : 'Lưu lịch hẹn'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Modal Đối Soát & Xác Minh Liên Kết Khách Vãng Lai / Lead */}
+      {showVerificationModal && activeCustomer && (
+        <div className="crm2-modal-backdrop" onClick={() => setShowVerificationModal(false)}>
+          <div
+            className="crm2-modal"
+            style={{ maxWidth: 680, width: '92%' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="crm2-modal-head">
+              <div>
+                <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ShieldCheck size={20} color="#16a34a" />
+                  Đối soát & Xác minh liên kết hồ sơ
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: 13, color: '#64748b' }}>
+                  Khách hàng: <strong>{activeCustomer.name}</strong> ({activeCustomer.code} · SĐT: {activeCustomer.phone})
+                </p>
+              </div>
+              <button
+                type="button"
+                className="crm2-modal-close"
+                onClick={() => setShowVerificationModal(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="crm2-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+              <div className="crm2-dup-banner">
+                <ShieldCheck size={20} style={{ flexShrink: 0, marginTop: 2 }} />
+                <div>
+                  <strong>Quy chuẩn bảo vệ dữ liệu khách hàng 360°:</strong>
+                  <p style={{ margin: '4px 0 0', lineHeight: 1.5 }}>
+                    Hệ thống phát hiện các lượt chơi vãng lai hoặc Lead từ Ads/Website có SĐT trùng khớp. Nhân viên cần đối soát và xác nhận thủ công, <strong>tuyệt đối không tự ý gộp hồ sơ</strong> làm sai lệch lịch sử giao dịch hay số dư ví.
+                  </p>
+                </div>
+              </div>
+
+              <div className="crm2-form-group" style={{ marginBottom: 16 }}>
+                <label>Ghi chú lý do xác minh (Lưu vào nhật ký kiểm toán)</label>
+                <input
+                  placeholder="VD: Khách xác nhận đã chơi tại Line 01 lúc 18h tối qua..."
+                  value={linkReason}
+                  onChange={(e) => setLinkReason(e.target.value)}
+                />
+              </div>
+
+              {/* Bookings vãng lai */}
+              <div style={{ marginBottom: 18 }}>
+                <h4 style={{ fontSize: 13.5, fontWeight: 700, margin: '0 0 8px', color: '#0f172a' }}>
+                  Lượt đặt sân / chơi golf vãng lai chưa liên kết ({unlinkedBookings.length})
+                </h4>
+                {unlinkedBookings.length === 0 ? (
+                  <p style={{ fontSize: 12.5, color: '#64748b', fontStyle: 'italic', margin: 0 }}>
+                    Không có lượt đặt sân vãng lai nào chưa liên kết với SĐT này.
+                  </p>
+                ) : (
+                  unlinkedBookings.map((b) => (
+                    <div key={b.id} className="crm2-link-item">
+                      <div className="crm2-link-info-col">
+                        <div className="crm2-link-title">
+                          {b.room.toUpperCase()} — {b.service === 'gdr' ? 'Luyện tập theo giờ' : `Game ${b.service} hố`}
+                        </div>
+                        <div className="crm2-link-meta">
+                          <span className="crm2-link-badge booking">Booking vãng lai</span>
+                          <span>{new Date(b.start).toLocaleString('vi-VN')}</span>
+                          <span>·</span>
+                          <span>Tên đặt: <strong>{b.customer}</strong></span>
+                          <span>·</span>
+                          <span>Số tiền: <strong>{money(b.amount ?? 0)}</strong></span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="crm2-btn-link-action"
+                        disabled={verifyingBusy}
+                        onClick={() => handleExecuteLink('booking', b.id)}
+                      >
+                        Xác nhận liên kết
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Leads chưa liên kết */}
+              <div>
+                <h4 style={{ fontSize: 13.5, fontWeight: 700, margin: '0 0 8px', color: '#0f172a' }}>
+                  Lead tiềm năng từ các kênh ({unlinkedLeads.length})
+                </h4>
+                {unlinkedLeads.length === 0 ? (
+                  <p style={{ fontSize: 12.5, color: '#64748b', fontStyle: 'italic', margin: 0 }}>
+                    Không có Lead nào trùng SĐT chưa được chuyển đổi.
+                  </p>
+                ) : (
+                  unlinkedLeads.map((l) => (
+                    <div key={l.id} className="crm2-link-item">
+                      <div className="crm2-link-info-col">
+                        <div className="crm2-link-title">
+                          Lead: {l.fullName} {l.email ? `(${l.email})` : ''}
+                        </div>
+                        <div className="crm2-link-meta">
+                          <span className="crm2-link-badge lead">Lead {l.stage}</span>
+                          <span>Nguồn: <strong>{l.source || 'Trực tiếp'}</strong></span>
+                          <span>·</span>
+                          <span>Nhu cầu: <strong>{l.targetService || 'Sân 3D'}</strong></span>
+                          <span>·</span>
+                          <span>Ngày tạo: {new Date(l.created).toLocaleDateString('vi-VN')}</span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="crm2-btn-link-action"
+                        disabled={verifyingBusy}
+                        onClick={() => handleExecuteLink('lead', l.id)}
+                      >
+                        Xác nhận liên kết
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="crm2-modal-foot">
+              <button
+                type="button"
+                className="crm2-btn-secondary"
+                onClick={() => setShowVerificationModal(false)}
+              >
+                Đóng
               </button>
             </div>
           </div>

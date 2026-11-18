@@ -5,7 +5,7 @@ import { isManager } from '../core/access';
 import { DAY, fail, getSettings, notifyStaff, reply, staffList, type Ctx } from './store';
 
 // The customer file: members and walk-ins from the shared `customers` table, with what they bought and played.
-const CUSTOMERS_SQL = `SELECT c.id,c.name,c.phone,c.birthday,c.email,c.zalo_id,c.marketing_consent,c.created,
+const CUSTOMERS_SQL = `SELECT c.id,c.name,c.phone,COALESCE(p.code, 'KH' || upper(substr(c.id,-6))) AS code,c.birthday,c.email,c.zalo_id,c.marketing_consent,c.created,
   (SELECT COUNT(*) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS visits,
   (SELECT MAX(v.finished) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS last_visit,
   (SELECT COALESCE(SUM(v.amount),0) FROM crm_visits v WHERE v.tenant=c.tenant AND v.customer_id=c.id) AS spend,
@@ -13,8 +13,8 @@ const CUSTOMERS_SQL = `SELECT c.id,c.name,c.phone,c.birthday,c.email,c.zalo_id,c
   COALESCE((SELECT p.points FROM customer_points p WHERE p.tenant=c.tenant AND p.customer_id=c.id),0) AS points,
   (SELECT COUNT(*) FROM crm2_tasks t WHERE t.tenant=c.tenant AND t.customer_id=c.id AND t.done_at IS NULL) AS open_tasks,
   (SELECT a.verified FROM member_accounts a WHERE a.tenant=c.tenant AND a.customer_id=c.id) AS account
- FROM customers c`;
-const LIST_SQL = `${CUSTOMERS_SQL} WHERE c.tenant=? AND (?='' OR c.phone LIKE ? OR c.name LIKE ?) ORDER BY c.created DESC LIMIT 300`;
+ FROM customers c LEFT JOIN crm2_customer_profiles p ON p.tenant=c.tenant AND p.phone_norm=c.phone`;
+const LIST_SQL = `${CUSTOMERS_SQL} WHERE c.tenant=? AND (?='' OR c.phone LIKE ? OR c.name LIKE ? OR p.code LIKE ? OR c.id=?) ORDER BY c.created DESC LIMIT 300`;
 const ONE_SQL = `${CUSTOMERS_SQL} WHERE c.tenant=? AND c.id=?`;
 const BOOKING_PHONE_DIGITS =
   "replace(replace(replace(replace(replace(b.phone,' ',''),'-',''),'(',''),')',''),'.','')";
@@ -27,6 +27,7 @@ const BOOKING_PHONE_NORM = `CASE
 
 type Row = {
   id: string;
+  code?: string | null;
   name: string;
   phone: string;
   birthday: string;
@@ -96,7 +97,15 @@ export async function listCareCustomers(c: Ctx, query: string) {
   const rows = (
     await db()
       .prepare(LIST_SQL)
-      .bind(c.now - 90 * DAY, c.tenant, q, `%${q.replace(/[ \-().]/g, '')}%`, `%${q}%`)
+      .bind(
+        c.now - 90 * DAY,
+        c.tenant,
+        q,
+        `%${q.replace(/[ \-().]/g, '')}%`,
+        `%${q}%`,
+        `%${q.replace(/[^A-Za-z0-9]/g, '')}%`,
+        q,
+      )
       .all<Row>()
   ).results;
   return reply({ customers: rows.map((r) => withSegments(r, vip, c.now)), now: c.now });

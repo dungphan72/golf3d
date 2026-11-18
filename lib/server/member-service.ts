@@ -41,6 +41,7 @@ import {
 import { walletBonus } from '../wallet';
 import { activateCard, addAbsence, cancelAbsence, saleTerm } from './card-service';
 import { expiryOnActivation } from '../card-term';
+import { ensureProfile } from '../../modules/crm/server/customers';
 
 export { memberInput };
 type R = ServiceResult;
@@ -275,7 +276,8 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .prepare(CREATE_CUSTOMER_SQL)
         .bind(id, tenant, input.name, phone, input.note, now)
         .run();
-      return reply({ ok: true, id });
+      const code = await ensureProfile(tenant, phone, actor, now).catch(() => null);
+      return reply({ ok: true, id, code });
     }
     if (input.action === 'order-reject') {
       const r = await d

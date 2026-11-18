@@ -6,7 +6,7 @@ import { fail, getSettings, reply, vnDayStart, DAY, type Ctx, type Result } from
 
 const VN = 7 * 3_600_000;
 
-/** Creates the profile of a customer (code KH-000001) on first sale; safe to call again. */
+/** Creates the profile of a customer (code KH000001) on first sale or creation; safe to call again. */
 export async function ensureProfile(tenant: string, phoneNorm: string, by: string, now: number) {
   const d = db();
   const found = await d
@@ -24,7 +24,7 @@ export async function ensureProfile(tenant: string, phoneNorm: string, by: strin
       )?.n ?? 0) +
       1 +
       attempt;
-    const code = 'KH-' + String(n).padStart(6, '0');
+    const code = 'KH' + String(n).padStart(6, '0');
     const r = await d
       .prepare(
         'INSERT OR IGNORE INTO crm2_customer_profiles(tenant,phone_norm,code,updated_by,created,updated) VALUES (?,?,?,?,?,?)',

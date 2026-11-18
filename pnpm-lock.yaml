@@ -27,8 +27,8 @@ importers:
         specifier: ^5.7.1
         version: 5.7.1(@standard-schema/spec@1.1.0)(ajv-formats@2.1.1(ajv@8.20.0))(ajv@8.20.0)(react-hook-form@7.85.0(react@19.2.9))(zod@4.6.7)
       '@shadcn/react':
-        specifier: ^0.3.0
-        version: 0.3.0(@types/react@19.2.14)(react@19.2.9)
+        specifier: ^0.3.1
+        version: 0.3.1(@types/react@19.2.14)(react@19.2.9)
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -2206,8 +2206,8 @@ packages:
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
 
-  '@shadcn/react@0.3.0':
-    resolution: {integrity: sha512-iKN0NuYe850VDHlxEfvppFrpa7CMV3zArTHusXlaSmeFeQhohGbIqclv6WwPTs/44I8EkXQpcuRt6sXEVKkWqQ==}
+  '@shadcn/react@0.3.1':
+    resolution: {integrity: sha512-2gOR0HDMtWeRsCZfNDaU0YDFdgH3zsDQ6lz67Fv/y/qjY9y+R8kJqAn6q56phqv7/zHi0wqURjntrNO9zL7vnQ==}
     peerDependencies:
       '@types/react': '>=19'
       react: '>=19'
@@ -3536,6 +3536,7 @@ packages:
   image-size@2.0.2:
     resolution: {integrity: sha512-IRqXKlaXwgSMAMtpNzZa1ZAe8m+Sa1770Dhk8VkSsP9LS+iHD62Zd8FQKs8fbPiagBE7BzoFX23cxFnwshpV6w==}
     engines: {node: '>=16.x'}
+    deprecated: Use latest 2.x please
     hasBin: true
 
   immer@10.2.0:
@@ -6507,7 +6508,7 @@ snapshots:
 
   '@rtsao/scc@1.1.0': {}
 
-  '@shadcn/react@0.3.0(@types/react@19.2.14)(react@19.2.9)':
+  '@shadcn/react@0.3.1(@types/react@19.2.14)(react@19.2.9)':
     optionalDependencies:
       '@types/react': 19.2.14
       react: 19.2.9

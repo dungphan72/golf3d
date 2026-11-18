@@ -2158,6 +2158,184 @@
   cursor: not-allowed;
 }
 
+/* ==========================================================================
+   CRM 360° — CLOSED-LOOP FUNNEL & RETENTION ANALYTICS (MỤC 9)
+   ========================================================================== */
+
+.crm2-funnel-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.crm2-funnel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.crm2-funnel-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.crm2-funnel-steps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.crm2-funnel-step {
+  flex: 1;
+  min-width: 140px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 12px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.crm2-funnel-step:hover {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+.crm2-funnel-step-name {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.crm2-funnel-step-count {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.crm2-funnel-step-rate {
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+  margin-top: 4px;
+}
+
+.crm2-funnel-step-drop {
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+
+.crm2-funnel-arrow {
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.crm2-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 900px) {
+  .crm2-analytics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .crm2-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crm2-analytics-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 5px;
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.crm2-analytics-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.crm2-analytics-card-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.crm2-analytics-card-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+.crm2-sla-badge-good {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.crm2-sla-badge-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.crm2-sla-badge-bad {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.crm2-funnel-overall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+
+
 
 
 

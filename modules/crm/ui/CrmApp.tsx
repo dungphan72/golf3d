@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowRight,
   Award,
+  BarChart3,
   Bell,
   Briefcase,
   Calendar,
@@ -57,6 +58,7 @@ import {
 import { money } from '../../../lib/club';
 import { call, dateOnly, errText } from './api';
 import { CAMPAIGN_CHANNELS, SEGMENTS, SEGMENT_NAMES, type CampaignChannel, type CampaignSegment } from '../core/campaigns';
+import type { FunnelAnalysis, StaffPerformanceRow, LtvAndRetentionMetrics } from '../core/funnel';
 import '../../../app/crm-flow.css';
 
 export type CrmFlowPage =
@@ -65,7 +67,8 @@ export type CrmFlowPage =
   | 'opportunities'
   | 'appointments'
   | 'tasks'
-  | 'marketing';
+  | 'marketing'
+  | 'reports';
 
 type TierKind = 'gold' | 'platinum' | 'silver' | 'vip' | 'none';
 type SegmentFilter = 'all' | 'member' | 'lead' | 'corp' | 'vip';
@@ -280,6 +283,7 @@ export function CrmModule({
     if (tab === 'opportunities' || tab === 'pipeline') return 'opportunities';
     if (tab === 'appointments') return 'appointments';
     if (tab === 'tasks' || tab === 'care') return 'tasks';
+    if (tab === 'reports' || tab === 'funnel' || tab === 'baocao') return 'reports';
     return 'customers';
   };
 
@@ -520,6 +524,45 @@ export function CrmModule({
     if (flowPage === 'marketing') void loadCampaigns();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowPage]);
+
+  // Báo cáo Funnel & LTV Retention
+  const [reportDays, setReportDays] = useState<number>(30);
+  const [reportLoading, setReportLoading] = useState<boolean>(false);
+  const [funnelData, setFunnelData] = useState<{
+    funnel: FunnelAnalysis;
+    staff: StaffPerformanceRow[];
+    ltv: LtvAndRetentionMetrics;
+    generatedAt: string;
+  } | null>(null);
+
+  async function loadFunnelReport(days: number = reportDays) {
+    setReportLoading(true);
+    try {
+      const res = await call<{
+        ok?: boolean;
+        fullFunnel?: {
+          funnel: FunnelAnalysis;
+          staff: StaffPerformanceRow[];
+          ltv: LtvAndRetentionMetrics;
+          generatedAt: string;
+        };
+      }>(`/api/crm2/report?days=${days}`);
+      if (res?.fullFunnel) {
+        setFunnelData(res.fullFunnel);
+      }
+    } catch (e) {
+      notify(errText(e));
+    } finally {
+      setReportLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (flowPage === 'reports') {
+      void loadFunnelReport(reportDays);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowPage, reportDays]);
 
   // Bookings from the club (single source of truth), shown on the appointments page.
   const [appts, setAppts] = useState<
@@ -1939,6 +1982,14 @@ export function CrmModule({
           >
             <Megaphone size={15} />
             <span>Marketing</span>
+          </button>
+          <button
+            type="button"
+            className={`crm2-flow-btn ${flowPage === 'reports' ? 'active' : ''}`}
+            onClick={() => switchFlowPage('reports')}
+          >
+            <BarChart3 size={15} />
+            <span>Báo cáo & Phễu</span>
           </button>
         </nav>
 
@@ -3873,6 +3924,301 @@ export function CrmModule({
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* =====================================================================
+          PAGE 7: BÁO CÁO PHỄU CHUYỂN ĐỔI & LTV / RETENTION
+          ===================================================================== */}
+      {flowPage === 'reports' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Header & Bộ lọc kỳ đo */}
+          <div className="crm2-card" style={{ padding: 20 }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div
+                  style={{
+                    width: 42,
+                    height: 42,
+                    borderRadius: 5,
+                    background: '#e0f2fe',
+                    color: '#0284c7',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <BarChart3 size={24} />
+                </div>
+                <div>
+                  <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                    Báo cáo Phễu chuyển đổi & Chỉ số LTV / Retention
+                  </h1>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: '#64748b' }}>
+                    Khép kín chuỗi Lead ➔ Booking ➔ Check-in ➔ Thanh toán ➔ Tái mua, hiệu suất SLA 5 phút và giá trị vòng đời khách hàng.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 5 }}>
+                  {[
+                    { label: '7 ngày', days: 7 },
+                    { label: '30 ngày', days: 30 },
+                    { label: '90 ngày', days: 90 },
+                    { label: '1 năm', days: 365 },
+                  ].map((p) => (
+                    <button
+                      key={p.days}
+                      type="button"
+                      style={{
+                        padding: '6px 12px',
+                        border: 'none',
+                        background: reportDays === p.days ? '#ffffff' : 'transparent',
+                        color: reportDays === p.days ? '#0f172a' : '#64748b',
+                        fontWeight: reportDays === p.days ? 700 : 500,
+                        fontSize: 12.5,
+                        borderRadius: 4,
+                        cursor: 'pointer',
+                        boxShadow: reportDays === p.days ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      }}
+                      onClick={() => setReportDays(p.days)}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  className="crm2-btn-secondary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px' }}
+                  onClick={() => void loadFunnelReport(reportDays)}
+                  disabled={reportLoading}
+                >
+                  <RotateCcw size={14} className={reportLoading ? 'crm2-spin' : ''} />
+                  <span>{reportLoading ? 'Đang tải...' : 'Làm mới'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Nội dung báo cáo */}
+          {funnelData ? (
+            <>
+              {/* 1. Closed-loop 5-Stage Funnel */}
+              <div className="crm2-funnel-wrapper">
+                <div className="crm2-funnel-head">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="crm2-funnel-title">
+                      🎯 Phễu chuyển đổi khép kín (Lead ➔ Booking ➔ Check-in ➔ Thanh toán ➔ Tái mua)
+                    </span>
+                    <span style={{ fontSize: 11.5, color: '#64748b' }}>
+                      (Kỳ đo: {funnelData.funnel.periodDays} ngày)
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="crm2-funnel-overall">
+                      <span>Tỷ lệ chốt trọn vòng:</span>
+                      <strong>{funnelData.funnel.endToEndConversionRate}%</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="crm2-funnel-steps">
+                  {funnelData.funnel.stages.map((st, idx) => (
+                    <div key={st.key} style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <div className="crm2-funnel-step" style={{ flex: 1 }}>
+                        <div className="crm2-funnel-step-name">{st.label}</div>
+                        <div className="crm2-funnel-step-count">{st.count}</div>
+                        <div className="crm2-funnel-step-rate">{st.conversionRate}% chuyển đổi</div>
+                        <div className="crm2-funnel-step-drop">
+                          {st.dropoffRate > 0 ? `Rớt: ${st.dropoffRate}%` : `Đầu phễu: ${st.overallRate}%`}
+                        </div>
+                      </div>
+                      {idx < funnelData.funnel.stages.length - 1 && (
+                        <ArrowRight size={18} className="crm2-funnel-arrow" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. LTV & Retention Analytics Cards */}
+              <div className="crm2-analytics-grid">
+                <div className="crm2-analytics-card">
+                  <div className="crm2-analytics-card-title">💎 Giá trị vòng đời trung bình (LTV)</div>
+                  <div className="crm2-analytics-card-value">{money(funnelData.ltv.averageLtv)}</div>
+                  <div className="crm2-analytics-card-sub">
+                    Dựa trên {funnelData.ltv.payingCustomers} / {funnelData.ltv.totalCustomers} khách có phát sinh chi tiêu
+                  </div>
+                </div>
+
+                <div className="crm2-analytics-card">
+                  <div className="crm2-analytics-card-title">🔄 Tỷ lệ giữ chân 30 ngày (Retention)</div>
+                  <div className="crm2-analytics-card-value" style={{ color: '#16a34a' }}>
+                    {funnelData.ltv.retention30dRate}%
+                  </div>
+                  <div className="crm2-analytics-card-sub">
+                    Khách hàng có lịch chơi lại trong vòng 30 ngày qua
+                  </div>
+                </div>
+
+                <div className="crm2-analytics-card">
+                  <div className="crm2-analytics-card-title">💤 Tỷ lệ khách ngủ đông (&gt;30 ngày)</div>
+                  <div className="crm2-analytics-card-value" style={{ color: '#d97706' }}>
+                    {funnelData.ltv.dormantRate}%
+                  </div>
+                  <div className="crm2-analytics-card-sub">
+                    Tỷ lệ khách chưa có lượt chơi mới trong 30 ngày qua
+                  </div>
+                </div>
+
+                <div className="crm2-analytics-card">
+                  <div className="crm2-analytics-card-title">💰 Tổng doanh thu lũy kế</div>
+                  <div className="crm2-analytics-card-value" style={{ color: '#0284c7' }}>
+                    {money(funnelData.ltv.totalHistoricalSpend)}
+                  </div>
+                  <div className="crm2-analytics-card-sub">
+                    Nguồn chuẩn từ POS Booking & Hóa đơn CRM
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Phân bổ Hạng hội viên theo LTV */}
+              <div className="crm2-card" style={{ padding: 18 }}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px', color: '#0f172a' }}>
+                  👑 Phân bổ Giá trị Khách hàng theo Hạng hội viên (LTV)
+                </h3>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                    gap: 12,
+                  }}
+                >
+                  {[
+                    { key: 'vip', label: '🌟 VIP (≥100tr)', data: funnelData.ltv.byTier.vip },
+                    { key: 'platinum', label: '💠 Platinum (≥50tr)', data: funnelData.ltv.byTier.platinum },
+                    { key: 'gold', label: '🥇 Gold (≥20tr)', data: funnelData.ltv.byTier.gold },
+                    { key: 'silver', label: '🥈 Silver (<20tr)', data: funnelData.ltv.byTier.silver },
+                    { key: 'none', label: 'Khách lẻ / Tiêu chuẩn', data: funnelData.ltv.byTier.none },
+                  ].map((t) => (
+                    <div
+                      key={t.key}
+                      style={{
+                        padding: '12px 14px',
+                        background: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: 5,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#334155' }}>
+                          {t.label}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#0f172a' }}>
+                          {t.data.count} KH
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 13, fontWeight: 800, color: '#16a34a' }}>
+                        LTV TB: {money(t.data.avgLtv)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Hiệu suất Nhân viên & SLA 5 phút */}
+              <div className="crm2-card" style={{ padding: 18 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', color: '#0f172a' }}>
+                    ⚡ Hiệu suất Nhân viên & Cam kết Phản hồi Lead SLA ≤ 5 phút
+                  </h3>
+                  <p style={{ margin: 0, fontSize: 12.5, color: '#64748b' }}>
+                    Đo lường thời gian từ lúc phát sinh Lead đến khi Nhân viên CSKH thực hiện tương tác đầu tiên (cuộc gọi, Zalo, ghi chú).
+                  </p>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                  <table className="crm2-table" style={{ width: '100%', textAlign: 'left' }}>
+                    <thead>
+                      <tr>
+                        <th>Nhân viên phụ trách</th>
+                        <th>Lead tiếp nhận</th>
+                        <th>Đã phản hồi</th>
+                        <th>Đạt SLA ≤ 5m</th>
+                        <th>Tỷ lệ SLA 5 phút</th>
+                        <th>T/g phản hồi TB</th>
+                        <th>Deal chốt (Won)</th>
+                        <th>Doanh thu mang lại</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {funnelData.staff.map((st) => (
+                        <tr key={st.userId}>
+                          <td>
+                            <strong>{st.name}</strong>
+                          </td>
+                          <td>{st.assignedLeads}</td>
+                          <td>{st.respondedLeads}</td>
+                          <td>{st.slaCompliantLeads}</td>
+                          <td>
+                            <span
+                              className={
+                                st.slaComplianceRate >= 80
+                                  ? 'crm2-sla-badge-good'
+                                  : st.slaComplianceRate >= 50
+                                  ? 'crm2-sla-badge-warn'
+                                  : 'crm2-sla-badge-bad'
+                              }
+                            >
+                              {st.slaComplianceRate}%
+                            </span>
+                          </td>
+                          <td>
+                            {st.avgResponseMinutes > 0
+                              ? `${st.avgResponseMinutes} phút`
+                              : 'Chưa có dữ liệu'}
+                          </td>
+                          <td>
+                            <span style={{ fontWeight: 700, color: '#16a34a' }}>{st.wonDeals}</span>
+                          </td>
+                          <td>
+                            <strong>{money(st.totalRevenue)}</strong>
+                          </td>
+                        </tr>
+                      ))}
+                      {funnelData.staff.length === 0 && (
+                        <tr>
+                          <td colSpan={8} style={{ textAlign: 'center', color: '#64748b', padding: 24 }}>
+                            Chưa có dữ liệu phân công nhân viên trong kỳ này.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="crm2-card" style={{ padding: 40, textAlign: 'center', color: '#64748b' }}>
+              {reportLoading ? (
+                <div>Đang tính toán các chỉ số phễu và LTV...</div>
+              ) : (
+                <div>Chưa có dữ liệu báo cáo cho kỳ đo này. Vui lòng nhấn Làm mới.</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

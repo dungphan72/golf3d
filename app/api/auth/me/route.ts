@@ -1,6 +1,7 @@
 import { getAuth, sendResult, httpError } from '../../../auth-session';
 import { db } from '../../../../lib/server/common';
 import { permissionsOf } from '../../../../lib/auth/permissions';
+import { userTenants } from '../../../../lib/server/auth-service';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -13,12 +14,15 @@ export async function GET() {
       .prepare("SELECT 1 AS x FROM memberships WHERE tenant=? AND role='owner'")
       .bind(auth.tenant)
       .first());
+  const tenants = await userTenants(auth.userId);
   return sendResult({
     status: 200,
     body: {
       name: auth.name,
       email: auth.email,
       role: auth.role,
+      tenant: auth.tenant,
+      tenants,
       via: auth.via,
       mustChange: auth.mustChange,
       needsPassword,

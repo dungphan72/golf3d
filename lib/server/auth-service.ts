@@ -183,6 +183,72 @@ export async function logout(token: string) {
     .run();
 }
 
+export type TenantMembership = {
+  tenant: string;
+  name: string;
+  role: Role;
+};
+
+export async function userTenants(userId: string): Promise<TenantMembership[]> {
+  const rows = (
+    await db()
+      .prepare(
+        `SELECT m.tenant, m.role, s.value AS settingValue
+         FROM memberships m
+         LEFT JOIN settings s ON s.tenant=m.tenant
+         WHERE m.user_id=?
+         ORDER BY m.created`,
+      )
+      .bind(userId)
+      .all<{ tenant: string; role: string; settingValue: string | null }>()
+  ).results;
+
+  return rows
+    .filter((r) => isRole(r.role))
+    .map((r) => {
+      let name = r.tenant;
+      if (r.settingValue) {
+        try {
+          const cfg = JSON.parse(r.settingValue);
+          if (cfg?.name) name = cfg.name;
+        } catch {}
+      }
+      return {
+        tenant: r.tenant,
+        role: r.role as Role,
+        name,
+      };
+    });
+}
+
+export async function switchSessionTenant(
+  token: string,
+  targetTenant: string,
+): Promise<ServiceResult> {
+  const auth = await userFromSession(token);
+  if (!auth) return fail('Chưa đăng nhập', 401);
+
+  const membership = await db()
+    .prepare('SELECT role FROM memberships WHERE user_id=? AND tenant=?')
+    .bind(auth.userId, targetTenant)
+    .first<{ role: string }>();
+
+  if (!membership || !isRole(membership.role)) {
+    return fail('Bạn không có quyền truy cập cơ sở này', 403);
+  }
+
+  const sId = await tokenId(token);
+  await db()
+    .prepare('UPDATE sessions SET tenant=? WHERE id=?')
+    .bind(targetTenant, sId)
+    .run();
+
+  return ok({
+    tenant: targetTenant,
+    role: membership.role,
+  });
+}
+
 export async function changePassword(
   user: AuthUser,
   current: string,

@@ -36,13 +36,19 @@ export default function PwaFloatingInstallBanner() {
       (window.navigator as unknown as { standalone?: boolean }).standalone === true;
     if (standalone) return;
 
-    // 2. Check if already installed
-    if (localStorage.getItem(INSTALLED_KEY) === 'true') return;
+    // Allow force test via URL parameter e.g. ?pwa=1
+    const searchParams = new URLSearchParams(window.location.search);
+    const forceShow = searchParams.get('pwa') === '1' || searchParams.get('install') === '1';
 
-    // 3. Check session dismiss and 7-day snooze
-    if (sessionStorage.getItem(DISMISS_SESSION_KEY) === '1') return;
-    const snoozedUntil = localStorage.getItem(DISMISS_SNOOZE_KEY);
-    if (snoozedUntil && Number(snoozedUntil) > Date.now()) return;
+    if (!forceShow) {
+      // 2. Check if already installed
+      if (localStorage.getItem(INSTALLED_KEY) === 'true') return;
+
+      // 3. Check session dismiss and snooze
+      if (sessionStorage.getItem(DISMISS_SESSION_KEY) === '1') return;
+      const snoozedUntil = localStorage.getItem(DISMISS_SNOOZE_KEY);
+      if (snoozedUntil && Number(snoozedUntil) > Date.now()) return;
+    }
 
     // 4. Detect iOS Safari
     const ua = window.navigator.userAgent;
@@ -73,10 +79,10 @@ export default function PwaFloatingInstallBanner() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // 8. Slide in banner smoothly after brief 1.5s delay (matching crm.khaidien.vn)
+    // 8. Slide in banner smoothly after brief 800ms delay
     const timer = setTimeout(() => {
       setIsVisible(true);
-    }, 1500);
+    }, 800);
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
@@ -141,7 +147,19 @@ export default function PwaFloatingInstallBanner() {
           aria-label="Đóng"
           onClick={handleDismiss}
         >
-          ×
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
         </button>
 
         <div className="yadcrm-pwa-icon sg-pwa-icon">
@@ -181,7 +199,19 @@ export default function PwaFloatingInstallBanner() {
             aria-label="Đóng"
             onClick={() => setShowIosGuide(false)}
           >
-            ×
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
           </button>
           <strong>Thêm SiGolf vào Màn hình chính</strong>
           <p>

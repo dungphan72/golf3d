@@ -36,6 +36,11 @@ import {
   Edit2,
   Trash2,
   Printer,
+  Bell,
+  User,
+  ChevronDown,
+  ArrowDown,
+  ArrowUp,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl } from '../../../lib/bank';
@@ -889,22 +894,9 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   return (
     <div className="pk-desktop-container">
-      {/* Top Banner & Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          background: 'var(--pk-primary)',
-          color: '#ffffff',
-          padding: '12px 16px',
-          borderRadius: 'var(--pk-radius)',
-          marginBottom: 16,
-          flexWrap: 'wrap',
-          gap: 10,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      {/* Top Banner & Header (Bám sát thiết kế SIGOLF · Bãi xe GoPick) */}
+      <div className="pk-top-bar">
+        <div className="pk-top-bar-left">
           {onNavigate && (
             <button
               type="button"
@@ -916,35 +908,49 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 background: 'rgba(255,255,255,0.2)',
                 color: '#ffffff',
                 border: 'none',
-                padding: '6px 10px',
-                borderRadius: 'var(--pk-radius)',
+                padding: '5px 10px',
+                borderRadius: 6,
                 fontSize: 12,
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
               title="Quay lại bán hàng POS hoặc Đặt sân"
             >
-              <ArrowLeft size={15} />
-              <span>Về quản lý SIGOLF</span>
+              <ArrowLeft size={14} />
+              <span>Về SIGOLF</span>
             </button>
           )}
-          <Car size={22} />
-          <h1 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>
+          <Car size={20} color="#86efac" />
+          <h1 className="pk-top-bar-title">
             SIGOLF · Bãi xe GoPick
           </h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12.5, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: 4 }}>
-            {isGuard ? 'Bảo vệ trực cổng' : 'Quản lý bãi xe'}
-          </span>
+        <div className="pk-top-bar-right">
+          <button
+            type="button"
+            className="pk-bell-btn"
+            title="Thông báo bãi xe"
+            onClick={() => notify('Hệ thống bãi xe GoPick hoạt động bình thường.')}
+          >
+            <Bell size={16} />
+            <span className="pk-bell-dot" />
+          </button>
+
+          <div className="pk-top-bar-badge">
+            <User size={14} />
+            <span>{isGuard ? 'Bảo vệ trực cổng' : 'Quản lý bãi xe'}</span>
+            <ChevronDown size={13} style={{ opacity: 0.8 }} />
+          </div>
+
           <button
             type="button"
             className="pk-header-back"
             onClick={loadConfigAndSpots}
-            title="Làm mới dữ liệu"
+            title="Làm mới dữ liệu bãi xe"
+            style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff' }}
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
           </button>
         </div>
       </div>
@@ -973,51 +979,66 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
       {/* Main 2-Column Operational Layout */}
       <div className="pk-admin-layout">
-        {/* Left Sidebar Menu */}
-        <aside className="pk-admin-sidebar">
+        {/* Left Sidebar Menu (Icon trên chữ dưới đúng theo ảnh) */}
+        <aside className="pk-admin-sidebar" aria-label="Menu bãi xe">
           <button
             type="button"
             className={`pk-admin-nav-item ${activeTab === 'map' ? 'active' : ''}`}
             onClick={() => setActiveTab('map')}
+            title="Sơ đồ 65 ô bãi xe"
           >
-            <MapPin size={18} />
-            <span>Sơ đồ bãi xe</span>
+            <div className="pk-nav-icon-wrap">
+              <span style={{ fontWeight: 900, fontSize: 15 }}>P</span>
+            </div>
+            <span>Bãi xe</span>
           </button>
 
           <button
             type="button"
             className={`pk-admin-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
             onClick={() => setActiveTab('schedule')}
+            title="Lịch đặt chỗ"
           >
-            <Calendar size={18} />
-            <span>Lịch đặt chỗ</span>
+            <div className="pk-nav-icon-wrap">
+              <Calendar size={18} />
+            </div>
+            <span>Đặt chỗ</span>
           </button>
 
           <button
             type="button"
             className={`pk-admin-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
             onClick={() => setActiveTab('gate')}
+            title="Kiểm soát xe vào / ra"
           >
-            <Car size={18} />
-            <span>Vào / Ra (Cổng)</span>
+            <div className="pk-nav-icon-wrap">
+              <Car size={18} />
+            </div>
+            <span>Vào / Ra</span>
           </button>
 
           <button
             type="button"
             className={`pk-admin-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
             onClick={() => setActiveTab('reconciliation')}
+            title="Đối soát cuối ca"
           >
-            <TrendingUp size={18} />
-            <span>Đối soát cuối ca</span>
+            <div className="pk-nav-icon-wrap">
+              <TrendingUp size={18} />
+            </div>
+            <span>Đối soát</span>
           </button>
 
           <button
             type="button"
             className={`pk-admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
             onClick={() => setActiveTab('settings')}
+            title="Cài đặt bãi xe"
           >
-            <Sliders size={18} />
-            <span>Cài đặt bãi xe</span>
+            <div className="pk-nav-icon-wrap">
+              <Sliders size={18} />
+            </div>
+            <span>Cài đặt</span>
           </button>
         </aside>
 
@@ -1030,33 +1051,48 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
             <div style={{ display: 'flex', gap: 16 }}>
               {/* Sơ đồ chính */}
               <div className="pk-card" style={{ flex: 1 }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    marginBottom: 14,
-                    paddingBottom: 10,
-                    borderBottom: '1px solid var(--pk-border)',
-                  }}
-                >
+                <div className="pk-panel-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Sơ đồ bãi xe</h2>
-                    <span
-                      style={{
-                        fontSize: 11.5,
-                        fontWeight: 700,
-                        color: 'var(--pk-primary)',
-                        background: 'var(--pk-primary-light)',
-                        padding: '2px 8px',
-                        borderRadius: 12,
-                      }}
-                    >
-                      ● Trực tuyến
+                    <div className="pk-panel-icon-badge">
+                      <span>P</span>
+                    </div>
+                    <h2 className="pk-panel-title">Sơ đồ bãi xe</h2>
+                    <span className="pk-online-pill">
+                      <span className="pk-dot-online" /> Trực tuyến
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <div className="pk-header-pill-input">
+                      <Calendar size={14} color="#64748b" />
+                      <input
+                        type="date"
+                        value={mapDate}
+                        onChange={(e) => {
+                          setMapDate(e.target.value);
+                          setMapMode('slot');
+                        }}
+                      />
+                    </div>
+
+                    <div className="pk-header-pill-input">
+                      <Clock size={14} color="#64748b" />
+                      <select
+                        value={slotPreset}
+                        onChange={(e) => {
+                          const val = e.target.value as any;
+                          setSlotPreset(val);
+                          setMapMode(val === 'now' ? 'now' : 'slot');
+                        }}
+                      >
+                        <option value="now">Hiện tại ({new Date().toTimeString().slice(0, 5)})</option>
+                        <option value="morning">Sáng (08:00 – 12:00)</option>
+                        <option value="afternoon">Chiều (13:00 – 17:00)</option>
+                        <option value="evening">Tối (17:45 – 20:15)</option>
+                        <option value="custom">Tùy chọn giờ</option>
+                      </select>
+                    </div>
+
                     <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 2, borderRadius: 4 }}>
                       <button
                         type="button"
@@ -1089,66 +1125,11 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                           borderRadius: 3,
                           cursor: 'pointer',
                         }}
-                        onClick={() => {
-                          setMapMode('slot');
-                          if (slotPreset === 'now') setSlotPreset('morning');
-                        }}
+                        onClick={() => setMapMode('slot')}
                       >
-                        Theo khung giờ
+                        Theo khung
                       </button>
                     </div>
-
-                    {mapMode === 'slot' && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <input
-                          type="date"
-                          className="pk-input"
-                          style={{ width: 135, height: 30, fontSize: 12, padding: '2px 8px' }}
-                          value={mapDate}
-                          onChange={(e) => setMapDate(e.target.value)}
-                        />
-                        <select
-                          className="pk-select"
-                          style={{ width: 155, height: 30, fontSize: 12, padding: '2px 8px' }}
-                          value={slotPreset}
-                          onChange={(e: any) => setSlotPreset(e.target.value)}
-                        >
-                          <option value="morning">Sáng (06:00 - 12:00)</option>
-                          <option value="afternoon">Chiều (12:00 - 18:00)</option>
-                          <option value="evening">Tối (18:00 - 22:00)</option>
-                          <option value="custom">Tùy chỉnh...</option>
-                        </select>
-                        {slotPreset === 'custom' && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <input
-                              type="time"
-                              className="pk-input"
-                              style={{ width: 85, height: 30, fontSize: 12, padding: '2px 6px' }}
-                              value={customSlotStart}
-                              onChange={(e) => setCustomSlotStart(e.target.value)}
-                            />
-                            <span style={{ fontSize: 12 }}>–</span>
-                            <input
-                              type="time"
-                              className="pk-input"
-                              style={{ width: 85, height: 30, fontSize: 12, padding: '2px 6px' }}
-                              value={customSlotEnd}
-                              onChange={(e) => setCustomSlotEnd(e.target.value)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      className="pk-btn-secondary"
-                      style={{ height: 30, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={loadConfigAndSpots}
-                      title="Làm mới sơ đồ"
-                    >
-                      <RefreshCw size={13} className={loading ? 'pk-spin' : ''} />
-                    </button>
                   </div>
                 </div>
 
@@ -1501,36 +1482,49 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               =================================================================== */}
           {activeTab === 'schedule' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div className="pk-card" style={{ padding: 14 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ position: 'relative', flex: 1 }}>
-                    <Search
-                      size={16}
-                      style={{ position: 'absolute', left: 10, top: 12, color: 'var(--pk-text-muted)' }}
-                    />
-                    <input
-                      type="text"
-                      className="pk-input"
-                      placeholder="Tìm vé hoặc biển số..."
-                      style={{ paddingLeft: 32 }}
-                      value={searchTicket}
-                      onChange={(e) => setSearchTicket(e.target.value)}
-                    />
+              <div className="pk-card" style={{ padding: '14px 18px', marginBottom: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="pk-panel-icon-badge">
+                      <Calendar size={18} />
+                    </div>
+                    <h2 className="pk-panel-title">Lịch đặt chỗ</h2>
                   </div>
 
-                  <select
-                    className="pk-select"
-                    style={{ width: 160 }}
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                  >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="confirmed">Đã đặt</option>
-                    <option value="holding">Đang giữ</option>
-                    <option value="active">Đang có xe</option>
-                    <option value="completed">Đã ra bãi</option>
-                    <option value="cancelled">Đã hủy</option>
-                  </select>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, maxWidth: 440, justifyContent: 'flex-end' }}>
+                    <div className="pk-search-box-pill" style={{ flex: 1 }}>
+                      <Search size={15} color="#94a3b8" />
+                      <input
+                        type="text"
+                        placeholder="Tìm vé hoặc biển số..."
+                        value={searchTicket}
+                        onChange={(e) => setSearchTicket(e.target.value)}
+                      />
+                      {searchTicket && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchTicket('')}
+                          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#94a3b8', padding: 0 }}
+                        >
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+
+                    <select
+                      className="pk-select"
+                      style={{ width: 140, height: 36, padding: '4px 8px', fontSize: 12.5 }}
+                      value={statusFilter}
+                      onChange={(e) => setStatusFilter(e.target.value)}
+                    >
+                      <option value="all">Tất cả</option>
+                      <option value="confirmed">Đã đặt</option>
+                      <option value="holding">Đang giữ</option>
+                      <option value="active">Đang có xe</option>
+                      <option value="completed">Đã ra bãi</option>
+                      <option value="cancelled">Đã hủy</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -1720,97 +1714,93 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 onChange={handlePhotoCaptured}
               />
 
-              {/* Mode switch & Quick Action Bar */}
+              {/* Mode switch & Quick Action Bar (Đúng theo mockup Screen 3) */}
+              <div className="pk-card" style={{ padding: '12px 18px', marginBottom: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="pk-panel-icon-badge">
+                      <Car size={18} />
+                    </div>
+                    <h2 className="pk-panel-title">Kiểm soát xe vào / ra</h2>
+                  </div>
+
+                  <div className="pk-gate-toggle-group">
+                    <button
+                      type="button"
+                      className={`pk-gate-toggle-btn ${gateMode === 'in' ? 'active' : ''}`}
+                      onClick={() => setGateMode('in')}
+                    >
+                      <ArrowDown size={14} />
+                      <span>Xe vào</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={`pk-gate-toggle-btn ${gateMode === 'out' ? 'active' : ''}`}
+                      onClick={() => setGateMode('out')}
+                    >
+                      <ArrowUp size={14} />
+                      <span>Xe ra</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons row */}
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
+                  justifyContent: 'flex-end',
                   flexWrap: 'wrap',
-                  gap: 10,
+                  gap: 8,
                 }}
               >
-                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 5 }}>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '8px 20px',
-                      border: 'none',
-                      background: gateMode === 'out' ? 'var(--pk-primary)' : 'transparent',
-                      color: gateMode === 'out' ? '#ffffff' : '#64748b',
-                      fontWeight: 700,
-                      fontSize: 13.5,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                    onClick={() => setGateMode('out')}
-                  >
-                    ↑ Xe ra (Kiểm tra & Mở cổng)
-                  </button>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '8px 20px',
-                      border: 'none',
-                      background: gateMode === 'in' ? 'var(--pk-primary)' : 'transparent',
-                      color: gateMode === 'in' ? '#ffffff' : '#64748b',
-                      fontWeight: 700,
-                      fontSize: 13.5,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                    onClick={() => setGateMode('in')}
-                  >
-                    ↓ Xe vào
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="pk-btn-primary"
+                  style={{
+                    width: 'auto',
+                    padding: '0 14px',
+                    height: 38,
+                    background: '#0284c7',
+                    borderColor: '#0284c7',
+                    gap: 6,
+                  }}
+                  onClick={() => photoInputRef.current?.click()}
+                  title="Mở camera điện thoại chụp ảnh biển số trực tiếp"
+                >
+                  <Camera size={16} />
+                  <span>Chụp ảnh biển số</span>
+                </button>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    type="button"
-                    className="pk-btn-primary"
-                    style={{
-                      width: 'auto',
-                      padding: '0 14px',
-                      height: 38,
-                      background: '#0284c7',
-                      borderColor: '#0284c7',
-                      gap: 6,
-                    }}
-                    onClick={() => photoInputRef.current?.click()}
-                    title="Mở camera điện thoại chụp ảnh biển số trực tiếp"
-                  >
-                    <Camera size={16} />
-                    <span>Chụp ảnh biển số</span>
-                  </button>
+                <button
+                  type="button"
+                  className="pk-btn-primary"
+                  style={{ width: 'auto', padding: '0 14px', height: 38, gap: 6 }}
+                  onClick={startLiveCamera}
+                  title="Mở khung ngắm quét camera trực tiếp (ANPR)"
+                >
+                  <Video size={16} />
+                  <span>Quét Camera</span>
+                </button>
 
-                  <button
-                    type="button"
-                    className="pk-btn-primary"
-                    style={{ width: 'auto', padding: '0 14px', height: 38, gap: 6 }}
-                    onClick={startLiveCamera}
-                    title="Mở khung ngắm quét camera trực tiếp (ANPR)"
-                  >
-                    <Video size={16} />
-                    <span>Quét Camera</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="pk-btn-secondary"
-                    style={{ width: 'auto', padding: '0 12px', height: 38 }}
-                    onClick={() => setShowPaperModal(true)}
-                  >
-                    <Plus size={15} />
-                    <span>Vé giấy</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  className="pk-btn-secondary"
+                  style={{ width: 'auto', padding: '0 12px', height: 38 }}
+                  onClick={() => setShowPaperModal(true)}
+                >
+                  <Plus size={15} />
+                  <span>Vé giấy</span>
+                </button>
               </div>
 
               {/* Danh sách xe đang có mặt trong bãi (Chạm 1 lần để chọn nhanh) */}
@@ -2389,31 +2379,42 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           {activeTab === 'reconciliation' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Chọn ngày đối soát */}
-              <div
-                className="pk-card"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <TrendingUp size={20} color="var(--pk-primary)" />
-                  <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Đối soát cuối ca</h2>
-                </div>
+              <div className="pk-card" style={{ padding: '14px 18px', marginBottom: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="pk-panel-icon-badge">
+                      <TrendingUp size={18} />
+                    </div>
+                    <h2 className="pk-panel-title">Đối soát cuối ca</h2>
+                  </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    type="date"
-                    className="pk-input"
-                    style={{ width: 160 }}
-                    value={reconDate}
-                    onChange={(e) => setReconDate(e.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="pk-btn-secondary"
-                    style={{ width: 'auto', padding: '0 12px' }}
-                    onClick={loadReconciliation}
-                  >
-                    <RefreshCw size={14} />
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div className="pk-header-pill-input">
+                      <Calendar size={14} color="#64748b" />
+                      <input
+                        type="date"
+                        value={reconDate}
+                        onChange={(e) => setReconDate(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      className="pk-btn-secondary"
+                      style={{ width: 'auto', padding: '0 12px', height: 36 }}
+                      onClick={loadReconciliation}
+                      title="Làm mới đối soát"
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -2774,39 +2775,38 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           {activeTab === 'settings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Header Thanh công cụ */}
-              <div
-                className="pk-card"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '16px 20px',
-                  flexWrap: 'wrap',
-                  gap: 12,
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Sliders size={20} color="var(--pk-primary)" />
-                    <h2 style={{ fontSize: 17, fontWeight: 800, margin: 0 }}>
-                      Cài đặt & Vận hành Bãi đậu xe {formSettings.facilityName || config?.facilityName}
-                    </h2>
-                  </div>
-                  <p style={{ fontSize: 12.5, color: 'var(--pk-text-muted)', margin: '4px 0 0' }}>
-                    Tùy biến toàn bộ tham số: Bật/tắt bãi xe, bảng giá, giờ miễn phí Golf, thời gian giữ chỗ, vé giấy và quản lý từng ô đỗ mặt bằng.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="pk-btn-primary"
-                  style={{ width: 'auto', padding: '0 20px', height: 40 }}
-                  onClick={handleSaveSettings}
-                  disabled={savingSettings}
+              <div className="pk-card" style={{ padding: '14px 18px', marginBottom: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 12,
+                  }}
                 >
-                  <Save size={16} />
-                  <span>{savingSettings ? 'Đang lưu cài đặt...' : 'Lưu tất cả cài đặt'}</span>
-                </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="pk-panel-icon-badge">
+                      <Sliders size={18} />
+                    </div>
+                    <div>
+                      <h2 className="pk-panel-title">
+                        Cài đặt bãi xe {formSettings.facilityName || config?.facilityName}
+                      </h2>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="pk-btn-primary"
+                    style={{ width: 'auto', padding: '0 20px', height: 38 }}
+                    onClick={handleSaveSettings}
+                    disabled={savingSettings}
+                  >
+                    <Save size={15} />
+                    <span>{savingSettings ? 'Đang lưu...' : 'Lưu tất cả cài đặt'}</span>
+                  </button>
+                </div>
               </div>
 
               {/* Grid 2 cột: Cấu hình thông số */}

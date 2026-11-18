@@ -22,6 +22,12 @@ import {
   closeShift,
 } from '../modules/parking/server/parking-service.ts';
 import { db } from '../lib/server/common.ts';
+import { receiveSepay } from '../lib/server/bank-service.ts';
+import {
+  extractVietnamesePlate,
+  formatVietnamesePlate,
+  cleanPlateString,
+} from '../modules/parking/core/plate-recognition.ts';
 import type { ParkingTicket } from '../modules/parking/core/types.ts';
 
 const TENANT = 'gopick';
@@ -409,4 +415,95 @@ test('8. Multi-tenant Isolation Check', async () => {
     },
     /không tìm thấy thông tin vé/i,
   );
+});
+
+test('9. Vietnamese License Plate ANPR Extraction & Normalization', () => {
+  // Test various Vietnamese license plate formats and OCR noise
+  assert.equal(extractVietnamesePlate('51A-123.45'), '51A-123.45');
+  assert.equal(extractVietnamesePlate('BIEN SO: 51A12345'), '51A-123.45');
+  assert.equal(extractVietnamesePlate('XE RA 30H-678.90 DANG CHO'), '30H-678.90');
+  assert.equal(extractVietnamesePlate('51K 246 80'), '51K-246.80');
+  assert.equal(extractVietnamesePlate('29A-9999'), '29A-9999');
+  assert.equal(extractVietnamesePlate('59C1-123.45'), '59C1-123.45');
+
+  // Test format and clean
+  assert.equal(cleanPlateString('51A-123.45'), '51A12345');
+  assert.equal(formatVietnamesePlate('51A12345'), '51A-123.45');
+  assert.equal(formatVietnamesePlate('30H67890'), '30H-678.90');
+});
+
+test('10. SePay Webhook Auto-confirmation, Spot Lock & Camera Gate Checkout', async () => {
+  // 1. Customer reserves spot P10 on mobile
+  const holdTicket = await holdSpot(TENANT, {
+    spotCode: 'P10',
+    licensePlate: '51A-123.45',
+    customerName: 'Khách SePay Test',
+    expectedIn: Date.now() + 1800000,
+    expectedOut: Date.now() + 7200000,
+  });
+  assert.ok(holdTicket);
+  assert.equal(holdTicket.status, 'holding');
+
+  // 2. Simulate SePay Webhook incoming transaction matching note PK-xxxx or PKxxxx
+  const ticketNumeric = holdTicket.ticketCode.replace(/\D/g, '');
+  const sepayRawPayload = {
+    id: Date.now(),
+    gateway: 'MBBank',
+    transactionDate: new Date().toISOString(),
+    accountNumber: '0877834888',
+    subAccount: null,
+    transferType: 'in',
+    transferAmount: 30000,
+    accumulated: 1000000,
+    code: null,
+    content: `PK${ticketNumeric} THANH TOAN DAT CHO GUI XE`,
+    referenceCode: `FT${Date.now()}`,
+    description: `PK${ticketNumeric} THANH TOAN DAT CHO GUI XE`,
+  };
+
+  const sepayRes = await receiveSepay(null, sepayRawPayload);
+  assert.ok(sepayRes.status < 400);
+
+  // 3. Verify ticket was automatically confirmed & spot locked
+  const verifiedTicket = await db()
+    .prepare('SELECT * FROM parking_tickets WHERE ticket_code=?')
+    .bind(holdTicket.ticketCode)
+    .first<any>();
+  assert.equal(verifiedTicket.status, 'confirmed');
+  assert.equal(verifiedTicket.paid_amount, 30000);
+  assert.equal(verifiedTicket.payment_method, 'sepay');
+
+  // Verify spot P10 is no longer available (locked)
+  const grid = await getSpotGrid(
+    TENANT,
+    Date.now() + 1800000,
+    Date.now() + 7200000,
+  );
+  const p10Spot = grid.spots.find((s) => s.code === 'P10');
+  assert.ok(p10Spot);
+  assert.equal(p10Spot.stateForWindow, 'booked');
+
+  // 4. Vehicle enters: Guard checks in vehicle
+  const checkedIn = await gateCheckIn(TENANT, {
+    ticketCode: holdTicket.ticketCode,
+    staffName: 'Bảo vệ cổng',
+  });
+  assert.equal(checkedIn.status, 'active');
+
+  // 5. Vehicle leaves: Guard uses camera plate OCR (raw: 51A12345 or 51A-123.45)
+  const checkOutResult = await gateCheckOut(TENANT, {
+    licensePlate: '51A12345', // Normalized OCR without dash/dot
+    staffName: 'Bảo vệ camera',
+  });
+  assert.equal(checkOutResult.ticket.status, 'completed');
+  assert.equal(checkOutResult.ticket.licensePlate, '51A-123.45');
+
+  // 6. Verify spot is now available again
+  const finalGrid = await getSpotGrid(
+    TENANT,
+    Date.now() + 1800000,
+    Date.now() + 7200000,
+  );
+  const freedSpot = finalGrid.spots.find((s) => s.code === 'P10');
+  assert.equal(freedSpot?.stateForWindow, 'available');
 });

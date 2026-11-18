@@ -28,8 +28,11 @@ import {
   Maximize2,
   X,
   FileText,
+  Copy,
+  Zap,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
+import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings } from '../core/types';
 import { PwaInstallProvider, PwaInstallCard } from '../../../app/ui/PwaInstallPrompt';
 import '../../../app/parking.css';
@@ -350,6 +353,13 @@ export default function ParkingCustomerApp({
   const [holdSecondsLeft, setHoldSecondsLeft] = useState<number>(300);
   const [paymentBusy, setPaymentBusy] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [bank, setBank] = useState<{ bin: string; account: string; holder: string; bankName: string }>({
+    bin: '970422',
+    account: '0877834888',
+    holder: 'SAIGON INDOOR GOLF',
+    bankName: 'MBBank (Quân Đội)',
+  });
+  const [copiedField, setCopiedField] = useState<'account' | 'amount' | 'content' | null>(null);
 
   // My Tickets State
   const [myTickets, setMyTickets] = useState<ParkingTicket[]>([]);
@@ -384,9 +394,38 @@ export default function ParkingCustomerApp({
       .then((res) => res.json())
       .then((data: any) => {
         if (data.ok && data.config) setConfig(data.config);
+        if (data.ok && data.bank) setBank(data.bank);
       })
       .catch(() => {});
   }, [tenant]);
+
+  // Realtime SePay payment listener & Auto-lock spot
+  useEffect(() => {
+    if (step !== 3 || !ticket || ticket.status === 'confirmed' || ticket.status === 'active') return;
+
+    let isSubscribed = true;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/parking?action=ticket&tenant=${tenant}&code=${ticket.ticketCode}`, {
+          cache: 'no-store',
+        });
+        const data: any = await res.json();
+        if (isSubscribed && data.ok && data.ticket) {
+          if (data.ticket.status === 'confirmed' || data.ticket.status === 'active') {
+            setTicket(data.ticket);
+            setStep(4);
+          }
+        }
+      } catch {
+        // ignore background network glitch
+      }
+    }, 2500);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [step, ticket, tenant]);
 
   // Load saved tickets from localStorage
   useEffect(() => {
@@ -1359,40 +1398,125 @@ export default function ParkingCustomerApp({
                   </div>
                 ) : (
                   <div className="pk-card" style={{ marginBottom: 14 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>{t.payMethod}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <div style={{ fontWeight: 700, fontSize: 13 }}>{t.payMethod}</div>
+                      <span style={{ fontSize: 11, background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 10, fontWeight: 600 }}>
+                        Cổng SePay Auto
+                      </span>
+                    </div>
+
                     <div
                       style={{
-                        padding: 12,
-                        borderRadius: 5,
-                        background: '#f8fafc',
-                        border: '1px solid var(--pk-border)',
+                        padding: 10,
+                        borderRadius: 6,
+                        background: '#f0fdf4',
+                        border: '1px solid #bbf7d0',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: 12,
+                        gap: 10,
+                        marginBottom: 12,
                       }}
                     >
-                      <QrCode size={24} color="var(--pk-primary)" />
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 700 }}>{t.qrPayment}</div>
-                        <div style={{ fontSize: 11.5, color: 'var(--pk-text-muted)' }}>
-                          Quét mã QR tự động xác nhận trong 5 giây
-                        </div>
+                      <Zap size={20} color="var(--pk-primary)" />
+                      <div style={{ fontSize: 12, color: '#166534', lineHeight: 1.4 }}>
+                        <strong>Tự động khóa chỗ:</strong> Quét mã QR bằng App Ngân hàng bất kỳ, hệ thống SePay sẽ tự động khớp lệnh và xuất vé sau 3 giây.
                       </div>
                     </div>
 
-                    {/* QR chuyển khoản VietQR */}
-                    <div style={{ textAlign: 'center', marginTop: 14 }}>
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                          `https://sigolf.vn/pay?ticket=${ticket.ticketCode}&amount=${ticket.customerAmount || ticket.totalAmount}`,
-                        )}`}
-                        alt="QR thanh toán"
-                        style={{ width: 140, height: 140, border: '1px solid #e2e8f0', borderRadius: 4 }}
-                      />
-                      <div style={{ fontSize: 12, color: 'var(--pk-text-muted)', marginTop: 6 }}>
-                        Nội dung chuyển khoản: <strong>{ticket.ticketCode}</strong>
-                      </div>
-                    </div>
+                    {/* QR chuyển khoản SePay */}
+                    {(() => {
+                      const sepayNote = ticket.ticketCode.replace('-', '');
+                      const paymentAmount = ticket.customerAmount || ticket.totalAmount;
+                      const qrImageSrc = sepayQrUrl({
+                        bin: bank.bin,
+                        account: bank.account,
+                        holder: bank.holder,
+                        amount: paymentAmount,
+                        note: sepayNote,
+                      });
+
+                      const copyToClipboard = (txt: string, field: 'account' | 'amount' | 'content') => {
+                        try {
+                          navigator.clipboard.writeText(txt);
+                          setCopiedField(field);
+                          setTimeout(() => setCopiedField(null), 2000);
+                        } catch {}
+                      };
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                          <div style={{ padding: 8, background: '#ffffff', borderRadius: 8, border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}>
+                            <img
+                              src={qrImageSrc}
+                              alt="Mã QR thanh toán SePay"
+                              style={{ width: 170, height: 170, display: 'block' }}
+                            />
+                          </div>
+
+                          <div style={{ width: '100%', marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12.5 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: '#f8fafc', borderRadius: 4 }}>
+                              <span style={{ color: 'var(--pk-text-muted)' }}>Ngân hàng:</span>
+                              <strong>{bank.bankName || 'MBBank (Quân Đội)'}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: '#f8fafc', borderRadius: 4 }}>
+                              <span style={{ color: 'var(--pk-text-muted)' }}>Số tài khoản:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <strong style={{ color: '#0f172a' }}>{bank.account}</strong>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(bank.account, 'account')}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, color: 'var(--pk-primary)' }}
+                                  title="Sao chép số tài khoản"
+                                >
+                                  {copiedField === 'account' ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: '#f8fafc', borderRadius: 4 }}>
+                              <span style={{ color: 'var(--pk-text-muted)' }}>Chủ tài khoản:</span>
+                              <strong style={{ color: '#0f172a' }}>{bank.holder}</strong>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: '#f8fafc', borderRadius: 4 }}>
+                              <span style={{ color: 'var(--pk-text-muted)' }}>Số tiền:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <strong style={{ color: 'var(--pk-primary)' }}>{money(paymentAmount)}</strong>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(String(paymentAmount), 'amount')}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, color: 'var(--pk-primary)' }}
+                                  title="Sao chép số tiền"
+                                >
+                                  {copiedField === 'amount' ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                              </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 8px', background: '#fef3c7', borderRadius: 4, border: '1px dashed #f59e0b' }}>
+                              <span style={{ color: '#92400e', fontWeight: 600 }}>Nội dung CK:</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <strong style={{ color: '#b45309', fontSize: 13.5 }}>{sepayNote}</strong>
+                                <button
+                                  type="button"
+                                  onClick={() => copyToClipboard(sepayNote, 'content')}
+                                  style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 2, color: '#b45309' }}
+                                  title="Sao chép nội dung chuyển khoản"
+                                >
+                                  {copiedField === 'content' ? <Check size={14} /> : <Copy size={14} />}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: '#16a34a', marginTop: 10 }}>
+                            <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#16a34a', animation: 'pulse 1.5s infinite' }} />
+                            <span>Đang chờ tín hiệu SePay... Chỗ sẽ được khóa tự động.</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

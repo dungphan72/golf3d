@@ -617,13 +617,14 @@ export async function gateCheckIn(
   input: GateCheckInInput,
   now: number = Date.now(),
 ): Promise<ParkingTicket> {
+  const cleanPlate = input.licensePlate ? input.licensePlate.replace(/[-\s.]/g, '').toUpperCase() : '';
   const query = input.ticketCode
     ? 'SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?'
     : input.accessToken
     ? 'SELECT * FROM parking_tickets WHERE tenant=? AND access_token=?'
-    : 'SELECT * FROM parking_tickets WHERE tenant=? AND license_plate=? AND status IN (\'confirmed\', \'active\') ORDER BY expected_in DESC LIMIT 1';
+    : "SELECT * FROM parking_tickets WHERE tenant=? AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '')=? AND status IN ('confirmed', 'active') ORDER BY expected_in DESC LIMIT 1";
 
-  const param = input.ticketCode || input.accessToken || input.licensePlate;
+  const param = input.ticketCode || input.accessToken || cleanPlate;
   const ticket = await db().prepare(query).bind(tenant, param).first<any>();
 
   if (!ticket) {
@@ -667,13 +668,14 @@ export async function gateCheckOut(
   input: GateCheckOutInput,
   now: number = Date.now(),
 ): Promise<{ ticket: ParkingTicket; surchargeDue: number }> {
+  const cleanPlate = input.licensePlate ? input.licensePlate.replace(/[-\s.]/g, '').toUpperCase() : '';
   const query = input.ticketCode
     ? 'SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?'
     : input.accessToken
     ? 'SELECT * FROM parking_tickets WHERE tenant=? AND access_token=?'
-    : 'SELECT * FROM parking_tickets WHERE tenant=? AND license_plate=? AND status=\'active\' ORDER BY actual_in DESC LIMIT 1';
+    : "SELECT * FROM parking_tickets WHERE tenant=? AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '')=? AND status='active' ORDER BY actual_in DESC LIMIT 1";
 
-  const param = input.ticketCode || input.accessToken || input.licensePlate;
+  const param = input.ticketCode || input.accessToken || cleanPlate;
   const ticket = await db().prepare(query).bind(tenant, param).first<any>();
 
   if (!ticket) {

@@ -32,6 +32,8 @@ const keyHash = (key: string) => tokenId('sepay:' + key);
  * Only incoming money is stored. Retries (same transaction id) are acknowledged without a duplicate.
  * Nothing is paid automatically: staff confirm the matching bill in the payment dialog.
  */
+import { confirmTicket } from '../../modules/parking/server/parking-service';
+
 export async function receiveSepay(
   authorization: string | null,
   raw: unknown,
@@ -81,6 +83,21 @@ export async function receiveSepay(
       }
     }
 
+    // Safety fallback 3: Match tenant by Parking Ticket code in note
+    if (!tenant && p.content) {
+      const parkingMatch = (p.content || '').toUpperCase().match(/\bPK[-\s]?([0-9]{4})\b/i);
+      if (parkingMatch) {
+        const pkRow = await db()
+          .prepare("SELECT tenant FROM parking_tickets WHERE ticket_code=?")
+          .bind(`PK-${parkingMatch[1]}`)
+          .first<{ tenant: string }>();
+        if (pkRow) {
+          tenant = pkRow.tenant;
+          console.log(`[SePay Webhook] Matched tenant '${tenant}' by parking ticket 'PK-${parkingMatch[1]}'`);
+        }
+      }
+    }
+
     if (!tenant) {
       console.warn('[SePay Webhook] Unauthorized - no matching tenant found. Auth header:', authHeader);
       return error('Khóa xác thực không hợp lệ', 401);
@@ -122,6 +139,30 @@ export async function receiveSepay(
       if (!message.includes('bank_tx_external') && !message.includes('UNIQUE')) throw e;
       console.log(`[SePay Webhook] Duplicate TX ${p.id} acknowledged.`);
     }
+
+    // Auto-confirm & lock spot for Parking tickets if note contains PK-xxxx or PKxxxx
+    const parkingMatch = (p.content || '').toUpperCase().match(/\bPK[-\s]?([0-9]{4})\b/i);
+    if (parkingMatch) {
+      const parkingTicketCode = `PK-${parkingMatch[1]}`;
+      console.log(`[SePay Webhook] Found Parking Ticket code ${parkingTicketCode} in note: "${p.content}"`);
+      try {
+        const foundTicket = await db()
+          .prepare("SELECT * FROM parking_tickets WHERE ticket_code=? AND status IN ('holding', 'pending_review')")
+          .bind(parkingTicketCode)
+          .first<any>();
+        if (foundTicket) {
+          await confirmTicket(foundTicket.tenant, {
+            ticketCode: parkingTicketCode,
+            paymentMethod: 'sepay',
+            paymentRef: String(p.id || p.referenceCode || Date.now()),
+          });
+          console.log(`[SePay Webhook] Auto-confirmed & locked spot for Parking Ticket ${parkingTicketCode}!`);
+        }
+      } catch (parkingErr) {
+        console.error(`[SePay Webhook] Error auto-confirming parking ticket ${parkingTicketCode}:`, parkingErr);
+      }
+    }
+
     return reply({ success: true });
   } catch (e) {
     console.error('[SePay Webhook Exception]', e);

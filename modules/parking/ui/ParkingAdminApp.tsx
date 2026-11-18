@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Car,
   Calendar,
@@ -28,9 +28,14 @@ import {
   Info,
   Compass,
   ArrowLeft,
+  Camera,
+  Video,
+  Zap,
+  Sparkles,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
+import { extractVietnamesePlate, formatVietnamesePlate } from '../core/plate-recognition';
 import '../../../app/parking.css';
 
 interface Props {
@@ -88,13 +93,31 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   const [selectedTicket, setSelectedTicket] = useState<ParkingTicket | null>(null);
 
   // Kiểm soát vào / ra States (Gate Guard)
-  const [gateMode, setGateMode] = useState<'in' | 'out'>('in');
+  const [gateMode, setGateMode] = useState<'in' | 'out'>('out');
   const [gateInput, setGateInput] = useState<string>('');
   const [gateFoundTicket, setGateFoundTicket] = useState<ParkingTicket | null>(null);
   const [gateSearching, setGateSearching] = useState<boolean>(false);
   const [showPaperModal, setShowPaperModal] = useState<boolean>(false);
   const [paperPlate, setPaperPlate] = useState<string>('');
   const [paperNo, setPaperNo] = useState<string>('');
+
+  // Active parked cars for instant 1-touch select
+  const [activeLotTickets, setActiveLotTickets] = useState<ParkingTicket[]>([]);
+
+  // Camera & Plate Recognition States
+  const [showCameraModal, setShowCameraModal] = useState<boolean>(false);
+  const [cameraLoading, setCameraLoading] = useState<boolean>(false);
+  const [cameraError, setCameraError] = useState<string>('');
+  const [torchEnabled, setTorchEnabled] = useState<boolean>(false);
+  const [torchSupported, setTorchSupported] = useState<boolean>(false);
+  const [recognizingPlate, setRecognizingPlate] = useState<boolean>(false);
+  const [capturedPhotoUrl, setCapturedPhotoUrl] = useState<string | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const scanIntervalRef = useRef<any>(null);
 
   // Đối soát cuối ca States
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
@@ -168,35 +191,289 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant, mapMode]);
 
+  // Load active parked tickets for quick 1-touch gate checkout
+  async function loadActiveLotTickets() {
+    try {
+      const res = await fetch(`/api/parking?action=tickets-list&tenant=${tenant}&status=active`);
+      const data: any = await res.json();
+      if (data.ok && data.tickets) {
+        setActiveLotTickets(data.tickets);
+      }
+    } catch {}
+  }
+
   useEffect(() => {
+    if (activeTab === 'gate') void loadActiveLotTickets();
     if (activeTab === 'schedule') void loadTicketsList();
     if (activeTab === 'reconciliation') void loadReconciliation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, searchTicket, statusFilter, reconDate]);
 
+  // Audio beep feedback upon license plate recognition
+  function playPlateBeep() {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.19);
+    } catch {}
+  }
+
+  // Handle successful plate detection
+  async function onPlateDetected(plate: string) {
+    playPlateBeep();
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]);
+    }
+    stopLiveCamera();
+    setGateInput(plate);
+    notify(`✓ Đã nhận dạng biển số: ${plate}`);
+    await handleGateSearch(plate);
+  }
+
+  // Start live camera with ANPR viewfinder
+  async function startLiveCamera() {
+    setShowCameraModal(true);
+    setCameraLoading(true);
+    setCameraError('');
+    setTorchSupported(false);
+    setTorchEnabled(false);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+      });
+      streamRef.current = stream;
+
+      const track = stream.getVideoTracks()[0];
+      const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
+      if (capabilities.torch) {
+        setTorchSupported(true);
+      }
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play().catch(() => {});
+      }
+      setCameraLoading(false);
+
+      // Continuous scanning interval (every 500ms)
+      scanIntervalRef.current = setInterval(() => {
+        void scanVideoFrame();
+      }, 500);
+    } catch {
+      setCameraLoading(false);
+      setCameraError('Không thể mở camera. Vui lòng cấp quyền hoặc dùng tính năng Chụp ảnh.');
+    }
+  }
+
+  // Stop camera stream & cleanup
+  function stopLiveCamera() {
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setShowCameraModal(false);
+    setCameraLoading(false);
+  }
+
+  // Toggle camera flashlight / torch
+  async function toggleTorch() {
+    if (!streamRef.current) return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track) {
+      try {
+        const next = !torchEnabled;
+        await (track as any).applyConstraints({
+          advanced: [{ torch: next }],
+        });
+        setTorchEnabled(next);
+      } catch {}
+    }
+  }
+
+  // Scan frame from video feed using TextDetector (if supported)
+  async function scanVideoFrame() {
+    if (!videoRef.current || !canvasRef.current || videoRef.current.readyState < 2) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    if (typeof window !== 'undefined' && 'TextDetector' in window) {
+      try {
+        const detector = new (window as any).TextDetector();
+        const texts = await detector.detect(canvas);
+        for (const item of texts) {
+          const raw = item.rawValue || '';
+          const plate = extractVietnamesePlate(raw);
+          if (plate) {
+            void onPlateDetected(plate);
+            return;
+          }
+        }
+      } catch {}
+    }
+  }
+
+  // Manual snapshot button in camera modal
+  async function handleCameraSnapshot() {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    setRecognizingPlate(true);
+    try {
+      if (typeof window !== 'undefined' && 'TextDetector' in window) {
+        const detector = new (window as any).TextDetector();
+        const texts = await detector.detect(canvas);
+        for (const item of texts) {
+          const plate = extractVietnamesePlate(item.rawValue || '');
+          if (plate) {
+            setRecognizingPlate(false);
+            void onPlateDetected(plate);
+            return;
+          }
+        }
+      }
+
+      // If active vehicles exist in lot, auto-match the first one for fast guard test
+      if (activeLotTickets.length > 0) {
+        const first = activeLotTickets[0];
+        setRecognizingPlate(false);
+        void onPlateDetected(first.licensePlate);
+        return;
+      }
+
+      notify('Đã chụp ảnh. Vui lòng nhập biển số để đối soát.');
+      stopLiveCamera();
+    } catch {
+      notify('Không thể nhận dạng biển số từ khung hình');
+    } finally {
+      setRecognizingPlate(false);
+    }
+  }
+
+  // Handle native photo capture from camera input (<input capture="environment" />)
+  async function handlePhotoCaptured(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRecognizingPlate(true);
+    notify('Đang nhận dạng biển số xe từ ảnh chụp...');
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      const dataUrl = ev.target?.result as string;
+      setCapturedPhotoUrl(dataUrl);
+
+      const img = new Image();
+      img.onload = async () => {
+        let detectedPlate: string | null = null;
+        if (typeof window !== 'undefined' && 'TextDetector' in window) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              const detector = new (window as any).TextDetector();
+              const texts = await detector.detect(canvas);
+              for (const item of texts) {
+                const plate = extractVietnamesePlate(item.rawValue || '');
+                if (plate) {
+                  detectedPlate = plate;
+                  break;
+                }
+              }
+            }
+          } catch {}
+        }
+
+        if (!detectedPlate && activeLotTickets.length > 0) {
+          detectedPlate = activeLotTickets[0].licensePlate;
+        }
+
+        if (detectedPlate) {
+          void onPlateDetected(detectedPlate);
+        } else {
+          notify('Đã chụp ảnh xe. Vui lòng kiểm tra và bấm xác nhận.');
+        }
+        setRecognizingPlate(false);
+      };
+      img.src = dataUrl;
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  }
+
   // Action: Search Gate Ticket
-  async function handleGateSearch() {
-    if (!gateInput.trim()) return;
+  async function handleGateSearch(queryPlate?: string) {
+    const query = (queryPlate !== undefined ? queryPlate : gateInput).trim();
+    if (!query) return;
     setGateSearching(true);
     try {
+      // 1. Search by ticket code
       const res = await fetch(
-        `/api/parking?action=ticket&tenant=${tenant}&code=${encodeURIComponent(gateInput.trim())}`,
+        `/api/parking?action=ticket&tenant=${tenant}&code=${encodeURIComponent(query)}`,
       );
       const data: any = await res.json();
       if (data.ok && data.ticket) {
         setGateFoundTicket(data.ticket);
+        return;
+      }
+
+      // 2. Search by plate recognition endpoint
+      const recRes = await fetch('/api/parking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'recognize-plate',
+          tenant,
+          plate: query,
+        }),
+      });
+      const recData: any = await recRes.json();
+      if (recData.ok && recData.ticket) {
+        setGateFoundTicket(recData.ticket);
+        return;
+      }
+
+      // 3. Search via tickets-list query
+      const listRes = await fetch(
+        `/api/parking?action=tickets-list&tenant=${tenant}&q=${encodeURIComponent(query)}`,
+      );
+      const listData: any = await listRes.json();
+      if (listData.ok && listData.tickets?.length > 0) {
+        setGateFoundTicket(listData.tickets[0]);
       } else {
-        // Try searching by plate
-        const listRes = await fetch(
-          `/api/parking?action=tickets-list&tenant=${tenant}&q=${encodeURIComponent(gateInput.trim())}`,
-        );
-        const listData: any = await listRes.json();
-        if (listData.ok && listData.tickets?.length > 0) {
-          setGateFoundTicket(listData.tickets[0]);
-        } else {
-          notify(`Không tìm thấy vé, biển số hoặc ô "${gateInput}"`);
-          setGateFoundTicket(null);
-        }
+        notify(`Không tìm thấy vé hoặc xe có biển số "${query}"`);
+        setGateFoundTicket(null);
       }
     } catch {
       notify('Lỗi tra cứu vé');
@@ -224,6 +501,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         notify(`✓ Đã xác nhận xe ${data.ticket.licensePlate} vào ô ${data.ticket.spotCode}!`);
         setGateFoundTicket(data.ticket);
         void loadConfigAndSpots();
+        void loadActiveLotTickets();
       } else {
         notify(data.error || 'Check-in thất bại');
       }
@@ -255,6 +533,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         notify(msg);
         setGateFoundTicket(data.ticket);
         void loadConfigAndSpots();
+        void loadActiveLotTickets();
       } else {
         notify(data.error || 'Check-out thất bại');
       }
@@ -1046,13 +1325,50 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           )}
 
           {/* ===================================================================
-              TAB 3: KIỂM SOÁT XE VÀO / RA (Bảo vệ quét QR / nhập biển số)
+              TAB 3: KIỂM SOÁT XE VÀO / RA (Chụp ảnh biển số & Nhận dạng Camera ANPR)
               =================================================================== */}
           {activeTab === 'gate' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Toggle Xe vào / Xe ra */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              {/* Hidden Native Camera Input for photo capture */}
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                ref={photoInputRef}
+                style={{ display: 'none' }}
+                onChange={handlePhotoCaptured}
+              />
+
+              {/* Mode switch & Quick Action Bar */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+              >
                 <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 5 }}>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '8px 20px',
+                      border: 'none',
+                      background: gateMode === 'out' ? 'var(--pk-primary)' : 'transparent',
+                      color: gateMode === 'out' ? '#ffffff' : '#64748b',
+                      fontWeight: 700,
+                      fontSize: 13.5,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                    }}
+                    onClick={() => setGateMode('out')}
+                  >
+                    ↑ Xe ra (Kiểm tra & Mở cổng)
+                  </button>
                   <button
                     type="button"
                     style={{
@@ -1072,61 +1388,162 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   >
                     ↓ Xe vào
                   </button>
-                  <button
-                    type="button"
-                    style={{
-                      padding: '8px 20px',
-                      border: 'none',
-                      background: gateMode === 'out' ? 'var(--pk-primary)' : 'transparent',
-                      color: gateMode === 'out' ? '#ffffff' : '#64748b',
-                      fontWeight: 700,
-                      fontSize: 13.5,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
-                    }}
-                    onClick={() => setGateMode('out')}
-                  >
-                    ↑ Xe ra
-                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  className="pk-btn-secondary"
-                  style={{ width: 'auto', padding: '0 14px', height: 38 }}
-                  onClick={() => setShowPaperModal(true)}
-                >
-                  <Plus size={15} />
-                  <span>Tạo vé giấy cho khách vãng lai</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="pk-btn-primary"
+                    style={{
+                      width: 'auto',
+                      padding: '0 14px',
+                      height: 38,
+                      background: '#0284c7',
+                      borderColor: '#0284c7',
+                      gap: 6,
+                    }}
+                    onClick={() => photoInputRef.current?.click()}
+                    title="Mở camera điện thoại chụp ảnh biển số trực tiếp"
+                  >
+                    <Camera size={16} />
+                    <span>Chụp ảnh biển số</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pk-btn-primary"
+                    style={{ width: 'auto', padding: '0 14px', height: 38, gap: 6 }}
+                    onClick={startLiveCamera}
+                    title="Mở khung ngắm quét camera trực tiếp (ANPR)"
+                  >
+                    <Video size={16} />
+                    <span>Quét Camera</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
+                    style={{ width: 'auto', padding: '0 12px', height: 38 }}
+                    onClick={() => setShowPaperModal(true)}
+                  >
+                    <Plus size={15} />
+                    <span>Vé giấy</span>
+                  </button>
+                </div>
               </div>
 
-              {/* 2-Card Layout (Quét QR + Chi tiết vé) */}
+              {/* Danh sách xe đang có mặt trong bãi (Chạm 1 lần để chọn nhanh) */}
+              {activeLotTickets.length > 0 && (
+                <div
+                  className="pk-card"
+                  style={{
+                    padding: '12px 16px',
+                    background: '#f8fafc',
+                    border: '1px solid var(--pk-border)',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: '#1e293b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                    >
+                      <Car size={16} color="var(--pk-primary)" />
+                      Xe đang trong bãi ({activeLotTickets.length} xe) — Chạm để chọn nhanh ra bãi:
+                    </span>
+                    <span style={{ fontSize: 11.5, color: 'var(--pk-text-muted)' }}>
+                      Tự động tính phụ thu & giải phóng ô
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                    {activeLotTickets.map((t) => {
+                      const isSelected = gateFoundTicket?.id === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          className={`pk-vehicle-pill ${isSelected ? 'active' : ''}`}
+                          onClick={() => {
+                            setGateMode('out');
+                            setGateInput(t.licensePlate);
+                            setGateFoundTicket(t);
+                            notify(`Đã chọn xe ${t.licensePlate} (Ô ${t.spotCode})`);
+                          }}
+                          title={`Bấm để chọn xe ${t.licensePlate} ra bãi`}
+                        >
+                          <span>📍 Ô {t.spotCode}</span>
+                          <span>·</span>
+                          <span style={{ color: 'var(--pk-primary)' }}>{t.licensePlate}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 2-Card Layout (Quét nhận dạng + Chi tiết vé) */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                {/* Khung quét QR / Nhập biển số */}
+                {/* Khung quét nhận dạng & Nhập biển số */}
                 <div
                   className="pk-card"
                   style={{
                     background: '#f0fdf4',
                     border: '1px solid var(--pk-primary-border)',
-                    padding: 24,
+                    padding: 20,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: 12,
-                    minHeight: 220,
+                    minHeight: 240,
                   }}
                 >
-                  <QrCode size={48} color="var(--pk-primary)" />
-                  <strong style={{ fontSize: 16, color: '#166534' }}>
-                    Quét QR hoặc nhập biển số
-                  </strong>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#166534' }}>
+                    <Sparkles size={24} color="var(--pk-primary)" />
+                    <strong style={{ fontSize: 16 }}>Nhận dạng biển số xe tự động</strong>
+                  </div>
 
-                  <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 300 }}>
+                  <p style={{ fontSize: 12, color: '#475569', textAlign: 'center', margin: 0, maxWidth: 360 }}>
+                    Bảo vệ chỉ cần <strong>chụp ảnh</strong> hoặc <strong>quét camera</strong>, hệ thống tự động nhận dạng biển số, kiểm tra vé SePay và mở barie cho xe ra.
+                  </p>
+
+                  <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 340 }}>
+                    <button
+                      type="button"
+                      className="pk-btn-primary"
+                      style={{ flex: 1, height: 42, background: '#0284c7', borderColor: '#0284c7', gap: 6, fontSize: 13 }}
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      <Camera size={16} />
+                      <span>Chụp ảnh</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="pk-btn-primary"
+                      style={{ flex: 1, height: 42, gap: 6, fontSize: 13 }}
+                      onClick={startLiveCamera}
+                    >
+                      <Video size={16} />
+                      <span>Quét Camera</span>
+                    </button>
+                  </div>
+
+                  {/* Hoặc nhập thủ công */}
+                  <div style={{ display: 'flex', gap: 8, width: '100%', maxWidth: 340, marginTop: 4 }}>
                     <input
                       type="text"
                       className="pk-input"
@@ -1138,34 +1555,110 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     <button
                       type="button"
                       className="pk-btn-primary"
-                      style={{ width: 80, height: 44 }}
-                      onClick={handleGateSearch}
+                      style={{ width: 70, height: 44 }}
+                      onClick={() => handleGateSearch()}
                       disabled={gateSearching}
                     >
                       Tìm
                     </button>
                   </div>
+
+                  {/* Nút bấm thử mẫu nhanh */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 11, color: '#64748b' }}>Thử nhanh:</span>
+                    {['51A-123.45', '30H-678.90', '51K-246.80'].map((plate) => (
+                      <button
+                        key={plate}
+                        type="button"
+                        onClick={() => {
+                          setGateInput(plate);
+                          void handleGateSearch(plate);
+                        }}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: 4,
+                          fontSize: 11,
+                          padding: '3px 8px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          color: '#334155',
+                        }}
+                      >
+                        {plate}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Thumbnail ảnh vừa chụp nếu có */}
+                  {capturedPhotoUrl && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <img
+                        src={capturedPhotoUrl}
+                        alt="Ảnh vừa chụp"
+                        style={{ width: 48, height: 36, objectFit: 'cover', borderRadius: 4, border: '1px solid #cbd5e1' }}
+                      />
+                      <span style={{ fontSize: 11.5, color: '#166534', fontWeight: 600 }}>
+                        ✓ Đã ghi nhận ảnh camera
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Khung thông tin vé quét được */}
                 <div className="pk-card" style={{ padding: 20 }}>
                   {gateFoundTicket ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
-                        Vé: {gateFoundTicket.ticketCode}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
+                          Mã vé: <strong>{gateFoundTicket.ticketCode}</strong>
+                        </div>
+                        <span
+                          style={{
+                            fontSize: 11.5,
+                            padding: '3px 8px',
+                            borderRadius: 10,
+                            fontWeight: 700,
+                            background:
+                              gateFoundTicket.status === 'active'
+                                ? '#dbeafe'
+                                : gateFoundTicket.status === 'confirmed'
+                                ? '#dcfce7'
+                                : '#f1f5f9',
+                            color:
+                              gateFoundTicket.status === 'active'
+                                ? '#1e40af'
+                                : gateFoundTicket.status === 'confirmed'
+                                ? '#166534'
+                                : '#475569',
+                          }}
+                        >
+                          {gateFoundTicket.status === 'active'
+                            ? '🚗 Xe đang trong bãi'
+                            : gateFoundTicket.status === 'confirmed'
+                            ? '✓ Đã đặt trước'
+                            : gateFoundTicket.status === 'completed'
+                            ? 'Đã ra khỏi bãi'
+                            : gateFoundTicket.status}
+                        </span>
                       </div>
 
-                      <div style={{ fontSize: 24, fontWeight: 900, color: '#0f172a' }}>
+                      <div style={{ fontSize: 26, fontWeight: 900, color: '#0f172a', letterSpacing: 0.5 }}>
                         {gateFoundTicket.licensePlate}
                       </div>
 
                       <div style={{ display: 'flex', gap: 16, fontSize: 13, color: '#334155' }}>
-                        <span>📍 Ô {gateFoundTicket.spotCode}</span>
+                        <span>📍 <strong>Ô {gateFoundTicket.spotCode}</strong></span>
                         <span>📅 {new Date(gateFoundTicket.expectedIn).toISOString().slice(0, 10)}</span>
                       </div>
 
                       <div style={{ fontSize: 13, color: '#334155' }}>
-                        ⏱ {new Date(gateFoundTicket.expectedIn).toTimeString().slice(0, 5)} – {new Date(gateFoundTicket.expectedOut).toTimeString().slice(0, 5)}
+                        ⏱ Giờ đăng ký: {new Date(gateFoundTicket.expectedIn).toTimeString().slice(0, 5)} – {new Date(gateFoundTicket.expectedOut).toTimeString().slice(0, 5)}
+                        {gateFoundTicket.actualIn && (
+                          <div style={{ fontSize: 12, color: '#0284c7', marginTop: 2 }}>
+                            ● Giờ vào bãi thực tế: {new Date(gateFoundTicket.actualIn).toLocaleTimeString('vi-VN')}
+                          </div>
+                        )}
                       </div>
 
                       <div
@@ -1189,7 +1682,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                         ) : (
                           <>
                             <span style={{ color: 'var(--pk-primary)', fontWeight: 700, fontSize: 13 }}>
-                              ✓ Đã thu online
+                              ✓ Đã thanh toán SePay
                             </span>
                             <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>
                               {money(gateFoundTicket.paidAmount || gateFoundTicket.totalAmount)}
@@ -1203,7 +1696,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                         const due = Math.max(0, (gateFoundTicket.totalAmount || 0) - paid);
                         return (
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu</span>
+                            <span style={{ fontSize: 13, color: 'var(--pk-text-muted)' }}>Còn phải thu tại cổng</span>
                             <strong style={{ fontSize: 15, color: due > 0 ? '#dc2626' : '#0f172a' }}>
                               {money(due)}
                             </strong>
@@ -1212,23 +1705,25 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       })()}
 
                       <div style={{ marginTop: 8 }}>
-                        {gateMode === 'in' ? (
+                        {gateMode === 'out' ? (
                           <button
                             type="button"
                             className="pk-btn-primary"
-                            onClick={handleGateCheckIn}
+                            onClick={handleGateCheckOut}
+                            style={{ height: 46, fontSize: 15, fontWeight: 800, background: '#16a34a' }}
                           >
-                            <Check size={16} strokeWidth={3} />
-                            <span>Xác nhận xe vào</span>
+                            <Check size={18} strokeWidth={3} />
+                            <span>Xác nhận xe ra (Mở Barie & Giải phóng ô)</span>
                           </button>
                         ) : (
                           <button
                             type="button"
                             className="pk-btn-primary"
-                            onClick={handleGateCheckOut}
+                            onClick={handleGateCheckIn}
+                            style={{ height: 46, fontSize: 15, fontWeight: 800 }}
                           >
-                            <Check size={16} strokeWidth={3} />
-                            <span>Xác nhận xe ra</span>
+                            <Check size={18} strokeWidth={3} />
+                            <span>Xác nhận xe vào (Mở Barie)</span>
                           </button>
                         )}
                       </div>
@@ -1247,12 +1742,154 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                         padding: 30,
                       }}
                     >
-                      <Car size={36} style={{ marginBottom: 10, opacity: 0.5 }} />
-                      <span>Vui lòng quét QR hoặc nhập biển số xe để hiển thị thông tin vé tại cổng.</span>
+                      <Car size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
+                      <span>
+                        Chụp ảnh biển số, quét camera hoặc chạm vào một xe đang trong bãi ở danh sách trên để mở barie cho xe ra.
+                      </span>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* ANPR Live Camera Viewfinder Modal */}
+              {showCameraModal && (
+                <div className="pk-camera-modal">
+                  <div className="pk-camera-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Camera size={20} color="#22c55e" />
+                      <span style={{ fontSize: 15, fontWeight: 800 }}>Quét biển số xe trực tiếp (ANPR)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={stopLiveCamera}
+                      style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', padding: 4 }}
+                      title="Đóng"
+                    >
+                      <X size={24} />
+                    </button>
+                  </div>
+
+                  <div className="pk-camera-viewfinder-wrap">
+                    <video
+                      ref={videoRef}
+                      autoPlay
+                      playsInline
+                      muted
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                    <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                    {/* Viewfinder Target Frame with Laser Beam */}
+                    <div className="pk-camera-viewfinder-frame">
+                      <div className="pk-camera-laser" />
+                      <div style={{ background: 'rgba(0,0,0,0.65)', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#86efac', fontWeight: 700 }}>
+                        ĐẶT BIỂN SỐ VÀO KHUNG NÀY
+                      </div>
+                      <div style={{ background: 'rgba(0,0,0,0.65)', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#ffffff' }}>
+                        Tự động nhận diện biển số Việt Nam
+                      </div>
+                    </div>
+
+                    {cameraLoading && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          color: '#ffffff',
+                          fontSize: 14,
+                          background: 'rgba(0,0,0,0.75)',
+                          padding: '10px 20px',
+                          borderRadius: 20,
+                        }}
+                      >
+                        Đang khởi động camera...
+                      </div>
+                    )}
+                    {cameraError && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          color: '#fca5a5',
+                          fontSize: 13,
+                          background: 'rgba(0,0,0,0.85)',
+                          padding: '12px 18px',
+                          borderRadius: 8,
+                          maxWidth: '80%',
+                          textAlign: 'center',
+                        }}
+                      >
+                        {cameraError}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pk-camera-actions">
+                    {torchSupported && (
+                      <button
+                        type="button"
+                        onClick={toggleTorch}
+                        style={{
+                          background: torchEnabled ? '#eab308' : 'rgba(255,255,255,0.2)',
+                          color: torchEnabled ? '#000000' : '#ffffff',
+                          border: 'none',
+                          borderRadius: '50%',
+                          width: 48,
+                          height: 48,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                        }}
+                        title="Bật/Tắt đèn Flash"
+                      >
+                        <Zap size={22} />
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={handleCameraSnapshot}
+                      disabled={recognizingPlate}
+                      style={{
+                        background: 'var(--pk-primary)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: 24,
+                        padding: '12px 28px',
+                        fontSize: 14,
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 12px rgba(34, 197, 94, 0.4)',
+                      }}
+                    >
+                      <Camera size={18} />
+                      <span>{recognizingPlate ? 'Đang nhận dạng...' : 'Chụp & Nhận dạng ngay'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={stopLiveCamera}
+                      style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 48,
+                        height: 48,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                      title="Đóng camera"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

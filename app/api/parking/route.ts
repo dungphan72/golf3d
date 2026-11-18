@@ -1,6 +1,6 @@
 import { getAuth } from '../../auth-session';
 import { can } from '../../../lib/auth/permissions';
-import { db, audit } from '../../../lib/server/common';
+import { db, audit, loadConfig } from '../../../lib/server/common';
 import {
   DEFAULT_PARKING_TENANT,
   ensureParkingInitialized,
@@ -28,7 +28,17 @@ export async function GET(req: Request) {
   try {
     if (action === 'config') {
       const config = await ensureParkingInitialized(tenant);
-      return Response.json({ ok: true, config });
+      const clubConfig = await loadConfig(tenant).catch(() => null);
+      return Response.json({
+        ok: true,
+        config,
+        bank: {
+          bin: clubConfig?.bankBin || '970422',
+          account: clubConfig?.bankAccount || '0877834888',
+          holder: clubConfig?.bankHolder || 'SAIGON INDOOR GOLF',
+          bankName: 'MBBank (Quân Đội)',
+        },
+      });
     }
 
     if (action === 'spots') {
@@ -43,17 +53,28 @@ export async function GET(req: Request) {
     if (action === 'ticket') {
       const code = url.searchParams.get('code');
       const token = url.searchParams.get('token');
+      const plate = url.searchParams.get('plate');
 
-      if (!code && !token) {
-        return Response.json({ error: 'Cần mã vé hoặc token truy cập' }, { status: 400 });
+      if (!code && !token && !plate) {
+        return Response.json({ error: 'Cần mã vé, biển số hoặc token truy cập' }, { status: 400 });
       }
 
-      const query = code
-        ? 'SELECT * FROM parking_tickets WHERE ticket_code=?'
-        : 'SELECT * FROM parking_tickets WHERE access_token=?';
+      let query = '';
+      let param = '';
 
-      const param = code || token;
-      const row = await db().prepare(query).bind(param).first<any>();
+      if (code) {
+        query = 'SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?';
+        param = code;
+      } else if (token) {
+        query = 'SELECT * FROM parking_tickets WHERE tenant=? AND access_token=?';
+        param = token;
+      } else {
+        const cleanPlate = (plate || '').replace(/[-\s.]/g, '').toUpperCase();
+        query = "SELECT * FROM parking_tickets WHERE tenant=? AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '')=? AND status IN ('confirmed', 'active') ORDER BY expected_in DESC LIMIT 1";
+        param = cleanPlate;
+      }
+
+      const row = await db().prepare(query).bind(tenant, param).first<any>();
 
       if (!row) {
         return Response.json({ error: 'Không tìm thấy vé đậu xe' }, { status: 404 });
@@ -180,6 +201,60 @@ export async function POST(req: Request) {
   const action = body.action || '';
 
   try {
+    if (action === 'check-sepay') {
+      const code = (body.ticketCode || '').trim();
+      if (!code) return Response.json({ error: 'Thiếu mã vé' }, { status: 400 });
+      const ticketRow = await db()
+        .prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?')
+        .bind(tenant, code)
+        .first<any>();
+      if (!ticketRow) return Response.json({ error: 'Không tìm thấy vé' }, { status: 404 });
+      if (ticketRow.status === 'confirmed' || ticketRow.status === 'active') {
+        return Response.json({ ok: true, confirmed: true, ticket: ticketRow });
+      }
+      const cleanCode = code.replace(/[-\s]/g, '');
+      const tx = await db()
+        .prepare(
+          "SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY created_at DESC LIMIT 1"
+        )
+        .bind(tenant, `%${cleanCode}%`, `%${code}%`)
+        .first<any>();
+      if (tx) {
+        const confirmedTicket = await confirmTicket(tenant, {
+          ticketCode: code,
+          paymentMethod: 'sepay',
+          paymentRef: tx.external_id || String(tx.id),
+        });
+        return Response.json({ ok: true, confirmed: true, ticket: confirmedTicket });
+      }
+      return Response.json({ ok: true, confirmed: false, status: ticketRow.status });
+    }
+
+    if (action === 'recognize-plate') {
+      const rawPlate = (body.plate || '').trim().toUpperCase();
+      const cleanPlate = rawPlate.replace(/[-\s.]/g, '');
+      let matchedTicket = null;
+      if (cleanPlate) {
+        const row = await db()
+          .prepare(
+            `SELECT * FROM parking_tickets 
+             WHERE tenant=? 
+               AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '') LIKE ?
+               AND status IN ('confirmed', 'active')
+             ORDER BY updated_at DESC LIMIT 1`
+          )
+          .bind(tenant, `%${cleanPlate}%`)
+          .first<any>();
+        if (row) matchedTicket = row;
+      }
+      return Response.json({
+        ok: true,
+        recognizedPlate: rawPlate,
+        cleanPlate,
+        ticket: matchedTicket,
+      });
+    }
+
     if (action === 'verify-golf') {
       const res = await verifyGolfBookingSponsorship(
         tenant,

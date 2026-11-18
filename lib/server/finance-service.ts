@@ -18,6 +18,8 @@ import {
 } from '../finance-sql';
 import { USE_BANK_TX_SQL } from '../bank-sql';
 import type { z } from 'zod';
+import { emitEvent } from '../../modules/crm/server/event-bus';
+import { makeEventKey } from '../../modules/crm/core/events';
 type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
 const error = (message: string, status = 400): R => reply({ error: message }, status);
@@ -243,9 +245,9 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
       return reply({ ok: true, bookingIds: ids });
     }
     const booking = await db
-      .prepare('SELECT id,status,amount FROM bookings WHERE tenant=? AND id=?')
+      .prepare('SELECT id,status,amount,phone FROM bookings WHERE tenant=? AND id=?')
       .bind(tenant, input.bookingId)
-      .first<{ id: string; status: string; amount: number | null }>();
+      .first<{ id: string; status: string; amount: number | null; phone: string }>();
     if (!booking) return error('Không tìm thấy phiếu', 404);
     if (booking.status !== 'finished' || booking.amount == null || booking.amount <= 0)
       return error('Chỉ thu phiếu đã kết thúc, có số tiền hợp lệ và chưa thanh toán', 409);
@@ -307,6 +309,23 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
         statements.push(db.prepare(USE_BANK_TX_SQL).bind(booking.id, tenant, linked.bankTxId));
       }
       await db.batch(statements);
+      emitEvent({
+        id: crypto.randomUUID(),
+        type: 'pos.payment.completed',
+        tenant,
+        source: 'pos',
+        actor,
+        timestamp: now,
+        idempotencyKey: makeEventKey('pos.payment.completed', tenant, booking.id, input.requestId),
+        phone: booking.phone,
+        data: {
+          bookingId: booking.id,
+          method: 'mixed',
+          amount: due,
+          shiftId: shift.id,
+          requestId: input.requestId,
+        },
+      }).catch(() => {});
       return reply({ ok: true });
     }
     const entry = db
@@ -341,6 +360,23 @@ export async function applyFinance(tenant: string, actor: string, input: Finance
     } else {
       await entry.run();
     }
+    emitEvent({
+      id: crypto.randomUUID(),
+      type: 'pos.payment.completed',
+      tenant,
+      source: 'pos',
+      actor,
+      timestamp: now,
+      idempotencyKey: makeEventKey('pos.payment.completed', tenant, booking.id, input.requestId),
+      phone: booking.phone,
+      data: {
+        bookingId: booking.id,
+        method: input.method,
+        amount: due,
+        shiftId: shift.id,
+        requestId: input.requestId,
+      },
+    }).catch(() => {});
     return reply({ ok: true });
   } catch (e) {
     // A parallel identical request may have committed after replay() first checked.

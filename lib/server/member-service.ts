@@ -42,6 +42,8 @@ import { walletBonus } from '../wallet';
 import { activateCard, addAbsence, cancelAbsence, saleTerm } from './card-service';
 import { expiryOnActivation } from '../card-term';
 import { ensureProfile } from '../../modules/crm/server/customers';
+import { emitEvent } from '../../modules/crm/server/event-bus';
+import { makeEventKey } from '../../modules/crm/core/events';
 
 export { memberInput };
 type R = ServiceResult;
@@ -707,6 +709,27 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
         .prepare(WALLET_BALANCE_SQL)
         .bind(tenant, input.customerId)
         .first<{ balance: number }>();
+      emitEvent({
+        id: crypto.randomUUID(),
+        type: 'membership.wallet_topup',
+        tenant,
+        source: 'membership',
+        actor,
+        timestamp: now,
+        idempotencyKey: makeEventKey(
+          'membership.wallet_topup',
+          tenant,
+          input.customerId,
+          input.requestId,
+        ),
+        customerId: input.customerId,
+        data: {
+          delta: input.amount + bonus,
+          balance: total?.balance ?? 0,
+          reason: 'topup',
+          actor,
+        },
+      }).catch(() => {});
       return reply({ ok: true, bonus, balance: total?.balance ?? 0 });
     }
     if (input.action === 'wallet-pay') {
@@ -743,6 +766,24 @@ export async function applyMember(tenant: string, actor: string, input: MemberIn
           .bind(crypto.randomUUID(), tenant, owner.id, -b.amount, 'spend', b.id, actor, '', now),
         d.prepare(PAY_BY_WALLET_SQL).bind(tenant, b.id, b.amount),
       ]);
+      emitEvent({
+        id: crypto.randomUUID(),
+        type: 'membership.wallet_spent',
+        tenant,
+        source: 'membership',
+        actor,
+        timestamp: now,
+        idempotencyKey: makeEventKey('membership.wallet_spent', tenant, b.id, String(now)),
+        customerId: owner.id,
+        phone: b.phone,
+        data: {
+          delta: -b.amount,
+          balance: have - b.amount,
+          bookingId: b.id,
+          reason: 'spend',
+          actor,
+        },
+      }).catch(() => {});
       return reply({ ok: true, paid: true, balance: have - b.amount });
     }
     if (input.action === 'adjust') {

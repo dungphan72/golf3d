@@ -1,6 +1,8 @@
 import { db, type ServiceResult } from './common';
 import type { BillInfo, BillingInput } from '../billing';
 import { scopedShiftId } from '../finance';
+import { emitEvent } from '../../modules/crm/server/event-bus';
+import { makeEventKey } from '../../modules/crm/core/events';
 
 type R = ServiceResult;
 const reply = (body: Record<string, unknown>, status = 200): R => ({ status, body });
@@ -119,6 +121,22 @@ export async function applyBilling(tenant: string, actor: string, input: Billing
         now,
       )
       .run();
+    emitEvent({
+      id: crypto.randomUUID(),
+      type: 'pos.refund.completed',
+      tenant,
+      source: 'pos',
+      actor,
+      timestamp: now,
+      idempotencyKey: makeEventKey('pos.refund.completed', tenant, input.bookingId, key),
+      data: {
+        bookingId: input.bookingId,
+        method: input.method,
+        amount: input.amount,
+        reason: input.reason,
+        requestId: key,
+      },
+    }).catch(() => {});
     return reply({ ok: true });
   } catch (e) {
     return explain(e);

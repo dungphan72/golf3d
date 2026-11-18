@@ -313,6 +313,7 @@ export function CrmModule({
   const [tlFilter, setTlFilter] = useState<InteractionType>('all');
   const [quickNoteText, setQuickNoteText] = useState('');
   const [quickNoteChannel, setQuickNoteChannel] = useState<'call' | 'zalo' | 'email' | 'note'>('note');
+  const [isReconciling, setIsReconciling] = useState(false);
 
   // Modals
   const [showCreateCustomerModal, setShowCreateCustomerModal] = useState(false);
@@ -1029,6 +1030,50 @@ export function CrmModule({
       );
     } catch (e) {
       notify(errText(e));
+    }
+  }
+
+  async function handleReconcileCustomer() {
+    if (!activeCustomer) return;
+    setIsReconciling(true);
+    try {
+      const res = await call<{
+        ok: boolean;
+        report: {
+          pos: { netSpend: number; transactionCount: number };
+          booking: { completedSessions: number; totalHoursPlayed: number };
+          membership: { walletBalance: number; loyaltyPoints: number };
+        };
+      }>('/api/crm2/sync', {
+        action: 'reconcile',
+        customerId: activeCustomer.id,
+      });
+      if (res?.report) {
+        const r = res.report;
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === activeCustomer.id
+              ? {
+                  ...c,
+                  stats: {
+                    ...c.stats,
+                    spend: r.pos.netSpend,
+                    bookings: r.booking.completedSessions,
+                    hours: `${String(r.booking.totalHoursPlayed).replace('.', ',')} giờ`,
+                    points: r.membership.loyaltyPoints,
+                  },
+                }
+              : c,
+          ),
+        );
+        notify(
+          `Đối soát thành công: POS (${money(r.pos.netSpend)} / ${r.pos.transactionCount} GD), Booking (${r.booking.completedSessions} buổi / ${r.booking.totalHoursPlayed}h), Điểm thưởng (${r.membership.loyaltyPoints}).`,
+        );
+      }
+    } catch (e) {
+      notify(errText(e));
+    } finally {
+      setIsReconciling(false);
     }
   }
 
@@ -2290,6 +2335,33 @@ export function CrmModule({
                 {/* SUB-TAB 1: THÔNG TIN (1:1 WITH REFERENCE IMAGE) */}
                 {profileSubTab === 'info' && (
                   <>
+                    {/* Event Bus & Single Source of Truth Consistency Bar */}
+                    <div className="crm2-consistency-bar">
+                      <div className="crm2-consistency-sources">
+                        <span style={{ fontSize: 12.5, fontWeight: 700, color: '#0f172a' }}>
+                          Đồng bộ chuẩn 3 nguồn:
+                        </span>
+                        <span className="crm2-source-pill pos" title="Hóa đơn & giao dịch thu tiền từ POS">
+                          <Receipt size={12} /> POS: Chuẩn giao dịch
+                        </span>
+                        <span className="crm2-source-pill booking" title="Phiên chơi & đặt line từ Booking">
+                          <Calendar size={12} /> Booking: Chuẩn phiên chơi
+                        </span>
+                        <span className="crm2-source-pill membership" title="Gói tập & số dư ví từ Membership">
+                          <CreditCard size={12} /> Membership: Chuẩn số dư & gói
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="crm2-reconcile-btn"
+                        onClick={handleReconcileCustomer}
+                        disabled={isReconciling}
+                      >
+                        <RotateCcw size={13} className={isReconciling ? 'crm-spin' : ''} />
+                        {isReconciling ? 'Đang đối soát...' : 'Đối soát & Đồng bộ 360°'}
+                      </button>
+                    </div>
+
                     <div className="crm2-info-split">
                       {/* Left Box: Thông tin cơ bản */}
                       <div className="crm2-subbox">

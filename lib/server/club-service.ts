@@ -23,6 +23,8 @@ import { db, audit, pendingCount, loadConfig, ok, fail, type ServiceResult } fro
 import { rooms } from '../club';
 import { invalidateLandingCache } from './landing-service';
 import { ensureProfile } from '../../modules/crm/server/customers';
+import { emitEvent } from '../../modules/crm/server/event-bus';
+import { makeEventKey } from '../../modules/crm/core/events';
 
 async function syncCustomerOnBooking(tenant: string, rawName: string, rawPhone: string, now: number) {
   const name = rawName.trim();
@@ -386,6 +388,24 @@ export async function runClubAction(
     if (!result.meta.changes)
       return fail('Phòng vừa có lịch trùng hoặc đang sử dụng. Vui lòng chọn giờ/phòng khác.', 409);
     await syncCustomerOnBooking(tenant, input.customer, input.phone, now);
+    emitEvent({
+      id: crypto.randomUUID(),
+      type: 'booking.created',
+      tenant,
+      source: 'booking',
+      actor: 'Khách đặt sân',
+      timestamp: now,
+      idempotencyKey: makeEventKey('booking.created', tenant, id),
+      phone: input.phone,
+      data: {
+        bookingId: id,
+        room: room.id,
+        service: input.service ?? 'gdr',
+        start,
+        end: plan.end,
+        customerName: input.customer,
+      },
+    }).catch(() => {});
     await audit(tenant, 'Đặt lịch', `${room.name} · ${input.customer}`);
     return ok({ id });
   }
@@ -496,6 +516,25 @@ export async function runClubAction(
       .bind(now, now, tenant, b.id, tenant, b.room, b.id, now)
       .run();
     if (!conflict.meta.changes) return fail('Phòng đang được sử dụng hoặc đang dọn', 409);
+    emitEvent({
+      id: crypto.randomUUID(),
+      type: 'booking.started',
+      tenant,
+      source: 'booking',
+      actor: 'Nhân viên quầy',
+      timestamp: now,
+      idempotencyKey: makeEventKey('booking.started', tenant, b.id, String(now)),
+      phone: b.phone,
+      data: {
+        bookingId: b.id,
+        room: b.room,
+        service: b.service,
+        start: b.start,
+        end: b.end,
+        started: now,
+        customerName: b.customer,
+      },
+    }).catch(() => {});
     await audit(tenant, 'Bắt đầu', b.id);
     return ok();
   } else if (input.action === 'pause') {
@@ -531,6 +570,27 @@ export async function runClubAction(
       )
       .run();
     if (!ended.meta.changes) return fail('Phiên vừa thay đổi ở thiết bị khác. Hãy tải lại.', 409);
+    emitEvent({
+      id: crypto.randomUUID(),
+      type: 'booking.finished',
+      tenant,
+      source: 'booking',
+      actor: 'Nhân viên quầy',
+      timestamp: now,
+      idempotencyKey: makeEventKey('booking.finished', tenant, b.id, String(now)),
+      phone: b.phone,
+      data: {
+        bookingId: b.id,
+        room: b.room,
+        service: b.service,
+        start: b.start,
+        end: b.end,
+        started: b.started,
+        finished: now,
+        amount,
+        customerName: b.customer,
+      },
+    }).catch(() => {});
     await audit(tenant, 'Kết thúc', b.id);
     return ok();
   } else if (input.action === 'round-min') {

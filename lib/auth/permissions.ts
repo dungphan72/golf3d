@@ -35,6 +35,10 @@ export const PERMISSIONS = [
   // Tournament scores: staff enter them, only the owner confirms scores golfers entered themselves.
   'tournament.score',
   'tournament.approve',
+  // Parking module: view spots/schedule, gate check-in/out, full management & reconciliation.
+  'parking.view',
+  'parking.gate',
+  'parking.manage',
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -75,6 +79,8 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'crm.view',
     'crm.work',
     'coach.view',
+    'parking.view',
+    'parking.gate',
   ],
   coach: ['view', 'support.handle', 'member.view', 'coach.view', 'coach.own'],
   cskh: [
@@ -89,6 +95,8 @@ const GRANTS: Record<Role, readonly Permission[]> = {
     'crm.work',
     'coach.view',
     'coach.schedule',
+    'parking.view',
+    'parking.gate',
   ],
   sale: [
     'view',

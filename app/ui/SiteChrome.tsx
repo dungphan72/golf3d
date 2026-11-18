@@ -17,6 +17,7 @@ const NAV: [string, string][] = [
   ['Đặt sân', '/#dat-cho-nhanh'],
   ['Giải đấu', '/#giai-dau'],
   ['Hội viên', '/thanh-vien'],
+  ['Đậu xe', '/parking'],
   ['Bảng giá', '/bang-gia'],
   ['Tin tức', '/tin-tuc'],
 ];
@@ -96,6 +97,7 @@ export async function SiteFooter() {
         <nav aria-label="Dịch vụ">
           <h3>Dịch vụ</h3>
           <a href="/#dat-cho-nhanh">Đặt sân Golf 3D</a>
+          <a href="/parking">Đặt chỗ đậu xe</a>
           <a href="/thanh-vien">Thẻ hội viên</a>
           <a href="/#giai-dau">Giải đấu &amp; Sự kiện</a>
           <a href="/tai-khoan">Tài khoản</a>

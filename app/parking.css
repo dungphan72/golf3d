@@ -1,0 +1,694 @@
+/**
+ * Saigon Indoor Golf (SIGOLF) — Module Bãi Đậu Xe
+ * Design Tokens & Visual Styles
+ * Follows Be Vietnam Pro, Material Design, 5px border-radius, clean light theme.
+ */
+
+:root {
+  --pk-primary: #15803d;
+  --pk-primary-hover: #166534;
+  --pk-primary-light: #f0fdf4;
+  --pk-primary-border: #bbf7d0;
+  --pk-accent: #0284c7;
+  --pk-warn: #d97706;
+  --pk-warn-light: #fef3c7;
+  --pk-danger: #dc2626;
+  --pk-danger-light: #fee2e2;
+  --pk-bg: #f8fafc;
+  --pk-card: #ffffff;
+  --pk-border: #e2e8f0;
+  --pk-text-main: #0f172a;
+  --pk-text-muted: #64748b;
+  --pk-radius: 5px;
+}
+
+/* Base Wrapper */
+.pk-container {
+  max-width: 480px;
+  margin: 0 auto;
+  background: var(--pk-card);
+  min-height: 100vh;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--pk-text-main);
+}
+
+.pk-desktop-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Header */
+.pk-header {
+  background: var(--pk-primary);
+  color: #ffffff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pk-header-back {
+  background: none;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--pk-radius);
+}
+
+.pk-header-title {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+/* Stepper */
+.pk-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--pk-border);
+}
+
+.pk-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  flex: 1;
+}
+
+.pk-step-item::after {
+  content: '';
+  position: absolute;
+  top: 11px;
+  left: 60%;
+  width: 80%;
+  height: 2px;
+  background: #e2e8f0;
+  z-index: 1;
+}
+
+.pk-step-item:last-child::after {
+  display: none;
+}
+
+.pk-step-item.active::after,
+.pk-step-item.completed::after {
+  background: var(--pk-primary);
+}
+
+.pk-step-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: var(--pk-text-muted);
+  z-index: 2;
+}
+
+.pk-step-item.active .pk-step-circle {
+  background: var(--pk-primary);
+  color: #ffffff;
+}
+
+.pk-step-item.completed .pk-step-circle {
+  background: var(--pk-primary);
+  color: #ffffff;
+}
+
+.pk-step-label {
+  font-size: 11px;
+  color: var(--pk-text-muted);
+  font-weight: 500;
+}
+
+.pk-step-item.active .pk-step-label {
+  color: var(--pk-primary);
+  font-weight: 700;
+}
+
+/* Step Content */
+.pk-body {
+  padding: 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pk-page-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--pk-text-main);
+  margin: 0;
+}
+
+/* Form Controls */
+.pk-card {
+  background: #ffffff;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  padding: 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.pk-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.pk-input-group:last-child {
+  margin-bottom: 0;
+}
+
+.pk-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--pk-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pk-select,
+.pk-input {
+  width: 100%;
+  height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  font-size: 14px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--pk-text-main);
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.pk-select:focus,
+.pk-input:focus {
+  border-color: var(--pk-primary);
+}
+
+/* Golf Linking Card */
+.pk-golf-link-box {
+  background: var(--pk-primary-light);
+  border: 1px solid var(--pk-primary-border);
+  border-radius: var(--pk-radius);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.pk-golf-link-box:hover {
+  background: #dcfce7;
+}
+
+.pk-golf-link-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pk-golf-link-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--pk-primary);
+}
+
+.pk-golf-link-sub {
+  font-size: 11.5px;
+  color: #166534;
+}
+
+/* Parking Lot Visual Map */
+.pk-lot-map {
+  background: #374151;
+  border-radius: var(--pk-radius);
+  padding: 14px 10px;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  border: 3px solid #1f2937;
+  overflow: hidden;
+}
+
+.pk-lot-lane {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.pk-lot-lane-arrow {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+
+.pk-lot-lane-stripes-left,
+.pk-lot-lane-stripes-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  background: repeating-linear-gradient(
+    0deg,
+    #ffffff,
+    #ffffff 4px,
+    transparent 4px,
+    transparent 8px
+  );
+}
+
+.pk-lot-lane-stripes-left {
+  left: 4px;
+}
+
+.pk-lot-lane-stripes-right {
+  right: 4px;
+}
+
+.pk-lot-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.pk-spot-cell {
+  background: #ffffff;
+  border: 2px dashed #94a3b8;
+  border-radius: 4px;
+  height: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.pk-spot-cell:hover:not(.occupied):not(.maintenance):not(.booked) {
+  border-color: var(--pk-primary);
+  background: #f0fdf4;
+}
+
+.pk-spot-cell.selected {
+  background: var(--pk-primary) !important;
+  border: 2px solid var(--pk-primary) !important;
+  color: #ffffff;
+}
+
+.pk-spot-cell.selected .pk-spot-code {
+  color: #ffffff;
+  font-weight: 800;
+}
+
+.pk-spot-cell.booked {
+  background: repeating-linear-gradient(
+    45deg,
+    #f1f5f9,
+    #f1f5f9 6px,
+    #e2e8f0 6px,
+    #e2e8f0 12px
+  );
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.pk-spot-cell.occupied {
+  background: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.pk-spot-cell.maintenance {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  cursor: not-allowed;
+}
+
+.pk-spot-code {
+  font-size: 11px;
+  font-weight: 700;
+  color: #334155;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid #cbd5e1;
+}
+
+.pk-spot-cell.selected .pk-spot-code {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.pk-car-icon {
+  width: 28px;
+  height: 42px;
+  border-radius: 5px;
+  background: #475569;
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.pk-car-icon::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 3px;
+  right: 3px;
+  height: 8px;
+  background: #94a3b8;
+  border-radius: 2px;
+}
+
+.pk-car-icon::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  left: 3px;
+  right: 3px;
+  height: 6px;
+  background: #94a3b8;
+  border-radius: 2px;
+}
+
+/* Map Legend */
+.pk-lot-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 8px 0;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--pk-text-muted);
+}
+
+.pk-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.pk-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Countdown Hold Banner */
+.pk-hold-banner {
+  background: var(--pk-warn-light);
+  border: 1px solid #fde68a;
+  border-radius: var(--pk-radius);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #92400e;
+}
+
+/* Ticket Stub (Vé răng cưa) */
+.pk-ticket-stub {
+  background: #ffffff;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  position: relative;
+  overflow: hidden;
+}
+
+.pk-ticket-stub::before,
+.pk-ticket-stub::after {
+  content: '';
+  position: absolute;
+  top: 55%;
+  width: 18px;
+  height: 18px;
+  background: var(--pk-bg);
+  border-radius: 50%;
+  border: 1px solid var(--pk-border);
+  z-index: 3;
+}
+
+.pk-ticket-stub::before {
+  left: -9px;
+}
+
+.pk-ticket-stub::after {
+  right: -9px;
+}
+
+.pk-ticket-head {
+  padding: 20px 20px 14px;
+  text-align: center;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.pk-ticket-facility {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pk-text-muted);
+}
+
+.pk-ticket-spot {
+  font-size: 32px;
+  font-weight: 900;
+  color: #0f172a;
+  margin: 4px 0 12px;
+  letter-spacing: 0.5px;
+}
+
+.pk-ticket-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pk-ticket-qr-img {
+  width: 160px;
+  height: 160px;
+  background: #ffffff;
+  padding: 6px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+}
+
+.pk-ticket-code {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: 1px;
+}
+
+.pk-ticket-details {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.pk-ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pk-ticket-row-label {
+  color: var(--pk-text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pk-ticket-row-val {
+  font-weight: 700;
+  color: var(--pk-text-main);
+}
+
+/* Primary Action Buttons */
+.pk-btn-primary {
+  width: 100%;
+  height: 48px;
+  background: var(--pk-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--pk-radius);
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  box-shadow: 0 2px 4px rgba(21, 128, 61, 0.2);
+}
+
+.pk-btn-primary:hover {
+  background: var(--pk-primary-hover);
+}
+
+.pk-btn-primary:disabled {
+  background: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pk-btn-secondary {
+  width: 100%;
+  height: 44px;
+  background: #ffffff;
+  color: var(--pk-text-main);
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.pk-btn-secondary:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+/* Admin Dashboard Elements */
+.pk-admin-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.pk-admin-sidebar {
+  width: 220px;
+  background: #ffffff;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: fit-content;
+}
+
+.pk-admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--pk-radius);
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  background: none;
+  text-align: left;
+  width: 100%;
+  transition: all 0.15s ease;
+}
+
+.pk-admin-nav-item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.pk-admin-nav-item.active {
+  background: var(--pk-primary-light);
+  color: var(--pk-primary);
+  font-weight: 700;
+}
+
+.pk-admin-content {
+  flex: 1;
+}
+
+.pk-admin-stats-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--pk-border);
+  border-radius: var(--pk-radius);
+  padding: 14px;
+  min-width: 160px;
+}
+
+.pk-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.pk-badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--pk-radius);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pk-badge-confirmed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pk-badge-holding {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.pk-badge-cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pk-badge-active {
+  background: #e0f2fe;
+  color: #0284c7;
+}

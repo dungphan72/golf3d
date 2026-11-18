@@ -20,6 +20,7 @@ import { MembersPanel } from './MembersPanel';
 import { SepaySettings } from './SepaySettings';
 import { ReportsPanel } from './ReportsPanel';
 import { CrmModule } from '../../modules/crm/ui/CrmApp';
+import ParkingAdminApp from '../../modules/parking/ui/ParkingAdminApp';
 
 import { WalkInDialog } from './WalkInDialog';
 import { ContentPanel } from './ContentPanel';
@@ -172,6 +173,7 @@ export default function ClubApp() {
     crmx: 'crm.view',
     online: 'booking.create',
     marketing: 'crm.view',
+    parking: 'parking.view',
   };
   const allowed = (key: string) =>
     !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
@@ -349,6 +351,12 @@ export default function ClubApp() {
                   }
                   onFlowChange={(page) => setCrmSub(page)}
                   onNavigate={handleCrmNavigate}
+                />
+              )}
+              {view === 'parking' && allowed('parking') && (
+                <ParkingAdminApp
+                  tenant="gopick"
+                  onNavigate={go}
                 />
               )}
             </>

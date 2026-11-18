@@ -10,11 +10,17 @@ const projectRoot = path.resolve(currentDir, '..');
 let dbPath = null;
 const d1Dir = path.join(projectRoot, '.wrangler/state/v3/d1/miniflare-D1DatabaseObject');
 if (fs.existsSync(d1Dir)) {
-  for (const f of fs.readdirSync(d1Dir)) {
-    if (f.endsWith('.sqlite') && f !== 'metadata.sqlite') {
-      dbPath = path.join(d1Dir, f);
-      break;
-    }
+  const files = fs
+    .readdirSync(d1Dir)
+    .filter((f) => f.endsWith('.sqlite') && f !== 'metadata.sqlite')
+    .map((f) => ({ name: f, path: path.join(d1Dir, f), size: fs.statSync(path.join(d1Dir, f)).size }))
+    .sort((a, b) => {
+      if (a.name === 'golf3d.sqlite') return -1;
+      if (b.name === 'golf3d.sqlite') return 1;
+      return b.size - a.size;
+    });
+  if (files.length > 0) {
+    dbPath = files[0].path;
   }
 }
 

@@ -1157,3 +1157,157 @@ export const tournamentScores = sqliteTable(
     index('tournament_score_status').on(t.tenant, t.status, t.updated),
   ],
 );
+
+/** Parking Module: settings per tenant (GoPick first) */
+export const parkingSettings = sqliteTable('parking_settings', {
+  tenant: text('tenant').primaryKey(),
+  isEnabled: integer('is_enabled').notNull().default(1),
+  facilityName: text('facility_name').notNull().default('Bãi xe GoPick'),
+  address: text('address').notNull().default('250 Lương Định Của, Phường An Phú, TP. Thủ Đức, TP.HCM'),
+  directionsUrl: text('directions_url').notNull().default('https://maps.google.com/?q=250+Luong+Dinh+Cua'),
+  defaultHourlyRate: integer('default_hourly_rate').notNull().default(30000),
+  bufferMinutes: integer('buffer_minutes').notNull().default(0),
+  holdTimeoutSeconds: integer('hold_timeout_seconds').notNull().default(300),
+  golfFreeHours: integer('golf_free_hours').notNull().default(3),
+  golfSlotsPerBooking: integer('golf_slots_per_booking').notNull().default(1),
+  overtimeRatePerHour: integer('overtime_rate_per_hour').notNull().default(30000),
+  allowPaperTickets: integer('allow_paper_tickets').notNull().default(1),
+  updatedAt: integer('updated_at').notNull(),
+});
+
+/** Parking Spots: physical/visual parking slot in the facility */
+export const parkingSpots = sqliteTable(
+  'parking_spots',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    code: text('code').notNull(),
+    section: text('section').notNull(),
+    spotType: text('spot_type').notNull().default('car'),
+    rowIndex: integer('row_index').notNull().default(0),
+    colIndex: integer('col_index').notNull().default(0),
+    isActive: integer('is_active').notNull().default(1),
+    status: text('status').notNull().default('active'),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex('parking_spots_tenant_code_idx').on(t.tenant, t.code),
+    index('parking_spots_tenant_sort_idx').on(t.tenant, t.sortOrder),
+  ],
+);
+
+/** Parking Tickets: customer reservations, holding, active parking, and checkout */
+export const parkingTickets = sqliteTable(
+  'parking_tickets',
+  {
+    id: text('id').primaryKey(),
+    ticketCode: text('ticket_code').notNull(),
+    tenant: text('tenant').notNull(),
+    spotId: text('spot_id').notNull(),
+    spotCode: text('spot_code').notNull(),
+    section: text('section').notNull(),
+    customerId: text('customer_id').notNull().default(''),
+    customerName: text('customer_name').notNull(),
+    customerPhone: text('customer_phone').notNull(),
+    licensePlate: text('license_plate').notNull(),
+    vehicleType: text('vehicle_type').notNull().default('car'),
+    expectedIn: integer('expected_in').notNull(),
+    expectedOut: integer('expected_out').notNull(),
+    actualIn: integer('actual_in'),
+    actualOut: integer('actual_out'),
+    checkinBy: text('checkin_by').notNull().default(''),
+    checkoutBy: text('checkout_by').notNull().default(''),
+    status: text('status').notNull().default('holding'),
+    source: text('source').notNull().default('web'),
+    golfBookingId: text('golf_booking_id'),
+    posBillId: text('pos_bill_id'),
+    baseAmount: integer('base_amount').notNull().default(30000),
+    sponsoredAmount: integer('sponsored_amount').notNull().default(0),
+    paidAmount: integer('paid_amount').notNull().default(0),
+    overtimeAmount: integer('overtime_amount').notNull().default(0),
+    totalAmount: integer('total_amount').notNull().default(30000),
+    refundAmount: integer('refund_amount').notNull().default(0),
+    feePayer: text('fee_payer').notNull().default('customer'),
+    holdExpiresAt: integer('hold_expires_at').notNull(),
+    accessToken: text('access_token').notNull(),
+    paymentMethod: text('payment_method').notNull().default(''),
+    paymentRef: text('payment_ref').notNull().default(''),
+    paidAt: integer('paid_at'),
+    paperTicketNo: text('paper_ticket_no'),
+    notes: text('notes').notNull().default(''),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+  },
+  (t) => [
+    uniqueIndex('parking_tickets_code_idx').on(t.ticketCode),
+    uniqueIndex('parking_tickets_token_idx').on(t.accessToken),
+    index('parking_tickets_tenant_spot_time_idx').on(t.tenant, t.spotId, t.expectedIn, t.expectedOut),
+    index('parking_tickets_tenant_status_idx').on(t.tenant, t.status, t.createdAt),
+    index('parking_tickets_plate_idx').on(t.tenant, t.licensePlate),
+  ],
+);
+
+/** Parking Transactions: ledger entries per shift and method */
+export const parkingTransactions = sqliteTable(
+  'parking_transactions',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    ticketId: text('ticket_id').notNull(),
+    ticketCode: text('ticket_code').notNull(),
+    shiftId: text('shift_id'),
+    txType: text('tx_type').notNull(),
+    method: text('method').notNull(),
+    amount: integer('amount').notNull(),
+    referenceCode: text('reference_code').notNull().default(''),
+    note: text('note').notNull().default(''),
+    recordedBy: text('recorded_by').notNull().default(''),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [
+    index('parking_tx_tenant_created_idx').on(t.tenant, t.createdAt),
+    index('parking_tx_shift_idx').on(t.tenant, t.shiftId),
+  ],
+);
+
+/** Parking Shifts: shift management and end-of-shift reconciliation */
+export const parkingShifts = sqliteTable(
+  'parking_shifts',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    staffId: text('staff_id').notNull(),
+    staffName: text('staff_name').notNull(),
+    openedAt: integer('opened_at').notNull(),
+    closedAt: integer('closed_at'),
+    status: text('status').notNull().default('open'),
+    onlineTotal: integer('online_total').notNull().default(0),
+    gateCashTotal: integer('gate_cash_total').notNull().default(0),
+    gateTransferTotal: integer('gate_transfer_total').notNull().default(0),
+    refundTotal: integer('refund_total').notNull().default(0),
+    netCollected: integer('net_collected').notNull().default(0),
+    sponsoredTotal: integer('sponsored_total').notNull().default(0),
+    cashSubmitted: integer('cash_submitted').notNull().default(0),
+    cashDiff: integer('cash_diff').notNull().default(0),
+    notes: text('notes').notNull().default(''),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('parking_shifts_tenant_idx').on(t.tenant, t.openedAt)],
+);
+
+/** Parking Audit Logs: tracking spot locks, refunds, gate operations, spot changes */
+export const parkingAuditLogs = sqliteTable(
+  'parking_audit_logs',
+  {
+    id: text('id').primaryKey(),
+    tenant: text('tenant').notNull(),
+    ticketId: text('ticket_id'),
+    actorId: text('actor_id').notNull(),
+    actorName: text('actor_name').notNull(),
+    action: text('action').notNull(),
+    detail: text('detail').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (t) => [index('parking_audit_tenant_idx').on(t.tenant, t.createdAt)],
+);
+

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Banknote,
   Bell,
+  Car,
   Check,
   CreditCard,
   Crown,
@@ -231,6 +232,31 @@ export function SessionPanel({
               {b.people} người · {SERVICE_LABEL[b.service] ?? b.service}
             </small>
           </div>
+          <a
+            href={`/parking?bookingId=${encodeURIComponent(b.id)}&facility=gopick&customerPhone=${encodeURIComponent(b.phone || '')}&customerName=${encodeURIComponent(b.customer || '')}&start=${encodeURIComponent(b.start)}&end=${encodeURIComponent(b.end)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Đặt thêm chỗ đậu xe cho khách"
+            className="pos-ghost"
+            style={{
+              marginLeft: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: '0.82rem',
+              padding: '6px 10px',
+              borderRadius: '5px',
+              border: '1px solid #1a5f3f',
+              background: '#e8f5ed',
+              color: '#1a5f3f',
+              textDecoration: 'none',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Car size={15} />
+            Đặt chỗ đậu xe
+          </a>
         </div>
 
         {operating && (

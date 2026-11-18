@@ -15,6 +15,7 @@ import type {
   GateCheckInInput,
   GateCheckOutInput,
   CreatePaperTicketInput,
+  ChangeSpotInput,
 } from '../core/types.ts';
 import { calculateParkingPricing } from '../core/pricing.ts';
 import { evaluateSpotState, doesTicketConflict } from '../core/availability.ts';
@@ -92,8 +93,34 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
     };
   }
 
-  // Ensure legacy A01-A10 demo spots are deactivated for GoPick so they are no longer sold
+  // Ensure legacy A01-A10 demo spots are deactivated for GoPick so they are no longer sold,
+  // but first migrate any active tickets on legacy A% spots to the corresponding P% spots safely
   if (tenant === 'gopick') {
+    try {
+      const activeLegacyTickets = await db()
+        .prepare(
+          "SELECT id, spot_code FROM parking_tickets WHERE tenant='gopick' AND spot_code LIKE 'A%' AND status IN ('holding', 'confirmed', 'active')"
+        )
+        .all<any>();
+
+      for (const t of activeLegacyTickets.results) {
+        const num = parseInt(t.spot_code.replace(/\D/g, '') || '1', 10);
+        const targetPCode = `P${String(num).padStart(2, '0')}`;
+        const targetPSpot = await db()
+          .prepare("SELECT id, section FROM parking_spots WHERE tenant='gopick' AND code=?")
+          .bind(targetPCode)
+          .first<any>();
+        if (targetPSpot) {
+          await db()
+            .prepare("UPDATE parking_tickets SET spot_id=?, spot_code=?, section=? WHERE id=?")
+            .bind(targetPSpot.id, targetPCode, targetPSpot.section, t.id)
+            .run();
+        }
+      }
+    } catch {
+      // Safe fallback if parking_tickets doesn't have records yet
+    }
+
     await db()
       .prepare("UPDATE parking_spots SET is_active=0 WHERE tenant='gopick' AND code LIKE 'A%'")
       .run();
@@ -823,6 +850,97 @@ export async function createGatePaperTicket(
 }
 
 /**
+ * Changes spot for an existing ticket with atomic collision checking.
+ * Both client and admin screens use this exact method to prevent double bookings.
+ */
+export async function changeTicketSpot(
+  tenant: string = DEFAULT_PARKING_TENANT,
+  input: ChangeSpotInput,
+  now: number = Date.now(),
+): Promise<ParkingTicket> {
+  const ticketCode = (input.ticketCode || '').trim();
+  const targetCode = (input.newSpotCode || '').trim().toUpperCase();
+
+  const ticket = await db()
+    .prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?')
+    .bind(tenant, ticketCode)
+    .first<any>();
+
+  if (!ticket) {
+    throw new Error(`Không tìm thấy vé đậu xe "${ticketCode}"`);
+  }
+
+  if (['completed', 'cancelled'].includes(ticket.status)) {
+    throw new Error('Không thể đổi ô cho vé đã hoàn thành hoặc đã hủy');
+  }
+
+  if (ticket.spot_code === targetCode) {
+    return mapDbTicket(ticket);
+  }
+
+  const targetSpot = await db()
+    .prepare('SELECT * FROM parking_spots WHERE tenant=? AND code=?')
+    .bind(tenant, targetCode)
+    .first<any>();
+
+  if (!targetSpot || !targetSpot.is_active) {
+    throw new Error(`Ô đỗ ${targetCode} không tồn tại hoặc đã ngừng hoạt động`);
+  }
+
+  if (targetSpot.status === 'maintenance') {
+    throw new Error(`Ô đỗ ${targetCode} đang trong thời gian bảo trì`);
+  }
+
+  const settings = await ensureParkingInitialized(tenant);
+
+  // Check for any conflicting ticket on targetSpot in ticket's time window
+  const overlapping = await db()
+    .prepare(
+      `SELECT * FROM parking_tickets 
+       WHERE tenant=? 
+         AND spot_id=? 
+         AND id<>?
+         AND status IN ('holding', 'confirmed', 'active')
+         AND (
+           status IN ('confirmed', 'active')
+           OR (status = 'holding' AND hold_expires_at > ?)
+         )`
+    )
+    .bind(tenant, targetSpot.id, ticket.id, now)
+    .all<any>();
+
+  const mappedOverlaps = overlapping.results.map(mapDbTicket);
+  for (const ot of mappedOverlaps) {
+    if (doesTicketConflict(ot, ticket.expected_in, ticket.expected_out, settings.bufferMinutes, now)) {
+      throw new Error(`Ô ${targetCode} đã có xe giữ hoặc đặt trước trong khung giờ này. Vui lòng chọn ô khác.`);
+    }
+  }
+
+  // Update ticket spot atomically
+  await db()
+    .prepare(
+      `UPDATE parking_tickets 
+       SET spot_id=?, spot_code=?, section=?, updated_at=? 
+       WHERE id=?`
+    )
+    .bind(targetSpot.id, targetSpot.code, targetSpot.section, now, ticket.id)
+    .run();
+
+  await audit(
+    tenant,
+    'ĐỔI_Ô_ĐỖ',
+    `Đổi ô vé ${ticketCode} của xe ${ticket.license_plate} từ ${ticket.spot_code} sang ${targetCode} bởi ${input.staffName || 'Quản lý'}`,
+  );
+
+  const updatedTicket = await db()
+    .prepare('SELECT * FROM parking_tickets WHERE id=?')
+    .bind(ticket.id)
+    .first<any>();
+
+  return mapDbTicket(updatedTicket);
+}
+
+/**
  * End-of-shift reconciliation: accurately segregates online, gate cash, gate transfer, refunds, and GoPick sponsored.
  * Timestamps strictly adhere to transaction time rather than car checkout time.
  */
@@ -837,7 +955,7 @@ export async function getShiftReconciliation(
 
   const txs = (
     await db()
-      .prepare('SELECT * FROM parking_transactions WHERE tenant=? AND created_at>=? AND created_at<=?')
+      .prepare('SELECT * FROM parking_transactions WHERE tenant=? AND created_at>=? AND created_at<=? ORDER BY created_at DESC')
       .bind(tenant, startOfDay, endOfDay)
       .all<any>()
   ).results;
@@ -862,13 +980,37 @@ export async function getShiftReconciliation(
   }
 
   const gateAmount = gateCash + gateTransfer;
-  const netCollected = onlineAmount + gateAmount - refundAmount;
+  const netCollected = gateCash - refundAmount; // Cash on hand that security/staff must submit
 
   // Active cars in lot currently
   const activeCount = await db()
     .prepare("SELECT COUNT(*) as cnt FROM parking_tickets WHERE tenant=? AND status='active'")
     .bind(tenant)
     .first<{ cnt: number }>();
+
+  // Fetch recent shifts history
+  const shiftList = (
+    await db()
+      .prepare('SELECT * FROM parking_shifts WHERE tenant=? ORDER BY created_at DESC LIMIT 10')
+      .bind(tenant)
+      .all<any>()
+      .catch(() => ({ results: [] }))
+  ).results;
+
+  const mappedTxs: ParkingTransaction[] = txs.map((tx: any) => ({
+    id: tx.id,
+    tenant: tx.tenant,
+    ticketId: tx.ticket_id,
+    ticketCode: tx.ticket_code,
+    shiftId: tx.shift_id,
+    txType: tx.tx_type,
+    method: tx.method,
+    amount: tx.amount,
+    referenceCode: tx.reference_code || '',
+    note: tx.note || '',
+    recordedBy: tx.recorded_by || '',
+    createdAt: tx.created_at,
+  }));
 
   return {
     dateStr: targetDate,
@@ -882,17 +1024,39 @@ export async function getShiftReconciliation(
     transactionsCount: txs.length,
     ticketsCount: txs.length,
     activeCarsInLot: activeCount?.cnt ?? 0,
+    transactions: mappedTxs,
+    shiftsHistory: shiftList,
   };
 }
 
 /**
  * Closes shift with counted cash balance.
+ * Implements idempotency to prevent duplicate shift logs on double click or network retry.
  */
 export async function closeShift(
   tenant: string = DEFAULT_PARKING_TENANT,
-  params: { staffId: string; staffName: string; cashSubmitted: number; notes?: string },
+  params: { staffId?: string; staffName?: string; cashSubmitted: number; notes?: string },
   now: number = Date.now(),
-): Promise<ShiftReconciliationSummary> {
+): Promise<ShiftReconciliationSummary & { shiftId: string }> {
+  const staffId = params.staffId || 'staff-default';
+  const staffName = params.staffName || 'Nhân viên trực ca';
+
+  // 1. Idempotency check: prevent duplicate shift creation within 60 seconds
+  const recentShift = await db()
+    .prepare(
+      `SELECT * FROM parking_shifts 
+       WHERE tenant=? AND staff_id=? AND created_at > ? AND cash_submitted=?
+       ORDER BY created_at DESC LIMIT 1`
+    )
+    .bind(tenant, staffId, now - 60000, params.cashSubmitted)
+    .first<any>();
+
+  if (recentShift) {
+    console.log(`[Shift Close Idempotency] Existing shift found: ${recentShift.id}`);
+    const currentRecon = await getShiftReconciliation(tenant, undefined, now);
+    return { ...currentRecon, shiftId: recentShift.id };
+  }
+
   const recon = await getShiftReconciliation(tenant, undefined, now);
   const shiftId = `shift-${tenant}-${now}`;
   const cashDiff = params.cashSubmitted - recon.gateCash;
@@ -908,8 +1072,8 @@ export async function closeShift(
     .bind(
       shiftId,
       tenant,
-      params.staffId,
-      params.staffName,
+      staffId,
+      staffName,
       now - 8 * 3600 * 1000,
       now,
       recon.onlineAmount,
@@ -925,9 +1089,19 @@ export async function closeShift(
     )
     .run();
 
-  await audit(tenant, 'CHỐT_CA_BÃI_XE', `Nhân viên ${params.staffName} chốt ca. Tiền mặt bàn giao: ${params.cashSubmitted} đ (Chênh lệch: ${cashDiff} đ)`);
+  // 2. Associate all unclosed transactions with this shift
+  await db()
+    .prepare(
+      `UPDATE parking_transactions 
+       SET shift_id=? 
+       WHERE tenant=? AND (shift_id IS NULL OR shift_id='') AND created_at <= ?`
+    )
+    .bind(shiftId, tenant, now)
+    .run();
 
-  return recon;
+  await audit(tenant, 'CHỐT_CA_BÃI_XE', `Nhân viên ${staffName} chốt ca ${shiftId}. Tiền mặt bàn giao: ${params.cashSubmitted} đ (Chênh lệch: ${cashDiff} đ)`);
+
+  return { ...recon, shiftId };
 }
 
 /**

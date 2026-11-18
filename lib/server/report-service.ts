@@ -38,7 +38,58 @@ export async function revenueReport(
       legacyDays.results as Parameters<typeof mergeLegacy>[2],
       legacyServices.results as ServiceRow[],
     );
-    return { status: 200, body: { from, to, days: merged.days, services: merged.services } };
+
+    // Aggregate parking transactions for this date window
+    const parkingQuery = await db()
+      .prepare(
+        `SELECT 
+           DATE(DATETIME(created_at/1000 + 7*3600, 'unixepoch')) as day,
+           SUM(CASE WHEN method='cash' AND tx_type<>'refund' THEN amount ELSE 0 END) as parkingCash,
+           SUM(CASE WHEN method<>'cash' AND tx_type<>'refund' AND tx_type<>'sponsored_accrual' THEN amount ELSE 0 END) as parkingTransfer,
+           SUM(CASE WHEN tx_type='refund' THEN amount ELSE 0 END) as parkingRefund,
+           SUM(CASE WHEN tx_type='sponsored_accrual' THEN amount ELSE 0 END) as parkingSponsored,
+           COUNT(*) as parkingCount
+         FROM parking_transactions
+         WHERE tenant=? AND created_at>=? AND created_at<?
+         GROUP BY day`
+      )
+      .bind(tenant, start, end)
+      .all<any>()
+      .catch(() => ({ results: [] }));
+
+    const parkingMap = new Map<string, any>();
+    let totalParkingRevenue = 0;
+    let totalParkingTickets = 0;
+    for (const p of parkingQuery.results || []) {
+      parkingMap.set(p.day, p);
+      const net = (p.parkingCash || 0) + (p.parkingTransfer || 0) - (p.parkingRefund || 0);
+      totalParkingRevenue += net;
+      totalParkingTickets += (p.parkingCount || 0);
+    }
+
+    const daysWithParking = merged.days.map((d: any) => {
+      const p = parkingMap.get(d.day);
+      const pkNet = p ? (p.parkingCash + p.parkingTransfer - p.parkingRefund) : 0;
+      return {
+        ...d,
+        parking: pkNet,
+        parkingCash: p?.parkingCash || 0,
+        parkingTransfer: p?.parkingTransfer || 0,
+        parkingSponsored: p?.parkingSponsored || 0,
+      };
+    });
+
+    const servicesWithParking = [...merged.services];
+    if (totalParkingRevenue > 0 || totalParkingTickets > 0) {
+      servicesWithParking.push({
+        service: 'parking',
+        rounds: totalParkingTickets,
+        revenue: totalParkingRevenue,
+        food: 0,
+      });
+    }
+
+    return { status: 200, body: { from, to, days: daysWithParking, services: servicesWithParking } };
   } catch (e) {
     console.error('revenue report', e);
     return { status: 500, body: { error: 'Chưa tải được báo cáo' } };

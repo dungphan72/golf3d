@@ -15,6 +15,7 @@ import {
   UserPlus,
   Users,
   Wrench,
+  Car,
 } from 'lucide-react';
 import { rooms, money, type Booking } from '../../lib/club';
 import { time, type Data } from './shared';
@@ -54,7 +55,17 @@ export function AdminOverview({
     [filter, setFilter] = useState('all'),
     [report, setReport] = useState<Report | null>(null),
     [reportError, setReportError] = useState(''),
-    [retry, setRetry] = useState(0);
+    [retry, setRetry] = useState(0),
+    [parkingSummary, setParkingSummary] = useState<{ total: number; available: number; occupied: number; booked: number } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/parking?action=spots&tenant=gopick&mode=now')
+      .then((r) => r.json())
+      .then((d: any) => {
+        if (d.ok && d.summary) setParkingSummary(d.summary);
+      })
+      .catch(() => {});
+  }, []);
   const today = vnDay(now),
     from = vnDay(now - 6 * 86400000);
   useEffect(() => {
@@ -154,6 +165,14 @@ export function AdminOverview({
       tone: 'purple',
       hint: 'Có gói còn hạn',
       view: 'members',
+    },
+    {
+      label: 'Bãi xe GoPick',
+      value: parkingSummary ? `${parkingSummary.available}/${parkingSummary.total} ô trống` : '65 ô',
+      icon: Car,
+      tone: 'cyan',
+      hint: parkingSummary ? `${parkingSummary.occupied} xe đang đỗ` : 'Xem sơ đồ bãi xe',
+      view: 'parking',
     },
   ];
   return (

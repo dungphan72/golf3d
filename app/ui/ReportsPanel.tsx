@@ -17,6 +17,10 @@ type Day = {
   /** Part of the day's receipts typed in from old bills (approved by the owner). */
   legacy?: number;
   other?: number;
+  parking?: number;
+  parkingCash?: number;
+  parkingTransfer?: number;
+  parkingSponsored?: number;
 };
 type Service = { service: string; rounds: number; revenue: number; food: number };
 type Report = { days: Day[]; services: Service[] };
@@ -26,6 +30,7 @@ const SERVICE: Record<string, string> = {
   '9': 'Chơi 9 hố',
   '18': 'Chơi 18 hố',
   other: 'Dịch vụ khác (bill cũ)',
+  parking: 'Bãi xe GoPick',
 };
 const vnDate = (ms: number) => new Date(ms + 7 * 3600_000).toISOString().slice(0, 10);
 const shortDay = (d: string) => d.split('-').reverse().slice(0, 2).join('/');
@@ -59,7 +64,7 @@ export function ReportsPanel() {
   }, [from, to]);
 
   const totals = useMemo(() => {
-    const t = { cash: 0, transfer: 0, card: 0, packages: 0, expenses: 0, payments: 0, legacy: 0, other: 0 };
+    const t = { cash: 0, transfer: 0, card: 0, packages: 0, expenses: 0, payments: 0, legacy: 0, other: 0, parking: 0 };
     for (const d of report?.days ?? []) {
       t.cash += d.cash;
       t.transfer += d.transfer;
@@ -69,6 +74,7 @@ export function ReportsPanel() {
       t.payments += d.payments;
       t.legacy += d.legacy ?? 0;
       t.other += d.other ?? 0;
+      t.parking += (d.parking ?? 0);
     }
     return t;
   }, [report]);
@@ -84,6 +90,7 @@ export function ReportsPanel() {
         'Tiền mặt',
         'Chuyển khoản',
         'Thẻ',
+        'Bãi xe GoPick',
         'Tổng thu',
         'Trong đó từ bill cũ',
         'Bán gói',
@@ -95,6 +102,7 @@ export function ReportsPanel() {
         d.cash,
         d.transfer,
         d.card,
+        d.parking ?? 0,
         d.cash + d.transfer + d.card + (d.other ?? 0),
         d.legacy ?? 0,
         d.packages,
@@ -268,6 +276,14 @@ export function ReportsPanel() {
             {money(totals.packages)}
           </div>
           <div className="operate-kpi-sub">Gói giờ, gói hố</div>
+        </div>
+
+        <div className="operate-kpi-card">
+          <div className="operate-kpi-label">Bãi xe GoPick</div>
+          <div className="operate-kpi-val text-green">{money(totals.parking)}</div>
+          <div className="operate-kpi-sub">
+            {totals.parking > 0 ? `${Math.round((totals.parking / (received || 1)) * 100)}% tổng thu` : 'Vé xe & phụ thu'}
+          </div>
         </div>
 
         <div className="operate-kpi-card">

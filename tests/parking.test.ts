@@ -18,6 +18,7 @@ import {
   gateCheckIn,
   gateCheckOut,
   createGatePaperTicket,
+  changeTicketSpot,
   getShiftReconciliation,
   closeShift,
 } from '../modules/parking/server/parking-service.ts';
@@ -506,4 +507,166 @@ test('10. SePay Webhook Auto-confirmation, Spot Lock & Camera Gate Checkout', as
   );
   const freedSpot = finalGrid.spots.find((s) => s.code === 'P10');
   assert.equal(freedSpot?.stateForWindow, 'available');
+});
+
+test('11. End-to-end P65 booking, single ID mapping, and legacy spot retirement', async () => {
+  // Ensure exactly 65 physical spots in GoPick (P01 - P65)
+  const grid = await getSpotGrid(TENANT, Date.now(), Date.now() + 3600000);
+  assert.equal(grid.spots.length, 65, 'Total spots must be exactly 65 for GoPick');
+  const p65 = grid.spots.find((s) => s.code === 'P65');
+  assert.ok(p65, 'P65 must exist in grid');
+  assert.equal(p65.id, 'spot-gopick-P65', 'Physical ID must be spot-gopick-P65');
+
+  // Verify legacy A% spots are retired/inactive
+  const legacySpots = grid.spots.filter((s) => s.code.startsWith('A'));
+  assert.equal(legacySpots.length, 0, 'Legacy A% spots must not be available for booking');
+
+  // Hold P65 with Golf Sponsorship
+  const now = Date.now();
+  const mockGolfId = `bkg-p65-${now}`;
+  await db()
+    .prepare(
+      `INSERT INTO bookings (
+        id, tenant, room, customer, phone, service, people, start, end, status, segments, price, created, food_total
+      ) VALUES (?, ?, 'Phòng VIP', 'Khách VIP P65', '0912345678', 'golf', 1, ?, ?, 'confirmed', '[]', 500000, ?, 0)`
+    )
+    .bind(mockGolfId, TENANT, now + 3600000, now + 10800000, now)
+    .run();
+
+  const holdP65 = await holdSpot(TENANT, {
+    spotCode: 'P65',
+    expectedIn: now + 3600000,
+    expectedOut: now + 10800000,
+    licensePlate: '51A-999.65',
+    customerName: 'Khách VIP P65',
+    customerPhone: '0912345678',
+    golfBookingId: mockGolfId,
+  });
+  assert.equal(holdP65.spotCode, 'P65');
+  assert.equal(holdP65.feePayer, 'gopick_sponsored');
+
+  // Confirm booking with GoPick 100% sponsorship
+  const confirmedP65 = await confirmTicket(TENANT, {
+    ticketCode: holdP65.ticketCode,
+    paymentMethod: 'system',
+    amountPaid: 0,
+    transactionRef: `SPONSOR-${mockGolfId}`,
+  });
+  assert.equal(confirmedP65.status, 'confirmed');
+  assert.equal(confirmedP65.feePayer, 'gopick_sponsored');
+
+  // Guard checks in vehicle
+  const inP65 = await gateCheckIn(TENANT, {
+    ticketCode: holdP65.ticketCode,
+    staffName: 'Bảo vệ cổng',
+  });
+  assert.equal(inP65.status, 'active');
+
+  // Guard checks out vehicle
+  const outP65 = await gateCheckOut(TENANT, {
+    ticketCode: holdP65.ticketCode,
+    staffName: 'Bảo vệ cổng',
+  });
+  assert.equal(outP65.ticket.status, 'completed');
+});
+
+test('12. Atomic server collision prevention on spot change (changeTicketSpot)', async () => {
+  const now = Date.now();
+  const inTime = now + 1800000;
+  const outTime = now + 7200000;
+
+  // Create ticket 1 on P21
+  const t1 = await holdSpot(TENANT, {
+    spotCode: 'P21',
+    expectedIn: inTime,
+    expectedOut: outTime,
+    licensePlate: '51B-888.21',
+    customerName: 'Khách Test P21',
+  });
+  await confirmTicket(TENANT, { ticketCode: t1.ticketCode, paymentMethod: 'cash', paidAmount: 30000 });
+
+  // Create ticket 2 on P22
+  const t2 = await holdSpot(TENANT, {
+    spotCode: 'P22',
+    expectedIn: inTime,
+    expectedOut: outTime,
+    licensePlate: '51B-888.22',
+    customerName: 'Khách Test P22',
+  });
+  await confirmTicket(TENANT, { ticketCode: t2.ticketCode, paymentMethod: 'cash', paidAmount: 30000 });
+
+  // Ticket 1 attempts to change to P22 (already occupied/booked) -> must be rejected
+  await assert.rejects(
+    async () => {
+      await changeTicketSpot(TENANT, {
+        ticketCode: t1.ticketCode,
+        newSpotCode: 'P22',
+        staffName: 'Lễ tân ca sáng',
+      });
+    },
+    { message: /Ô P22 đã có xe giữ hoặc đặt trước/i },
+  );
+
+  // Ticket 1 changes to empty P23 -> must succeed
+  const changedT1 = await changeTicketSpot(TENANT, {
+    ticketCode: t1.ticketCode,
+    newSpotCode: 'P23',
+    staffName: 'Lễ tân ca sáng',
+  });
+  assert.equal(changedT1.spotCode, 'P23');
+
+  // Verify P21 is now available again
+  const gridAfter = await getSpotGrid(TENANT, inTime, outTime);
+  const p21 = gridAfter.spots.find((s) => s.code === 'P21');
+  assert.equal(p21?.stateForWindow, 'available');
+});
+
+test('13. Shift reconciliation: Net cash calculation & idempotency', async () => {
+  const today = new Date().toISOString().slice(0, 10);
+  const recon = await getShiftReconciliation(TENANT, today);
+
+  // Net collected must strictly equal gateCash - refundAmount
+  assert.equal(
+    recon.netCollected,
+    recon.gateCash - recon.refundAmount,
+    'netCollected must equal gateCash - refundAmount',
+  );
+
+  // Close shift first time
+  const shift1 = await closeShift(TENANT, {
+    staffName: 'Quản lý trưởng',
+    cashSubmitted: recon.netCollected,
+  });
+  assert.ok(shift1.shiftId);
+
+  // Immediate second attempt within 60s with same cash -> idempotency returns existing shift
+  const shift2 = await closeShift(TENANT, {
+    staffName: 'Quản lý trưởng',
+    cashSubmitted: recon.netCollected,
+  });
+  assert.equal(shift2.shiftId, shift1.shiftId, 'Shift closure must be idempotent on rapid re-submission');
+});
+
+test('14. Overtime calculation with grace period', async () => {
+  const baseTime = Date.now();
+  // Within 15-minute grace period -> 0 overtime
+  const otWithin = calculateParkingPricing({
+    expectedIn: baseTime,
+    expectedOut: baseTime + 2 * 3600 * 1000,
+    actualOut: baseTime + 2 * 3600 * 1000 + 14 * 60 * 1000,
+    defaultHourlyRate: 30000,
+    overtimeRatePerHour: 15000,
+  });
+  assert.equal(otWithin.overtimeAmount, 0);
+
+  // 35 minutes past expectedOut -> exceeds 15m grace -> charged 1 hour overtime
+  const otExceed = calculateParkingPricing({
+    expectedIn: baseTime,
+    expectedOut: baseTime + 2 * 3600 * 1000,
+    actualOut: baseTime + 2 * 3600 * 1000 + 35 * 60 * 1000,
+    defaultHourlyRate: 30000,
+    overtimeRatePerHour: 15000,
+  });
+  assert.equal(otExceed.overtimeHours, 1);
+  assert.equal(otExceed.overtimeAmount, 15000);
 });

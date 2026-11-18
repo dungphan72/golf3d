@@ -98,6 +98,7 @@ export interface ParkingTransaction {
   tenant: string;
   ticketId: string;
   ticketCode: string;
+  licensePlate?: string;
   shiftId: string | null;
   txType: 'online_payment' | 'gate_payment' | 'surcharge' | 'refund' | 'sponsored_accrual';
   method: 'vietqr' | 'sepay' | 'cash' | 'transfer' | 'internal';
@@ -161,6 +162,7 @@ export interface ConfirmTicketInput {
   paymentRef?: string;
   transactionRef?: string;
   amountPaid?: number;
+  paidAmount?: number;
 }
 
 export interface GateCheckInInput {
@@ -197,6 +199,8 @@ export interface CreatePaperTicketInput {
 }
 
 export interface ShiftReconciliationSummary {
+  facilityName?: string;
+  facilityCode?: string;
   dateStr: string;
   onlineAmount: number;
   gateAmount: number;
@@ -208,4 +212,13 @@ export interface ShiftReconciliationSummary {
   transactionsCount: number;
   ticketsCount: number;
   activeCarsInLot: number;
+  transactions?: ParkingTransaction[];
+  shiftsHistory?: any[];
+}
+
+export interface ChangeSpotInput {
+  tenant?: string;
+  ticketCode: string;
+  newSpotCode: string;
+  staffName?: string;
 }

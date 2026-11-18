@@ -88,6 +88,21 @@ export function SessionPanel({
   const [due, setDue] = useState<number | null>(null);
   const [zaloNotice, setZaloNotice] = useState('');
   const [tick, setTick] = useState(() => Date.now());
+  const [linkedParkingTicket, setLinkedParkingTicket] = useState<{ ticketCode: string; spotCode: string; licensePlate: string; status: string } | null>(null);
+
+  useEffect(() => {
+    if (!b?.id) return;
+    fetch(`/api/parking?action=tickets-list&tenant=gopick&q=${encodeURIComponent(b.id)}`)
+      .then((r) => r.json())
+      .then((d: any) => {
+        if (d.ok && d.tickets && d.tickets.length > 0) {
+          setLinkedParkingTicket(d.tickets[0]);
+        } else {
+          setLinkedParkingTicket(null);
+        }
+      })
+      .catch(() => setLinkedParkingTicket(null));
+  }, [b?.id]);
   const asideRef = useRef<HTMLElement>(null);
 
   // Running timer, and Escape closes the panel unless a dialog above it is open.
@@ -232,31 +247,59 @@ export function SessionPanel({
               {b.people} người · {SERVICE_LABEL[b.service] ?? b.service}
             </small>
           </div>
-          <a
-            href={`/parking?bookingId=${encodeURIComponent(b.id)}&facility=gopick&customerPhone=${encodeURIComponent(b.phone || '')}&customerName=${encodeURIComponent(b.customer || '')}&start=${encodeURIComponent(b.start)}&end=${encodeURIComponent(b.end)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Đặt thêm chỗ đậu xe cho khách"
-            className="pos-ghost"
-            style={{
-              marginLeft: 'auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 5,
-              fontSize: '0.82rem',
-              padding: '6px 10px',
-              borderRadius: '5px',
-              border: '1px solid #1a5f3f',
-              background: '#e8f5ed',
-              color: '#1a5f3f',
-              textDecoration: 'none',
-              fontWeight: 600,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <Car size={15} />
-            Đặt chỗ đậu xe
-          </a>
+          {linkedParkingTicket ? (
+            <a
+              href={`/parking/ticket/${linkedParkingTicket.ticketCode}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Khách chơi Golf được GoPick tài trợ 100% bãi xe"
+              className="pos-ghost"
+              style={{
+                marginLeft: 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: '0.82rem',
+                padding: '6px 10px',
+                borderRadius: '5px',
+                border: '1px solid #16a34a',
+                background: '#dcfce7',
+                color: '#15803d',
+                textDecoration: 'none',
+                fontWeight: 700,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Car size={15} />
+              <span>🚗 {linkedParkingTicket.licensePlate} (Ô {linkedParkingTicket.spotCode} · Tài trợ 100%)</span>
+            </a>
+          ) : (
+            <a
+              href={`/parking?bookingId=${encodeURIComponent(b.id)}&facility=gopick&customerPhone=${encodeURIComponent(b.phone || '')}&customerName=${encodeURIComponent(b.customer || '')}&start=${encodeURIComponent(b.start)}&end=${encodeURIComponent(b.end)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Đặt thêm chỗ đậu xe (GoPick tài trợ 100%)"
+              className="pos-ghost"
+              style={{
+                marginLeft: 'auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontSize: '0.82rem',
+                padding: '6px 10px',
+                borderRadius: '5px',
+                border: '1px solid #1a5f3f',
+                background: '#e8f5ed',
+                color: '#1a5f3f',
+                textDecoration: 'none',
+                fontWeight: 600,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Car size={15} />
+              <span>+ Đặt ô xe (Tài trợ 100%)</span>
+            </a>
+          )}
         </div>
 
         {operating && (

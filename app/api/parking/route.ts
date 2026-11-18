@@ -13,6 +13,7 @@ import {
   createGatePaperTicket,
   getShiftReconciliation,
   closeShift,
+  changeTicketSpot,
 } from '../../../modules/parking/server/parking-service';
 
 export const dynamic = 'force-dynamic';
@@ -341,24 +342,21 @@ export async function POST(req: Request) {
     }
 
     if (action === 'change-spot') {
-      // Operator changes spot for a ticket
       const ticketCode = String(body.ticketCode || '').trim();
       const newSpotCode = String(body.newSpotCode || '').trim().toUpperCase();
+      const staffName = auth?.name || body.staffName || 'Quản lý bãi xe';
 
-      const ticket = await db().prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?').bind(tenant, ticketCode).first<any>();
-      if (!ticket) throw new Error('Không tìm thấy vé để đổi ô');
+      const updated = await changeTicketSpot(tenant, {
+        ticketCode,
+        newSpotCode,
+        staffName,
+      });
 
-      const spot = await db().prepare('SELECT * FROM parking_spots WHERE tenant=? AND code=?').bind(tenant, newSpotCode).first<any>();
-      if (!spot) throw new Error(`Không tìm thấy ô đỗ ${newSpotCode}`);
-
-      await db()
-        .prepare('UPDATE parking_tickets SET spot_id=?, spot_code=?, section=?, updated_at=? WHERE id=?')
-        .bind(spot.id, spot.code, spot.section, Date.now(), ticket.id)
-        .run();
-
-      await audit(tenant, 'ĐỔI_Ô_ĐỖ', `Đổi ô vé ${ticketCode} từ ${ticket.spot_code} sang ${newSpotCode} bởi ${auth?.name || 'Nhân viên'}`);
-
-      return Response.json({ ok: true, message: `Đã đổi vé sang ô ${newSpotCode}` });
+      return Response.json({
+        ok: true,
+        message: `Đã đổi vé ${ticketCode} sang ô ${newSpotCode} thành công`,
+        ticket: updated,
+      });
     }
 
     if (action === 'cancel-ticket') {

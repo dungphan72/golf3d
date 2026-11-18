@@ -54,10 +54,16 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   // Config & Status
   const [config, setConfig] = useState<ParkingSettings | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [mapError, setMapError] = useState<string>('');
   const [notifyMsg, setNotifyMsg] = useState<string>('');
 
-  // Sơ đồ bãi xe States
+  // Sơ đồ bãi xe States & Bộ lọc thời gian
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [mapMode, setMapMode] = useState<'now' | 'slot'>('now');
+  const [mapDate, setMapDate] = useState<string>(todayStr);
+  const [slotPreset, setSlotPreset] = useState<'now' | 'morning' | 'afternoon' | 'evening' | 'custom'>('now');
+  const [customSlotStart, setCustomSlotStart] = useState<string>('08:00');
+  const [customSlotEnd, setCustomSlotEnd] = useState<string>('12:00');
   const [spots, setSpots] = useState<ParkingSpot[]>([]);
   const [selectedSpot, setSelectedSpot] = useState<ParkingSpot | null>(null);
   const [adminSectionFilter, setAdminSectionFilter] = useState<string>('all');
@@ -120,10 +126,12 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   const scanIntervalRef = useRef<any>(null);
 
   // Đối soát cuối ca States
-  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [reconDate, setReconDate] = useState<string>(todayStr);
   const [reconData, setReconData] = useState<ShiftReconciliationSummary | null>(null);
-  const [cashSubmittedInput, setCashSubmittedInput] = useState<string>('150000');
+  const [reconLoadingStatus, setReconLoadingStatus] = useState<'idle' | 'loading' | 'loaded' | 'error'>('idle');
+  const [reconError, setReconError] = useState<string>('');
+  const [cashSubmittedInput, setCashSubmittedInput] = useState<string>('');
+  const [isClosingShift, setIsClosingShift] = useState<boolean>(false);
 
   // Modal đổi ô & bảo trì
   const [showChangeSpotModal, setShowChangeSpotModal] = useState<boolean>(false);
@@ -135,18 +143,52 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     setTimeout(() => setNotifyMsg(''), 4000);
   }
 
+  // Helper tính số phút quá giờ (quá 15p ân hạn)
+  function getOvertimeMinutes(t: ParkingTicket): number {
+    if (t.status !== 'active') return 0;
+    const expOut = new Date(t.expectedOut).getTime();
+    const now = Date.now();
+    const diffMins = Math.floor((now - expOut) / 60000);
+    return diffMins > 0 ? diffMins : 0;
+  }
+
   // Load config & grid
   async function loadConfigAndSpots() {
     setLoading(true);
+    setMapError('');
     try {
-      const res = await fetch(`/api/parking?action=spots&tenant=${tenant}&mode=${mapMode}`);
+      let url = `/api/parking?action=spots&tenant=${tenant}&mode=${mapMode}`;
+      if (mapMode === 'slot') {
+        let startTime = '06:00';
+        let endTime = '12:00';
+        if (slotPreset === 'morning') {
+          startTime = '06:00';
+          endTime = '12:00';
+        } else if (slotPreset === 'afternoon') {
+          startTime = '12:00';
+          endTime = '18:00';
+        } else if (slotPreset === 'evening') {
+          startTime = '18:00';
+          endTime = '22:00';
+        } else if (slotPreset === 'custom') {
+          startTime = customSlotStart;
+          endTime = customSlotEnd;
+        }
+        const inIso = `${mapDate}T${startTime}:00+07:00`;
+        const outIso = `${mapDate}T${endTime}:00+07:00`;
+        url += `&in=${encodeURIComponent(inIso)}&out=${encodeURIComponent(outIso)}`;
+      }
+      const res = await fetch(url);
       const data: any = await res.json();
       if (data.ok) {
         if (data.settings) setConfig(data.settings);
         if (data.spots) setSpots(data.spots);
         if (data.summary) setMapSummary(data.summary);
+      } else {
+        setMapError(data.error || 'Lỗi tải sơ đồ');
       }
     } catch {
+      setMapError('Không thể tải sơ đồ bãi xe');
       notify('Không thể tải sơ đồ bãi xe');
     } finally {
       setLoading(false);
@@ -175,13 +217,22 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   // Load shift reconciliation
   async function loadReconciliation() {
+    setReconLoadingStatus('loading');
+    setReconError('');
     try {
       const res = await fetch(`/api/parking?action=reconciliation&tenant=${tenant}&date=${reconDate}`);
       const data: any = await res.json();
       if (data.ok && data.report) {
         setReconData(data.report);
+        setCashSubmittedInput(String(data.report.netCollected ?? 0));
+        setReconLoadingStatus('loaded');
+      } else {
+        setReconLoadingStatus('error');
+        setReconError(data.error || 'Lỗi tải dữ liệu đối soát');
       }
-    } catch {
+    } catch (err: any) {
+      setReconLoadingStatus('error');
+      setReconError(err.message || 'Lỗi kết nối đối soát');
       notify('Lỗi tải dữ liệu đối soát');
     }
   }
@@ -189,7 +240,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   useEffect(() => {
     void loadConfigAndSpots();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tenant, mapMode]);
+  }, [tenant, mapMode, mapDate, slotPreset, customSlotStart, customSlotEnd]);
 
   // Load active parked tickets for quick 1-touch gate checkout
   async function loadActiveLotTickets() {
@@ -634,8 +685,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   // Action: Close Shift
   async function handleCloseShift() {
+    if (isClosingShift) return;
     const cash = Number(cashSubmittedInput) || 0;
     if (!confirm(`Xác nhận chốt ca với số tiền mặt nộp: ${money(cash)}?`)) return;
+    setIsClosingShift(true);
     try {
       const res = await fetch('/api/parking', {
         method: 'POST',
@@ -656,6 +709,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       }
     } catch {
       notify('Lỗi chốt ca');
+    } finally {
+      setIsClosingShift(false);
     }
   }
 
@@ -846,7 +901,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 2, borderRadius: 4 }}>
                       <button
                         type="button"
@@ -860,7 +915,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                           borderRadius: 3,
                           cursor: 'pointer',
                         }}
-                        onClick={() => setMapMode('now')}
+                        onClick={() => {
+                          setMapMode('now');
+                          setSlotPreset('now');
+                        }}
                       >
                         Hiện tại
                       </button>
@@ -876,13 +934,96 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                           borderRadius: 3,
                           cursor: 'pointer',
                         }}
-                        onClick={() => setMapMode('slot')}
+                        onClick={() => {
+                          setMapMode('slot');
+                          if (slotPreset === 'now') setSlotPreset('morning');
+                        }}
                       >
                         Theo khung giờ
                       </button>
                     </div>
+
+                    {mapMode === 'slot' && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <input
+                          type="date"
+                          className="pk-input"
+                          style={{ width: 135, height: 30, fontSize: 12, padding: '2px 8px' }}
+                          value={mapDate}
+                          onChange={(e) => setMapDate(e.target.value)}
+                        />
+                        <select
+                          className="pk-select"
+                          style={{ width: 155, height: 30, fontSize: 12, padding: '2px 8px' }}
+                          value={slotPreset}
+                          onChange={(e: any) => setSlotPreset(e.target.value)}
+                        >
+                          <option value="morning">Sáng (06:00 - 12:00)</option>
+                          <option value="afternoon">Chiều (12:00 - 18:00)</option>
+                          <option value="evening">Tối (18:00 - 22:00)</option>
+                          <option value="custom">Tùy chỉnh...</option>
+                        </select>
+                        {slotPreset === 'custom' && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <input
+                              type="time"
+                              className="pk-input"
+                              style={{ width: 85, height: 30, fontSize: 12, padding: '2px 6px' }}
+                              value={customSlotStart}
+                              onChange={(e) => setCustomSlotStart(e.target.value)}
+                            />
+                            <span style={{ fontSize: 12 }}>–</span>
+                            <input
+                              type="time"
+                              className="pk-input"
+                              style={{ width: 85, height: 30, fontSize: 12, padding: '2px 6px' }}
+                              value={customSlotEnd}
+                              onChange={(e) => setCustomSlotEnd(e.target.value)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      className="pk-btn-secondary"
+                      style={{ height: 30, width: 30, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={loadConfigAndSpots}
+                      title="Làm mới sơ đồ"
+                    >
+                      <RefreshCw size={13} className={loading ? 'pk-spin' : ''} />
+                    </button>
                   </div>
                 </div>
+
+                {/* Trạng thái lỗi tải sơ đồ nếu có */}
+                {mapError && (
+                  <div
+                    style={{
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      color: '#991b1b',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--pk-radius)',
+                      marginBottom: 10,
+                      fontSize: 12.5,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>Lỗi tải sơ đồ: {mapError}</span>
+                    <button
+                      type="button"
+                      className="pk-btn-secondary"
+                      style={{ height: 26, fontSize: 11, padding: '0 8px' }}
+                      onClick={loadConfigAndSpots}
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                )}
 
                 {/* Cảnh báo ô chưa cấu hình tọa độ / mặt bằng nếu có */}
                 {unconfiguredSpots.length > 0 && (
@@ -1023,61 +1164,126 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 </div>
 
                 {/* Chi tiết ô đã bấm */}
-                {selectedSpot && (
-                  <div
-                    style={{
-                      marginTop: 14,
-                      padding: 12,
-                      background: '#f8fafc',
-                      borderRadius: 'var(--pk-radius)',
-                      border: '1px solid var(--pk-border)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      flexWrap: 'wrap',
-                      gap: 10,
-                    }}
-                  >
-                    <div>
-                      <strong style={{ fontSize: 14 }}>Ô đỗ {selectedSpot.code} ({selectedSpot.section})</strong>
-                      <div style={{ fontSize: 12, color: 'var(--pk-text-muted)', marginTop: 2 }}>
-                        Trạng thái: <strong>{selectedSpot.stateForWindow === 'available' ? 'Trống' : selectedSpot.stateForWindow === 'occupied' ? 'Đang có xe' : selectedSpot.stateForWindow === 'held' ? 'Đang giữ' : 'Đã đặt'}</strong>
-                        {selectedSpot.currentVehiclePlate && ` · Biển số: ${selectedSpot.currentVehiclePlate}`}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: selectedSpot.hasCoordinates ? '#64748b' : '#b45309', marginTop: 2 }}>
-                        {selectedSpot.hasCoordinates
-                          ? `📍 Tọa độ: Dãy ${selectedSpot.section} · Hàng ${selectedSpot.rowIndex} · Cột ${selectedSpot.colIndex}`
-                          : '⚠️ Chưa cấu hình tọa độ / vị trí trên mặt bằng'}
-                      </div>
-                    </div>
+                {selectedSpot && (() => {
+                  const spotTicket = ticketsList.find(
+                    (t) =>
+                      t.spotCode === selectedSpot.code &&
+                      (t.status === 'active' || t.status === 'confirmed' || t.status === 'holding'),
+                  );
 
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        className="pk-btn-secondary"
-                        style={{ height: 32, padding: '0 10px', fontSize: 12 }}
-                        onClick={() => {
-                          const newStatus = selectedSpot.status === 'maintenance' ? 'active' : 'maintenance';
-                          fetch('/api/parking', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                              action: 'set-spot-status',
-                              tenant,
-                              spotCode: selectedSpot.code,
-                              status: newStatus,
-                            }),
-                          }).then(() => {
-                            notify(`Đã cập nhật trạng thái ô ${selectedSpot.code}`);
-                            void loadConfigAndSpots();
-                          });
-                        }}
-                      >
-                        {selectedSpot.status === 'maintenance' ? 'Mở lại ô' : 'Khóa bảo trì'}
-                      </button>
+                  return (
+                    <div
+                      style={{
+                        marginTop: 14,
+                        padding: 12,
+                        background: '#f8fafc',
+                        borderRadius: 'var(--pk-radius)',
+                        border: '1px solid var(--pk-border)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: 10,
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <strong style={{ fontSize: 14 }}>
+                            Ô đỗ {selectedSpot.code} ({selectedSpot.section})
+                          </strong>
+                          <span
+                            className={`pk-badge-status ${
+                              selectedSpot.status === 'maintenance'
+                                ? 'pk-badge-maintenance'
+                                : selectedSpot.stateForWindow === 'available'
+                                ? 'pk-badge-confirmed'
+                                : selectedSpot.stateForWindow === 'occupied'
+                                ? 'pk-badge-active'
+                                : 'pk-badge-holding'
+                            }`}
+                          >
+                            {selectedSpot.status === 'maintenance'
+                              ? 'Bảo trì'
+                              : selectedSpot.stateForWindow === 'available'
+                              ? 'Trống'
+                              : selectedSpot.stateForWindow === 'occupied'
+                              ? 'Đang có xe'
+                              : selectedSpot.stateForWindow === 'held'
+                              ? 'Đang giữ'
+                              : 'Đã đặt'}
+                          </span>
+                        </div>
+
+                        {spotTicket && (
+                          <div style={{ fontSize: 12.5, color: '#1e293b', marginTop: 4 }}>
+                            🚗 Biển số: <strong>{spotTicket.licensePlate}</strong> · Vé: <strong>{spotTicket.ticketCode}</strong>
+                            {' · '}
+                            ⏱ {new Date(spotTicket.expectedIn).toTimeString().slice(0, 5)} – {new Date(spotTicket.expectedOut).toTimeString().slice(0, 5)}
+                            {spotTicket.feePayer === 'gopick_sponsored' ? ' (GoPick tài trợ)' : ''}
+                          </div>
+                        )}
+
+                        <div style={{ fontSize: 11.5, color: selectedSpot.hasCoordinates ? '#64748b' : '#b45309', marginTop: 2 }}>
+                          {selectedSpot.hasCoordinates
+                            ? `📍 Tọa độ: Dãy ${selectedSpot.section} · Hàng ${selectedSpot.rowIndex} · Cột ${selectedSpot.colIndex}`
+                            : '⚠️ Chưa cấu hình tọa độ / vị trí trên mặt bằng'}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {spotTicket && (
+                          <>
+                            <button
+                              type="button"
+                              className="pk-btn-primary"
+                              style={{ height: 32, padding: '0 10px', fontSize: 12, background: 'var(--pk-primary)' }}
+                              onClick={() => {
+                                setSelectedTicket(spotTicket);
+                                setShowChangeSpotModal(true);
+                              }}
+                            >
+                              Đổi ô đỗ
+                            </button>
+                            <a
+                              href={`/parking/ticket/${spotTicket.ticketCode}?token=${spotTicket.accessToken}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="pk-btn-secondary"
+                              style={{ height: 32, padding: '0 10px', fontSize: 12, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <ExternalLink size={12} />
+                              <span>Mở vé</span>
+                            </a>
+                          </>
+                        )}
+
+                        <button
+                          type="button"
+                          className="pk-btn-secondary"
+                          style={{ height: 32, padding: '0 10px', fontSize: 12 }}
+                          onClick={() => {
+                            const newStatus = selectedSpot.status === 'maintenance' ? 'active' : 'maintenance';
+                            fetch('/api/parking', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                action: 'set-spot-status',
+                                tenant,
+                                spotCode: selectedSpot.code,
+                                status: newStatus,
+                              }),
+                            }).then(() => {
+                              notify(`Đã cập nhật trạng thái ô ${selectedSpot.code}`);
+                              void loadConfigAndSpots();
+                            });
+                          }}
+                        >
+                          {selectedSpot.status === 'maintenance' ? 'Mở lại ô' : 'Khóa bảo trì'}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {/* Cột thống kê trạng thái bên phải */}
@@ -1203,27 +1409,42 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                           {new Date(t.expectedIn).toTimeString().slice(0, 5)}
                         </td>
                         <td style={{ padding: '10px 14px' }}>
-                          <span
-                            className={`pk-badge-status ${
-                              t.status === 'confirmed'
-                                ? 'pk-badge-confirmed'
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <span
+                              className={`pk-badge-status ${
+                                t.status === 'confirmed'
+                                  ? 'pk-badge-confirmed'
+                                  : t.status === 'holding'
+                                  ? 'pk-badge-holding'
+                                  : t.status === 'active'
+                                  ? 'pk-badge-active'
+                                  : 'pk-badge-cancelled'
+                              }`}
+                            >
+                              {t.status === 'confirmed'
+                                ? '✓ Đã đặt'
                                 : t.status === 'holding'
-                                ? 'pk-badge-holding'
+                                ? '⏱ Đang giữ'
                                 : t.status === 'active'
-                                ? 'pk-badge-active'
-                                : 'pk-badge-cancelled'
-                            }`}
-                          >
-                            {t.status === 'confirmed'
-                              ? '✓ Đã đặt'
-                              : t.status === 'holding'
-                              ? '⏱ Đang giữ'
-                              : t.status === 'active'
-                              ? '🚗 Có xe'
-                              : t.status === 'completed'
-                              ? 'Đã ra'
-                              : 'Đã hủy'}
-                          </span>
+                                ? '🚗 Có xe'
+                                : t.status === 'completed'
+                                ? 'Đã ra'
+                                : 'Đã hủy'}
+                            </span>
+                            {t.status === 'active' && getOvertimeMinutes(t) > 15 && (
+                              <span
+                                className="pk-badge-status"
+                                style={{
+                                  background: '#fee2e2',
+                                  color: '#b91c1c',
+                                  fontSize: 10.5,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                ⚠️ Quá {getOvertimeMinutes(t)}p
+                              </span>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1268,6 +1489,11 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       <div style={{ fontSize: 12.5, color: '#334155' }}>
                         📍 Ô {selectedTicket.spotCode} · 📅 {new Date(selectedTicket.expectedIn).toISOString().slice(0, 10)} · ⏱ {new Date(selectedTicket.expectedIn).toTimeString().slice(0, 5)} – {new Date(selectedTicket.expectedOut).toTimeString().slice(0, 5)}
                       </div>
+                      {selectedTicket.status === 'active' && getOvertimeMinutes(selectedTicket) > 15 && (
+                        <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700, marginTop: 4 }}>
+                          ⚠️ Đỗ quá hạn {getOvertimeMinutes(selectedTicket)} phút (vượt 15 phút ân hạn) · Phụ thu {money(Math.ceil((getOvertimeMinutes(selectedTicket) - 15) / 60) * 15000)}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1692,6 +1918,29 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       </div>
 
                       {(() => {
+                        if (gateFoundTicket.status !== 'active') return null;
+                        const otMins = getOvertimeMinutes(gateFoundTicket);
+                        if (otMins <= 15) return null;
+                        const surchargeHours = Math.ceil((otMins - 15) / 60);
+                        const surcharge = surchargeHours * 15000;
+                        return (
+                          <div
+                            style={{
+                              background: '#fef2f2',
+                              border: '1px solid #fecaca',
+                              borderRadius: 6,
+                              padding: '8px 12px',
+                              color: '#991b1b',
+                              fontSize: 12.5,
+                            }}
+                          >
+                            ⚠️ <strong>Xe quá giờ {otMins} phút</strong> (vượt quá 15 phút ân hạn).
+                            <div>Phụ thu ngoài giờ: <strong>{money(surcharge)}</strong> ({surchargeHours} giờ x 15.000 đ)</div>
+                          </div>
+                        );
+                      })()}
+
+                      {(() => {
                         const paid = (gateFoundTicket.paidAmount || 0) + (gateFoundTicket.sponsoredAmount || 0);
                         const due = Math.max(0, (gateFoundTicket.totalAmount || 0) - paid);
                         return (
@@ -1927,104 +2176,303 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 </div>
               </div>
 
-              {/* Bảng báo cáo sổ tiền chuẩn mẫu */}
+              {/* Bảng báo cáo số tiền thực thu từ hệ thống */}
               <div className="pk-card" style={{ padding: 20 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>📶 Thu online</span>
+                {reconLoadingStatus === 'loading' ? (
+                  <div style={{ textAlign: 'center', padding: 32, color: 'var(--pk-text-muted)' }}>
+                    <RefreshCw size={24} className="pk-spin" style={{ margin: '0 auto 12px' }} />
+                    <div>Đang tải dữ liệu đối soát thực tế...</div>
+                  </div>
+                ) : reconLoadingStatus === 'error' ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--pk-danger)' }}>
+                    <p style={{ margin: '0 0 12px' }}>Không thể tải dữ liệu đối soát ({reconError}).</p>
+                    <button
+                      type="button"
+                      className="pk-btn-secondary"
+                      style={{ width: 'auto', margin: '0 auto' }}
+                      onClick={loadReconciliation}
+                    >
+                      Thử lại
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>📶 Thu online (SePay)</span>
+                        </div>
+                        <strong>{money(reconData?.onlineAmount ?? 0)}</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>💵 Thu tại cổng</span>
+                          <span style={{ fontSize: 11.5, color: 'var(--pk-text-muted)' }}>
+                            (TM: {money(reconData?.gateCash ?? 0)} · CK: {money(reconData?.gateTransfer ?? 0)})
+                          </span>
+                        </div>
+                        <strong>{money(reconData?.gateAmount ?? 0)}</strong>
+                      </div>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>🔄 Hoàn tiền</span>
+                        </div>
+                        <span style={{ color: 'var(--pk-danger)', fontWeight: 700 }}>
+                          {money(reconData?.refundAmount ?? 0)}
+                        </span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: 18,
+                          fontWeight: 800,
+                          padding: '14px 0',
+                          borderTop: '2px solid var(--pk-border)',
+                          borderBottom: '2px solid var(--pk-border)',
+                          color: 'var(--pk-primary)',
+                        }}
+                      >
+                        <div>
+                          <span>Σ Thực thu nộp bàn giao</span>
+                          <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--pk-text-muted)' }}>
+                            (Tiền mặt tại cổng trừ khoản hoàn tiền)
+                          </div>
+                        </div>
+                        <span>{money(reconData?.netCollected ?? 0)}</span>
+                      </div>
+
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          fontSize: 14,
+                          paddingTop: 8,
+                          color: '#166534',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>⛳ GoPick tài trợ · Chờ đối soát</span>
+                        </div>
+                        <strong style={{ fontSize: 15 }}>
+                          {money(reconData?.sponsoredAmount ?? 0)}
+                        </strong>
+                      </div>
                     </div>
-                    <strong>{money(reconData?.onlineAmount ?? 300000)}</strong>
-                  </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>💵 Thu tại cổng</span>
+                    {/* Nhập tiền mặt thực nộp & Nút hành động */}
+                    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--pk-border)' }}>
+                      <div className="pk-input-group" style={{ marginBottom: 14 }}>
+                        <label className="pk-label">
+                          Số tiền mặt nhân viên nộp thực tế (đồng):
+                        </label>
+                        <input
+                          type="number"
+                          className="pk-input"
+                          placeholder="Nhập số tiền mặt thực nộp..."
+                          value={cashSubmittedInput}
+                          onChange={(e) => setCashSubmittedInput(e.target.value)}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: 12 }}>
+                        <button
+                          type="button"
+                          className="pk-btn-primary"
+                          style={{ flex: 1 }}
+                          onClick={handleCloseShift}
+                          disabled={isClosingShift}
+                        >
+                          <Check size={16} strokeWidth={3} />
+                          <span>{isClosingShift ? 'Đang chốt ca...' : 'Chốt ca'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="pk-btn-secondary"
+                          style={{ width: 'auto', padding: '0 20px' }}
+                          onClick={() => {
+                            if (!reconData) return;
+                            const rows = [
+                              `BÁO CÁO ĐỐI SOÁT BÃI XE - ${reconData.facilityName || 'GoPick'} (${reconDate})`,
+                              `Ngày đối soát,${reconDate}`,
+                              `Thời gian xuất,${new Date().toLocaleString('vi-VN')}`,
+                              '',
+                              'I. TỔNG HỢP DOANH THU',
+                              `Thu online (SePay),${reconData.onlineAmount ?? 0}`,
+                              `Thu tại cổng (Tiền mặt),${reconData.gateCash ?? 0}`,
+                              `Thu tại cổng (Chuyển khoản),${reconData.gateTransfer ?? 0}`,
+                              `Tổng thu tại cổng,${reconData.gateAmount ?? 0}`,
+                              `Hoàn tiền,${reconData.refundAmount ?? 0}`,
+                              `Thực thu bàn giao,${reconData.netCollected ?? 0}`,
+                              `GoPick tài trợ (Chờ đối soát),${reconData.sponsoredAmount ?? 0}`,
+                              `Tổng số vé,${reconData.ticketsCount ?? 0}`,
+                              '',
+                              'II. CHI TIẾT GIAO DỊCH TRONG CA',
+                              'Mã GD,Mã vé,Biển số,Phương thức,Số tiền,Thời gian,Ghi chú',
+                              ...(reconData.transactions || []).map(
+                                (tx) =>
+                                  `"${tx.id}","${tx.ticketCode || ''}","${tx.licensePlate || ''}","${
+                                    tx.method
+                                  }",${tx.txType === 'refund' ? -tx.amount : tx.amount},"${new Date(
+                                    tx.createdAt,
+                                  ).toLocaleString('vi-VN')}","${(tx.note || '').replace(/"/g, '""')}"`,
+                              ),
+                            ];
+                            const csvContent = '\uFEFF' + rows.join('\n');
+                            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.setAttribute('href', url);
+                            link.setAttribute('download', `doi-soat-bai-xe-${reconDate}.csv`);
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                            URL.revokeObjectURL(url);
+                          }}
+                        >
+                          <Download size={15} />
+                          <span>Xuất báo cáo (CSV)</span>
+                        </button>
+                      </div>
                     </div>
-                    <strong>{money(reconData?.gateAmount ?? 150000)}</strong>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>🔄 Hoàn tiền</span>
-                    </div>
-                    <span style={{ color: 'var(--pk-danger)', fontWeight: 700 }}>
-                      {money(reconData?.refundAmount ?? 30000)}
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: 18,
-                      fontWeight: 800,
-                      padding: '14px 0',
-                      borderTop: '2px solid var(--pk-border)',
-                      borderBottom: '2px solid var(--pk-border)',
-                      color: 'var(--pk-primary)',
-                    }}
-                  >
-                    <span>Σ Thực thu</span>
-                    <span>{money(reconData?.netCollected ?? 420000)}</span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      fontSize: 14,
-                      paddingTop: 8,
-                      color: '#166534',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span>⛳ GoPick tài trợ · Chờ đối soát</span>
-                    </div>
-                    <strong style={{ fontSize: 15 }}>
-                      {money(reconData?.sponsoredAmount ?? 90000)}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* Nút hành động */}
-                <div style={{ display: 'flex', gap: 12, marginTop: 24 }}>
-                  <button
-                    type="button"
-                    className="pk-btn-primary"
-                    style={{ flex: 1 }}
-                    onClick={handleCloseShift}
-                  >
-                    <Check size={16} strokeWidth={3} />
-                    <span>Chốt ca</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="pk-btn-secondary"
-                    style={{ width: 'auto', padding: '0 20px' }}
-                    onClick={() => {
-                      const csvContent =
-                        'data:text/csv;charset=utf-8,' +
-                        `Khoản mục,Số tiền\nThu online,${reconData?.onlineAmount ?? 300000}\nThu tại cổng,${
-                          reconData?.gateAmount ?? 150000
-                        }\nHoàn tiền,${reconData?.refundAmount ?? 30000}\nThực thu,${
-                          reconData?.netCollected ?? 420000
-                        }\nGoPick tài trợ,${reconData?.sponsoredAmount ?? 90000}`;
-                      const encodedUri = encodeURI(csvContent);
-                      const link = document.createElement('a');
-                      link.setAttribute('href', encodedUri);
-                      link.setAttribute('download', `doi-soat-bai-xe-${reconDate}.csv`);
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                  >
-                    <Download size={15} />
-                    <span>Xuất báo cáo</span>
-                  </button>
-                </div>
+                  </>
+                )}
               </div>
+
+              {/* Bảng chi tiết giao dịch trong ca */}
+              {reconData?.transactions && reconData.transactions.length > 0 && (
+                <div className="pk-card" style={{ padding: 16 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>
+                    Chi tiết giao dịch đã ghi nhận ({reconData.transactions.length})
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--pk-border)' }}>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Mã GD</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Mã vé</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Biển số</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Phương thức</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Số tiền</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Thời gian</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Ghi chú</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reconData.transactions.map((tx) => (
+                          <tr key={tx.id} style={{ borderBottom: '1px solid var(--pk-border)' }}>
+                            <td style={{ padding: '8px 10px', fontWeight: 600 }}>{tx.id.slice(0, 8)}...</td>
+                            <td style={{ padding: '8px 10px' }}>{tx.ticketCode || '—'}</td>
+                            <td style={{ padding: '8px 10px', fontWeight: 600 }}>{tx.licensePlate || '—'}</td>
+                            <td style={{ padding: '8px 10px' }}>
+                              {(() => {
+                                const isOnline = tx.method === 'sepay' || tx.method === 'vietqr';
+                                const isCash = tx.method === 'cash';
+                                const isTransfer = tx.method === 'transfer';
+                                return (
+                                  <span
+                                    className="pk-badge-status"
+                                    style={{
+                                      background: isOnline ? '#dbeafe' : isCash ? '#fef3c7' : '#e0e7ff',
+                                      color: isOnline ? '#1d4ed8' : isCash ? '#b45309' : '#3730a3',
+                                    }}
+                                  >
+                                    {isOnline
+                                      ? 'SePay QR'
+                                      : isCash
+                                      ? 'Tiền mặt'
+                                      : isTransfer
+                                      ? 'CK Cổng'
+                                      : tx.method}
+                                  </span>
+                                );
+                              })()}
+                            </td>
+                            <td
+                              style={{
+                                padding: '8px 10px',
+                                textAlign: 'right',
+                                fontWeight: 700,
+                                color: tx.txType === 'refund' ? 'var(--pk-danger)' : '#166534',
+                              }}
+                            >
+                              {tx.txType === 'refund' ? '-' : '+'}{money(tx.amount)}
+                            </td>
+                            <td style={{ padding: '8px 10px', color: 'var(--pk-text-muted)' }}>
+                              {new Date(tx.createdAt).toLocaleTimeString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                            <td style={{ padding: '8px 10px', color: 'var(--pk-text-muted)' }}>
+                              {tx.note || '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Lịch sử các ca đã chốt */}
+              {reconData?.shiftsHistory && reconData.shiftsHistory.length > 0 && (
+                <div className="pk-card" style={{ padding: 16 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>
+                    Lịch sử các ca đã chốt gần đây
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--pk-border)' }}>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Mã ca</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Nhân viên chốt</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Tiền thực nộp</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Hệ thống tính</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'right' }}>Chênh lệch</th>
+                          <th style={{ padding: '8px 10px', textAlign: 'left' }}>Thời gian chốt</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reconData.shiftsHistory.map((s) => (
+                          <tr key={s.id} style={{ borderBottom: '1px solid var(--pk-border)' }}>
+                            <td style={{ padding: '8px 10px', fontWeight: 600 }}>{s.shiftCode}</td>
+                            <td style={{ padding: '8px 10px' }}>{s.staffName}</td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 600 }}>
+                              {money(s.cashSubmitted)}
+                            </td>
+                            <td style={{ padding: '8px 10px', textAlign: 'right' }}>
+                              {money(s.systemRevenue)}
+                            </td>
+                            <td
+                              style={{
+                                padding: '8px 10px',
+                                textAlign: 'right',
+                                fontWeight: 700,
+                                color:
+                                  s.discrepancy < 0
+                                    ? 'var(--pk-danger)'
+                                    : s.discrepancy > 0
+                                    ? '#16a34a'
+                                    : 'inherit',
+                              }}
+                            >
+                              {s.discrepancy === 0 ? 'Khớp (0 đ)' : money(s.discrepancy)}
+                            </td>
+                            <td style={{ padding: '8px 10px', color: 'var(--pk-text-muted)' }}>
+                              {new Date(s.closedAt).toLocaleString('vi-VN')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -2095,7 +2543,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 </div>
                 <p style={{ fontSize: 12.5, color: 'var(--pk-text-muted)', margin: 0 }}>
                   Kích thước mỗi xe: 2,5m x 5,0m · Cổng vào: theo đường hiện trạng (6,5m) · Tổng sức chứa: 65 xe (P01 - P65).
-                  Hệ thống hỗ trợ đồng thời chế độ chọn 10 ô nhanh A01-A10 trên điện thoại và toàn bộ 65 ô mặt bằng thực tế.
+                  Mặt bằng bãi xe GoPick gồm 65 ô vật lý (P01 - P65) theo phương án bố trí đã duyệt. Đã ngừng mở bán các ô mẫu cũ A01-A10 và đồng bộ một mã ID cho toàn bộ hệ thống.
                 </p>
               </div>
             </div>
@@ -2129,11 +2577,31 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
             </p>
 
             <div className="pk-input-group">
-              <label className="pk-label">Mã ô đỗ mới</label>
+              <label className="pk-label">Chọn ô trống cần chuyển đến</label>
+              <select
+                className="pk-select"
+                value={targetNewSpot}
+                onChange={(e) => setTargetNewSpot(e.target.value)}
+                style={{ marginBottom: 8 }}
+              >
+                <option value="">-- Chọn ô trống trong danh sách --</option>
+                {spots
+                  .filter(
+                    (s) =>
+                      s.stateForWindow === 'available' &&
+                      s.status !== 'maintenance' &&
+                      s.code !== selectedTicket.spotCode,
+                  )
+                  .map((s) => (
+                    <option key={s.code} value={s.code}>
+                      Ô {s.code} ({s.section})
+                    </option>
+                  ))}
+              </select>
               <input
                 type="text"
                 className="pk-input"
-                placeholder="VD: A05 hoặc P12"
+                placeholder="Hoặc nhập mã ô: VD P12"
                 value={targetNewSpot}
                 onChange={(e) => setTargetNewSpot(e.target.value)}
               />

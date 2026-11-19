@@ -29,6 +29,25 @@ export default async function TicketPage({
   // Sanitize to plain JSON object for safe RSC serialization
   const plainTicket = row ? JSON.parse(JSON.stringify(row)) : null;
 
+  // Privacy protection: If visited without matching access_token, mask sensitive PII
+  if (plainTicket && (!token || token !== plainTicket.access_token)) {
+    if (plainTicket.customer_name) {
+      const parts = String(plainTicket.customer_name).trim().split(/\s+/);
+      plainTicket.customer_name = parts
+        .map((p: string) => (p.length <= 2 ? p : p[0] + '*'.repeat(Math.min(3, p.length - 2)) + p[p.length - 1]))
+        .join(' ');
+    }
+    if (plainTicket.customer_phone && String(plainTicket.customer_phone).length >= 7) {
+      const s = String(plainTicket.customer_phone);
+      plainTicket.customer_phone = s.slice(0, 4) + '***' + s.slice(-3);
+    }
+    if (plainTicket.license_plate && String(plainTicket.license_plate).length >= 5) {
+      const s = String(plainTicket.license_plate);
+      plainTicket.license_plate = s.slice(0, 3) + '***' + s.slice(-2);
+    }
+    plainTicket.access_token = '';
+  }
+
   return (
     <div className="pk-container" style={{ minHeight: '100vh', background: '#f8fafc' }}>
       <TicketDetailClient code={code} initialTicket={plainTicket} token={token} />

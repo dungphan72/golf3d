@@ -1,6 +1,9 @@
-import { getAuth } from '../../auth-session';
-import { can } from '../../../lib/auth/permissions';
+import { getAuth, sameOrigin, httpError } from '../../auth-session';
+import { can, type Permission } from '../../../lib/auth/permissions';
+import type { AuthUser } from '../../../lib/server/auth-service';
 import { db, audit, loadConfig } from '../../../lib/server/common';
+import { clientIp } from '../../../lib/server/http';
+import { overLimit } from '../../../lib/server/throttle';
 import {
   DEFAULT_PARKING_TENANT,
   ensureParkingInitialized,
@@ -22,12 +25,44 @@ import {
 
 export const dynamic = 'force-dynamic';
 
+function maskName(name?: string | null): string {
+  if (!name) return 'Khách hàng';
+  const parts = name.trim().split(/\s+/);
+  return parts
+    .map((p) => (p.length <= 2 ? p : p[0] + '*'.repeat(Math.min(3, p.length - 2)) + p[p.length - 1]))
+    .join(' ');
+}
+
+function maskPhone(phone?: string | null): string {
+  if (!phone || phone.length < 7) return '090***';
+  return phone.slice(0, 4) + '***' + phone.slice(-3);
+}
+
+function maskPlate(plate?: string | null): string {
+  if (!plate || plate.length < 5) return '***';
+  return plate.slice(0, 3) + '***' + plate.slice(-2);
+}
+
+function requireParking(auth: AuthUser | null, tenant: string, permission: Permission) {
+  if (!auth) return httpError('Vui lòng đăng nhập', 401);
+  if (auth.mustChange) return httpError('Hãy đổi mật khẩu tạm thời trước', 403);
+  if (!can(auth, permission)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  // GoPick is the parking facility attached to the legacy golf3d-main club.
+  if (tenant !== auth.tenant && !(tenant === DEFAULT_PARKING_TENANT && auth.tenant === 'golf3d-main'))
+    return httpError('Không có quyền truy cập bãi xe của cơ sở này', 403);
+  return null;
+}
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const action = url.searchParams.get('action') || 'spots';
   const tenantParam = url.searchParams.get('tenant');
   const auth = await getAuth();
   const tenant = tenantParam || auth?.tenant || DEFAULT_PARKING_TENANT;
+  if (action === 'tickets-list' || action === 'reconciliation') {
+    const denied = requireParking(auth, tenant, action === 'tickets-list' ? 'parking.view' : 'parking.manage');
+    if (denied) return denied;
+  }
 
   try {
     if (action === 'config') {
@@ -94,6 +129,10 @@ export async function GET(req: Request) {
         return Response.json({ error: 'Không tìm thấy vé đậu xe' }, { status: 404 });
       }
 
+      const isStaff = auth && can(auth, 'parking.view');
+      const hasValidToken = Boolean(token && row.access_token && row.access_token === token);
+      const isAuthorized = isStaff || hasValidToken;
+
       return Response.json({
         ok: true,
         ticket: {
@@ -103,9 +142,9 @@ export async function GET(req: Request) {
           spotId: row.spot_id,
           spotCode: row.spot_code,
           section: row.section,
-          customerName: row.customer_name,
-          customerPhone: row.customer_phone,
-          licensePlate: row.license_plate,
+          customerName: isAuthorized ? row.customer_name : maskName(row.customer_name),
+          customerPhone: isAuthorized ? row.customer_phone : maskPhone(row.customer_phone),
+          licensePlate: isAuthorized ? row.license_plate : maskPlate(row.license_plate),
           vehicleType: row.vehicle_type,
           expectedIn: row.expected_in,
           expectedOut: row.expected_out,
@@ -113,7 +152,7 @@ export async function GET(req: Request) {
           actualOut: row.actual_out,
           status: row.status,
           source: row.source,
-          golfBookingId: row.golf_booking_id,
+          golfBookingId: isAuthorized ? row.golf_booking_id : undefined,
           baseAmount: row.base_amount,
           sponsoredAmount: row.sponsored_amount,
           paidAmount: row.paid_amount,
@@ -121,11 +160,11 @@ export async function GET(req: Request) {
           totalAmount: row.total_amount,
           feePayer: row.fee_payer,
           holdExpiresAt: row.hold_expires_at,
-          accessToken: row.access_token,
+          accessToken: isAuthorized ? row.access_token : undefined,
           paymentMethod: row.payment_method,
-          paymentRef: row.payment_ref,
+          paymentRef: isAuthorized ? row.payment_ref : undefined,
           paidAt: row.paid_at,
-          notes: row.notes,
+          notes: isAuthorized ? row.notes : undefined,
         },
       });
     }
@@ -203,6 +242,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!sameOrigin(req)) return httpError('Nguồn yêu cầu không hợp lệ', 403);
   const url = new URL(req.url);
   let body: any = {};
   try {
@@ -214,6 +254,17 @@ export async function POST(req: Request) {
   const auth = await getAuth();
   const tenant = body.tenant || auth?.tenant || DEFAULT_PARKING_TENANT;
   const action = body.action || url.searchParams.get('action') || '';
+  const staffActions: Record<string, Permission> = {
+    'recognize-plate': 'parking.gate', 'gate-checkin': 'parking.gate',
+    'gate-checkout': 'parking.gate', 'gate-paper-ticket': 'parking.gate',
+    'close-shift': 'parking.manage', 'change-spot': 'parking.manage',
+    'cancel-ticket': 'parking.manage', 'set-spot-status': 'parking.manage',
+    'update-settings': 'parking.manage', 'save-spot': 'parking.manage', 'delete-spot': 'parking.manage',
+  };
+  if (staffActions[action]) {
+    const denied = requireParking(auth, tenant, staffActions[action]);
+    if (denied) return denied;
+  }
 
   try {
     if (action === 'check-sepay') {
@@ -277,10 +328,46 @@ export async function POST(req: Request) {
         Number(body.expectedIn) || Date.now(),
         Number(body.expectedOut) || Date.now() + 2.5 * 3600 * 1000,
       );
-      return Response.json({ ok: true, ...res });
+      // Privacy defense: Mask customer phone to prevent enumeration scraping
+      const sanitizedPhone = res.customerPhone ? maskPhone(res.customerPhone) : undefined;
+      return Response.json({ ok: true, ...res, customerPhone: sanitizedPhone });
     }
 
     if (action === 'hold') {
+      const ip = clientIp(req);
+      const isStaff = auth && (can(auth, 'parking.manage') || can(auth, 'parking.gate'));
+
+      // Anti-hoarding & flood protection: max 5 holds per 10 minutes per IP
+      if (!isStaff && (await overLimit('pk_hold', ip, 10 * 60_000, 5))) {
+        return Response.json(
+          { error: 'Bạn đã thực hiện quá nhiều lượt giữ chỗ liên tục. Vui lòng thử lại sau 10 phút.' },
+          { status: 429 },
+        );
+      }
+
+      // Business rule: One license plate cannot hold multiple spots simultaneously
+      const rawPlate = (body.licensePlate || '').trim();
+      const cleanPlate = rawPlate.replace(/[-\s.]/g, '').toUpperCase();
+      if (!isStaff && cleanPlate) {
+        const existingHold = await db()
+          .prepare(
+            `SELECT ticket_code, spot_code FROM parking_tickets 
+             WHERE tenant=? 
+               AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '')=?
+               AND status='holding' AND hold_expires_at > ?`,
+          )
+          .bind(tenant, cleanPlate, Date.now())
+          .first<any>();
+        if (existingHold) {
+          return Response.json(
+            {
+              error: `Biển số ${rawPlate} hiện đang có một phiên giữ chỗ ô ${existingHold.spot_code} (${existingHold.ticket_code}). Vui lòng hoàn tất thanh toán hoặc đợi 5 phút để giữ ô khác.`,
+            },
+            { status: 400 },
+          );
+        }
+      }
+
       const ticket = await holdSpot(tenant, {
         spotCode: body.spotCode,
         licensePlate: body.licensePlate,
@@ -296,11 +383,52 @@ export async function POST(req: Request) {
     }
 
     if (action === 'confirm') {
+      const ticketCode = (body.ticketCode || '').trim();
+      const accessToken = (body.accessToken || '').trim();
+      if (!ticketCode) return Response.json({ error: 'Thiếu mã vé cần xác nhận' }, { status: 400 });
+
+      const targetTicket = await db()
+        .prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?')
+        .bind(tenant, ticketCode)
+        .first<any>();
+      if (!targetTicket) {
+        return Response.json({ error: `Không tìm thấy vé "${ticketCode}"` }, { status: 404 });
+      }
+
+      const isStaff = auth && can(auth, 'parking.manage');
+      const customerMustPay = Math.max(0, targetTicket.base_amount - targetTicket.sponsored_amount);
+
+      // Financial security: If ticket has balance to pay (> 0), public client CANNOT bypass payment!
+      if (customerMustPay > 0 && !isStaff) {
+        const cleanCode = ticketCode.replace(/[-\s]/g, '');
+        const tx = await db()
+          .prepare(
+            'SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY created_at DESC LIMIT 1',
+          )
+          .bind(tenant, `%${cleanCode}%`, `%${ticketCode}%`)
+          .first<any>();
+
+        if (!tx) {
+          return Response.json(
+            {
+              error:
+                'Chưa nhận được giao dịch ngân hàng từ SePay. Vui lòng chuyển khoản theo mã VietQR hoặc đợi hệ thống tự động khớp lệnh.',
+            },
+            { status: 402 },
+          );
+        }
+      }
+
+      // Authentication security: Verify access_token for sponsored ticket
+      if (!isStaff && targetTicket.access_token && accessToken && targetTicket.access_token !== accessToken) {
+        return Response.json({ error: 'Mã xác thực vé không hợp lệ' }, { status: 403 });
+      }
+
       const ticket = await confirmTicket(tenant, {
-        ticketCode: body.ticketCode,
+        ticketCode,
         accessToken: body.accessToken,
-        paymentMethod: body.paymentMethod,
-        paymentRef: body.paymentRef,
+        paymentMethod: isStaff ? (body.paymentMethod || 'cash') : (customerMustPay === 0 ? 'gopick_sponsored' : 'sepay'),
+        paymentRef: isStaff ? (body.paymentRef || 'STAFF_CONFIRMED') : undefined,
       });
       return Response.json({ ok: true, ticket });
     }
@@ -330,11 +458,30 @@ export async function POST(req: Request) {
 
     if (action === 'extend-stay') {
       const staffName = auth?.name || body.staffName || 'Khách hàng';
+      const isStaff = auth && (can(auth, 'parking.manage') || can(auth, 'parking.gate'));
+      const ticketCode = String(body.ticketCode || '').trim();
+      const accessToken = String(body.accessToken || '').trim();
+
+      const ticketRow = await db()
+        .prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?')
+        .bind(tenant, ticketCode)
+        .first<any>();
+      if (!ticketRow) {
+        return Response.json({ error: 'Không tìm thấy thông tin vé đỗ xe để gia hạn' }, { status: 404 });
+      }
+
+      // Security check: If not staff, MUST verify matching accessToken
+      if (!isStaff) {
+        if (!accessToken || accessToken !== ticketRow.access_token) {
+          return Response.json({ error: 'Mã xác thực vé không hợp lệ để thực hiện gia hạn' }, { status: 403 });
+        }
+      }
+
       const ticket = await extendParkingTicket(tenant, {
-        ticketCode: body.ticketCode,
-        accessToken: body.accessToken,
+        ticketCode,
+        accessToken,
         extraMinutes: Number(body.extraMinutes) || 60,
-        paymentMethod: body.paymentMethod || 'vietqr',
+        paymentMethod: isStaff ? (body.paymentMethod || 'cash') : 'vietqr',
         paymentRef: body.paymentRef,
         staffName,
       });
@@ -355,7 +502,7 @@ export async function POST(req: Request) {
     }
 
     if (action === 'close-shift') {
-      if (auth && !can(auth.role, 'finance.shift') && !can(auth.role, 'parking.manage')) {
+      if (auth && !can(auth, 'finance.shift') && !can(auth, 'parking.manage')) {
         return Response.json({ error: 'Không có quyền chốt ca bãi xe' }, { status: 403 });
       }
       const staffName = auth?.name || body.staffName || 'Bảo vệ ca trực';

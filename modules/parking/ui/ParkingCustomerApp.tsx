@@ -504,7 +504,8 @@ export default function ParkingCustomerApp({
     let isSubscribed = true;
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/parking?action=ticket&tenant=${tenant}&code=${ticket.ticketCode}`, {
+        const tokenParam = ticket.accessToken ? `&token=${encodeURIComponent(ticket.accessToken)}` : '';
+        const res = await fetch(`/api/parking?action=ticket&tenant=${tenant}&code=${ticket.ticketCode}${tokenParam}`, {
           cache: 'no-store',
         });
         const data: any = await res.json();
@@ -750,25 +751,48 @@ export default function ParkingCustomerApp({
     setPaymentBusy(true);
     try {
       const isFree = ticket.sponsoredAmount >= ticket.totalAmount || ticket.customerAmount === 0;
-      const res = await fetch('/api/parking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'confirm',
-          tenant,
-          ticketCode: ticket.ticketCode,
-          accessToken: ticket.accessToken,
-          paymentMethod: isFree ? 'gopick_sponsored' : 'vietqr',
-          amountPaid: isFree ? 0 : ticket.customerAmount,
-        }),
-      });
-      const data: any = await res.json();
-      if (data.ok && data.ticket) {
-        setTicket(data.ticket);
-        sessionStorage.removeItem('sigolf_parking_holding_ticket');
-        setStep(4);
+      if (isFree) {
+        // Free / Sponsored: confirm directly with verified accessToken
+        const res = await fetch('/api/parking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'confirm',
+            tenant,
+            ticketCode: ticket.ticketCode,
+            accessToken: ticket.accessToken,
+            paymentMethod: 'gopick_sponsored',
+          }),
+        });
+        const data: any = await res.json();
+        if (data.ok && data.ticket) {
+          setTicket(data.ticket);
+          sessionStorage.removeItem('sigolf_parking_holding_ticket');
+          setStep(4);
+        } else {
+          setErrorMessage(data.error || 'Xác nhận vé không thành công.');
+        }
       } else {
-        setErrorMessage(data.error || 'Xác nhận vé không thành công.');
+        // Paid ticket: call check-sepay to verify transaction from bank
+        const res = await fetch('/api/parking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'check-sepay',
+            tenant,
+            ticketCode: ticket.ticketCode,
+          }),
+        });
+        const data: any = await res.json();
+        if (data.ok && data.confirmed && data.ticket) {
+          setTicket(data.ticket);
+          sessionStorage.removeItem('sigolf_parking_holding_ticket');
+          setStep(4);
+        } else {
+          setErrorMessage(
+            'Chưa nhận được giao dịch từ ngân hàng. Quý khách vui lòng chuyển khoản theo mã VietQR hoặc đợi 3–5 giây để SePay tự động khớp lệnh.',
+          );
+        }
       }
     } catch {
       setErrorMessage('Lỗi kết nối cổng thanh toán. Vui lòng kiểm tra lại.');

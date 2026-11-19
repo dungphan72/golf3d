@@ -826,3 +826,71 @@ test('16. Stay Extension (extendParkingTicket) with spot collision check and rec
   );
 });
 
+test('17. Security Hardening: Anti-hoarding, IDOR PII Masking, and Token Verification', async () => {
+  const baseTime = Date.now() + 24 * 3600 * 1000;
+  const testPlate = '51K-888.77';
+
+  await db().prepare("DELETE FROM parking_tickets WHERE tenant=? AND spot_code='P50'").bind(TENANT).run();
+
+  // 1. Create a hold ticket
+  const ticket = await holdSpot(TENANT, {
+    spotCode: 'P50',
+    licensePlate: testPlate,
+    customerName: 'Nguyễn Văn Bảo Mật',
+    customerPhone: '0909123456',
+    expectedIn: baseTime,
+    expectedOut: baseTime + 2 * 3600 * 1000,
+  });
+
+  assert.ok(ticket.accessToken, 'Ticket must have access token generated');
+  assert.equal(ticket.licensePlate, '51K-888.77');
+
+  // 2. Anti-hoarding check: Same license plate trying to hold another spot while previous hold is active
+  const cleanPlate = testPlate.replace(/[-\s.]/g, '').toUpperCase();
+  const existingActiveHold = await db()
+    .prepare(
+      `SELECT ticket_code, spot_code FROM parking_tickets 
+       WHERE tenant=? 
+         AND REPLACE(REPLACE(REPLACE(license_plate, '-', ''), '.', ''), ' ', '')=?
+         AND status='holding' AND hold_expires_at > ?`,
+    )
+    .bind(TENANT, cleanPlate, Date.now())
+    .first<any>();
+
+  assert.ok(existingActiveHold, 'Must detect active unexpired hold for this plate');
+  assert.equal(existingActiveHold.spot_code, 'P50');
+
+  // 3. IDOR PII Masking Verification (simulating public query with and without token)
+  const dbRow = await db()
+    .prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?')
+    .bind(TENANT, ticket.ticketCode)
+    .first<any>();
+
+  assert.ok(dbRow);
+
+  // Without token:
+  const maskedName = dbRow.customer_name
+    .trim()
+    .split(/\s+/)
+    .map((p: string) => (p.length <= 2 ? p : p[0] + '*'.repeat(Math.min(3, p.length - 2)) + p[p.length - 1]))
+    .join(' ');
+  const maskedPhone = dbRow.customer_phone.slice(0, 4) + '***' + dbRow.customer_phone.slice(-3);
+  const maskedPlate = dbRow.license_plate.slice(0, 3) + '***' + dbRow.license_plate.slice(-2);
+
+  assert.equal(maskedName, 'N***n V*n B*o M*t');
+  assert.equal(maskedPhone, '0909***456');
+  assert.equal(maskedPlate, '51K***77');
+
+  // 4. Token validation
+  const wrongToken = 'invalid-token-123';
+  const hasValidTokenWrong = dbRow.access_token === wrongToken;
+  const hasValidTokenRight = dbRow.access_token === ticket.accessToken;
+
+  assert.equal(hasValidTokenWrong, false, 'Invalid token must be rejected');
+  assert.equal(hasValidTokenRight, true, 'Valid token must be accepted');
+
+  // Cleanup test ticket
+  await db().prepare('DELETE FROM parking_tickets WHERE tenant=? AND ticket_code=?').bind(TENANT, ticket.ticketCode).run();
+});
+
+

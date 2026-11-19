@@ -281,7 +281,7 @@ export async function POST(req: Request) {
       const cleanCode = code.replace(/[-\s]/g, '');
       const tx = await db()
         .prepare(
-          "SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY created_at DESC LIMIT 1"
+          "SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY received DESC LIMIT 1"
         )
         .bind(tenant, `%${cleanCode}%`, `%${code}%`)
         .first<any>();
@@ -403,7 +403,7 @@ export async function POST(req: Request) {
         const cleanCode = ticketCode.replace(/[-\s]/g, '');
         const tx = await db()
           .prepare(
-            'SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY created_at DESC LIMIT 1',
+            'SELECT * FROM bank_transactions WHERE tenant=? AND (code LIKE ? OR content LIKE ?) ORDER BY received DESC LIMIT 1',
           )
           .bind(tenant, `%${cleanCode}%`, `%${ticketCode}%`)
           .first<any>();

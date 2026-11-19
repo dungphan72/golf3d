@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import {
   ArrowRight,
   CalendarDays,
+  Car,
   CarFront,
   Check,
   Clock,
@@ -12,7 +13,10 @@ import {
   Globe,
   GraduationCap,
   MapPin,
+  Newspaper,
   Phone,
+  Receipt,
+  Sparkles,
   Target,
   Trophy,
   UserRound,
@@ -26,6 +30,7 @@ import { getCachedLandingData } from '../lib/server/landing-service';
 import type { Post } from '../lib/server/content-service';
 import BookingPage from './ui/BookingPage';
 import QuickBook from './ui/QuickBook';
+import { ZaloIcon } from './ui/SiteChrome';
 import './home-reference.css';
 import './home-dark.css';
 
@@ -529,40 +534,43 @@ export default async function LandingPage() {
               vụ đa dạng tại TP.HCM.
             </p>
             <div className="hd-social">
-              <a href={BRAND.zalo} aria-label="Liên hệ qua Zalo">
-                Zalo
+              <a href={BRAND.zalo} aria-label="Liên hệ qua Zalo" target="_blank" rel="noopener noreferrer">
+                <ZaloIcon size={18} />
+                <span>Zalo</span>
               </a>
               <a href={`tel:${clubHotline}`} aria-label="Gọi câu lạc bộ">
-                <Phone size={18} />
+                <Phone size={17} />
+                <span>Hotline</span>
               </a>
             </div>
           </div>
           <nav aria-label="Về chúng tôi">
             <h3>Về chúng tôi</h3>
-            <a href="#tien-ich">Không gian & tiện ích</a>
-            <a href="/bang-gia">Bảng giá</a>
-            <a href="/tin-tuc">Tin tức</a>
+            <a href="#tien-ich"><Sparkles size={16} /> Không gian &amp; tiện ích</a>
+            <a href="/bang-gia"><Receipt size={16} /> Bảng giá</a>
+            <a href="/tin-tuc"><Newspaper size={16} /> Tin tức</a>
           </nav>
           <nav aria-label="Dịch vụ">
             <h3>Dịch vụ</h3>
-            <a href="#dat-cho-nhanh">Đặt sân Golf 3D</a>
-            <a href="#huan-luyen">Huấn luyện Golf</a>
-            <a href="#giai-dau">Giải đấu & Sự kiện</a>
-            <a href="#hoi-vien">Gói hội viên</a>
+            <a href="#dat-cho-nhanh"><CalendarDays size={16} /> Đặt sân Golf 3D</a>
+            <a href="/parking"><Car size={16} /> Đặt chỗ đậu xe</a>
+            <a href="#huan-luyen"><GraduationCap size={16} /> Huấn luyện Golf</a>
+            <a href="#giai-dau"><Trophy size={16} /> Giải đấu &amp; Sự kiện</a>
+            <a href="#hoi-vien"><Crown size={16} /> Gói hội viên</a>
           </nav>
           <address>
             <h3>Liên hệ</h3>
             <p>
-              <MapPin size={18} />
-              {clubAddress}
+              <MapPin size={16} />
+              <span>{clubAddress}</span>
             </p>
             <a href={`tel:${clubHotline}`}>
-              <Phone size={18} />
+              <Phone size={16} />
               <strong>{clubHotline}</strong>
             </a>
             <a href={`https://${BRAND.website}`}>
-              <Globe size={18} />
-              {BRAND.website}
+              <Globe size={16} />
+              <span>{BRAND.website}</span>
             </a>
           </address>
         </div>

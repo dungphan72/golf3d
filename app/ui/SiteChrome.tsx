@@ -1,5 +1,18 @@
 /* eslint-disable @next/next/no-img-element, @next/next/no-html-link-for-pages */
-import { Globe, MapPin, Phone, UserRound } from 'lucide-react';
+import {
+  CalendarDays,
+  Car,
+  Crown,
+  Globe,
+  MapPin,
+  MessageCircle,
+  Newspaper,
+  Phone,
+  Receipt,
+  Sparkles,
+  Trophy,
+  UserRound,
+} from 'lucide-react';
 import { BRAND } from '../../lib/brand';
 import { publicPricing } from '../../lib/server/pricing-service';
 import '../home-dark.css';
@@ -63,10 +76,25 @@ export async function SiteHeader({ active }: { active?: string }) {
   );
 }
 
+export function ZaloIcon({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" style={{ flexShrink: 0 }}>
+      <path
+        d="M24 4C12.954 4 4 12.954 4 24c0 4.108 1.242 7.93 3.376 11.114L5.13 41.69a1.5 1.5 0 001.902 1.902l6.576-2.246A19.866 19.866 0 0024 44c11.046 0 20-8.954 20-20S35.046 4 24 4z"
+        fill="#0068FF"
+      />
+      <path
+        d="M17 19h7.5l-6.8 9.2a1 1 0 00.8 1.6H27v-3h-5.5l6.8-9.2a1 1 0 00-.8-1.6H17v3z"
+        fill="#ffffff"
+      />
+    </svg>
+  );
+}
+
 export async function SiteFooter() {
   const c = await club();
   return (
-    <footer className="hd-footer" id="lien-he">
+    <footer className="hd-footer" id="lien-he" aria-label="Chân trang SiGolf">
       <div className="hd-footer-grid">
         <div>
           <a className="hd-brand" href="/">
@@ -80,41 +108,43 @@ export async function SiteFooter() {
             Phòng tập Golf 3D hiện đại với công nghệ Foresight GC3, không gian chuyên nghiệp và dịch vụ đa dạng tại TP.HCM.
           </p>
           <div className="hd-social">
-            <a href={BRAND.zalo || `https://zalo.me/${c.hotline}`} aria-label="Liên hệ qua Zalo">
-              Zalo
+            <a href={BRAND.zalo || `https://zalo.me/${c.hotline}`} aria-label="Liên hệ qua Zalo" target="_blank" rel="noopener noreferrer">
+              <ZaloIcon size={18} />
+              <span>Zalo</span>
             </a>
             <a href={`tel:${c.hotline}`} aria-label="Gọi câu lạc bộ">
-              <Phone size={18} />
+              <Phone size={17} />
+              <span>Hotline</span>
             </a>
           </div>
         </div>
         <nav aria-label="Về chúng tôi">
           <h3>Về chúng tôi</h3>
-          <a href="/#tien-ich">Không gian &amp; tiện ích</a>
-          <a href="/bang-gia">Bảng giá</a>
-          <a href="/tin-tuc">Tin tức</a>
+          <a href="/#tien-ich"><Sparkles size={16} /> Không gian &amp; tiện ích</a>
+          <a href="/bang-gia"><Receipt size={16} /> Bảng giá</a>
+          <a href="/tin-tuc"><Newspaper size={16} /> Tin tức</a>
         </nav>
         <nav aria-label="Dịch vụ">
           <h3>Dịch vụ</h3>
-          <a href="/#dat-cho-nhanh">Đặt sân Golf 3D</a>
-          <a href="/parking">Đặt chỗ đậu xe</a>
-          <a href="/thanh-vien">Thẻ hội viên</a>
-          <a href="/#giai-dau">Giải đấu &amp; Sự kiện</a>
-          <a href="/tai-khoan">Tài khoản</a>
+          <a href="/#dat-cho-nhanh"><CalendarDays size={16} /> Đặt sân Golf 3D</a>
+          <a href="/parking"><Car size={16} /> Đặt chỗ đậu xe</a>
+          <a href="/thanh-vien"><Crown size={16} /> Thẻ hội viên</a>
+          <a href="/#giai-dau"><Trophy size={16} /> Giải đấu &amp; Sự kiện</a>
+          <a href="/tai-khoan"><UserRound size={16} /> Tài khoản</a>
         </nav>
         <address>
           <h3>Liên hệ</h3>
           <p>
-            <MapPin size={18} />
-            {c.address}
+            <MapPin size={16} />
+            <span>{c.address}</span>
           </p>
           <a href={`tel:${c.hotline}`}>
-            <Phone size={18} />
+            <Phone size={16} />
             <strong>{c.hotline}</strong>
           </a>
           <a href={`https://${BRAND.website}`}>
-            <Globe size={18} />
-            {BRAND.website}
+            <Globe size={16} />
+            <span>{BRAND.website}</span>
           </a>
         </address>
       </div>

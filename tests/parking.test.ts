@@ -784,9 +784,11 @@ test('15. Parking settings and spot management (CRUD)', async () => {
 });
 
 test('16. Stay Extension (extendParkingTicket) with spot collision check and receipt', async () => {
+  const testSpot = 'P58';
+  await db().prepare('DELETE FROM parking_tickets WHERE tenant=? AND spot_code=?').bind(TENANT, testSpot).run();
   const baseTime = Date.now() + 5000000;
   const initialTicket = await holdSpot(TENANT, {
-    spotCode: 'P25',
+    spotCode: testSpot,
     licensePlate: '51K-EXT.01',
     customerName: 'Khách Gia Hạn',
     expectedIn: baseTime,
@@ -813,7 +815,7 @@ test('16. Stay Extension (extendParkingTicket) with spot collision check and rec
   await assert.rejects(
     async () => {
       await holdSpot(TENANT, {
-        spotCode: 'P25',
+        spotCode: testSpot,
         licensePlate: '51K-EXT.COLLIDE',
         customerName: 'Khách Trùng Giờ',
         expectedIn: confirmed.expectedOut + 15 * 60 * 1000, // Inside the extended window

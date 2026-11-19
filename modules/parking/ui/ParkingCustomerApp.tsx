@@ -33,6 +33,7 @@ import {
   Bell,
   Camera,
   Download,
+  MessageCircle,
   PlusCircle,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
@@ -2282,6 +2283,35 @@ export default function ParkingCustomerApp({
             </div>
           </div>
         </div>
+      )}
+
+      {/* =====================================================================
+          CHÂN TRANG KHÁCH HÀNG (MOBILE & DESKTOP FOOTER CÓ ICON)
+          ===================================================================== */}
+      {!(activeNav === 'booking' && step === 3) && (
+        <footer className="pk-footer" aria-label="Chân trang bãi xe">
+          <div className="pk-footer-brand">
+            <Car size={18} />
+            <span>Bãi xe GoPick · SiGolf 250 Lương Định Của</span>
+          </div>
+          <div className="pk-footer-actions">
+            <a href="tel:0877834888" className="pk-footer-btn">
+              <Phone size={14} />
+              <span>Hotline 0877834888</span>
+            </a>
+            <a href="https://zalo.me/0877834888" target="_blank" rel="noopener noreferrer" className="pk-footer-btn">
+              <MessageCircle size={14} />
+              <span>Chat Zalo</span>
+            </a>
+            <a href="https://maps.google.com/?q=250+Lương+Định+Của" target="_blank" rel="noopener noreferrer" className="pk-footer-btn">
+              <MapPin size={14} />
+              <span>Chỉ đường</span>
+            </a>
+          </div>
+          <p className="pk-footer-copy">
+            © {new Date().getFullYear()} SiGolf. Mở cửa 24/7 · Camera AI giám sát · Vé QR tiện lợi.
+          </p>
+        </footer>
       )}
 
       {/* =====================================================================

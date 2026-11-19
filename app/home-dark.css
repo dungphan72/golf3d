@@ -772,6 +772,16 @@ body:has(.hd-home) {
   color: var(--hd-muted);
   font-size: 14px;
 }
+.hd-footer nav a svg {
+  color: var(--hd-em);
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.hd-footer nav a:hover svg {
+  opacity: 1;
+  transform: translateX(2px);
+}
 .hd-footer nav a:hover,
 .hd-footer address a:hover {
   color: var(--hd-em);
@@ -795,15 +805,26 @@ body:has(.hd-home) {
   margin-top: 16px;
 }
 .hd-social a {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-width: 42px;
-  height: 42px;
-  padding: 0 12px;
+  height: 40px;
+  padding: 0 14px;
   border: 1px solid var(--hd-line);
-  border-radius: 5px;
+  border-radius: 8px;
   font-size: 13px;
   font-weight: 700;
+  text-decoration: none;
+  color: var(--hd-text);
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 0.15s ease;
+}
+.hd-social a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--hd-em);
+  color: var(--hd-em);
 }
 .hd-copy {
   width: min(1440px, 100%);

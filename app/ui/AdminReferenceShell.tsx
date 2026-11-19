@@ -360,6 +360,7 @@ export function AdminReferenceShell({
           { key: 'dashboard', label: 'Tổng quan', icon: Home },
           { key: 'bookings', label: 'Đặt sân', icon: CalendarDays },
           { key: 'rooms', label: 'POS', icon: Store },
+          { key: 'parking', label: 'Bãi xe', icon: Car },
           { key: 'crmx', label: 'Khách hàng', icon: Users },
           { key: 'reports', label: 'Báo cáo', icon: ChartNoAxesColumnIncreasing },
         ]

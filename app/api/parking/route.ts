@@ -203,6 +203,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const url = new URL(req.url);
   let body: any = {};
   try {
     body = await req.json();

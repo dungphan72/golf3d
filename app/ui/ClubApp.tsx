@@ -239,6 +239,19 @@ export default function ClubApp() {
       go(targetView);
     }
   };
+
+  if (view === 'parking' && allowed('parking')) {
+    return (
+      <PwaInstallProvider>
+        <ParkingAdminApp
+          tenant="gopick"
+          role={data?.role}
+          onNavigate={(target) => go(target || 'dashboard')}
+        />
+      </PwaInstallProvider>
+    );
+  }
+
   return (
     <PwaInstallProvider>
       <div className="ar-app">

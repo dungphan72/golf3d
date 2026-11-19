@@ -26,7 +26,7 @@ export async function GET() {
       via: auth.via,
       mustChange: auth.mustChange,
       needsPassword,
-      permissions: permissionsOf(auth.role),
+      permissions: permissionsOf(auth),
     },
   });
 }

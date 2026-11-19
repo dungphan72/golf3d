@@ -10,7 +10,7 @@ import {
   tokenId,
   temporaryPassword,
 } from '../auth/password';
-import { isRole, canAssignRole, type Role } from '../auth/permissions';
+import { isRole, can, canAssignRole, permissionsOf, parsePermissions, PERMISSIONS, type Permission, type Role } from '../auth/permissions';
 import { noteAttempt, recentAttempts } from './throttle';
 import { loginIdentifier } from '../auth/identifier';
 import { normalizePhone, validPhone } from '../member';
@@ -19,6 +19,7 @@ export type AuthUser = {
   userId: string;
   tenant: string;
   role: Role;
+  permissions?: Permission[];
   name: string;
   email: string;
   mustChange: boolean;
@@ -115,9 +116,9 @@ export async function login(
     return { ok: false, result: fail(BAD_LOGIN, 401) };
   }
   const membership = await db()
-    .prepare('SELECT tenant,role FROM memberships WHERE user_id=? ORDER BY created LIMIT 1')
+    .prepare('SELECT m.tenant,m.role,p.permissions FROM memberships m LEFT JOIN staff_permissions p ON p.user_id=m.user_id AND p.tenant=m.tenant WHERE m.user_id=? ORDER BY m.created LIMIT 1')
     .bind(row.id)
-    .first<{ tenant: string; role: string }>();
+    .first<{ tenant: string; role: string; permissions: string | null }>();
   if (!membership || !isRole(membership.role))
     return { ok: false, result: fail('Tài khoản chưa được cấp quyền vào cơ sở nào', 403) };
   await db()
@@ -138,6 +139,7 @@ export async function login(
       userId: row.id,
       tenant: membership.tenant,
       role: membership.role,
+      permissions: parsePermissions(membership.permissions),
       name: row.name,
       email: row.email,
       mustChange: !!row.must_change,
@@ -149,9 +151,10 @@ export async function login(
 export async function userFromSession(token: string): Promise<AuthUser | null> {
   const row = await db()
     .prepare(
-      `SELECT u.id,u.email,u.name,u.must_change,u.active,s.tenant,m.role
+      `SELECT u.id,u.email,u.name,u.must_change,u.active,s.tenant,m.role,p.permissions
        FROM sessions s JOIN users u ON u.id=s.user_id
        JOIN memberships m ON m.user_id=s.user_id AND m.tenant=s.tenant
+       LEFT JOIN staff_permissions p ON p.user_id=m.user_id AND p.tenant=m.tenant
        WHERE s.id=? AND s.expires>?`,
     )
     .bind(await tokenId(token), Date.now())
@@ -163,12 +166,14 @@ export async function userFromSession(token: string): Promise<AuthUser | null> {
       active: number;
       tenant: string;
       role: string;
+      permissions: string | null;
     }>();
   if (!row || !row.active || !isRole(row.role)) return null;
   return {
     userId: row.id,
     tenant: row.tenant,
     role: row.role,
+    permissions: parsePermissions(row.permissions),
     name: row.name,
     email: row.email,
     mustChange: !!row.must_change,
@@ -328,14 +333,18 @@ export type StaffRow = {
   active: boolean;
   created: number;
   phone: string;
+  permissions: Permission[];
+  customPermissions: boolean;
 };
 
 export async function listStaff(tenant: string): Promise<StaffRow[]> {
   const rows = (
     await db()
       .prepare(
-        `SELECT u.id,u.email,u.phone,u.name,u.active,u.created,m.role FROM memberships m
-         JOIN users u ON u.id=m.user_id WHERE m.tenant=? ORDER BY m.created LIMIT 200`,
+        `SELECT u.id,u.email,u.phone,u.name,u.active,u.created,m.role,p.permissions FROM memberships m
+         JOIN users u ON u.id=m.user_id
+         LEFT JOIN staff_permissions p ON p.user_id=m.user_id AND p.tenant=m.tenant
+         WHERE m.tenant=? ORDER BY m.created LIMIT 200`,
       )
       .bind(tenant)
       .all<{
@@ -346,20 +355,60 @@ export async function listStaff(tenant: string): Promise<StaffRow[]> {
         created: number;
         phone: string;
         role: string;
+        permissions: string | null;
       }>()
   ).results;
   return rows
     .filter((r) => isRole(r.role))
-    .map((r) => ({ ...r, role: r.role as Role, active: !!r.active }));
+    .map((r) => ({ ...r, role: r.role as Role, active: !!r.active,
+      customPermissions: r.permissions != null && r.role !== 'owner',
+      permissions: permissionsOf({ role: r.role as Role, permissions: parsePermissions(r.permissions) }),
+    }));
 }
 
 async function target(tenant: string, userId: string) {
   return db()
     .prepare(
-      'SELECT u.id,u.email,m.role FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant=? AND u.id=?',
+      'SELECT u.id,u.email,m.role,p.permissions FROM memberships m JOIN users u ON u.id=m.user_id LEFT JOIN staff_permissions p ON p.user_id=m.user_id AND p.tenant=m.tenant WHERE m.tenant=? AND u.id=?',
     )
     .bind(tenant, userId)
-    .first<{ id: string; email: string; role: string }>();
+    .first<{ id: string; email: string; role: string; permissions: string | null }>();
+}
+
+/** Only the owner can replace per-person grants; owner accounts always retain full access. */
+export async function setStaffPermissions(
+  actor: AuthUser,
+  input: { userId: string; permissions: Permission[] | null; expectedRole: Role },
+): Promise<ServiceResult> {
+  if (actor.role !== 'owner' || !can(actor, 'staff.manage'))
+    return fail('Chỉ Chủ cơ sở được thay đổi quyền riêng của nhân viên', 403);
+  const t = await target(actor.tenant, input.userId);
+  if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
+  if (t.role === 'owner') return fail('Chủ cơ sở luôn có toàn bộ quyền', 403);
+  if (t.role !== input.expectedRole) return fail('Vai trò đã thay đổi. Tải lại danh sách trước khi lưu quyền.', 409);
+  if (input.permissions !== null && (!Array.isArray(input.permissions) || input.permissions.some((p) => !PERMISSIONS.includes(p))))
+    return fail('Quyền không hợp lệ');
+  const selected = input.permissions === null ? null : PERMISSIONS.filter((p) => input.permissions!.includes(p));
+  // The shell needs view to load the employee's workspace. Account locking is a separate action.
+  if (selected && !selected.includes('view')) return fail('Cần giữ quyền truy cập hệ thống');
+  const statement = selected === null
+    ? db().prepare('DELETE FROM staff_permissions WHERE tenant=? AND user_id=?').bind(actor.tenant, input.userId)
+    : db().prepare(`INSERT INTO staff_permissions(tenant,user_id,permissions,updated_by,updated_at) VALUES (?,?,?,?,?)
+        ON CONFLICT(tenant,user_id) DO UPDATE SET permissions=excluded.permissions,updated_by=excluded.updated_by,updated_at=excluded.updated_at`)
+      .bind(actor.tenant, input.userId, JSON.stringify(selected), actor.userId, Date.now());
+  await db().batch([
+    statement,
+    db().prepare('INSERT INTO audit(id,tenant,action,detail,created) VALUES (?,?,?,?,?)')
+      .bind(crypto.randomUUID(), actor.tenant, 'staff.permissions', JSON.stringify({ actor: actor.userId, userId: input.userId, before: parsePermissions(t.permissions) ?? null, after: selected }), Date.now()),
+  ]);
+  return ok();
+}
+
+function canManageTarget(actor: AuthUser, t: { role: string; permissions: string | null }) {
+  if (!isRole(t.role) || !can(actor, 'staff.manage')) return false;
+  if (actor.role === 'owner') return true;
+  return t.role !== 'owner' && t.role !== 'manager' &&
+    permissionsOf({ role: t.role, permissions: parsePermissions(t.permissions) }).every((p) => can(actor, p));
 }
 
 export async function createStaff(
@@ -373,7 +422,7 @@ export async function createStaff(
   if (phone && (await db().prepare('SELECT id FROM users WHERE phone=?').bind(phone).first()))
     return fail('Số điện thoại đã được dùng cho tài khoản khác', 409);
   if (input.name.trim().length < 2) return fail('Vui lòng nhập tên nhân viên');
-  if (!isRole(input.role) || !canAssignRole(actor.role, input.role))
+  if (!isRole(input.role) || !canAssignRole(actor, input.role))
     return fail('Không đủ quyền gán vai trò này', 403);
   const existing = await db()
     .prepare('SELECT id FROM users WHERE email=?')
@@ -405,7 +454,7 @@ export async function updateStaff(
 ): Promise<ServiceResult> {
   const t = await target(actor.tenant, input.userId);
   if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
-  if (!canAssignRole(actor.role, t.role)) return fail('Không đủ quyền sửa nhân viên này', 403);
+  if (!canManageTarget(actor, t)) return fail('Không đủ quyền sửa nhân viên này', 403);
   if (
     input.userId === actor.userId &&
     (input.active === false || (input.role && input.role !== t.role))
@@ -428,7 +477,7 @@ export async function updateStaff(
       .run();
   }
   if (input.role !== undefined) {
-    if (!isRole(input.role) || !canAssignRole(actor.role, input.role))
+    if (!isRole(input.role) || !canAssignRole(actor, input.role))
       return fail('Không đủ quyền gán vai trò này', 403);
     await db()
       .prepare('UPDATE memberships SET role=? WHERE tenant=? AND user_id=?')
@@ -451,7 +500,7 @@ export async function deleteStaff(actor: AuthUser, userId: string): Promise<Serv
   if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
   if (userId === actor.userId) return fail('Không thể tự xóa tài khoản của chính mình', 409);
   if (t.role === 'owner') return fail('Không thể xóa tài khoản Chủ cơ sở', 403);
-  if (!canAssignRole(actor.role, t.role)) return fail('Không đủ quyền xóa nhân viên này', 403);
+  if (!canManageTarget(actor, t)) return fail('Không đủ quyền xóa nhân viên này', 403);
 
   // Terminate active sessions and remove from crm sales extra & tenant membership
   await db().prepare('DELETE FROM sessions WHERE user_id=?').bind(userId).run().catch(() => undefined);
@@ -473,7 +522,7 @@ export async function resetStaffPassword(actor: AuthUser, userId: string): Promi
   const t = await target(actor.tenant, userId);
   if (!t || !isRole(t.role)) return fail('Không tìm thấy nhân viên', 404);
   if (userId === actor.userId) return fail('Hãy dùng chức năng đổi mật khẩu của chính mình', 409);
-  if (!canAssignRole(actor.role, t.role)) return fail('Không đủ quyền', 403);
+  if (!canManageTarget(actor, t)) return fail('Không đủ quyền', 403);
   const password = temporaryPassword();
   await db().batch([
     db()

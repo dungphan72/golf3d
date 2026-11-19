@@ -3070,7 +3070,7 @@ function SettingsCardModal({
 
           {cardId === 'staff_roles' && (
             <div>
-              <StaffPanel actorRole="owner" />
+              <StaffPanel />
             </div>
           )}
 

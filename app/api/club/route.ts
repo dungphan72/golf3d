@@ -37,7 +37,7 @@ export async function GET() {
   if (response) return response;
   const data = await loadDashboard(auth.tenant, auth.name);
   return Response.json(
-    { ...data, role: auth.role, permissions: permissionsOf(auth.role) },
+    { ...data, role: auth.role, permissions: permissionsOf(auth) },
     { headers: { 'Cache-Control': 'no-store' } },
   );
 }
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     return httpError('Dữ liệu không hợp lệ');
   }
   const needed = ACTION_PERMISSION[input.action];
-  if (!needed || !can(auth.role, needed))
+  if (!needed || !can(auth, needed))
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   // Wiping bookings, shifts and the cashbook is irreversible: only the facility owner may do it.
   if (input.action === 'clean-test-data' && auth.role !== 'owner')

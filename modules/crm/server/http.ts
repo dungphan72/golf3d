@@ -33,6 +33,7 @@ export function crmRoute(
       tenant: auth.tenant,
       userId: auth.userId,
       role: auth.role,
+      permissions: auth.permissions,
       now: requestNow(req),
       base: originOf(req),
     };

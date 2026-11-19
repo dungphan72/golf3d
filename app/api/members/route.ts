@@ -60,7 +60,7 @@ export async function POST(req: Request) {
     return httpError('Dữ liệu không hợp lệ');
   }
   const needed = NEEDED[input.action];
-  if (!needed || !can(auth.role, needed))
+  if (!needed || !can(auth, needed))
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   const result = await applyMember(auth.tenant, auth.userId, input);
   // A round fully covered by a package is paid: send the receipt like any other payment.

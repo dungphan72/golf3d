@@ -5,6 +5,7 @@ import { defaults, type Booking } from '../../lib/club';
 import FnbPanel from './FnbPanel';
 import { BookingForm } from './Forms';
 import { SystemSettingsHub } from './SystemSettingsHub';
+import { StaffPanel } from './StaffPanel';
 import { ModernPosFlow } from './ModernPosFlow';
 import { PageTabs } from './kit';
 import { type Data } from './shared';
@@ -72,10 +73,15 @@ export default function ClubApp() {
   async function load() {
     try {
       const r = await fetch('/api/club', { cache: 'no-store' });
-      const v = (await r.json()) as Data & { error?: string };
       if (r.status === 401) {
         setAuthState('login');
         return;
+      }
+      let v: any = {};
+      try {
+        v = (await r.json()) as Data & { error?: string };
+      } catch {
+        throw new Error('Dữ liệu từ máy chủ phản hồi không đúng định dạng. Vui lòng thử lại sau.');
       }
       if (r.status === 403 && v.error?.includes('mật khẩu tạm thời')) {
         setAuthState('change');
@@ -183,6 +189,7 @@ export default function ClubApp() {
     parking: 'parking.view',
   };
   const allowed = (key: string) =>
+    (key === 'settings' && !!data?.permissions?.includes('staff.manage')) ||
     !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
   async function signOut() {
     try {
@@ -353,6 +360,7 @@ export default function ClubApp() {
               )}
               {(view === 'settings' || (view === 'packages' && allowed('settings'))) &&
                 allowed('settings') && (
+                  !data?.permissions?.includes('settings.manage') ? <StaffPanel /> :
                   <SystemSettingsHub
                     config={c}
                     busy={busy}

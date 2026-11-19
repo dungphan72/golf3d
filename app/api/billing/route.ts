@@ -27,6 +27,6 @@ export async function POST(req: Request) {
   const parsed = billingInput.safeParse(json);
   if (!parsed.success) return httpError(parsed.error.issues.map((i) => i.message).join(' · '));
   const needed = parsed.data.action === 'discount' ? 'billing.discount' : 'billing.refund';
-  if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  if (!can(auth, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   return sendResult(await applyBilling(auth.tenant, auth.userId, parsed.data));
 }

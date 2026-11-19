@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     parsed.data.action === 'open' || parsed.data.action === 'close'
       ? 'finance.shift'
       : 'finance.operate';
-  if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  if (!can(auth, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   const result = await applyFinance(auth.tenant, auth.userId, parsed.data);
   // Payment confirmed: receipt now, thank-you tomorrow (queued once per booking, so a retry sends nothing twice).
   if (result.status === 200 && ['pay', 'pay-split', 'pay-group'].includes(parsed.data.action)) {

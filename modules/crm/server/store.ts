@@ -1,3 +1,4 @@
+import type { Permission } from '../../../lib/auth/permissions';
 import { db, type ServiceResult } from '../../../lib/server/common';
 import { enqueue } from '../../../lib/server/outbox-service';
 import { sanitizeSettings, type CrmSettings } from '../core/settings';
@@ -10,7 +11,7 @@ const VN = 7 * 3_600_000;
 /** Start of the Vietnam day that contains t, as a timestamp. */
 export const vnDayStart = (t: number) => Math.floor((t + VN) / DAY) * DAY - VN;
 
-export type Ctx = { tenant: string; userId: string; role: string; now: number; base: string };
+export type Ctx = { tenant: string; userId: string; role: string; permissions?: Permission[]; now: number; base: string };
 
 export async function getSettings(tenant: string): Promise<CrmSettings> {
   const row = await db()

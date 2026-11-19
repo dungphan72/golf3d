@@ -240,7 +240,7 @@ export async function adminState(actor: AuthUser, postId: string): Promise<Servi
       note: s.review_note,
     })),
     signupsLeft: signups.filter((s) => !have.has(s.phone)),
-    canApprove: can(actor.role, 'tournament.approve'),
+    canApprove: can(actor, 'tournament.approve'),
   });
 }
 
@@ -269,7 +269,7 @@ async function playerOwned(tenant: string, id: string) {
 }
 
 export async function staffAction(actor: AuthUser, a: StaffAction): Promise<ServiceResult> {
-  if (!can(actor.role, 'tournament.score')) return fail('Bạn không có quyền nhập điểm giải đấu', 403);
+  if (!can(actor, 'tournament.score')) return fail('Bạn không có quyền nhập điểm giải đấu', 403);
   const t = actor.tenant;
   const now = Date.now();
   switch (a.action) {
@@ -413,7 +413,7 @@ export async function staffAction(actor: AuthUser, a: StaffAction): Promise<Serv
       return ok({ status });
     }
     case 'score-review': {
-      if (!can(actor.role, 'tournament.approve')) return fail('Chỉ chủ cơ sở được duyệt điểm golfer tự nhập', 403);
+      if (!can(actor, 'tournament.approve')) return fail('Chỉ chủ cơ sở được duyệt điểm golfer tự nhập', 403);
       const row = await db()
         .prepare('SELECT id,status FROM tournament_scores WHERE tenant=? AND id=?')
         .bind(t, a.id)

@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { DataTable, DialogHeading, ModalDialog } from './kit';
-import { ROLES, ROLE_LABELS, type Role } from '../../lib/auth/permissions';
+import { ROLES, ROLE_LABELS, canAssignRole, permissionsOf, type Permission, type Role, type PermissionActor } from '../../lib/auth/permissions';
+import { PERMISSION_GROUPS, PERMISSION_LABELS } from '../../lib/auth/permission-catalog';
+import './staff-permissions.css';
 import {
   UserPlus,
   KeyRound,
@@ -12,7 +14,7 @@ import {
   Trash2,
 } from 'lucide-react';
 
-type Staff = { id: string; email: string; phone?: string; name: string; role: Role; active: boolean };
+type Staff = { id: string; email: string; phone?: string; name: string; role: Role; active: boolean; permissions: Permission[]; customPermissions: boolean };
 
 async function call(body: unknown) {
   const r = await fetch('/api/staff', {
@@ -25,7 +27,7 @@ async function call(body: unknown) {
   return result;
 }
 
-export function StaffPanel({ actorRole }: { actorRole: string }) {
+export function StaffPanel() {
   const [staff, setStaff] = useState<Staff[]>([]);
   const [error, setError] = useState('');
   const [secret, setSecret] = useState<{ who: string; password: string } | null>(null);
@@ -37,14 +39,30 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [actor, setActor] = useState<(PermissionActor & { userId: string }) | null>(null);
+  const [editing, setEditing] = useState<Staff | null>(null);
+  const [draft, setDraft] = useState<Permission[]>([]);
+  const [custom, setCustom] = useState(false);
+  const [permissionSearch, setPermissionSearch] = useState('');
+  const [saved, setSaved] = useState('');
+  const [permissionError, setPermissionError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const assignable = ROLES.filter((r) => actorRole === 'owner' || r !== 'owner');
+  const assignable = ROLES.filter((r) => actor && canAssignRole(actor, r));
+  const editable = !!actor && actor.role === 'owner' && editing?.role !== 'owner';
+  const canManage = (s: Staff) => !!actor && (actor.role === 'owner' || (
+    s.role !== 'owner' && s.role !== 'manager' && s.permissions.every((p) => permissionsOf(actor).includes(p))
+  ));
 
   async function load() {
-    const r = await fetch('/api/staff', { cache: 'no-store' });
-    const v = (await r.json()) as { staff?: Staff[]; error?: string };
-    if (!r.ok) setError(v.error || 'Không tải được danh sách');
-    else setStaff(v.staff ?? []);
+    try {
+      const r = await fetch('/api/staff', { cache: 'no-store' });
+      const v = (await r.json()) as { staff?: Staff[]; error?: string; actor?: PermissionActor & { userId: string } };
+      if (!r.ok) throw new Error(v.error || 'Không tải được danh sách');
+      setStaff(v.staff ?? []);
+      setActor(v.actor ?? null);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Không tải được danh sách'); }
+    finally { setLoading(false); }
   }
 
   useEffect(() => {
@@ -80,8 +98,25 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
     return true;
   });
 
+  async function savePermissions() {
+    if (!editing || !editable || busy) return;
+    setBusy(true);
+    setPermissionError('');
+    try {
+      await call({ action: 'permissions', userId: editing.id, expectedRole: editing.role, permissions: custom ? draft : null });
+      setSaved(`Đã lưu quyền cho ${editing.name}. Quyền mới có hiệu lực từ yêu cầu tiếp theo.`);
+      setEditing(null);
+      await load();
+    } catch (e) { setPermissionError(e instanceof Error ? e.message : 'Không lưu được quyền'); }
+    finally { setBusy(false); }
+  }
+
   return (
     <section className="staff-panel operate-staff">
+      <h2>Tài khoản & Phân quyền</h2>
+      <p className="muted">Chọn nhân viên để xem hoặc tùy chỉnh quyền theo từng chức năng. Chủ cơ sở được cấp quyền riêng; vai trò tiếp tục dùng làm mẫu và xác định phạm vi dữ liệu phụ trách.</p>
+      {saved && <p role="status" className="info-strip">{saved}</p>}
+      {loading && <p role="status">Đang tải danh sách nhân viên…</p>}
       {/* Top Staff Metrics Ribbon */}
       <div className="operate-ribbon">
         <div className="operate-kpi-card highlight">
@@ -170,6 +205,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
               type="button"
               className="primary operate-btn"
               onClick={() => setShowCreateModal(true)}
+              disabled={busy || !actor || assignable.length === 0}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -203,7 +239,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                       <button
                         type="button"
                         className="link-btn"
-                        disabled={busy}
+                        disabled={busy || !canManage(s)}
                         onClick={() => {
                           const v = window.prompt(`Số điện thoại đăng nhập của ${s.name} (để trống để xóa)`, s.phone ?? '');
                           if (v === null) return;
@@ -220,7 +256,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 key: 'role',
                 header: 'Vai trò',
                 cell: (s) => {
-                  const locked = s.role === 'owner' && actorRole !== 'owner';
+                  const locked = !canManage(s) || s.id === actor?.userId;
                   return (
                     <select
                       aria-label={'Vai trò của ' + s.name}
@@ -236,10 +272,20 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                           {ROLE_LABELS[r]}
                         </option>
                       ))}
-                      {locked && <option value="owner">{ROLE_LABELS.owner}</option>}
+                      {!assignable.includes(s.role) && <option value={s.role}>{ROLE_LABELS[s.role]}</option>}
                     </select>
                   );
                 },
+              },
+              {
+                key: 'permissions',
+                header: 'Quyền chức năng',
+                cell: (s) => (
+                  <button type="button" className="secondary operate-btn-sm" disabled={busy || !actor}
+                    onClick={() => { setEditing(s); setDraft(s.permissions); setCustom(s.customPermissions); setPermissionSearch(''); setPermissionError(''); }}>
+                    <ShieldAlert size={14} /> {s.role === 'owner' ? 'Toàn quyền' : s.customPermissions ? 'Tùy chỉnh' : 'Theo vai trò'} · {s.permissions.length} quyền
+                  </button>
+                ),
               },
               {
                 key: 'status',
@@ -254,7 +300,7 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
                 key: 'act',
                 header: 'Thao tác',
                 cell: (s) => {
-                  const locked = s.role === 'owner' && actorRole !== 'owner';
+                  const locked = !canManage(s) || s.id === actor?.userId;
                   return (
                     <div className="ds-cell-actions">
                       <button
@@ -298,6 +344,47 @@ export function StaffPanel({ actorRole }: { actorRole: string }) {
           />
         </div>
       </div>
+
+      {editing && (
+        <ModalDialog label={`Phân quyền cho ${editing.name}`} onClose={() => setEditing(null)} locked={busy}>
+          <DialogHeading onClose={() => setEditing(null)} locked={busy}>Phân quyền · {editing.name}</DialogHeading>
+          <div className="staff-permissions">
+            <p className="muted">{editing.email} · {ROLE_LABELS[editing.role]}</p>
+            {editing.role === 'owner' ? <p>Chủ cơ sở luôn có toàn bộ quyền để quản lý hệ thống.</p> : (
+              <fieldset className="staff-permission-mode" disabled={!editable || busy}>
+                <legend>Cách cấp quyền</legend>
+                <label><input type="radio" name="permission-mode" checked={!custom} onChange={() => { setCustom(false); setDraft(permissionsOf(editing.role)); }} /> Theo vai trò {ROLE_LABELS[editing.role]}</label>
+                <label><input type="radio" name="permission-mode" checked={custom} onChange={() => setCustom(true)} /> Tùy chỉnh cho nhân viên này</label>
+              </fieldset>
+            )}
+            {!editable && editing.role !== 'owner' && <p className="muted">Chỉ Chủ cơ sở được thay đổi quyền riêng.</p>}
+            {custom && <p className="muted">Quyền tùy chỉnh thay thế quyền mặc định và được giữ khi đổi vai trò. Cần cấp cả quyền xem của module để sử dụng các thao tác trong module đó.</p>}
+            <label className="staff-permission-search">Tìm chức năng
+              <input type="search" value={permissionSearch} onChange={(e) => setPermissionSearch(e.target.value)} placeholder="Tên module hoặc chức năng…" />
+            </label>
+            <p aria-live="polite">Đang cấp {draft.length} / {Object.keys(PERMISSION_LABELS).length} quyền</p>
+            <div className="staff-permission-groups">
+              {PERMISSION_GROUPS.filter((group) => `${group.title} ${group.permissions.map((p) => PERMISSION_LABELS[p]).join(' ')}`.toLocaleLowerCase('vi').includes(permissionSearch.toLocaleLowerCase('vi'))).map((group) => (
+                <fieldset key={group.title} disabled={!editable || !custom || busy}>
+                  <legend>{group.title} <span>{group.permissions.filter((p) => draft.includes(p)).length}/{group.permissions.length}</span></legend>
+                  {group.permissions.map((p) => (
+                    <label key={p}>
+                      <input type="checkbox" checked={draft.includes(p)} disabled={p === 'view'}
+                        onChange={(e) => setDraft((prev) => e.target.checked ? [...new Set([...prev, p])] : prev.filter((v) => v !== p))} />
+                      <span>{PERMISSION_LABELS[p]}{p === 'view' && <small>Quyền cơ bản; dùng khóa tài khoản để ngừng truy cập.</small>}</span>
+                    </label>
+                  ))}
+                </fieldset>
+              ))}
+            </div>
+            {permissionError && <p role="alert" className="error-box">{permissionError}</p>}
+            <div className="staff-permission-footer">
+              <button type="button" className="secondary" disabled={busy} onClick={() => setEditing(null)}>Đóng</button>
+              {editable && <button type="button" className="primary" disabled={busy} onClick={savePermissions}>{busy ? 'Đang lưu…' : 'Lưu phân quyền'}</button>}
+            </div>
+          </div>
+        </ModalDialog>
+      )}
 
       {/* Modal Dialog Form Tạo Tài Khoản */}
       {showCreateModal && (

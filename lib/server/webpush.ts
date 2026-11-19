@@ -1,5 +1,5 @@
 import { db } from './common';
-import { can, isRole } from '../auth/permissions';
+import { can, isRole, parsePermissions } from '../auth/permissions';
 import { encryptPayload, generateVapid, vapidAuthorization, type PushSub } from '../webpush-crypto';
 
 /** The deployment's VAPID key pair; created the first time it is needed. */
@@ -27,19 +27,20 @@ export async function pushToTenant(
     const subs = (
       await db()
         .prepare(
-          `SELECT DISTINCT p.endpoint, p.p256dh, p.auth, m.role
+          `SELECT DISTINCT p.endpoint, p.p256dh, p.auth, m.role, sp.permissions
            FROM push_subscriptions p
            JOIN users u ON u.id = p.user_id
            JOIN memberships m ON m.user_id = p.user_id AND m.tenant = ?
+           LEFT JOIN staff_permissions sp ON sp.user_id=m.user_id AND sp.tenant=m.tenant
            WHERE u.active = 1
              AND EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = p.user_id AND s.expires > ?)`
         )
         .bind(tenant, Date.now())
-        .all<PushSub & { role: string }>()
+        .all<PushSub & { role: string; permissions: string | null }>()
     ).results;
     const keys = await vapidKeys();
     await Promise.allSettled(
-      subs.filter((s) => isRole(s.role) && can(s.role, 'support.handle')).map(async (s) => {
+      subs.filter((s) => isRole(s.role) && can({ role: s.role, permissions: parsePermissions(s.permissions) }, 'support.handle')).map(async (s) => {
         const res = await fetch(s.endpoint, {
           method: 'POST',
           headers: {

@@ -302,8 +302,23 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     setReconError('');
     try {
       const res = await fetch(`/api/parking?action=reconciliation&tenant=${tenant}&date=${reconDate}`);
-      const data: any = await res.json();
-      if (data.ok && data.report) {
+      if (res.status === 401) {
+        setReconLoadingStatus('error');
+        setReconError('Phiên làm việc đã hết hạn. Vui lòng tải lại hoặc đăng nhập lại.');
+        return;
+      }
+      if (res.status === 403) {
+        setReconLoadingStatus('error');
+        setReconError('Tài khoản không có quyền xem đối soát ca.');
+        return;
+      }
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error('Dữ liệu đối soát trả về không đúng định dạng JSON.');
+      }
+      if (res.ok && data.ok && data.report) {
         setReconData(data.report);
         setCashSubmittedInput(String(data.report.netCollected ?? 0));
         setReconLoadingStatus('loaded');
@@ -2341,54 +2356,37 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   gap: 10,
                 }}
               >
-                <div style={{ display: 'inline-flex', background: '#f1f5f9', padding: 3, borderRadius: 5 }}>
+                <div className="pk-gate-mode-switch">
                   <button
                     type="button"
+                    className="pk-gate-mode-tab"
                     style={{
-                      padding: '8px 20px',
-                      border: 'none',
                       background: gateMode === 'out' ? 'var(--pk-primary)' : 'transparent',
                       color: gateMode === 'out' ? '#ffffff' : '#64748b',
-                      fontWeight: 700,
-                      fontSize: 13.5,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
                     }}
                     onClick={() => setGateMode('out')}
                   >
-                    ↑ Xe ra (Kiểm tra & Mở cổng)
+                    <span>↑ Xe ra (Kiểm tra & Mở cổng)</span>
                   </button>
                   <button
                     type="button"
+                    className="pk-gate-mode-tab"
                     style={{
-                      padding: '8px 20px',
-                      border: 'none',
                       background: gateMode === 'in' ? 'var(--pk-primary)' : 'transparent',
                       color: gateMode === 'in' ? '#ffffff' : '#64748b',
-                      fontWeight: 700,
-                      fontSize: 13.5,
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6,
                     }}
                     onClick={() => setGateMode('in')}
                   >
-                    ↓ Xe vào
+                    <span>↓ Xe vào</span>
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="pk-gate-actions-row">
                   <button
                     type="button"
                     className="pk-btn-primary"
                     style={{
-                      width: 'auto',
-                      padding: '0 14px',
+                      padding: '0 12px',
                       height: 38,
                       background: '#0284c7',
                       borderColor: '#0284c7',
@@ -2398,13 +2396,13 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     title="Mở camera điện thoại chụp ảnh biển số trực tiếp"
                   >
                     <Camera size={16} />
-                    <span>Chụp ảnh biển số</span>
+                    <span>Chụp ảnh biển</span>
                   </button>
 
                   <button
                     type="button"
                     className="pk-btn-primary"
-                    style={{ width: 'auto', padding: '0 14px', height: 38, gap: 6 }}
+                    style={{ padding: '0 12px', height: 38, gap: 6 }}
                     onClick={startLiveCamera}
                     title="Mở khung ngắm quét camera trực tiếp (ANPR)"
                   >
@@ -2415,7 +2413,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   <button
                     type="button"
                     className="pk-btn-secondary"
-                    style={{ width: 'auto', padding: '0 12px', height: 38 }}
+                    style={{ padding: '0 12px', height: 38, gap: 6 }}
                     onClick={() => setShowPaperModal(true)}
                   >
                     <Plus size={15} />
@@ -2426,7 +2424,6 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     type="button"
                     className="pk-btn-secondary"
                     style={{
-                      width: 'auto',
                       padding: '0 12px',
                       height: 38,
                       gap: 6,
@@ -3131,11 +3128,11 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Đối soát cuối ca</h2>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: '1 1 auto', justifyContent: 'flex-end' }}>
                   <input
                     type="date"
                     className="pk-input"
-                    style={{ width: 145 }}
+                    style={{ flex: '1 1 140px', minWidth: 140, maxWidth: 200, height: 38 }}
                     value={reconDate}
                     onChange={(e) => setReconDate(e.target.value)}
                   />

@@ -74,8 +74,8 @@ export async function listLegacyBills(
     bills: rows.slice(0, 100).map((r) => ({ ...r, lines: parseLines(r.lines) })),
     hasMore: rows.length > 100,
     pending,
-    canEnter: can(actor.role, 'legacy.enter'),
-    canApprove: can(actor.role, 'legacy.approve'),
+    canEnter: can(actor, 'legacy.enter'),
+    canApprove: can(actor, 'legacy.approve'),
   });
 }
 
@@ -144,7 +144,7 @@ function clean(input: LegacyInput): { error: string } | Clean {
 
 /** The owner's bills are approved straight away; everybody else's wait for the owner. */
 export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Promise<ServiceResult> {
-  if (!can(actor.role, 'legacy.enter')) return fail('Bạn không có quyền nhập bill cũ', 403);
+  if (!can(actor, 'legacy.enter')) return fail('Bạn không có quyền nhập bill cũ', 403);
   const c = clean(input);
   if ('error' in c) return fail(c.error);
   const { at, customer, phone, lines, code } = c;
@@ -156,7 +156,7 @@ export async function createLegacyBill(actor: AuthUser, input: LegacyInput): Pro
       .first();
     if (dup) return fail('Số bill này đã được nhập trước đó', 409);
   }
-  const owner = can(actor.role, 'legacy.approve');
+  const owner = can(actor, 'legacy.approve');
   const id = crypto.randomUUID();
   const total = linesTotal(lines);
   try {
@@ -206,7 +206,7 @@ export async function reviewLegacyBill(
   actor: AuthUser,
   input: { id: string; decision: 'approve' | 'reject' | 'revoke'; note?: string },
 ): Promise<ServiceResult> {
-  if (!can(actor.role, 'legacy.approve')) return fail('Chỉ chủ cơ sở được duyệt bill cũ', 403);
+  if (!can(actor, 'legacy.approve')) return fail('Chỉ chủ cơ sở được duyệt bill cũ', 403);
   const row = await db()
     .prepare('SELECT status,customer,total FROM legacy_bills WHERE tenant=? AND id=?')
     .bind(actor.tenant, input.id)
@@ -249,7 +249,7 @@ export async function updateLegacyBill(actor: AuthUser, id: string, input: Legac
     .first<{ status: string; created_by: string }>();
   if (!row) return fail('Không tìm thấy bill', 404);
   if (row.status !== 'pending') return fail('Chỉ sửa được bill đang chờ duyệt. Hãy thu hồi bill đã duyệt rồi nhập lại.', 409);
-  if (row.created_by !== actor.userId && !can(actor.role, 'legacy.approve'))
+  if (row.created_by !== actor.userId && !can(actor, 'legacy.approve'))
     return fail('Bạn chỉ sửa được bill do chính mình nhập', 403);
   const c = clean(input);
   if ('error' in c) return fail(c.error);
@@ -282,7 +282,7 @@ export async function withdrawLegacyBill(actor: AuthUser, id: string): Promise<S
     .first<{ status: string; created_by: string; customer: string }>();
   if (!row) return fail('Không tìm thấy bill', 404);
   if (row.status !== 'pending') return fail('Chỉ xóa được bill đang chờ duyệt', 409);
-  if (row.created_by !== actor.userId && !can(actor.role, 'legacy.approve'))
+  if (row.created_by !== actor.userId && !can(actor, 'legacy.approve'))
     return fail('Bạn chỉ xóa được bill do chính mình nhập', 403);
   await db().prepare("DELETE FROM legacy_bills WHERE tenant=? AND id=? AND status='pending'").bind(actor.tenant, id).run();
   await audit(actor.tenant, 'Xóa bill cũ chờ duyệt', row.customer);

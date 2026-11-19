@@ -1,0 +1,12 @@
+.staff-permissions { display: grid; gap: 16px; min-width: 0; }
+.staff-permission-mode, .staff-permission-groups fieldset { margin: 0; padding: 14px; border: 1px solid #dce3e1; border-radius: 10px; min-width: 0; }
+.staff-permission-mode legend, .staff-permission-groups legend { padding: 0 6px; font-weight: 650; }
+.staff-permission-groups legend span { color: #66726b; font-weight: 400; margin-left: 8px; }
+.staff-permission-mode label, .staff-permission-groups label { display: flex; align-items: flex-start; gap: 10px; padding: 9px 0; line-height: 1.5; cursor: pointer; }
+.staff-permissions input[type='checkbox'], .staff-permissions input[type='radio'] { flex: 0 0 auto; width: 18px; height: 18px; margin: 2px 0 0; accent-color: #15613b; }
+.staff-permission-groups small { display: block; color: #66726b; font-size: 12px; }
+.staff-permission-search { display: grid; gap: 6px; }
+.staff-permission-search input { width: 100%; min-width: 0; }
+.staff-permission-groups { display: grid; gap: 16px; }
+.staff-permission-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 12px; border-top: 1px solid #dce3e1; }
+.staff-permissions :is(button, input):focus-visible { outline: 2px solid #15613b; outline-offset: 3px; }

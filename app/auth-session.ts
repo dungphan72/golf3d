@@ -52,7 +52,7 @@ export async function authorize(
   const auth = await getAuth();
   if (!auth) return { response: httpError('Vui lòng đăng nhập', 401) };
   if (auth.mustChange) return { response: httpError('Hãy đổi mật khẩu tạm thời trước', 403) };
-  if (!can(auth.role, permission))
+  if (!can(auth, permission))
     return { response: httpError('Bạn không có quyền thực hiện thao tác này', 403) };
   return { auth };
 }
@@ -63,7 +63,7 @@ export async function authorizeAny(
   const auth = await getAuth();
   if (!auth) return { response: httpError('Vui lòng đăng nhập', 401) };
   if (auth.mustChange) return { response: httpError('Hãy đổi mật khẩu tạm thời trước', 403) };
-  if (!permissions.some((p) => can(auth.role, p)))
+  if (!permissions.some((p) => can(auth, p)))
     return { response: httpError('Bạn không có quyền thực hiện thao tác này', 403) };
   return { auth };
 }

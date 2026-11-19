@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex, primaryKey, foreignKey } from 'drizzle-orm/sqlite-core';
 export const settings = sqliteTable('settings', {
   tenant: text('tenant').primaryKey(),
   value: text('value').notNull(),
@@ -226,6 +226,16 @@ export const memberships = sqliteTable(
     index('membership_tenant').on(t.tenant),
   ],
 );
+export const staffPermissions = sqliteTable('staff_permissions', {
+  tenant: text('tenant').notNull(),
+  userId: text('user_id').notNull(),
+  permissions: text('permissions').notNull(),
+  updatedBy: text('updated_by').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  primaryKey({ columns: [t.tenant, t.userId] }),
+  foreignKey({ columns: [t.userId, t.tenant], foreignColumns: [memberships.userId, memberships.tenant] }).onDelete('cascade'),
+]);
 export const sessions = sqliteTable(
   'sessions',
   {

@@ -1025,7 +1025,7 @@ export default function ParkingCustomerApp({
                     </div>
 
                     {/* Giờ vào & Giờ ra */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                    <div className="pk-time-grid">
                       <div className="pk-input-group">
                         <label className="pk-label">
                           <Clock size={14} color="var(--pk-primary)" />

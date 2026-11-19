@@ -81,7 +81,7 @@ export async function applyCoaching(actor: Actor, input: CoachingInput): Promise
   const tenant = actor.tenant;
   try {
     if (input.action === 'coach-save') {
-      if (!can(actor.role, 'coach.manage')) return error('Bạn không có quyền quản lý HLV', 403);
+      if (!can(actor, 'coach.manage')) return error('Bạn không có quyền quản lý HLV', 403);
       if (input.id) {
         const r = await d
           .prepare(UPDATE_COACH_SQL)
@@ -97,7 +97,7 @@ export async function applyCoaching(actor: Actor, input: CoachingInput): Promise
       return reply({ ok: true, id });
     }
     if (input.action === 'lesson-create') {
-      if (!can(actor.role, 'coach.schedule')) return error('Bạn không có quyền xếp lịch học', 403);
+      if (!can(actor, 'coach.schedule')) return error('Bạn không có quyền xếp lịch học', 403);
       const phone = normalizePhone(input.phone);
       if (!validPhone(phone)) return error('Số điện thoại không hợp lệ');
       if (input.start % 900_000 !== 0) return error('Giờ bắt đầu phải cách nhau 15 phút');
@@ -138,7 +138,7 @@ export async function applyCoaching(actor: Actor, input: CoachingInput): Promise
       return reply({ ok: true, id, customerLinked: !!known });
     }
     if (input.action === 'lesson-reschedule') {
-      if (!can(actor.role, 'coach.schedule')) return error('Bạn không có quyền xếp lịch học', 403);
+      if (!can(actor, 'coach.schedule')) return error('Bạn không có quyền xếp lịch học', 403);
       if (input.start % 900_000 !== 0) return error('Giờ bắt đầu phải cách nhau 15 phút');
       if (input.start < now) return error('Giờ bắt đầu phải ở tương lai');
       const r = await d
@@ -155,9 +155,9 @@ export async function applyCoaching(actor: Actor, input: CoachingInput): Promise
       .bind(tenant, input.id)
       .first<{ id: string; coach_id: string; start: number; status: string }>();
     if (!lesson) return error('Không tìm thấy buổi học', 404);
-    const scheduler = can(actor.role, 'coach.schedule');
+    const scheduler = can(actor, 'coach.schedule');
     if (!scheduler) {
-      if (!can(actor.role, 'coach.own')) return error('Bạn không có quyền thao tác', 403);
+      if (!can(actor, 'coach.own')) return error('Bạn không có quyền thao tác', 403);
       if ((await myCoachId(actor)) !== lesson.coach_id)
         return error('Bạn chỉ thao tác được buổi học của mình', 403);
     }

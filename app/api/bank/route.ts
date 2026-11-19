@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   if (
     input.action !== 'ignore' &&
     input.action !== 'simulate-tx' &&
-    !can(auth.role, 'settings.manage')
+    !can(auth, 'settings.manage')
   )
     return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   return sendResult(await applyBank(auth.tenant, input));

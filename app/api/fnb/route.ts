@@ -28,6 +28,6 @@ export async function POST(req: Request) {
       : input.action === 'transition'
         ? 'fnb.kitchen'
         : 'menu.manage';
-  if (!can(auth.role, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
+  if (!can(auth, needed)) return httpError('Bạn không có quyền thực hiện thao tác này', 403);
   return sendResult(await applyFnb(auth.tenant, auth.userId, input));
 }

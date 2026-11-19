@@ -113,12 +113,34 @@ const GRANTS: Record<Role, readonly Permission[]> = {
 export const isRole = (value: unknown): value is Role =>
   typeof value === 'string' && (ROLES as readonly string[]).includes(value);
 
-export const can = (role: Role, permission: Permission) => GRANTS[role].includes(permission);
-export const permissionsOf = (role: Role): Permission[] => [...GRANTS[role]];
+export type PermissionActor = { role: Role; permissions?: readonly Permission[] };
+
+/** Missing profile inherits the role; an empty profile deliberately grants nothing. */
+export const permissionsOf = (subject: Role | PermissionActor): Permission[] => {
+  const role = typeof subject === 'string' ? subject : subject.role;
+  if (role === 'owner') return [...PERMISSIONS];
+  return [...(typeof subject === 'string' ? GRANTS[role] : subject.permissions ?? GRANTS[role])];
+};
+export const can = (subject: Role | PermissionActor, permission: Permission) =>
+  permissionsOf(subject).includes(permission);
+
+/** Corrupt persisted profiles fail closed rather than silently restoring the role. */
+export function parsePermissions(value: string | null | undefined): Permission[] | undefined {
+  if (value == null) return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return PERMISSIONS.filter((p) => parsed.includes(p));
+  } catch { return []; }
+}
 
 /** Managers may manage staff but never create, change or remove owners. */
-export function canAssignRole(actor: Role, target: Role) {
+export function canAssignRole(actor: Role | PermissionActor, target: Role) {
   if (!can(actor, 'staff.manage')) return false;
   // Only the owner creates, edits or resets managers and other owners; a manager handles the staff below.
-  return actor === 'owner' || (target !== 'owner' && target !== 'manager');
+  const role = typeof actor === 'string' ? actor : actor.role;
+  return role === 'owner' || (
+    target !== 'owner' && target !== 'manager' &&
+    permissionsOf(target).every((p) => can(actor, p))
+  );
 }

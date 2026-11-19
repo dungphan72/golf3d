@@ -212,7 +212,7 @@ export async function POST(req: Request) {
 
   const auth = await getAuth();
   const tenant = body.tenant || auth?.tenant || DEFAULT_PARKING_TENANT;
-  const action = body.action || '';
+  const action = body.action || url.searchParams.get('action') || '';
 
   try {
     if (action === 'check-sepay') {

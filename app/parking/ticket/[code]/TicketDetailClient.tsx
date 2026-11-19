@@ -1,7 +1,7 @@
 'use client';
 /* eslint-disable @next/next/no-img-element */
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Navigation,
   Check,
@@ -12,22 +12,21 @@ import {
   Car,
   Download,
   PlusCircle,
-  AlertTriangle,
   X,
-  CreditCard,
-  QrCode,
-  Share2,
-  CheckCircle2,
 } from 'lucide-react';
 import { money } from '../../../../lib/club';
 import { getQrDataUrl, downloadTicketPassImage } from '../../../../modules/parking/core/ticket-pass';
 
 interface Props {
-  ticket: any;
+  code?: string;
+  initialTicket?: any;
+  token?: string;
 }
 
-export default function TicketDetailClient({ ticket: initialTicket }: Props) {
+export default function TicketDetailClient({ code, initialTicket, token: propToken }: Props) {
   const [ticket, setTicket] = useState<any>(initialTicket);
+  const [loading, setLoading] = useState<boolean>(!initialTicket);
+  const [error, setError] = useState<string>('');
   const [downloading, setDownloading] = useState(false);
   const [showExtendModal, setShowExtendModal] = useState(false);
   const [extendHours, setExtendHours] = useState<number>(1);
@@ -35,30 +34,57 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
   const [extendError, setExtendError] = useState('');
   const [extendSuccess, setExtendSuccess] = useState('');
 
-  const expIn = useMemo(() => new Date(ticket.expected_in || ticket.expectedIn), [ticket]);
-  const expOut = useMemo(() => new Date(ticket.expected_out || ticket.expectedOut), [ticket]);
+  // Fallback client-side fetch if ticket wasn't pre-rendered
+  useEffect(() => {
+    if (!ticket && code) {
+      setLoading(true);
+      fetch(`/api/parking?action=ticket&code=${encodeURIComponent(code)}`)
+        .then((r) => r.json())
+        .then((data: any) => {
+          if (data.ok && data.ticket) {
+            setTicket(data.ticket);
+          } else {
+            setError(data.error || 'Không tìm thấy vé đậu xe');
+          }
+        })
+        .catch(() => setError('Lỗi kết nối khi tải vé'))
+        .finally(() => setLoading(false));
+    }
+  }, [code, ticket]);
+
+  const expIn = useMemo(() => {
+    if (!ticket) return new Date();
+    return new Date(ticket.expected_in || ticket.expectedIn || Date.now());
+  }, [ticket]);
+
+  const expOut = useMemo(() => {
+    if (!ticket) return new Date(Date.now() + 2 * 3600 * 1000);
+    return new Date(ticket.expected_out || ticket.expectedOut || Date.now() + 2 * 3600 * 1000);
+  }, [ticket]);
+
   const dateStr = expIn.toISOString().slice(0, 10);
   const timeInStr = expIn.toTimeString().slice(0, 5);
   const timeOutStr = expOut.toTimeString().slice(0, 5);
 
-  const tCode = ticket.ticket_code || ticket.ticketCode;
-  const token = ticket.access_token || ticket.accessToken;
+  const tCode = ticket?.ticket_code || ticket?.ticketCode || code || 'PK-XXXX';
+  const token = ticket?.access_token || ticket?.accessToken || propToken || '';
   const qrDataUrl = useMemo(
     () => getQrDataUrl(`SIGOLF_PARKING:${tCode}:${token}`, 5, 2),
     [tCode, token],
   );
 
   const isSponsored =
-    ticket.fee_payer === 'gopick_sponsored' ||
-    ticket.feePayer === 'gopick_sponsored' ||
-    (ticket.sponsored_amount || ticket.sponsoredAmount || 0) >=
-      (ticket.total_amount || ticket.totalAmount || 1);
+    ticket?.fee_payer === 'gopick_sponsored' ||
+    ticket?.feePayer === 'gopick_sponsored' ||
+    (ticket?.sponsored_amount || ticket?.sponsoredAmount || 0) >=
+      (ticket?.total_amount || ticket?.totalAmount || 1);
 
   // Time calculations
   const now = Date.now();
   const diffMins = Math.floor((expOut.getTime() - now) / 60000);
 
   const handleDownload = async () => {
+    if (!ticket) return;
     try {
       setDownloading(true);
       await downloadTicketPassImage(ticket);
@@ -68,6 +94,7 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
   };
 
   const handleExtendSubmit = async () => {
+    if (!ticket) return;
     try {
       setExtending(true);
       setExtendError('');
@@ -105,6 +132,36 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
       setExtending(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
+        <div style={{ textAlign: 'center', color: '#64748b', fontSize: 14 }}>Đang tải thẻ vé...</div>
+      </div>
+    );
+  }
+
+  if (!ticket) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', padding: 20 }}>
+        <div style={{ maxWidth: 420, width: '100%', textAlign: 'center', padding: '32px 20px', background: '#ffffff', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
+          <h2 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Không tìm thấy vé đậu xe</h2>
+          <p style={{ fontSize: 13.5, color: '#64748b', marginBottom: 24, lineHeight: 1.5 }}>
+            {error || `Mã vé ${code || ''} không tồn tại trên hệ thống hoặc đường dẫn chưa chính xác.`}
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <a href="/parking" className="pk-btn-primary" style={{ textDecoration: 'none', height: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              Quay lại Đặt chỗ bãi xe
+            </a>
+            <a href="/" className="pk-btn-secondary" style={{ textDecoration: 'none', height: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+              Trang chủ SIGOLF
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#f8fafc' }}>
@@ -212,7 +269,7 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
                 }}
               >
                 <span>
-                  ⏱ Thời gian còn lại: <strong>{Math.floor(diffMins / 60)}h {diffMins % 60}m</strong> (đến {timeOutStr})
+                  ⏱ Còn lại: <strong>{Math.floor(diffMins / 60)}h {diffMins % 60}m</strong> (đến {timeOutStr})
                 </span>
                 <button
                   type="button"
@@ -250,7 +307,7 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
                 }}
               >
                 <span>
-                  ⚠️ <strong>Sắp hết giờ:</strong> Còn {diffMins} phút là đến giờ xe ra ({timeOutStr}).
+                  ⚠️ <strong>Sắp hết giờ:</strong> Còn {diffMins} phút là đến giờ ra ({timeOutStr}).
                 </span>
                 <button
                   type="button"
@@ -285,7 +342,7 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
                 }}
               >
                 <span>
-                  ⚠️ <strong>Đã quá giờ đỗ {Math.abs(diffMins)} phút:</strong> Phụ thu ngoài giờ sẽ tính tại cổng khi xuất bãi.
+                  ⚠️ <strong>Quá giờ {Math.abs(diffMins)} phút:</strong> Phụ thu ngoài giờ tính tại cổng.
                 </span>
                 <button
                   type="button"
@@ -451,7 +508,7 @@ export default function TicketDetailClient({ ticket: initialTicket }: Props) {
             target="_blank"
             rel="noreferrer"
             className="pk-btn-secondary"
-            style={{ textDecoration: 'none', height: 44, fontSize: 14 }}
+            style={{ textDecoration: 'none', height: 44, fontSize: 14, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
           >
             <Navigation size={16} />
             <span>Chỉ đường đến bãi xe (Google Maps)</span>

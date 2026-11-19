@@ -1,5 +1,4 @@
 import { db } from '../../../../lib/server/common';
-import { notFound } from 'next/navigation';
 import TicketDetailClient from './TicketDetailClient';
 
 export const metadata = {
@@ -17,23 +16,22 @@ export default async function TicketPage({
   const { code } = await params;
   const { token } = await searchParams;
 
-  const row = await db()
-    .prepare('SELECT * FROM parking_tickets WHERE ticket_code=?')
-    .bind(code)
-    .first<any>();
-
-  if (!row) {
-    notFound();
+  let row: any = null;
+  try {
+    row = await db()
+      .prepare('SELECT * FROM parking_tickets WHERE ticket_code=?')
+      .bind(code)
+      .first<any>();
+  } catch (err) {
+    console.error('TicketPage DB query error:', err);
   }
 
-  // Security check: if ticket requires token for walk-in access
-  if (token && row.access_token !== token) {
-    notFound();
-  }
+  // Sanitize to plain JSON object for safe RSC serialization
+  const plainTicket = row ? JSON.parse(JSON.stringify(row)) : null;
 
   return (
     <div className="pk-container" style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <TicketDetailClient ticket={row} />
+      <TicketDetailClient code={code} initialTicket={plainTicket} token={token} />
     </div>
   );
 }

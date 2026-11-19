@@ -35,12 +35,14 @@ import {
   Download,
   MessageCircle,
   PlusCircle,
+  Sparkles,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings } from '../core/types';
 import { getQrDataUrl, downloadTicketPassImage } from '../core/ticket-pass';
 import { PwaInstallProvider } from '../../../app/ui/PwaInstallPrompt';
+import { formatDisplayDate, addHoursToTime, ParkingMapLegend } from './ParkingSharedUI';
 import '../../../app/parking.css';
 
 interface Props {
@@ -386,10 +388,30 @@ export default function ParkingCustomerApp({
       setDownloadingTicket(true);
       await downloadTicketPassImage(tItem);
     } catch (e: any) {
-      alert('Không thể tạo file ảnh vé: ' + (e?.message || ''));
+      setErrorMessage('Không thể tạo file ảnh vé: ' + (e?.message || ''));
     } finally {
       setDownloadingTicket(false);
     }
+  }
+
+  function handleAutoPickSpot() {
+    const candidate = spots.find(
+      (s) =>
+        s.stateForWindow === 'available' &&
+        (selectedSection === 'all' || s.section === selectedSection)
+    );
+    if (!candidate) {
+      setErrorMessage('Hiện không còn ô trống trong khu vực này.');
+      return;
+    }
+    setErrorMessage('');
+    setSelectedSpot(candidate);
+    setTimeout(() => {
+      const el = document.getElementById(
+        viewMode === 'map' ? `spot-map-${candidate.code}` : `spot-list-${candidate.code}`
+      );
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 60);
   }
 
   async function handleExtendStaySubmit() {
@@ -526,7 +548,7 @@ export default function ParkingCustomerApp({
     };
   }, [step, ticket, tenant]);
 
-  // Load saved tickets from localStorage
+  // Load saved tickets & booking draft from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('sigolf_parking_tickets');
@@ -536,8 +558,26 @@ export default function ParkingCustomerApp({
           setMyTickets(parsed);
         }
       }
+      const draftStr = localStorage.getItem('sigolf_parking_draft_v1');
+      if (draftStr) {
+        const draft = JSON.parse(draftStr);
+        if (draft.licensePlate && !licensePlate) setLicensePlate(draft.licensePlate);
+      }
     } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist license plate draft in localStorage
+  useEffect(() => {
+    try {
+      if (licensePlate.trim()) {
+        localStorage.setItem(
+          'sigolf_parking_draft_v1',
+          JSON.stringify({ licensePlate: licensePlate.trim().toUpperCase() })
+        );
+      }
+    } catch {}
+  }, [licensePlate]);
 
   // Save new ticket to localStorage whenever step 4 is reached
   useEffect(() => {
@@ -1052,6 +1092,30 @@ export default function ParkingCustomerApp({
                       </div>
                     </div>
 
+                    {/* Chip chọn nhanh thời lượng đỗ (GĐ1) */}
+                    <div className="pk-duration-chips" role="group" aria-label="Chọn nhanh thời lượng đỗ xe">
+                      {[
+                        { label: '1 giờ', hours: 1 },
+                        { label: '2 giờ', hours: 2 },
+                        { label: '3 giờ (Golf)', hours: 3 },
+                        { label: '4 giờ', hours: 4 },
+                        { label: '6 giờ', hours: 6 },
+                      ].map((preset) => {
+                        const targetTime = addHoursToTime(timeIn, preset.hours);
+                        const isActive = timeOut === targetTime;
+                        return (
+                          <button
+                            key={preset.hours}
+                            type="button"
+                            className={`pk-duration-chip ${isActive ? 'active' : ''}`}
+                            onClick={() => setTimeOut(targetTime)}
+                          >
+                            {preset.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     {/* Biển số xe */}
                     <div className="pk-input-group" style={{ marginTop: 10, marginBottom: 0 }}>
                       <label className="pk-label">
@@ -1194,7 +1258,7 @@ export default function ParkingCustomerApp({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: 'var(--pk-text-muted)' }}>Ngày đậu:</span>
-                        <strong>{dateStr}</strong>
+                        <strong>{formatDisplayDate(dateStr, lang)}</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ color: 'var(--pk-text-muted)' }}>Khung giờ:</span>
@@ -1271,28 +1335,40 @@ export default function ParkingCustomerApp({
 
                 {/* Cột chính (Sơ đồ / Danh sách ô đỗ) */}
                 <div className="pk-step2-map-col">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
                   <h2 className="pk-page-title" style={{ margin: 0 }}>{t.chooseSpotTitle}</h2>
-                  <button
-                    type="button"
-                    style={{
-                      background: '#f1f5f9',
-                      border: '1px solid #cbd5e1',
-                      borderRadius: 5,
-                      padding: '5px 10px',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      color: 'var(--pk-primary)',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                    }}
-                    onClick={() => switchViewMode(viewMode === 'map' ? 'list' : 'map')}
-                  >
-                    {viewMode === 'map' ? <List size={14} /> : <Layers size={14} />}
-                    {viewMode === 'map' ? t.viewList : t.viewMap}
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="pk-autopick-btn"
+                      onClick={handleAutoPickSpot}
+                      title="Tự động gợi ý ô trống gần cổng vào nhất"
+                    >
+                      <Sparkles size={13} />
+                      <span>{lang === 'en' ? 'Auto-pick' : lang === 'ko' ? '자동 선택' : 'Chọn giúp tôi'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      style={{
+                        background: '#f1f5f9',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: 6,
+                        padding: '5px 10px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: 'var(--pk-primary)',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        whiteSpace: 'nowrap',
+                      }}
+                      onClick={() => switchViewMode(viewMode === 'map' ? 'list' : 'map')}
+                    >
+                      {viewMode === 'map' ? <List size={14} /> : <Layers size={14} />}
+                      {viewMode === 'map' ? t.viewList : t.viewMap}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Quick time bar */}
@@ -1300,6 +1376,7 @@ export default function ParkingCustomerApp({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
+                    flexWrap: 'wrap',
                     gap: 8,
                     fontSize: 12,
                     color: 'var(--pk-text-muted)',
@@ -1311,7 +1388,7 @@ export default function ParkingCustomerApp({
                   }}
                 >
                   <Calendar size={13} color="var(--pk-primary)" />
-                  <span>{dateStr}</span>
+                  <span>{formatDisplayDate(dateStr, lang)}</span>
                   <span>·</span>
                   <Clock size={13} color="var(--pk-primary)" />
                   <span>{timeIn} – {timeOut} ({durationText})</span>
@@ -1334,7 +1411,7 @@ export default function ParkingCustomerApp({
                 </div>
 
                 {/* Filter chips theo dãy */}
-                <div className="pk-filter-chips">
+                <div className="pk-filter-chips pk-filter-chips-sticky">
                   <button
                     type="button"
                     className={`pk-filter-chip ${selectedSection === 'all' ? 'active' : ''}`}
@@ -1368,6 +1445,8 @@ export default function ParkingCustomerApp({
                       </div>
                     </div>
 
+                    <ParkingMapLegend lang={lang} />
+
                     {Object.entries(groupedSections)
                       .filter(([secName]) => selectedSection === 'all' || selectedSection === secName)
                       .map(([secName, secSpots], idx) => {
@@ -1393,12 +1472,29 @@ export default function ParkingCustomerApp({
                                   <div
                                     key={spot.id}
                                     id={`spot-map-${spot.code}`}
+                                    role="button"
+                                    tabIndex={isAvailable ? 0 : -1}
+                                    aria-label={`Ô ${spot.code}, ${spot.section}, ${
+                                      isSelected
+                                        ? 'đang chọn'
+                                        : isAvailable
+                                        ? 'còn trống'
+                                        : 'đã có xe hoặc đã đặt'
+                                    }`}
+                                    aria-pressed={isSelected}
+                                    aria-disabled={!isAvailable}
                                     className={`pk-spot-cell ${isSelected ? 'selected highlighted' : ''} ${
                                       isOccupied ? 'occupied' : ''
                                     } ${isBooked ? 'booked' : ''} ${isHeld ? 'held' : ''} ${
                                       isDiagonal ? 'diagonal' : ''
                                     }`}
                                     onClick={() => handleSpotSelect(spot)}
+                                    onKeyDown={(e) => {
+                                      if (isAvailable && (e.key === 'Enter' || e.key === ' ')) {
+                                        e.preventDefault();
+                                        handleSpotSelect(spot);
+                                      }
+                                    }}
                                     title={`${spot.code} (${spot.section}) - ${spot.stateForWindow}`}
                                   >
                                     <span className="pk-spot-code">{spot.code}</span>
@@ -1517,7 +1613,7 @@ export default function ParkingCustomerApp({
                           Ô {selectedSpot.code} · {selectedSpot.section}
                         </strong>
                         <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
-                          {dateStr} ({timeIn} – {timeOut})
+                          {formatDisplayDate(dateStr, lang)} ({timeIn} – {timeOut})
                         </div>
                       </div>
 
@@ -1845,7 +1941,7 @@ export default function ParkingCustomerApp({
                     </div>
                     <div className="pk-ticket-row">
                       <span>📅 {t.parkingDate}</span>
-                      <span>{new Date(ticket.expectedIn).toISOString().slice(0, 10)}</span>
+                      <span>{formatDisplayDate(new Date(ticket.expectedIn).toISOString().slice(0, 10), lang)}</span>
                     </div>
                     <div className="pk-ticket-row">
                       <span>⏱ {t.duration}</span>

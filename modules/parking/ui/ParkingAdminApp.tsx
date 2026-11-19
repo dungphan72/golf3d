@@ -53,6 +53,11 @@ import { sepayQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
 import { extractVietnamesePlate, formatVietnamesePlate } from '../core/plate-recognition';
 import { getQrDataUrl, downloadTicketPassImage } from '../core/ticket-pass';
+import {
+  ParkingMapLegend,
+  ParkingConfirmModal,
+  type ConfirmDialogState,
+} from './ParkingSharedUI';
 import '../../../app/parking.css';
 
 interface Props {
@@ -815,62 +820,112 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   }
 
   // Action: Cancel Ticket
-  async function handleCancelTicket() {
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
+
+  function handleExportReconCsv() {
+    const txs = reconData?.transactions || [];
+    const header = ['Mã giao dịch', 'Mã vé', 'Hình thức', 'Số tiền (VND)', 'Thời gian', 'Ghi chú'];
+    const rows = txs.map((tx: any) => [
+      tx.id || '',
+      tx.ticketId || '',
+      tx.method || '',
+      String(tx.amount || 0),
+      tx.createdAt ? new Date(tx.createdAt).toLocaleString('vi-VN') : '',
+      `"${String(tx.note || '').replace(/"/g, '""')}"`,
+    ]);
+    const csvContent =
+      '\uFEFF' +
+      [
+        `BÁO CÁO ĐỐI SOÁT BÃI XE GOPICK - NGÀY ${reconDate}`,
+        `Thu online (SePay),${reconData?.onlineAmount ?? 0}`,
+        `Thu tại cổng,${reconData?.gateAmount ?? 0}`,
+        `Hoàn tiền,${reconData?.refundAmount ?? 0}`,
+        `Thực thu bàn giao,${reconData?.netCollected ?? 0}`,
+        '',
+        header.join(','),
+        ...rows.map((r: string[]) => r.join(',')),
+      ].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `doi-soat-gopick-${reconDate}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    notify(`✓ Đã xuất file CSV đối soát ngày ${reconDate}`);
+  }
+
+  function handleCancelTicket() {
     if (!selectedTicket) return;
-    if (!confirm(`Bạn có chắc muốn hủy vé ${selectedTicket.ticketCode} của xe ${selectedTicket.licensePlate}?`)) return;
-    try {
-      const res = await fetch('/api/parking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'cancel-ticket',
-          tenant,
-          ticketCode: selectedTicket.ticketCode,
-          reason: 'Quản lý hủy tại bãi',
-        }),
-      });
-      const data: any = await res.json();
-      if (data.ok) {
-        notify('Đã hủy vé thành công');
-        void loadTicketsList();
-        void loadConfigAndSpots();
-      } else {
-        notify(data.error || 'Hủy vé thất bại');
-      }
-    } catch {
-      notify('Lỗi hủy vé');
-    }
+    const targetTicket = selectedTicket;
+    setConfirmDialog({
+      title: 'Xác nhận hủy vé',
+      message: `Bạn có chắc muốn hủy vé ${targetTicket.ticketCode} của xe ${targetTicket.licensePlate}?`,
+      confirmLabel: 'Hủy vé này',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/api/parking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'cancel-ticket',
+              tenant,
+              ticketCode: targetTicket.ticketCode,
+              reason: 'Quản lý hủy tại bãi',
+            }),
+          });
+          const data: any = await res.json();
+          if (data.ok) {
+            notify('Đã hủy vé thành công');
+            void loadTicketsList();
+            void loadConfigAndSpots();
+          } else {
+            notify(data.error || 'Hủy vé thất bại');
+          }
+        } catch {
+          notify('Lỗi hủy vé');
+        }
+      },
+    });
   }
 
   // Action: Close Shift
-  async function handleCloseShift() {
+  function handleCloseShift() {
     if (isClosingShift) return;
     const cash = Number(cashSubmittedInput) || 0;
-    if (!confirm(`Xác nhận chốt ca với số tiền mặt nộp: ${money(cash)}?`)) return;
-    setIsClosingShift(true);
-    try {
-      const res = await fetch('/api/parking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'close-shift',
-          tenant,
-          cashSubmitted: cash,
-          staffName: 'Quản lý ca trực',
-        }),
-      });
-      const data: any = await res.json();
-      if (data.ok) {
-        notify('✓ Đã chốt ca thành công và lưu sổ giao dịch!');
-        void loadReconciliation();
-      } else {
-        notify(data.error || 'Chốt ca thất bại');
-      }
-    } catch {
-      notify('Lỗi chốt ca');
-    } finally {
-      setIsClosingShift(false);
-    }
+    setConfirmDialog({
+      title: 'Xác nhận chốt ca trực',
+      message: `Xác nhận chốt ca với số tiền mặt nộp bàn giao: ${money(cash)}?`,
+      confirmLabel: 'Chốt ca ngay',
+      tone: 'primary',
+      onConfirm: async () => {
+        setIsClosingShift(true);
+        try {
+          const res = await fetch('/api/parking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'close-shift',
+              tenant,
+              cashSubmitted: cash,
+              staffName: 'Quản lý ca trực',
+            }),
+          });
+          const data: any = await res.json();
+          if (data.ok) {
+            notify('✓ Đã chốt ca thành công và lưu sổ giao dịch!');
+            void loadReconciliation();
+          } else {
+            notify(data.error || 'Chốt ca thất bại');
+          }
+        } catch {
+          notify('Lỗi chốt ca');
+        } finally {
+          setIsClosingShift(false);
+        }
+      },
+    });
   }
 
   // Action: Save Parking Facility Settings
@@ -934,28 +989,35 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   }
 
   // Action: Delete/Deactivate Spot
-  async function handleDeleteSpot(code: string) {
-    if (!confirm(`Xác nhận ngừng sử dụng ô đỗ ${code}?`)) return;
-    try {
-      const res = await fetch('/api/parking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'delete-spot',
-          tenant,
-          code,
-        }),
-      });
-      const data: any = await res.json();
-      if (data.ok) {
-        notify(`✓ Đã ngừng hoạt động ô ${code}`);
-        void loadConfigAndSpots();
-      } else {
-        notify(data.error || 'Không thể xóa ô đỗ');
-      }
-    } catch {
-      notify('Lỗi xóa ô đỗ');
-    }
+  function handleDeleteSpot(code: string) {
+    setConfirmDialog({
+      title: 'Ngừng sử dụng ô đỗ',
+      message: `Xác nhận chuyển ô đỗ ${code} sang trạng thái ngừng sử dụng?`,
+      confirmLabel: 'Ngừng sử dụng',
+      tone: 'danger',
+      onConfirm: async () => {
+        try {
+          const res = await fetch('/api/parking', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'delete-spot',
+              tenant,
+              code,
+            }),
+          });
+          const data: any = await res.json();
+          if (data.ok) {
+            notify(`✓ Đã ngừng hoạt động ô ${code}`);
+            void loadConfigAndSpots();
+          } else {
+            notify(data.error || 'Không thể xóa ô đỗ');
+          }
+        } catch {
+          notify('Lỗi xóa ô đỗ');
+        }
+      },
+    });
   }
 
   function openCreateSpotModal() {
@@ -1247,96 +1309,121 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
             </div>
           )}
 
-          {/* 3. Hero Welcome Banner (Clean, compact on mobile) */}
-          <section className="pk-saas-hero-banner">
-            <div className="pk-saas-hero-header">
-              <div>
-                <h2 className="pk-saas-hero-title">Chào buổi sáng 👋</h2>
-                <p className="pk-saas-hero-sub">GoPick 250 Lương Định Của · 65 ô P01–P65</p>
+          {/* 3. Hero Welcome Banner on Map tab; Compact 1-line KPI Strip on Operational sub-tabs (GĐ2) */}
+          {activeTab === 'map' ? (
+            <section className="pk-saas-hero-banner">
+              <div className="pk-saas-hero-header">
+                <div>
+                  <h2 className="pk-saas-hero-title">Chào buổi sáng 👋</h2>
+                  <p className="pk-saas-hero-sub">GoPick 250 Lương Định Của · 65 ô P01–P65</p>
+                </div>
+                <button
+                  type="button"
+                  className="pk-saas-action-cta-btn"
+                  onClick={() => setShowPaperModal(true)}
+                >
+                  <Plus size={14} strokeWidth={2.2} />
+                  <span>Đặt chỗ</span>
+                </button>
+              </div>
+
+              {/* Quick Action Shortcuts */}
+              <div className="pk-saas-shortcuts-row">
+                <button
+                  type="button"
+                  className={`pk-saas-shortcut-pill ${activeTab === 'map' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('map')}
+                >
+                  <div className="pk-saas-shortcut-icon pk-icon-blue">
+                    <Grid size={15} strokeWidth={2} />
+                  </div>
+                  <div className="pk-saas-shortcut-text">
+                    <strong>Sơ đồ</strong>
+                    <span>65 ô P01–P65</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`pk-saas-shortcut-pill ${(activeTab as string) === 'schedule' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('schedule')}
+                >
+                  <div className="pk-saas-shortcut-icon pk-icon-green">
+                    <Calendar size={15} strokeWidth={2} />
+                  </div>
+                  <div className="pk-saas-shortcut-text">
+                    <strong>Đặt chỗ</strong>
+                    <span>Giữ & khóa ô</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`pk-saas-shortcut-pill ${(activeTab as string) === 'gate' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('gate')}
+                >
+                  <div className="pk-saas-shortcut-icon pk-icon-orange">
+                    <Camera size={15} strokeWidth={2} />
+                  </div>
+                  <div className="pk-saas-shortcut-text">
+                    <strong>Vào / Ra</strong>
+                    <span>Quét ANPR</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`pk-saas-shortcut-pill ${(activeTab as string) === 'reconciliation' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('reconciliation')}
+                >
+                  <div className="pk-saas-shortcut-icon pk-icon-purple">
+                    <TrendingUp size={15} strokeWidth={2} />
+                  </div>
+                  <div className="pk-saas-shortcut-text">
+                    <strong>Đối soát</strong>
+                    <span>Báo cáo ca</span>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  className={`pk-saas-shortcut-pill ${(activeTab as string) === 'settings' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('settings')}
+                >
+                  <div className="pk-saas-shortcut-icon pk-icon-sky">
+                    <DollarSign size={15} strokeWidth={2} />
+                  </div>
+                  <div className="pk-saas-shortcut-text">
+                    <strong>Cài đặt</strong>
+                    <span>Biểu phí & SePay</span>
+                  </div>
+                </button>
+              </div>
+            </section>
+          ) : (
+            <section className="pk-admin-kpi-strip" aria-label="Tóm tắt trạng thái bãi xe">
+              <div className="pk-admin-kpi-items">
+                <span className="pk-admin-kpi-item">
+                  <strong style={{ color: '#059669' }}>{Math.max(0, 65 - activeLotTickets.length)}/65</strong>
+                  <span>ô trống</span>
+                </span>
+                <span style={{ color: '#cbd5e1' }}>·</span>
+                <span className="pk-admin-kpi-item">
+                  <strong style={{ color: '#4f46e5' }}>{activeLotTickets.length}</strong>
+                  <span>xe đang đỗ</span>
+                </span>
               </div>
               <button
                 type="button"
                 className="pk-saas-action-cta-btn"
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 9999 }}
                 onClick={() => setShowPaperModal(true)}
               >
-                <Plus size={14} strokeWidth={2.2} />
+                <Plus size={13} strokeWidth={2.2} />
                 <span>Đặt chỗ</span>
               </button>
-            </div>
-
-            {/* Quick Action Shortcuts */}
-            <div className="pk-saas-shortcuts-row">
-              <button
-                type="button"
-                className={`pk-saas-shortcut-pill ${activeTab === 'map' ? 'active' : ''}`}
-                onClick={() => setActiveTab('map')}
-              >
-                <div className="pk-saas-shortcut-icon pk-icon-blue">
-                  <Grid size={15} strokeWidth={2} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Sơ đồ</strong>
-                  <span>65 ô P01–P65</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`pk-saas-shortcut-pill ${activeTab === 'schedule' ? 'active' : ''}`}
-                onClick={() => setActiveTab('schedule')}
-              >
-                <div className="pk-saas-shortcut-icon pk-icon-green">
-                  <Calendar size={15} strokeWidth={2} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Đặt chỗ</strong>
-                  <span>Giữ & khóa ô</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`pk-saas-shortcut-pill ${activeTab === 'gate' ? 'active' : ''}`}
-                onClick={() => setActiveTab('gate')}
-              >
-                <div className="pk-saas-shortcut-icon pk-icon-orange">
-                  <Camera size={15} strokeWidth={2} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Vào / Ra</strong>
-                  <span>Quét ANPR</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`pk-saas-shortcut-pill ${activeTab === 'reconciliation' ? 'active' : ''}`}
-                onClick={() => setActiveTab('reconciliation')}
-              >
-                <div className="pk-saas-shortcut-icon pk-icon-purple">
-                  <TrendingUp size={15} strokeWidth={2} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Đối soát</strong>
-                  <span>Báo cáo ca</span>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                className={`pk-saas-shortcut-pill ${activeTab === 'settings' ? 'active' : ''}`}
-                onClick={() => setActiveTab('settings')}
-              >
-                <div className="pk-saas-shortcut-icon pk-icon-sky">
-                  <DollarSign size={15} strokeWidth={2} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Cài đặt</strong>
-                  <span>Biểu phí & SePay</span>
-                </div>
-              </button>
-            </div>
-          </section>
+            </section>
+          )}
 
           {/* 4. 3-Column Dashboard Row */}
           {activeTab === 'map' && (
@@ -1863,6 +1950,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     </div>
                   </div>
 
+                  <ParkingMapLegend lang="vi" />
+
                   {/* Render các dãy GoPick P1 - P6 */}
                   {Object.entries(groupedSections)
                     .filter(([secName]) => adminSectionFilter === 'all' || adminSectionFilter === secName)
@@ -1890,12 +1979,22 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                                 <div
                                   key={spot.id}
                                   id={`admin-spot-${spot.code}`}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-label={`Ô ${spot.code}, ${spot.section}, trạng thái ${spot.stateForWindow}`}
+                                  aria-pressed={isSelected}
                                   className={`pk-spot-cell ${isSelected ? 'selected highlighted' : ''} ${
                                     isOccupied ? 'occupied' : ''
                                   } ${isBooked ? 'booked' : ''} ${isHeld ? 'held' : ''} ${
                                     isMaint ? 'maintenance' : ''
                                   } ${isDiagonal ? 'diagonal' : ''}`}
                                   onClick={() => handleSelectSpot(spot)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.preventDefault();
+                                      handleSelectSpot(spot);
+                                    }
+                                  }}
                                   title={`${spot.code} (${spot.section}) - ${spot.stateForWindow}${
                                     !spot.hasCoordinates ? ' [Chưa cấu hình tọa độ]' : ''
                                   }`}
@@ -2457,6 +2556,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '4px 12px',
                       marginBottom: 8,
                     }}
                   >
@@ -2478,7 +2579,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     </span>
                   </div>
 
-                  <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                  <div className="pk-vehicle-pills-wrap">
                     {activeLotTickets.map((t) => {
                       const isSelected = gateFoundTicket?.id === t.id;
                       const otMins = getOvertimeMinutes(t);
@@ -3139,7 +3240,27 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   <button
                     type="button"
                     className="pk-btn-secondary"
-                    style={{ width: 'auto', padding: '0 12px' }}
+                    style={{ width: 'auto', padding: '0 10px', height: 38, gap: 5 }}
+                    onClick={handleExportReconCsv}
+                    title="Xuất báo cáo đối soát ca ra file CSV"
+                  >
+                    <Download size={14} />
+                    <span>Xuất CSV</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
+                    style={{ width: 'auto', padding: '0 10px', height: 38, gap: 5 }}
+                    onClick={() => window.print()}
+                    title="In phiếu đối soát bàn giao ca"
+                  >
+                    <Printer size={14} />
+                    <span>In</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
+                    style={{ width: 'auto', padding: '0 12px', height: 38 }}
                     onClick={loadReconciliation}
                   >
                     <RefreshCw size={14} />
@@ -4385,6 +4506,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           <span>Cài đặt</span>
         </button>
       </nav>
+
+      <ParkingConfirmModal dialog={confirmDialog} onClose={() => setConfirmDialog(null)} />
     </div>
   );
 }

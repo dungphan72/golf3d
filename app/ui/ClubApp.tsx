@@ -27,6 +27,8 @@ import { WalkInDialog } from './WalkInDialog';
 import { ContentPanel } from './ContentPanel';
 import { CoachingPanel } from './CoachingPanel';
 import { useBellSound } from './BellAlerts';
+import { useServiceCalls } from './useServiceCalls';
+import { ServiceCallBanner } from './ServiceCallBanner';
 import { FinanceDialog } from './finance/FinanceDialog';
 export default function ClubApp() {
   const [openingShift, setOpeningShift] = useState(false);
@@ -66,6 +68,7 @@ export default function ClubApp() {
     [crmSub, setCrmSub] = useState<string>('customers');
   const [authState, setAuthState] = useState<'ok' | 'login' | 'change'>('ok');
   const [checkingSession, setCheckingSession] = useState(true);
+  const serviceCallState = useServiceCalls();
   async function load() {
     try {
       const r = await fetch('/api/club', { cache: 'no-store' });
@@ -182,6 +185,15 @@ export default function ClubApp() {
   const allowed = (key: string) =>
     !needs[key] || !data?.permissions || data.permissions.includes(needs[key]);
   async function signOut() {
+    try {
+      const reg = await navigator.serviceWorker?.getRegistration('/sw.js');
+      const sub = await reg?.pushManager.getSubscription();
+      if (sub) {
+        const res = await fetch('/api/push', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'unsubscribe', endpoint: sub.endpoint }) });
+        if (res.ok) await sub.unsubscribe();
+      }
+    } catch { /* The server checks active sessions before sending. */ }
     await fetch('/api/auth/logout', { method: 'POST' });
     setData(null);
     setAuthState('login');
@@ -277,6 +289,16 @@ export default function ClubApp() {
             <div className="loading">Đang tải dữ liệu…</div>
           ) : (
             <>
+              {/* Realtime Service Call Banner when viewing any tab outside POS */}
+              {view !== 'rooms' && (
+                <ServiceCallBanner
+                  call={serviceCallState.bannerCall}
+                  onAcknowledge={serviceCallState.acknowledgeCall}
+                  onOpenDetails={() => go('rooms')}
+                  onDismiss={serviceCallState.dismissBanner}
+                />
+              )}
+
               {view === 'dashboard' && data && (
                 <AdminOverview
                   data={data}

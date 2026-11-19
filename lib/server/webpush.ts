@@ -1,4 +1,5 @@
 import { db } from './common';
+import { can, isRole } from '../auth/permissions';
 import { encryptPayload, generateVapid, vapidAuthorization, type PushSub } from '../webpush-crypto';
 
 /** The deployment's VAPID key pair; created the first time it is needed. */
@@ -20,18 +21,25 @@ export async function vapidKeys(): Promise<{ publicKey: string; privateJwk: Json
 /** Pushes to every subscription of the tenant; dead endpoints (404/410) are dropped. Never throws. */
 export async function pushToTenant(
   tenant: string,
-  message: { title: string; body: string; url: string },
+  message: { title: string; body: string; url: string; tag?: string },
 ) {
   try {
     const subs = (
       await db()
-        .prepare('SELECT endpoint,p256dh,auth FROM push_subscriptions WHERE tenant=? LIMIT 50')
-        .bind(tenant)
-        .all<PushSub>()
+        .prepare(
+          `SELECT DISTINCT p.endpoint, p.p256dh, p.auth, m.role
+           FROM push_subscriptions p
+           JOIN users u ON u.id = p.user_id
+           JOIN memberships m ON m.user_id = p.user_id AND m.tenant = ?
+           WHERE u.active = 1
+             AND EXISTS (SELECT 1 FROM sessions s WHERE s.user_id = p.user_id AND s.expires > ?)`
+        )
+        .bind(tenant, Date.now())
+        .all<PushSub & { role: string }>()
     ).results;
     const keys = await vapidKeys();
     await Promise.allSettled(
-      subs.map(async (s) => {
+      subs.filter((s) => isRole(s.role) && can(s.role, 'support.handle')).map(async (s) => {
         const res = await fetch(s.endpoint, {
           method: 'POST',
           headers: {

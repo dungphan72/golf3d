@@ -6,6 +6,7 @@ import {
   ArrowRight,
   Banknote,
   Bell,
+  BellRing,
   Building2,
   CalendarDays,
   Check,
@@ -89,6 +90,7 @@ import {
 import { useServiceCalls } from './useServiceCalls';
 import { ServiceCallBanner } from './ServiceCallBanner';
 import { ServiceCallDrawer } from './ServiceCallDrawer';
+import { BellSettings } from './BellAlerts';
 import '../pos-flow.css';
 
 export type MobileScreenId =
@@ -2786,6 +2788,50 @@ export function ModernPosFlow({
         }}
       />
 
+      {/* Push Notification & Ring Activation Banner on Mobile */}
+      {serviceCallState.pushPermission === 'default' && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
+            color: '#ffffff',
+            padding: '10px 14px',
+            borderRadius: 10,
+            margin: '0 12px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 10,
+            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)',
+            fontSize: 12.5,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <BellRing size={18} style={{ flexShrink: 0, color: '#93c5fd' }} />
+            <span>
+              <strong>Bật chuông gọi phục vụ:</strong> Đổ chuông ngay khi khóa màn hình hoặc mở tab khác.
+            </span>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: '#ffffff',
+              color: '#1d4ed8',
+              border: 'none',
+              borderRadius: 20,
+              padding: '6px 12px',
+              fontWeight: 700,
+              fontSize: 12,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+            onClick={() => serviceCallState.enablePushAlerts()}
+          >
+            Bật ngay
+          </button>
+        </div>
+      )}
+
         {/* Feedback Banners */}
         {notice && (
           <div className="pos-m3-toast success" role="status">
@@ -4207,6 +4253,11 @@ export function ModernPosFlow({
                     <X size={15} />
                   </button>
                 </div>
+                <div style={{ padding: '12px', borderBottom: '1px solid #e2e8f0' }}>
+                  <strong>Th?ng b?o g?i ph?c v? tr?n thi?t b? n?y</strong>
+                  <p style={{ margin: '4px 0 8px', fontSize: 12 }}>B?t th?ng b?o ?? nh?n cu?c g?i khi chuy?n tab ho?c kh?a m?n h?nh. Tr?n iPhone, m? ?ng d?ng t? m?n h?nh ch?nh.</p>
+                  <BellSettings showSound={false} />
+                </div>
                 {newSupportRequests.length === 0 && !data.onlinePending && serviceCallState.pendingCount === 0 ? (
                   <p className="pos-m3-empty-note">Không có yêu cầu hỗ trợ hay đặt sân mới.</p>
                 ) : (
@@ -4275,6 +4326,50 @@ export function ModernPosFlow({
           setDesktopMode('payment');
         }}
       />
+
+      {/* Push Notification & Ring Activation Banner on Desktop */}
+      {serviceCallState.pushPermission === 'default' && (
+        <div
+          style={{
+            background: 'linear-gradient(135deg, #1e3a8a, #2563eb)',
+            color: '#ffffff',
+            padding: '10px 18px',
+            borderRadius: 10,
+            marginBottom: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            boxShadow: '0 4px 14px rgba(37, 99, 235, 0.22)',
+            fontSize: 13.5,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <BellRing size={20} style={{ flexShrink: 0, color: '#93c5fd' }} />
+            <span>
+              <strong>Bật chuông gọi phục vụ POS:</strong> Để thiết bị tự động đổ chuông và nhận cuộc gọi ngay cả khi khóa màn hình hoặc đang ở tab khác.
+            </span>
+          </div>
+          <button
+            type="button"
+            style={{
+              background: '#ffffff',
+              color: '#1d4ed8',
+              border: 'none',
+              borderRadius: 20,
+              padding: '7px 18px',
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
+            }}
+            onClick={() => serviceCallState.enablePushAlerts()}
+          >
+            Bật chuông ngay
+          </button>
+        </div>
+      )}
 
       {/* Toast Feedback */}
       {(notice || errorMsg) && (

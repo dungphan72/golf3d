@@ -15,6 +15,12 @@ async function main() {
 
   const p65 = gopickSpots.find(s => s.code === 'P65');
   console.log('P65 in GoPick:', p65);
+
+  const pushSubs = await env.DB.prepare('SELECT * FROM push_subscriptions').all();
+  console.log('Push subscriptions count:', pushSubs.results.length, pushSubs.results);
+
+  const pushKeys = await env.DB.prepare('SELECT id, public_key, created FROM push_keys').all();
+  console.log('Push keys:', pushKeys.results);
 }
 
 main().catch(console.error);

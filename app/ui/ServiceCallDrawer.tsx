@@ -24,6 +24,7 @@ import {
   formatCallTimer,
 } from '../../lib/service-call';
 import { rooms } from '../../lib/club';
+import { BellSettings } from './BellAlerts';
 
 const ICON_MAP: Record<string, typeof Bell> = {
   UserCheck,
@@ -144,6 +145,13 @@ export function ServiceCallDrawer({
           </div>
         </div>
 
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+          <strong style={{ fontSize: 13.5, color: '#0f172a' }}>🔔 Thông báo cuộc gọi trên thiết bị này</strong>
+          <p style={{ margin: '4px 0 10px', fontSize: 12, color: '#64748b', lineHeight: 1.4 }}>
+            Tự động đổ chuông và gửi thông báo khi khách bấm chuông, ngay cả khi đang khóa màn hình hoặc chuyển tab khác.
+          </p>
+          <BellSettings showSound={true} />
+        </div>
         {/* Filter Tabs */}
         <div style={styles.tabsRow}>
           <button

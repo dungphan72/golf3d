@@ -75,7 +75,7 @@ const toB64u = (buf: ArrayBuffer | null) =>
     : '';
 
 /** Sound on/off for this device, plus phone push notifications (works with the screen locked). */
-export function BellSettings() {
+export function BellSettings({ showSound = true }: { showSound?: boolean }) {
   const [sound, setSound] = useState(true);
   const [push, setPush] = useState<'unknown' | 'on' | 'off' | 'unsupported' | 'blocked'>('unknown');
   const [busy, setBusy] = useState(false);
@@ -96,7 +96,15 @@ export function BellSettings() {
     navigator.serviceWorker
       .getRegistration('/sw.js')
       .then((reg) => reg?.pushManager.getSubscription())
-      .then((sub) => setPush(sub ? 'on' : 'off'))
+      .then(async (sub) => {
+        if (!sub || Notification.permission !== 'granted') { setPush('off'); return; }
+        const res = await fetch('/api/push', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'subscribe', endpoint: sub.endpoint,
+            p256dh: toB64u(sub.getKey('p256dh')), auth: toB64u(sub.getKey('auth')) }),
+        });
+        setPush(res.ok ? 'on' : 'off');
+      })
       .catch(() => setPush('off'));
   }, []);
 
@@ -125,7 +133,7 @@ export function BellSettings() {
       const keyRes = await fetch('/api/push');
       const { publicKey } = (await keyRes.json()) as { publicKey?: string; error?: string };
       if (!keyRes.ok || !publicKey) throw new Error('Không lấy được khóa thông báo');
-      const sub = await reg.pushManager.subscribe({
+      const sub = (await reg.pushManager.getSubscription()) ?? await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: b64uToBytes(publicKey),
       });
@@ -156,11 +164,12 @@ export function BellSettings() {
       const reg = await navigator.serviceWorker.getRegistration('/sw.js');
       const sub = await reg?.pushManager.getSubscription();
       if (sub) {
-        await fetch('/api/push', {
+        const res = await fetch('/api/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'unsubscribe', endpoint: sub.endpoint }),
         });
+        if (!res.ok) throw new Error('unsubscribe failed');
         await sub.unsubscribe();
       }
       setPush('off');
@@ -174,10 +183,10 @@ export function BellSettings() {
 
   return (
     <div className="bell-settings">
-      <button type="button" className="secondary" aria-pressed={sound} onClick={toggleSound}>
+      {showSound && <button type="button" className="secondary" aria-pressed={sound} onClick={toggleSound}>
         {sound ? <Volume2 size={16} /> : <VolumeX size={16} />}
         Âm chuông: {sound ? 'Bật' : 'Tắt'}
-      </button>
+      </button>}
       {push === 'unsupported' ? (
         <span className="muted">Trình duyệt này không hỗ trợ thông báo đẩy.</span>
       ) : push === 'blocked' ? (

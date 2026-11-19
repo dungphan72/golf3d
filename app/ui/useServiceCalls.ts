@@ -3,8 +3,14 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { type ServiceCall, type ResolutionType, type ServiceCallSettings } from '../../lib/service-call';
 
-// Shared AudioContext with user-gesture unlock for continuous bell
+// =====================================================================
+// 1. DUAL AUDIO ENGINE: HTML5 AUDIO + WEB AUDIO CHIME
+// =====================================================================
+
 let sharedAudioCtx: AudioContext | null = null;
+let sharedBellAudio: HTMLAudioElement | null = null;
+let audioPrimed = false;
+
 function getAudioContext(): AudioContext | null {
   try {
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -21,24 +27,81 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
+function getBellAudio(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    if (!sharedBellAudio) {
+      sharedBellAudio = new Audio('/service-bell.wav');
+      sharedBellAudio.preload = 'auto';
+    }
+    return sharedBellAudio;
+  } catch {
+    return null;
+  }
+}
+
+// User-gesture unlock to allow background tab audio playback
+export function primeAudio() {
+  if (audioPrimed) return;
+  audioPrimed = true;
+  try {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => undefined);
+    }
+    const audio = getBellAudio();
+    if (audio) {
+      audio.load();
+    }
+  } catch {
+    // ignore
+  }
+}
+
 if (typeof window !== 'undefined') {
-  const unlockAudio = () => {
-    getAudioContext();
-    window.removeEventListener('click', unlockAudio);
-    window.removeEventListener('keydown', unlockAudio);
-    window.removeEventListener('touchstart', unlockAudio);
+  const onFirstInteraction = () => {
+    primeAudio();
+    window.removeEventListener('click', onFirstInteraction);
+    window.removeEventListener('keydown', onFirstInteraction);
+    window.removeEventListener('touchstart', onFirstInteraction);
+    window.removeEventListener('pointerdown', onFirstInteraction);
   };
-  window.addEventListener('click', unlockAudio, { once: true });
-  window.addEventListener('keydown', unlockAudio, { once: true });
-  window.addEventListener('touchstart', unlockAudio, { once: true });
+  window.addEventListener('click', onFirstInteraction, { once: true });
+  window.addEventListener('keydown', onFirstInteraction, { once: true });
+  window.addEventListener('touchstart', onFirstInteraction, { once: true });
+  window.addEventListener('pointerdown', onFirstInteraction, { once: true });
 }
 
 /**
- * Web Audio Chime synthesizer:
- * Crisp, pleasant 2-tone bell chime (880Hz E5 -> 659Hz E4).
- * Works 100% locally without external sound files that might 404.
+ * Plays the crisp 2-tone service bell chime:
+ * 1. Tries HTML5 Audio element (/service-bell.wav)
+ * 2. As robust fallback, synthesizes chime via Web Audio API (880Hz -> 659Hz)
  */
 export function playServiceBellChime() {
+  primeAudio();
+
+  // 1. Try HTML5 Audio
+  let html5Played = false;
+  try {
+    const audio = getBellAudio();
+    if (audio) {
+      audio.currentTime = 0;
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            html5Played = true;
+          })
+          .catch(() => {
+            html5Played = false;
+          });
+      }
+    }
+  } catch {
+    html5Played = false;
+  }
+
+  // 2. Synthesize via Web Audio as fallback or companion
   try {
     const ctx = getAudioContext();
     if (!ctx) return;
@@ -60,7 +123,7 @@ export function playServiceBellChime() {
     osc1.start(now);
     osc1.stop(now + 0.6);
 
-    // Second tone (659.25 Hz - E5) starting slightly later
+    // Second tone (659.25 Hz - E5)
     const osc2 = ctx.createOscillator();
     const gain2 = ctx.createGain();
     osc2.type = 'sine';
@@ -72,18 +135,64 @@ export function playServiceBellChime() {
     osc2.start(now + 0.18);
     osc2.stop(now + 1.2);
   } catch {
-    // Browser may require user gesture
+    // Ignore autoplay limits
   }
 }
+
+// Module-level continuous bell timer to prevent overlapping loops if multiple components use this hook
+let moduleRingTimer: ReturnType<typeof setInterval> | null = null;
+let moduleRingSubscribers = 0;
+
+function startGlobalRinging() {
+  if (moduleRingTimer) return;
+  playServiceBellChime();
+  moduleRingTimer = setInterval(() => {
+    playServiceBellChime();
+  }, 2800);
+}
+
+function stopGlobalRinging() {
+  if (moduleRingTimer) {
+    clearInterval(moduleRingTimer);
+    moduleRingTimer = null;
+  }
+}
+
+// =====================================================================
+// 2. VAPID BASE64 HELPERS FOR PUSH NOTIFICATION SYNC
+// =====================================================================
+
+const b64uToBytes = (s: string) => {
+  const bin = atob(
+    s.replaceAll('-', '+').replaceAll('_', '/') + '='.repeat((4 - (s.length % 4)) % 4),
+  );
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+};
+
+const toB64u = (buf: ArrayBuffer | null) =>
+  buf
+    ? btoa(String.fromCharCode(...new Uint8Array(buf)))
+        .replaceAll('+', '-')
+        .replaceAll('/', '_')
+        .replaceAll('=', '')
+    : '';
+
+// =====================================================================
+// 3. MAIN HOOK: useServiceCalls
+// =====================================================================
 
 export function useServiceCalls() {
   const [calls, setCalls] = useState<ServiceCall[]>([]);
   const [settings, setSettings] = useState<ServiceCallSettings | null>(null);
   const [dismissedCallIds, setDismissedCallIds] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const prevPendingIdsRef = useRef<Set<string>>(new Set());
-  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pushPermission, setPushPermission] = useState<'granted' | 'default' | 'denied' | 'unsupported'>('default');
 
+  const prevPendingIdsRef = useRef<Set<string>>(new Set());
+  const originalTitleRef = useRef<string>('');
+  const titleFlashIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Fetch current live calls from server
   const fetchLive = useCallback(async () => {
     try {
       const res = await fetch('/api/service-call/live', { cache: 'no-store' });
@@ -93,24 +202,47 @@ export function useServiceCalls() {
         setCalls(data.calls);
         if (data.settings) setSettings(data.settings);
 
-        // Check for newly arrived CREATED calls to ring chime
+        // Check for newly arrived CREATED calls
         const currentPendingIds = new Set<string>(
           data.calls
             .filter((c: ServiceCall) => c.status === 'CREATED')
             .map((c: ServiceCall) => String(c.id))
         );
 
-        let hasNew = false;
-        for (const id of currentPendingIds) {
-          if (!prevPendingIdsRef.current.has(id)) {
-            hasNew = true;
+        let newlyArrivedCall: ServiceCall | null = null;
+        for (const c of data.calls) {
+          if (c.status === 'CREATED' && !prevPendingIdsRef.current.has(c.id)) {
+            newlyArrivedCall = c;
             break;
           }
         }
         prevPendingIdsRef.current = currentPendingIds;
 
-        if (hasNew && (data.settings?.sound_alert_enabled ?? true)) {
-          playServiceBellChime();
+        // If a new call arrived while document is hidden, show desktop notification
+        if (newlyArrivedCall && typeof window !== 'undefined') {
+          if (data.settings?.sound_alert_enabled ?? true) {
+            playServiceBellChime();
+          }
+
+          if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+            try {
+              const roomName = newlyArrivedCall.room_name || `Line ${newlyArrivedCall.room_id}`;
+              const catName = newlyArrivedCall.category_name || 'Gọi phục vụ';
+              const notif = new Notification(`🔔 ${roomName} đang gọi phục vụ!`, {
+                body: `${catName} - ${newlyArrivedCall.customer_name || 'Khách'}. Nhấn để mở POS ngay.`,
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: 'service-call-' + newlyArrivedCall.id,
+                requireInteraction: true,
+              });
+              notif.onclick = () => {
+                window.focus();
+                notif.close();
+              };
+            } catch {
+              // Ignore notification errors
+            }
+          }
         }
       }
     } catch {
@@ -118,36 +250,208 @@ export function useServiceCalls() {
     }
   }, []);
 
-  // Continuous bell ringing as long as any un-dismissed call is in 'CREATED' status
-  const continuousRingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // -------------------------------------------------------------------
+  // A. AUTO-SYNC PUSH SUBSCRIPTION ON LOGIN ("Duy trì đăng nhập là nhận cuộc gọi")
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) {
+      setPushPermission('unsupported');
+      return;
+    }
+
+    setPushPermission(Notification.permission);
+
+    // If permission is already granted, auto-subscribe silently
+    if (Notification.permission === 'granted') {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then(() => navigator.serviceWorker.ready)
+        .then(async (reg) => {
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            const keyRes = await fetch('/api/push', { cache: 'no-store' });
+            if (!keyRes.ok) return;
+            const { publicKey } = (await keyRes.json()) as { publicKey?: string };
+            if (!publicKey) return;
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: b64uToBytes(publicKey),
+            });
+          }
+          if (sub) {
+            await fetch('/api/push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'subscribe',
+                endpoint: sub.endpoint,
+                p256dh: toB64u(sub.getKey('p256dh')),
+                auth: toB64u(sub.getKey('auth')),
+              }),
+            }).catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
+    }
+  }, []);
+
+  // Action to request push permission and enable alerts with 1 tap
+  const enablePushAlerts = useCallback(async (): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    primeAudio();
+    playServiceBellChime();
+
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      alert('Trình duyệt này không hỗ trợ thông báo đẩy.');
+      setPushPermission('unsupported');
+      return false;
+    }
+
+    try {
+      const perm = await Notification.requestPermission();
+      setPushPermission(perm);
+      if (perm !== 'granted') {
+        if (perm === 'denied') {
+          alert('Thông báo đã bị chặn. Vui lòng nhấn vào biểu tượng ổ khóa cạnh thanh địa chỉ để Cho phép (Allow).');
+        }
+        return false;
+      }
+
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+
+      const keyRes = await fetch('/api/push', { cache: 'no-store' });
+      const { publicKey } = (await keyRes.json()) as { publicKey?: string };
+      if (!publicKey) throw new Error('Không lấy được khóa thông báo máy chủ.');
+
+      const sub =
+        (await reg.pushManager.getSubscription()) ??
+        (await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: b64uToBytes(publicKey),
+        }));
+
+      await fetch('/api/push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'subscribe',
+          endpoint: sub.endpoint,
+          p256dh: toB64u(sub.getKey('p256dh')),
+          auth: toB64u(sub.getKey('auth')),
+        }),
+      });
+
+      return true;
+    } catch (e: any) {
+      alert('Không bật được thông báo: ' + (e.message || String(e)));
+      return false;
+    }
+  }, []);
+
+  // -------------------------------------------------------------------
+  // B. LISTEN TO SERVICE WORKER WAKEUP MESSAGES
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'SERVICE_CALL_RING' || e.data?.type === 'SERVICE_CALL_FOCUS') {
+        fetchLive();
+        playServiceBellChime();
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }, [fetchLive]);
+
+  // -------------------------------------------------------------------
+  // C. CONTINUOUS BELL RINGING CONTROLLER
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    moduleRingSubscribers++;
+    return () => {
+      moduleRingSubscribers--;
+      if (moduleRingSubscribers <= 0) {
+        stopGlobalRinging();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const hasCreatedCalls = calls.some((c) => c.status === 'CREATED' && !dismissedCallIds.has(c.id));
     const soundEnabled = settings?.sound_alert_enabled ?? true;
 
     if (hasCreatedCalls && soundEnabled) {
-      if (!continuousRingRef.current) {
-        playServiceBellChime();
-        continuousRingRef.current = setInterval(() => {
-          playServiceBellChime();
-        }, 3000);
+      startGlobalRinging();
+    } else {
+      stopGlobalRinging();
+    }
+  }, [calls, settings, dismissedCallIds]);
+
+  // -------------------------------------------------------------------
+  // D. TITLE FLASHING & VISIBILITY CHANGE LISTENER
+  // -------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (!originalTitleRef.current) {
+      originalTitleRef.current = document.title || 'SiGolf';
+    }
+
+    const pendingCalls = calls.filter((c) => c.status === 'CREATED' && !dismissedCallIds.has(c.id));
+
+    if (pendingCalls.length > 0 && document.hidden) {
+      if (!titleFlashIntervalRef.current) {
+        let isAlt = false;
+        const callSummary = pendingCalls[0].room_name || `Line ${pendingCalls[0].room_id}`;
+        titleFlashIntervalRef.current = setInterval(() => {
+          isAlt = !isAlt;
+          document.title = isAlt
+            ? `🔔 [${pendingCalls.length} CUỘC GỌI] ${callSummary}!`
+            : originalTitleRef.current;
+        }, 1000);
       }
     } else {
-      if (continuousRingRef.current) {
-        clearInterval(continuousRingRef.current);
-        continuousRingRef.current = null;
+      if (titleFlashIntervalRef.current) {
+        clearInterval(titleFlashIntervalRef.current);
+        titleFlashIntervalRef.current = null;
+        if (originalTitleRef.current) {
+          document.title = originalTitleRef.current;
+        }
       }
     }
 
-    return () => {
-      if (continuousRingRef.current) {
-        clearInterval(continuousRingRef.current);
-        continuousRingRef.current = null;
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        if (titleFlashIntervalRef.current) {
+          clearInterval(titleFlashIntervalRef.current);
+          titleFlashIntervalRef.current = null;
+          if (originalTitleRef.current) {
+            document.title = originalTitleRef.current;
+          }
+        }
       }
     };
-  }, [calls, settings, dismissedCallIds]);
 
-  // Adaptive interval: 3.5s if open calls exist, 12s if idle
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (titleFlashIntervalRef.current) {
+        clearInterval(titleFlashIntervalRef.current);
+        titleFlashIntervalRef.current = null;
+      }
+    };
+  }, [calls, dismissedCallIds]);
+
+  // -------------------------------------------------------------------
+  // E. UN-THROTTLED BACKGROUND POLLING (WEB WORKER)
+  // -------------------------------------------------------------------
   const hasOpenCalls = useMemo(
     () => calls.some((c) => ['CREATED', 'ACKNOWLEDGED', 'IN_PROGRESS'].includes(c.status)),
     [calls]
@@ -155,10 +459,46 @@ export function useServiceCalls() {
 
   useEffect(() => {
     fetchLive();
-    const intervalMs = hasOpenCalls ? 3500 : 12000;
-    pollTimerRef.current = setInterval(fetchLive, intervalMs);
+
+    const intervalMs = hasOpenCalls ? 3500 : 10000;
+    let worker: Worker | null = null;
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
+
+    try {
+      // Inline Web Worker ticker to bypass browser background tab throttling
+      const blob = new Blob(
+        [
+          `let t = null;
+           self.onmessage = (e) => {
+             if (e.data.action === 'start') {
+               if (t) clearInterval(t);
+               t = setInterval(() => self.postMessage('tick'), e.data.interval || 3500);
+             } else if (e.data.action === 'stop') {
+               if (t) clearInterval(t);
+               t = null;
+             }
+           };`,
+        ],
+        { type: 'application/javascript' }
+      );
+      worker = new Worker(URL.createObjectURL(blob));
+      worker.onmessage = () => {
+        fetchLive();
+      };
+      worker.postMessage({ action: 'start', interval: intervalMs });
+    } catch {
+      // Fallback for environments where Blob worker is blocked
+      fallbackTimer = setInterval(fetchLive, intervalMs);
+    }
+
     return () => {
-      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      if (worker) {
+        worker.postMessage({ action: 'stop' });
+        worker.terminate();
+      }
+      if (fallbackTimer) {
+        clearInterval(fallbackTimer);
+      }
     };
   }, [fetchLive, hasOpenCalls]);
 
@@ -333,6 +673,8 @@ export function useServiceCalls() {
     pendingCount,
     settings,
     busy,
+    pushPermission,
+    enablePushAlerts,
     dismissBanner,
     acknowledgeCall,
     startCall,

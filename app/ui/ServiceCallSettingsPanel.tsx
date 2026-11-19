@@ -18,6 +18,7 @@ import {
   DEFAULT_SERVICE_CALL_SETTINGS,
 } from '../../lib/service-call';
 import { CallQrSheet } from './CallQrSheet';
+import { BellSettings } from './BellAlerts';
 
 type SettingsForm = Omit<ServiceCallSettings, 'tenant' | 'updated_at'>;
 
@@ -128,6 +129,13 @@ export function ServiceCallSettingsPanel({ slug = 'sigolf' }: Props) {
       )}
 
       {/* CARD 1: CẤU HÌNH VẬN HÀNH & SLA */}
+      <section style={{ padding: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}>
+        <h3 style={{ margin: '0 0 8px', fontSize: 16 }}>🔔 Thông báo trên thiết bị này</h3>
+        <p style={{ margin: '0 0 12px', color: '#64748b', fontSize: 13, lineHeight: 1.5 }}>
+          Bật thông báo đẩy và cho phép trình duyệt gửi thông báo để nhận cuộc gọi phục vụ khi chuyển tab hoặc khóa màn hình. Trên iPhone, thêm ứng dụng vào Màn hình chính và mở từ biểu tượng để nhận đẩy.
+        </p>
+        <BellSettings />
+      </section>
       <section
         style={{
           background: '#ffffff',

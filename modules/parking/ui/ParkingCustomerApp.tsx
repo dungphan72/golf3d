@@ -35,7 +35,7 @@ import {
 import { money } from '../../../lib/club';
 import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings } from '../core/types';
-import { PwaInstallProvider, PwaInstallCard } from '../../../app/ui/PwaInstallPrompt';
+import { PwaInstallProvider } from '../../../app/ui/PwaInstallPrompt';
 import '../../../app/parking.css';
 
 interface Props {
@@ -924,11 +924,6 @@ export default function ParkingCustomerApp({
                 <p style={{ fontSize: 13, color: 'var(--pk-text-muted)', marginTop: -6, marginBottom: 14 }}>
                   {t.pageSub1}
                 </p>
-
-                {/* Nhắc cài đặt SiGolf PWA ở trang đầu bãi xe */}
-                <div style={{ marginBottom: 12 }}>
-                  <PwaInstallCard />
-                </div>
 
                 <div className="pk-card">
                   {/* Bãi xe */}
@@ -2017,11 +2012,6 @@ export default function ParkingCustomerApp({
                 Mở /app
               </a>
             </div>
-          </div>
-
-          {/* Thẻ nhắc cài đặt ứng dụng SiGolf nếu chưa cài */}
-          <div style={{ marginBottom: 12 }}>
-            <PwaInstallCard />
           </div>
         </div>
       )}

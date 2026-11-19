@@ -24,10 +24,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const action = url.searchParams.get('action') || 'spots';
-  const tenantParam = url.searchParams.get('tenant') || DEFAULT_PARKING_TENANT;
-
+  const tenantParam = url.searchParams.get('tenant');
   const auth = await getAuth();
-  const tenant = auth?.tenant || tenantParam;
+  const tenant = tenantParam || auth?.tenant || DEFAULT_PARKING_TENANT;
 
   try {
     if (action === 'config') {
@@ -211,7 +210,7 @@ export async function POST(req: Request) {
   }
 
   const auth = await getAuth();
-  const tenant = auth?.tenant || body.tenant || DEFAULT_PARKING_TENANT;
+  const tenant = body.tenant || auth?.tenant || DEFAULT_PARKING_TENANT;
   const action = body.action || '';
 
   try {

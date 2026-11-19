@@ -234,13 +234,15 @@
   outline: none;
 }
 
-/* Adjust position when mobile bottom navigation (.mnav or .pk-bottom-nav) is present */
-@media (max-width: 768px) {
+/* Adjust position when mobile bottom navigation (.mnav, .pk-bottom-nav, or .ar-bottom) is present */
+@media (max-width: 900px) {
   body:has(.mnav) .yadcrm-pwa-install,
   body:has(.mnav) .sg-pwa-install,
   body:has(.pk-bottom-nav) .yadcrm-pwa-install,
-  body:has(.pk-bottom-nav) .sg-pwa-install {
-    bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  body:has(.pk-bottom-nav) .sg-pwa-install,
+  body:has(.ar-bottom) .yadcrm-pwa-install,
+  body:has(.ar-bottom) .sg-pwa-install {
+    bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
   }
 }
 

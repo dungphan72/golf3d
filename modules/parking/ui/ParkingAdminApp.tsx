@@ -1178,7 +1178,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 className={`pk-saas-shortcut-pill ${activeTab === 'map' ? 'active' : ''}`}
                 onClick={() => setActiveTab('map')}
               >
-                <div className="pk-saas-shortcut-icon blue">
+                <div className="pk-saas-shortcut-icon pk-icon-blue">
                   <Grid size={15} strokeWidth={2} />
                 </div>
                 <div className="pk-saas-shortcut-text">
@@ -1192,7 +1192,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 className={`pk-saas-shortcut-pill ${activeTab === 'schedule' ? 'active' : ''}`}
                 onClick={() => setActiveTab('schedule')}
               >
-                <div className="pk-saas-shortcut-icon green">
+                <div className="pk-saas-shortcut-icon pk-icon-green">
                   <Calendar size={15} strokeWidth={2} />
                 </div>
                 <div className="pk-saas-shortcut-text">
@@ -1206,7 +1206,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 className={`pk-saas-shortcut-pill ${activeTab === 'gate' ? 'active' : ''}`}
                 onClick={() => setActiveTab('gate')}
               >
-                <div className="pk-saas-shortcut-icon orange">
+                <div className="pk-saas-shortcut-icon pk-icon-orange">
                   <Camera size={15} strokeWidth={2} />
                 </div>
                 <div className="pk-saas-shortcut-text">
@@ -1220,7 +1220,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 className={`pk-saas-shortcut-pill ${activeTab === 'reconciliation' ? 'active' : ''}`}
                 onClick={() => setActiveTab('reconciliation')}
               >
-                <div className="pk-saas-shortcut-icon purple">
+                <div className="pk-saas-shortcut-icon pk-icon-purple">
                   <TrendingUp size={15} strokeWidth={2} />
                 </div>
                 <div className="pk-saas-shortcut-text">
@@ -1234,7 +1234,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 className={`pk-saas-shortcut-pill ${activeTab === 'settings' ? 'active' : ''}`}
                 onClick={() => setActiveTab('settings')}
               >
-                <div className="pk-saas-shortcut-icon sky">
+                <div className="pk-saas-shortcut-icon pk-icon-sky">
                   <DollarSign size={15} strokeWidth={2} />
                 </div>
                 <div className="pk-saas-shortcut-text">
@@ -1546,7 +1546,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               TAB 1: SƠ ĐỒ BÃI XE (Bám sát ảnh 2 - Sơ đồ bãi xe)
               =================================================================== */}
           {activeTab === 'map' && (
-            <div style={{ display: 'flex', gap: 16 }}>
+            <div className="pk-map-layout-row">
               {/* Sơ đồ chính */}
               <div className="pk-card" style={{ flex: 1 }}>
                 <div className="pk-panel-header">
@@ -2040,8 +2040,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     <h2 className="pk-panel-title">Lịch đặt chỗ</h2>
                   </div>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, maxWidth: 440, justifyContent: 'flex-end' }}>
-                    <div className="pk-search-box-pill" style={{ flex: 1 }}>
+                  <div className="pk-schedule-header-actions">
+                    <div className="pk-search-box-pill" style={{ flex: 1, minWidth: 0 }}>
                       <Search size={15} color="#94a3b8" />
                       <input
                         type="text"
@@ -2062,7 +2062,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
                     <select
                       className="pk-select"
-                      style={{ width: 140, height: 36, padding: '4px 8px', fontSize: 12.5 }}
+                      style={{ width: 110, height: 36, padding: '4px 8px', fontSize: 12.5, flexShrink: 0 }}
                       value={statusFilter}
                       onChange={(e) => setStatusFilter(e.target.value)}
                     >
@@ -2159,15 +2159,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
               {/* Chi tiết vé được chọn bên dưới (Giống ảnh 2) */}
               {selectedTicket && (
-                <div
-                  className="pk-card"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: 16,
-                  }}
-                >
+                <div className="pk-card pk-ticket-detail-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <img
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(
@@ -2419,7 +2411,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               )}
 
               {/* 2-Card Layout (Quét nhận dạng + Chi tiết vé) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="pk-gate-grid">
                 {/* Khung quét nhận dạng & Nhập biển số */}
                 <div
                   className="pk-card"
@@ -2933,19 +2925,19 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Chọn ngày đối soát */}
               <div
-                className="pk-card"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 14 }}
+                className="pk-card pk-recon-header-card"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, padding: 14 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <TrendingUp size={20} color="var(--pk-primary)" />
                   <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>Đối soát cuối ca</h2>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <input
                     type="date"
                     className="pk-input"
-                    style={{ width: 160 }}
+                    style={{ width: 145 }}
                     value={reconDate}
                     onChange={(e) => setReconDate(e.target.value)}
                   />
@@ -2969,7 +2961,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   border: '1px solid #cbd5e1',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Car size={16} color="var(--pk-primary)" />
                     <span>Hiệu suất lấp đầy bãi xe GoPick (65 ô)</span>
@@ -3353,7 +3345,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               </div>
 
               {/* Grid 2 cột: Cấu hình thông số */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div className="pk-settings-grid">
                 {/* Khung 1: Trạng thái & Cơ sở */}
                 <div className="pk-card" style={{ padding: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>

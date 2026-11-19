@@ -1812,27 +1812,32 @@
   font-size: 14px;
 }
 
-.pk-saas-shortcut-icon.blue {
+.pk-saas-shortcut-icon.blue,
+.pk-saas-shortcut-icon.pk-icon-blue {
   background: #eff6ff;
   color: #2563eb;
 }
 
-.pk-saas-shortcut-icon.green {
+.pk-saas-shortcut-icon.green,
+.pk-saas-shortcut-icon.pk-icon-green {
   background: #ecfdf5;
   color: #059669;
 }
 
-.pk-saas-shortcut-icon.orange {
+.pk-saas-shortcut-icon.orange,
+.pk-saas-shortcut-icon.pk-icon-orange {
   background: #fffbeb;
   color: #d97706;
 }
 
-.pk-saas-shortcut-icon.purple {
+.pk-saas-shortcut-icon.purple,
+.pk-saas-shortcut-icon.pk-icon-purple {
   background: #f5f3ff;
   color: #7c3aed;
 }
 
-.pk-saas-shortcut-icon.sky {
+.pk-saas-shortcut-icon.sky,
+.pk-saas-shortcut-icon.pk-icon-sky {
   background: #f0f9ff;
   color: #0284c7;
 }
@@ -2137,6 +2142,71 @@
     padding: 14px;
     border-radius: 14px;
     gap: 10px;
+  }
+}
+
+/* Layout containers & responsive grids */
+.pk-map-layout-row {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.pk-ticket-detail-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  gap: 14px;
+}
+
+.pk-gate-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pk-settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.pk-schedule-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 440px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 900px) {
+  .pk-schedule-header-actions {
+    max-width: 100%;
+    width: 100%;
+  }
+  .pk-map-layout-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+  .pk-map-layout-row > .pk-card {
+    width: 100%;
+    min-width: 0;
+  }
+  .pk-admin-stats-bar {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .pk-ticket-detail-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pk-gate-grid {
+    grid-template-columns: 1fr;
+  }
+  .pk-settings-grid {
+    grid-template-columns: 1fr;
   }
   .pk-bottom-nav {
     display: flex !important;

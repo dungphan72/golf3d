@@ -89,26 +89,27 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
       overtimeRatePerHour: existing.overtime_rate_per_hour,
       allowPaperTickets: Boolean(existing.allow_paper_tickets),
       updatedAt: existing.updated_at,
-      totalSpots: tenant === 'gopick' ? 65 : 10,
+      totalSpots: 65,
     };
   }
 
-  // Ensure legacy A01-A10 demo spots are deactivated for GoPick so they are no longer sold,
+  // Ensure legacy A01-A10 demo spots are deactivated so they are no longer sold,
   // but first migrate any active tickets on legacy A% spots to the corresponding P% spots safely
-  if (tenant === 'gopick') {
+  if (tenant === 'gopick' || tenant === 'golf3d-main') {
     try {
       const activeLegacyTickets = await db()
         .prepare(
-          "SELECT id, spot_code FROM parking_tickets WHERE tenant='gopick' AND spot_code LIKE 'A%' AND status IN ('holding', 'confirmed', 'active')"
+          "SELECT id, spot_code FROM parking_tickets WHERE tenant=? AND spot_code LIKE 'A%' AND status IN ('holding', 'confirmed', 'active')"
         )
+        .bind(tenant)
         .all<any>();
 
       for (const t of activeLegacyTickets.results) {
         const num = parseInt(t.spot_code.replace(/\D/g, '') || '1', 10);
         const targetPCode = `P${String(num).padStart(2, '0')}`;
         const targetPSpot = await db()
-          .prepare("SELECT id, section FROM parking_spots WHERE tenant='gopick' AND code=?")
-          .bind(targetPCode)
+          .prepare("SELECT id, section FROM parking_spots WHERE tenant=? AND code=?")
+          .bind(tenant, targetPCode)
           .first<any>();
         if (targetPSpot) {
           await db()
@@ -122,16 +123,17 @@ export async function ensureParkingInitialized(tenant: string = DEFAULT_PARKING_
     }
 
     await db()
-      .prepare("UPDATE parking_spots SET is_active=0 WHERE tenant='gopick' AND code LIKE 'A%'")
+      .prepare("UPDATE parking_spots SET is_active=0 WHERE tenant=? AND code LIKE 'A%'")
+      .bind(tenant)
       .run();
 
     // Enforce normalized row_index, col_index and section matching approved 65-slot GoPick plan
-    await db().prepare("UPDATE parking_spots SET row_index=1, col_index=CAST(SUBSTR(code, 2) AS INTEGER), section='Dãy chéo P1' WHERE tenant='gopick' AND code BETWEEN 'P01' AND 'P09'").run();
-    await db().prepare("UPDATE parking_spots SET row_index=2, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 9, section='Dãy P2' WHERE tenant='gopick' AND code BETWEEN 'P10' AND 'P20'").run();
-    await db().prepare("UPDATE parking_spots SET row_index=3, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 20, section='Dãy P3' WHERE tenant='gopick' AND code BETWEEN 'P21' AND 'P31'").run();
-    await db().prepare("UPDATE parking_spots SET row_index=4, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 31, section='Dãy P4' WHERE tenant='gopick' AND code BETWEEN 'P32' AND 'P42'").run();
-    await db().prepare("UPDATE parking_spots SET row_index=5, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 42, section='Dãy P5' WHERE tenant='gopick' AND code BETWEEN 'P43' AND 'P53'").run();
-    await db().prepare("UPDATE parking_spots SET row_index=6, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 53, section='Dãy P6' WHERE tenant='gopick' AND code BETWEEN 'P54' AND 'P65'").run();
+    await db().prepare("UPDATE parking_spots SET row_index=1, col_index=CAST(SUBSTR(code, 2) AS INTEGER), section='Dãy chéo P1' WHERE tenant=? AND code BETWEEN 'P01' AND 'P09'").bind(tenant).run();
+    await db().prepare("UPDATE parking_spots SET row_index=2, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 9, section='Dãy P2' WHERE tenant=? AND code BETWEEN 'P10' AND 'P20'").bind(tenant).run();
+    await db().prepare("UPDATE parking_spots SET row_index=3, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 20, section='Dãy P3' WHERE tenant=? AND code BETWEEN 'P21' AND 'P31'").bind(tenant).run();
+    await db().prepare("UPDATE parking_spots SET row_index=4, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 31, section='Dãy P4' WHERE tenant=? AND code BETWEEN 'P32' AND 'P42'").bind(tenant).run();
+    await db().prepare("UPDATE parking_spots SET row_index=5, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 42, section='Dãy P5' WHERE tenant=? AND code BETWEEN 'P43' AND 'P53'").bind(tenant).run();
+    await db().prepare("UPDATE parking_spots SET row_index=6, col_index=CAST(SUBSTR(code, 2) AS INTEGER) - 53, section='Dãy P6' WHERE tenant=? AND code BETWEEN 'P54' AND 'P65'").bind(tenant).run();
   }
 
   // Seed default spots if none exist

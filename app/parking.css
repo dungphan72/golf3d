@@ -1187,9 +1187,9 @@
    CUSTOMER & ADMIN MOBILE/DESKTOP FOOTER (CHÂN TRANG CÓ ICON)
    ========================================================================== */
 .pk-footer {
-  margin: 32px auto 16px;
+  margin: 32px auto 0;
   max-width: 960px;
-  padding: 24px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  padding: 24px 16px calc(76px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--pk-border);
   text-align: center;
   background: #ffffff;

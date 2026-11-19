@@ -2255,7 +2255,7 @@ export default function ParkingCustomerApp({
                 <a
                   href="/app"
                   className="pk-btn-secondary"
-                  style={{ width: 'auto', padding: '0 14px', height: 34, textDecoration: 'none', fontWeight: 700 }}
+                  style={{ width: 'auto', padding: '0 16px', height: 36, whiteSpace: 'nowrap', flexShrink: 0, textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                 >
                   Mở /app
                 </a>

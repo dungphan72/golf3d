@@ -23,7 +23,11 @@
 }
 
 /* Base Wrapper */
+html:has(.pk-container),
 body:has(.pk-container),
+html:has(.pk-saas-root),
+body:has(.pk-saas-root),
+html:has(.pk-saas-shell),
 body:has(.pk-saas-shell) {
   padding-bottom: 0 !important;
   background: #f8fafc !important;
@@ -1297,15 +1301,18 @@ body:has(.pk-saas-shell) {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
-  background: #ffffff;
+  height: auto !important;
+  min-height: 58px;
+  background: #ffffff !important;
   border-top: 1px solid var(--pk-border);
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-around;
   z-index: 90;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-top: 2px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.04);
+  box-sizing: border-box;
 }
 
 @media (min-width: 768px) {
@@ -1387,7 +1394,9 @@ body:has(.pk-saas-shell) {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: 100%;
+  min-height: 54px;
+  height: auto;
+  padding: 6px 2px;
   color: #64748b;
   text-decoration: none;
   font-size: 11px;
@@ -1430,7 +1439,7 @@ body:has(.pk-saas-shell) {
 /* Floating Spot Selection Bottom Bar (Mobile Slide-up Sheet) */
 .pk-spot-selection-bar {
   position: fixed !important;
-  bottom: calc(56px + env(safe-area-inset-bottom, 0px)) !important;
+  bottom: calc(58px + env(safe-area-inset-bottom, 0px)) !important;
   left: 0 !important;
   right: 0 !important;
   background: rgba(255, 255, 255, 0.98) !important;
@@ -2593,12 +2602,16 @@ body:has(.pk-saas-shell) {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 56px;
+    height: auto !important;
+    min-height: 58px;
+    align-items: stretch;
     background: #ffffff !important;
     border-top: 1px solid #e2e8f0;
     z-index: 9999;
+    padding-top: 2px;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
   }
   .pk-bottom-nav-item {
     flex: 1;
@@ -2606,11 +2619,13 @@ body:has(.pk-saas-shell) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
-    font-size: 10.5px;
+    gap: 3px;
+    min-height: 54px;
+    height: auto;
+    font-size: 11px;
     font-weight: 600;
     color: #64748b;
-    padding: 6px 0;
+    padding: 6px 2px;
     border: none;
     background: transparent;
     cursor: pointer;

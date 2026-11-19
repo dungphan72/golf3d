@@ -246,6 +246,18 @@
   }
 }
 
+/* On desktop (>= 901px), hide floating mobile PWA prompt on parking pages to prevent blocking cards and CTAs */
+@media (min-width: 901px) {
+  body:has(.pk-saas-root) .yadcrm-pwa-install,
+  body:has(.pk-saas-root) .sg-pwa-install,
+  body:has(.pk-isolated-root) .yadcrm-pwa-install,
+  body:has(.pk-isolated-root) .sg-pwa-install,
+  body:has(.pk-container) .yadcrm-pwa-install,
+  body:has(.pk-container) .sg-pwa-install {
+    display: none !important;
+  }
+}
+
 @media (max-width: 520px) {
   .yadcrm-pwa-install,
   .sg-pwa-install {

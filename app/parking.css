@@ -2255,3 +2255,133 @@
     display: none !important;
   }
 }
+
+/* ==========================================================================
+   CUSTOMER APP DESKTOP & TABLET TWO-COLUMN RESPONSIVE ENHANCEMENT
+   ========================================================================== */
+.pk-step1-layout,
+.pk-step2-layout,
+.pk-step3-layout,
+.pk-step4-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+}
+
+.pk-step1-preview-col,
+.pk-step2-summary-col {
+  display: none;
+}
+
+.pk-facility-preview-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+  border: 1px solid var(--pk-primary-border);
+  padding: 24px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pk-facility-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pk-facility-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--pk-primary-light);
+  color: var(--pk-primary);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+@media (min-width: 901px) {
+  .pk-isolated-root {
+    background: #f1f5f9;
+    padding: 28px 20px;
+    min-height: 100vh;
+  }
+
+  .pk-container {
+    max-width: 1120px;
+    margin: 0 auto;
+    background: #ffffff;
+    border-radius: 16px;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    min-height: calc(100vh - 56px);
+  }
+
+  .pk-app-header {
+    padding: 14px 28px;
+  }
+
+  .pk-stepper {
+    padding: 20px 60px;
+  }
+
+  .pk-body {
+    padding: 28px 32px;
+    gap: 24px;
+  }
+
+  /* Step 1 Grid on Desktop */
+  .pk-step1-layout {
+    display: grid;
+    grid-template-columns: 460px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .pk-step1-preview-col {
+    display: block !important;
+  }
+
+  /* Step 2 Grid on Desktop */
+  .pk-step2-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  .pk-step2-summary-col {
+    display: block !important;
+    position: sticky;
+    top: 24px;
+  }
+
+  .pk-spot-selection-bar {
+    display: none !important;
+  }
+
+  /* Step 3 Grid on Desktop */
+  .pk-step3-layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* Step 4 Grid on Desktop */
+  .pk-step4-layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 32px;
+    align-items: start;
+  }
+
+  /* Info Tab Grid on Desktop */
+  .pk-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}

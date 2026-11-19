@@ -31,6 +31,7 @@ import {
   Copy,
   Zap,
   Bell,
+  Camera,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
@@ -919,130 +920,291 @@ export default function ParkingCustomerApp({
 
             {/* BƯỚC 1: CHỌN THỜI GIAN */}
             {step === 1 && (
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <h2 className="pk-page-title">{t.pageTitle1}</h2>
-                <p style={{ fontSize: 13, color: 'var(--pk-text-muted)', marginTop: -6, marginBottom: 14 }}>
-                  {t.pageSub1}
-                </p>
+              <div className="pk-step1-layout">
+                <div className="pk-step1-form-col">
+                  <h2 className="pk-page-title">{t.pageTitle1}</h2>
+                  <p style={{ fontSize: 13, color: 'var(--pk-text-muted)', marginTop: -6, marginBottom: 14 }}>
+                    {t.pageSub1}
+                  </p>
 
-                <div className="pk-card">
-                  {/* Bãi xe */}
-                  <div className="pk-input-group">
-                    <label className="pk-label">
-                      <MapPin size={14} color="var(--pk-primary)" />
-                      {t.parkingLot}
-                    </label>
-                    <select
-                      className="pk-select"
-                      value={tenant}
-                      onChange={(e) => setTenant(e.target.value)}
-                    >
-                      <option value="gopick">Bãi xe GoPick — 250 Lương Định Của (65 ô)</option>
-                    </select>
-                  </div>
-
-                  {/* Ngày đậu xe */}
-                  <div className="pk-input-group">
-                    <label className="pk-label">
-                      <Calendar size={14} color="var(--pk-primary)" />
-                      {t.parkingDate}
-                    </label>
-                    <input
-                      type="date"
-                      className="pk-input"
-                      value={dateStr}
-                      min={todayStr}
-                      onChange={(e) => setDateStr(e.target.value)}
-                    />
-                  </div>
-
-                  {/* Giờ vào & Giờ ra */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <div className="pk-card">
+                    {/* Bãi xe */}
                     <div className="pk-input-group">
                       <label className="pk-label">
-                        <Clock size={14} color="var(--pk-primary)" />
-                        {t.timeIn}
+                        <MapPin size={14} color="var(--pk-primary)" />
+                        {t.parkingLot}
                       </label>
-                      <input
-                        type="time"
-                        className="pk-input"
-                        value={timeIn}
-                        onChange={(e) => setTimeIn(e.target.value)}
-                      />
+                      <select
+                        className="pk-select"
+                        value={tenant}
+                        onChange={(e) => setTenant(e.target.value)}
+                      >
+                        <option value="gopick">Bãi xe GoPick — 250 Lương Định Của (65 ô)</option>
+                      </select>
                     </div>
+
+                    {/* Ngày đậu xe */}
                     <div className="pk-input-group">
                       <label className="pk-label">
-                        <Clock size={14} color="var(--pk-primary)" />
-                        {t.timeOut}
+                        <Calendar size={14} color="var(--pk-primary)" />
+                        {t.parkingDate}
                       </label>
                       <input
-                        type="time"
+                        type="date"
                         className="pk-input"
-                        value={timeOut}
-                        onChange={(e) => setTimeOut(e.target.value)}
+                        value={dateStr}
+                        min={todayStr}
+                        onChange={(e) => setDateStr(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Giờ vào & Giờ ra */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                      <div className="pk-input-group">
+                        <label className="pk-label">
+                          <Clock size={14} color="var(--pk-primary)" />
+                          {t.timeIn}
+                        </label>
+                        <input
+                          type="time"
+                          className="pk-input"
+                          value={timeIn}
+                          onChange={(e) => setTimeIn(e.target.value)}
+                        />
+                      </div>
+                      <div className="pk-input-group">
+                        <label className="pk-label">
+                          <Clock size={14} color="var(--pk-primary)" />
+                          {t.timeOut}
+                        </label>
+                        <input
+                          type="time"
+                          className="pk-input"
+                          value={timeOut}
+                          onChange={(e) => setTimeOut(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Biển số xe */}
+                    <div className="pk-input-group" style={{ marginTop: 10, marginBottom: 0 }}>
+                      <label className="pk-label">
+                        <Car size={14} color="var(--pk-primary)" />
+                        {t.plateNumber}
+                      </label>
+                      <input
+                        type="text"
+                        className="pk-input"
+                        placeholder={t.platePlaceholder}
+                        value={licensePlate}
+                        onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                        style={{ fontWeight: 700, letterSpacing: 0.5 }}
                       />
                     </div>
                   </div>
 
-                  {/* Biển số xe */}
-                  <div className="pk-input-group" style={{ marginTop: 10, marginBottom: 0 }}>
-                    <label className="pk-label">
-                      <Car size={14} color="var(--pk-primary)" />
-                      {t.plateNumber}
-                    </label>
-                    <input
-                      type="text"
-                      className="pk-input"
-                      placeholder={t.platePlaceholder}
-                      value={licensePlate}
-                      onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                      style={{ fontWeight: 700, letterSpacing: 0.5 }}
-                    />
-                  </div>
-                </div>
-
-                {/* Thẻ Liên kết lịch Golf */}
-                <div
-                  className="pk-golf-link-box"
-                  onClick={() => setShowGolfModal(true)}
-                  role="button"
-                  tabIndex={0}
-                  style={{ cursor: 'pointer' }}
-                >
-                  <div className="pk-golf-link-left">
-                    <Calendar size={22} color="var(--pk-primary)" />
-                    <div>
-                      <div className="pk-golf-link-title">
-                        {golfSponsorship?.isValid ? t.golfLinked : t.linkGolf}
-                      </div>
-                      <div className="pk-golf-link-sub">
-                        {golfSponsorship?.isValid
-                          ? golfSponsorship.message
-                          : t.checkFreeHours}
-                      </div>
-                    </div>
-                  </div>
-                  <ChevronRight size={18} color="var(--pk-primary)" />
-                </div>
-
-                {/* Nút tìm chỗ trống đặt trong tầm ngón tay cái */}
-                <div style={{ marginTop: 'auto', paddingTop: 20 }}>
-                  <button
-                    type="button"
-                    className="pk-btn-primary"
-                    onClick={handleFindSpots}
-                    disabled={loadingSpots}
-                    style={{ height: 48, fontSize: 15 }}
+                  {/* Thẻ Liên kết lịch Golf */}
+                  <div
+                    className="pk-golf-link-box"
+                    onClick={() => setShowGolfModal(true)}
+                    role="button"
+                    tabIndex={0}
+                    style={{ cursor: 'pointer' }}
                   >
-                    {loadingSpots ? t.searching : t.findSpots}
-                  </button>
+                    <div className="pk-golf-link-left">
+                      <Calendar size={22} color="var(--pk-primary)" />
+                      <div>
+                        <div className="pk-golf-link-title">
+                          {golfSponsorship?.isValid ? t.golfLinked : t.linkGolf}
+                        </div>
+                        <div className="pk-golf-link-sub">
+                          {golfSponsorship?.isValid
+                            ? golfSponsorship.message
+                            : t.checkFreeHours}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} color="var(--pk-primary)" />
+                  </div>
+
+                  {/* Nút tìm chỗ trống đặt trong tầm ngón tay cái */}
+                  <div style={{ marginTop: 'auto', paddingTop: 20 }}>
+                    <button
+                      type="button"
+                      className="pk-btn-primary"
+                      onClick={handleFindSpots}
+                      disabled={loadingSpots}
+                      style={{ height: 48, fontSize: 15 }}
+                    >
+                      {loadingSpots ? t.searching : t.findSpots}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cột phải hiển thị trên Desktop & Tablet */}
+                <div className="pk-step1-preview-col">
+                  <div className="pk-facility-preview-card">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div className="pk-app-logo" style={{ width: 44, height: 44, fontSize: 20 }}>P</div>
+                      <div>
+                        <strong style={{ fontSize: 16, color: '#0f172a' }}>Bãi xe GoPick — SiGolf</strong>
+                        <div style={{ fontSize: 12, color: 'var(--pk-text-muted)', marginTop: 2 }}>
+                          250 Lương Định Của, Phường An Phú, TP. Thủ Đức, TP.HCM
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ height: 1, background: 'var(--pk-primary-border)' }} />
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div className="pk-facility-feature-item">
+                        <div className="pk-facility-feature-icon">
+                          <Car size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: 13.5, color: '#0f172a' }}>65 ô đỗ ô tô rộng rãi (P01–P65)</strong>
+                          <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                            Phân 6 dãy khoa học P1–P6, làn đường lưu thông 6.5m thông thoáng, dễ dàng ra vào.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pk-facility-feature-item">
+                        <div className="pk-facility-feature-icon">
+                          <CheckCircle2 size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: 13.5, color: 'var(--pk-primary)' }}>Tài trợ 3 giờ đỗ xe cho khách chơi Golf</strong>
+                          <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                            Khách hàng đặt lịch chơi phòng 3D Golf tại Saigon Indoor Golf được miễn phí 100% tiền đậu xe 3 tiếng.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pk-facility-feature-item">
+                        <div className="pk-facility-feature-icon">
+                          <Camera size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: 13.5, color: '#0f172a' }}>Kiểm soát tự động ANPR & Barie</strong>
+                          <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                            Nhận diện biển số tự động, thanh toán VietQR SePay khớp lệnh 3 giây, mở cổng tức thì.
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pk-facility-feature-item">
+                        <div className="pk-facility-feature-icon">
+                          <Phone size={18} />
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: 13.5, color: '#0f172a' }}>Hỗ trợ bảo vệ bốt gác 24/7</strong>
+                          <div style={{ fontSize: 12, color: '#475569', marginTop: 2 }}>
+                            Hotline ban quản lý bãi: <strong>0877 834 888</strong>. Hướng dẫn đỗ và xuất vé giấy linh hoạt.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
 
             {/* BƯỚC 2: CHỌN Ô ĐỖ (65 Ô GOPICK) */}
             {step === 2 && (
-              <div>
+              <div className="pk-step2-layout">
+                {/* Desktop Summary Sidebar (Chỉ hiện trên Desktop & Tablet) */}
+                <div className="pk-step2-summary-col">
+                  <div className="pk-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ borderBottom: '1px solid var(--pk-border)', paddingBottom: 10 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pk-primary)', textTransform: 'uppercase' }}>
+                        Thông tin lượt đỗ
+                      </div>
+                      <strong style={{ fontSize: 15, color: '#0f172a', display: 'block', marginTop: 2 }}>
+                        Bãi xe GoPick — 250 Lương Định Của
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--pk-text-muted)' }}>Ngày đậu:</span>
+                        <strong>{dateStr}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--pk-text-muted)' }}>Khung giờ:</span>
+                        <span>{timeIn} – {timeOut} ({durationText})</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--pk-text-muted)' }}>Biển số xe:</span>
+                        <strong style={{ color: '#0f172a' }}>{licensePlate || 'Chưa nhập'}</strong>
+                      </div>
+                      {golfSponsorship?.isValid && (
+                        <div style={{ padding: '6px 10px', background: '#f0fdf4', borderRadius: 6, border: '1px solid #bbf7d0', color: '#166534', fontSize: 12, fontWeight: 600 }}>
+                          ⛳ Miễn phí 3h (SiGolf tài trợ)
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--pk-primary)',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        padding: 0,
+                        textDecoration: 'underline',
+                      }}
+                    >
+                      ← Thay đổi thời gian & biển số
+                    </button>
+
+                    <div style={{ borderTop: '1px solid var(--pk-border)', paddingTop: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--pk-text-muted)', textTransform: 'uppercase', marginBottom: 6 }}>
+                        Vị trí ô đỗ đã chọn
+                      </div>
+                      {selectedSpot ? (
+                        <div style={{ background: 'var(--pk-primary-light)', border: '1px solid var(--pk-primary-border)', borderRadius: 8, padding: 12 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong style={{ fontSize: 18, color: 'var(--pk-primary)' }}>Ô {selectedSpot.code}</strong>
+                              <div style={{ fontSize: 12, color: '#475569' }}>{selectedSpot.section}</div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ fontSize: 11, color: 'var(--pk-text-muted)', display: 'block' }}>Tạm tính</span>
+                              <strong style={{ fontSize: 16, color: 'var(--pk-primary)' }}>
+                                {golfSponsorship?.isValid && golfSponsorship.isFullySponsored
+                                  ? '0 đ'
+                                  : money(config?.defaultHourlyRate || 30000)}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ padding: 14, textAlign: 'center', background: '#f8fafc', borderRadius: 8, border: '1px dashed #cbd5e1', color: '#64748b', fontSize: 12.5 }}>
+                          Chạm vào 1 ô đỗ còn trống trên sơ đồ
+                        </div>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="pk-btn-primary"
+                      onClick={handleHoldSpot}
+                      disabled={loadingSpots || !selectedSpot || !licensePlate.trim()}
+                      style={{ height: 46, fontSize: 14, marginTop: 4 }}
+                    >
+                      {loadingSpots ? t.searching : selectedSpot ? t.holdAndContinue : 'Chọn một ô đỗ'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cột chính (Sơ đồ / Danh sách ô đỗ) */}
+                <div className="pk-step2-map-col">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                   <h2 className="pk-page-title" style={{ margin: 0 }}>{t.chooseSpotTitle}</h2>
                   <button
@@ -1364,6 +1526,7 @@ export default function ParkingCustomerApp({
                     </button>
                   </div>
                 )}
+                </div>
               </div>
             )}
 
@@ -1920,97 +2083,99 @@ export default function ParkingCustomerApp({
         <div className="pk-body pk-content-with-bottom-nav">
           <h2 className="pk-page-title">{t.navInfo}</h2>
 
-          {/* Địa chỉ & Chỉ đường */}
-          <div className="pk-card" style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <MapPin size={20} color="var(--pk-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
-              <div>
-                <strong style={{ fontSize: 13.5 }}>{t.facilityAddressTitle}</strong>
-                <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>
-                  {t.addressVal}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 12 }}>
-              <a
-                href="https://maps.google.com/?q=250+Luong+Dinh+Cua"
-                target="_blank"
-                rel="noreferrer"
-                className="pk-btn-primary"
-                style={{ textDecoration: 'none', height: 40, fontSize: 13 }}
-              >
-                <Navigation size={15} />
-                <span>{t.directions}</span>
-              </a>
-            </div>
-          </div>
-
-          {/* Hotline */}
-          <div className="pk-card" style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Phone size={18} color="var(--pk-primary)" />
+          <div className="pk-info-grid">
+            {/* Địa chỉ & Chỉ đường */}
+            <div className="pk-card" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <MapPin size={20} color="var(--pk-primary)" style={{ flexShrink: 0, marginTop: 2 }} />
                 <div>
-                  <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>{t.hotlineTitle}</div>
-                  <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>0877 834 888</strong>
-                </div>
-              </div>
-
-              <a
-                href="tel:0877834888"
-                className="pk-btn-secondary"
-                style={{ width: 'auto', padding: '0 12px', height: 34, textDecoration: 'none' }}
-              >
-                Gọi ngay
-              </a>
-            </div>
-          </div>
-
-          {/* Bảng giá & Quyền lợi */}
-          <div className="pk-card" style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, borderBottom: '1px solid var(--pk-border)', paddingBottom: 6, marginBottom: 8 }}>
-              {t.priceTitle}
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#334155', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <li>{t.priceStandard}</li>
-              <li style={{ color: 'var(--pk-primary)', fontWeight: 600 }}>{t.priceGolf}</li>
-              <li>{t.priceOvertime}</li>
-            </ul>
-          </div>
-
-          {/* Nội quy bãi xe */}
-          <div className="pk-card" style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, borderBottom: '1px solid var(--pk-border)', paddingBottom: 6, marginBottom: 8 }}>
-              {t.regulationsTitle}
-            </div>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#334155', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <li>{t.reg1}</li>
-              <li>{t.reg2}</li>
-              <li>{t.reg3}</li>
-            </ul>
-          </div>
-
-          {/* Mục Về SiGolf trong Thông tin bãi */}
-          <div className="pk-card" style={{ marginBottom: 12, background: '#f8fafc' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Home size={20} color="var(--pk-primary)" />
-                <div>
-                  <strong style={{ fontSize: 13.5 }}>Về SiGolf</strong>
-                  <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
-                    Quay lại màn hình mở ứng dụng (/app)
+                  <strong style={{ fontSize: 13.5 }}>{t.facilityAddressTitle}</strong>
+                  <div style={{ fontSize: 13, color: '#334155', marginTop: 2 }}>
+                    {t.addressVal}
                   </div>
                 </div>
               </div>
 
-              <a
-                href="/app"
-                className="pk-btn-secondary"
-                style={{ width: 'auto', padding: '0 14px', height: 34, textDecoration: 'none', fontWeight: 700 }}
-              >
-                Mở /app
-              </a>
+              <div style={{ marginTop: 12 }}>
+                <a
+                  href="https://maps.google.com/?q=250+Luong+Dinh+Cua"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="pk-btn-primary"
+                  style={{ textDecoration: 'none', height: 40, fontSize: 13 }}
+                >
+                  <Navigation size={15} />
+                  <span>{t.directions}</span>
+                </a>
+              </div>
+            </div>
+
+            {/* Hotline */}
+            <div className="pk-card" style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Phone size={18} color="var(--pk-primary)" />
+                  <div>
+                    <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>{t.hotlineTitle}</div>
+                    <strong style={{ fontSize: 15, color: 'var(--pk-primary)' }}>0877 834 888</strong>
+                  </div>
+                </div>
+
+                <a
+                  href="tel:0877834888"
+                  className="pk-btn-secondary"
+                  style={{ width: 'auto', padding: '0 12px', height: 34, textDecoration: 'none' }}
+                >
+                  Gọi ngay
+                </a>
+              </div>
+            </div>
+
+            {/* Bảng giá & Quyền lợi */}
+            <div className="pk-card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, borderBottom: '1px solid var(--pk-border)', paddingBottom: 6, marginBottom: 8 }}>
+                {t.priceTitle}
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#334155', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <li>{t.priceStandard}</li>
+                <li style={{ color: 'var(--pk-primary)', fontWeight: 600 }}>{t.priceGolf}</li>
+                <li>{t.priceOvertime}</li>
+              </ul>
+            </div>
+
+            {/* Nội quy bãi xe */}
+            <div className="pk-card" style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, borderBottom: '1px solid var(--pk-border)', paddingBottom: 6, marginBottom: 8 }}>
+                {t.regulationsTitle}
+              </div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12.5, color: '#334155', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <li>{t.reg1}</li>
+                <li>{t.reg2}</li>
+                <li>{t.reg3}</li>
+              </ul>
+            </div>
+
+            {/* Mục Về SiGolf trong Thông tin bãi */}
+            <div className="pk-card" style={{ marginBottom: 12, background: '#f8fafc' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Home size={20} color="var(--pk-primary)" />
+                  <div>
+                    <strong style={{ fontSize: 13.5 }}>Về SiGolf</strong>
+                    <div style={{ fontSize: 12, color: 'var(--pk-text-muted)' }}>
+                      Quay lại màn hình mở ứng dụng (/app)
+                    </div>
+                  </div>
+                </div>
+
+                <a
+                  href="/app"
+                  className="pk-btn-secondary"
+                  style={{ width: 'auto', padding: '0 14px', height: 34, textDecoration: 'none', fontWeight: 700 }}
+                >
+                  Mở /app
+                </a>
+              </div>
             </div>
           </div>
         </div>

@@ -39,6 +39,11 @@ import {
   Bell,
   User,
   ChevronDown,
+  Grid,
+  HelpCircle,
+  Folder,
+  ArrowUpRight,
+  HardDrive,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl } from '../../../lib/bank';
@@ -126,6 +131,21 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   // Active parked cars for instant 1-touch select
   const [activeLotTickets, setActiveLotTickets] = useState<ParkingTicket[]>([]);
+  const [globalSearch, setGlobalSearch] = useState<string>('');
+  const [recentTab, setRecentTab] = useState<'active' | 'booked' | 'all'>('active');
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Global Ctrl + K search shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Camera & Plate Recognition States
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false);
@@ -282,6 +302,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   useEffect(() => {
     void loadConfigAndSpots();
+    void loadActiveLotTickets();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant, mapMode, mapDate, slotPreset, customSlotStart, customSlotEnd]);
 
@@ -891,157 +912,667 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   };
 
   return (
-    <div className="pk-desktop-container">
-      {/* Top Banner & Header (Bám sát thiết kế SIGOLF · Bãi xe GoPick) */}
-      <div className="pk-top-bar">
-        <div className="pk-top-bar-left">
+    <div className="pk-saas-root">
+      {/* 1. SaaS Workspace Top Header Bar */}
+      <header className="pk-saas-header">
+        <div className="pk-saas-brand-wrap">
           {onNavigate && (
             <button
               type="button"
-              onClick={() => onNavigate('rooms')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 5,
-                background: 'rgba(255,255,255,0.2)',
-                color: '#ffffff',
-                border: 'none',
-                padding: '5px 10px',
-                borderRadius: 6,
-                fontSize: 12,
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-              title="Quay lại bán hàng POS hoặc Đặt sân"
+              className="pk-saas-back-btn"
+              onClick={() => onNavigate('dashboard')}
+              title="Quay lại Bảng điều khiển SiGolf"
             >
               <ArrowLeft size={14} />
               <span>Về SIGOLF</span>
             </button>
           )}
-          <Car size={20} color="#86efac" />
-          <h1 className="pk-top-bar-title">
-            SIGOLF · Bãi xe GoPick
-          </h1>
+          <div className="pk-saas-logo-icon">
+            <Grid size={18} />
+          </div>
+          <div>
+            <h1 className="pk-saas-brand-title">Bãi xe GoPick</h1>
+          </div>
         </div>
 
-        <div className="pk-top-bar-right">
+        {/* Global Search Bar with Ctrl+K */}
+        <div className="pk-saas-search-box">
+          <Search size={15} className="pk-saas-search-icon" />
+          <input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Tìm kiếm biển số xe, mã vé, vị trí ô đỗ (P01–P65)..."
+            value={globalSearch}
+            onChange={(e) => {
+              setGlobalSearch(e.target.value);
+              setSearchTicket(e.target.value);
+            }}
+          />
+          <kbd className="pk-saas-search-kbd">Ctrl + K</kbd>
+        </div>
+
+        {/* Header Right Utilities */}
+        <div className="pk-saas-header-right">
           <button
             type="button"
-            className="pk-bell-btn"
-            title="Thông báo bãi xe"
-            onClick={() => notify('Hệ thống bãi xe GoPick hoạt động bình thường.')}
+            className="pk-saas-icon-btn"
+            title="Thông báo hệ thống"
+            onClick={() => notify('Hệ thống bãi xe GoPick 250 Lương Định Của đang kết nối ổn định.')}
           >
             <Bell size={16} />
-            <span className="pk-bell-dot" />
+            <span className="pk-saas-unread-dot" />
           </button>
 
-          <div className="pk-top-bar-badge">
-            <User size={14} />
-            <span>{isGuard ? 'Bảo vệ trực cổng' : 'Quản lý bãi xe'}</span>
-            <ChevronDown size={13} style={{ opacity: 0.8 }} />
+          <button
+            type="button"
+            className="pk-saas-icon-btn"
+            title="Trợ giúp & Hướng dẫn sử dụng"
+            onClick={() =>
+              notify(
+                'Hướng dẫn: 1. Sơ đồ 65 ô P01-P65. 2. Quét ANPR nhận diện biển số tự động. 3. Thanh toán SePay tự động khóa/mở ô.',
+              )
+            }
+          >
+            <HelpCircle size={16} />
+          </button>
+
+          <div className="pk-saas-user-pill">
+            <div className="pk-saas-avatar">
+              <User size={15} />
+            </div>
+            <span>{isGuard ? 'Bảo vệ cổng' : 'Quản lý bãi xe'}</span>
+            <ChevronDown size={13} style={{ opacity: 0.7 }} />
           </div>
 
           <button
             type="button"
-            className="pk-header-back"
-            onClick={loadConfigAndSpots}
+            className="pk-saas-icon-btn"
+            onClick={() => {
+              void loadConfigAndSpots();
+              void loadActiveLotTickets();
+            }}
             title="Làm mới dữ liệu bãi xe"
-            style={{ width: 32, height: 32, borderRadius: 6, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff' }}
           >
-            <RefreshCw size={14} />
+            <RefreshCw size={15} />
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* Floating Notification */}
-      {notifyMsg && (
-        <div
-          style={{
-            padding: '10px 16px',
-            background: 'var(--pk-primary-light)',
-            border: '1px solid var(--pk-primary-border)',
-            borderRadius: 'var(--pk-radius)',
-            color: 'var(--pk-primary)',
-            fontWeight: 700,
-            fontSize: 13.5,
-            marginBottom: 16,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <CheckCircle2 size={18} />
-          <span>{notifyMsg}</span>
-        </div>
-      )}
+      {/* 2. SaaS Main Layout (Sidebar + Content) */}
+      <div className="pk-saas-body">
+        {/* Left Sidebar */}
+        <aside className="pk-saas-sidebar" aria-label="Menu bãi xe">
+          <div>
+            <nav className="pk-saas-nav-list">
+              <button
+                type="button"
+                className={`pk-saas-nav-item ${activeTab === 'map' ? 'active' : ''}`}
+                onClick={() => setActiveTab('map')}
+                title="Sơ đồ 65 ô bãi xe"
+              >
+                <div className="pk-saas-nav-item-left">
+                  <Grid size={17} />
+                  <span>Tổng quan & Sơ đồ</span>
+                </div>
+                <span className="pk-saas-nav-badge">65 ô</span>
+              </button>
 
-      {/* Main 2-Column Operational Layout */}
-      <div className="pk-admin-layout">
-        {/* Left Sidebar Menu (Icon trên chữ dưới đúng theo ảnh) */}
-        <aside className="pk-admin-sidebar" aria-label="Menu bãi xe">
-          <button
-            type="button"
-            className={`pk-admin-nav-item ${activeTab === 'map' ? 'active' : ''}`}
-            onClick={() => setActiveTab('map')}
-            title="Sơ đồ 65 ô bãi xe"
-          >
-            <div className="pk-nav-icon-wrap">
-              <span style={{ fontWeight: 900, fontSize: 15 }}>P</span>
+              <button
+                type="button"
+                className={`pk-saas-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
+                onClick={() => setActiveTab('schedule')}
+                title="Lịch đặt chỗ"
+              >
+                <div className="pk-saas-nav-item-left">
+                  <Calendar size={17} />
+                  <span>Lịch đặt chỗ</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
+                onClick={() => setActiveTab('gate')}
+                title="Kiểm soát xe vào / ra"
+              >
+                <div className="pk-saas-nav-item-left">
+                  <Car size={17} />
+                  <span>Vào / Ra cổng</span>
+                </div>
+                {activeLotTickets.length > 0 && (
+                  <span className="pk-saas-nav-badge" style={{ background: '#fef3c7', color: '#d97706' }}>
+                    {activeLotTickets.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('reconciliation')}
+                title="Đối soát ca & Doanh thu"
+              >
+                <div className="pk-saas-nav-item-left">
+                  <TrendingUp size={17} />
+                  <span>Đối soát ca</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+                title="Cài đặt bãi xe"
+              >
+                <div className="pk-saas-nav-item-left">
+                  <Sliders size={17} />
+                  <span>Cài đặt hệ thống</span>
+                </div>
+              </button>
+            </nav>
+
+            {/* Section Filter List */}
+            <div className="pk-saas-section-header">Khu vực ô đỗ (65 ô)</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <button
+                type="button"
+                className={`pk-saas-sub-item ${adminSectionFilter === 'all' ? 'active' : ''}`}
+                onClick={() => {
+                  setAdminSectionFilter('all');
+                  if (activeTab !== 'map') setActiveTab('map');
+                }}
+              >
+                <Folder size={15} color="#6366f1" />
+                <span>Tất cả vị trí (P01–P65)</span>
+              </button>
+              <button
+                type="button"
+                className={`pk-saas-sub-item ${adminSectionFilter === 'Dãy A' ? 'active' : ''}`}
+                onClick={() => {
+                  setAdminSectionFilter('Dãy A');
+                  if (activeTab !== 'map') setActiveTab('map');
+                }}
+              >
+                <Folder size={15} color="#3b82f6" />
+                <span>Dãy A (P01 – P20)</span>
+              </button>
+              <button
+                type="button"
+                className={`pk-saas-sub-item ${adminSectionFilter === 'Dãy B' ? 'active' : ''}`}
+                onClick={() => {
+                  setAdminSectionFilter('Dãy B');
+                  if (activeTab !== 'map') setActiveTab('map');
+                }}
+              >
+                <Folder size={15} color="#10b981" />
+                <span>Dãy B (P21 – P40)</span>
+              </button>
+              <button
+                type="button"
+                className={`pk-saas-sub-item ${adminSectionFilter === 'Dãy C' ? 'active' : ''}`}
+                onClick={() => {
+                  setAdminSectionFilter('Dãy C');
+                  if (activeTab !== 'map') setActiveTab('map');
+                }}
+              >
+                <Folder size={15} color="#f59e0b" />
+                <span>Dãy C (P41 – P65)</span>
+              </button>
             </div>
-            <span>Bãi xe</span>
-          </button>
+          </div>
 
-          <button
-            type="button"
-            className={`pk-admin-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
-            onClick={() => setActiveTab('schedule')}
-            title="Lịch đặt chỗ"
-          >
-            <div className="pk-nav-icon-wrap">
-              <Calendar size={18} />
+          {/* Bottom Capacity Card (Storage Card in screenshot) */}
+          <div className="pk-saas-storage-card">
+            <div className="pk-saas-storage-top">
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <HardDrive size={14} color="#6366f1" />
+                Sức chứa bãi xe
+              </span>
+              <ArrowRight size={13} color="#94a3b8" />
             </div>
-            <span>Đặt chỗ</span>
-          </button>
-
-          <button
-            type="button"
-            className={`pk-admin-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
-            onClick={() => setActiveTab('gate')}
-            title="Kiểm soát xe vào / ra"
-          >
-            <div className="pk-nav-icon-wrap">
-              <Car size={18} />
+            <div className="pk-saas-progress-track">
+              <div
+                className="pk-saas-progress-fill"
+                style={{
+                  width: `${Math.min(100, Math.round(((mapSummary.occupied + mapSummary.booked) / 65) * 100))}%`,
+                }}
+              />
             </div>
-            <span>Vào / Ra</span>
-          </button>
-
-          <button
-            type="button"
-            className={`pk-admin-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
-            onClick={() => setActiveTab('reconciliation')}
-            title="Đối soát cuối ca"
-          >
-            <div className="pk-nav-icon-wrap">
-              <TrendingUp size={18} />
+            <div className="pk-saas-storage-bottom">
+              <span>Đang dùng {mapSummary.occupied + mapSummary.booked} / 65 ô</span>
+              <strong style={{ color: '#0f172a' }}>
+                {Math.round(((mapSummary.occupied + mapSummary.booked) / 65) * 100)}%
+              </strong>
             </div>
-            <span>Đối soát</span>
-          </button>
-
-          <button
-            type="button"
-            className={`pk-admin-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
-            onClick={() => setActiveTab('settings')}
-            title="Cài đặt bãi xe"
-          >
-            <div className="pk-nav-icon-wrap">
-              <Sliders size={18} />
-            </div>
-            <span>Cài đặt</span>
-          </button>
+          </div>
         </aside>
 
-        {/* Right Content Area */}
-        <section className="pk-admin-content">
+        {/* Content Viewport */}
+        <main className="pk-saas-content">
+          {/* Notification Alert Banner */}
+          {notifyMsg && (
+            <div
+              style={{
+                padding: '12px 18px',
+                background: '#ecfdf5',
+                border: '1px solid #a7f3d0',
+                borderRadius: 14,
+                color: '#065f46',
+                fontWeight: 600,
+                fontSize: 13.5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+              }}
+            >
+              <CheckCircle2 size={18} color="#059669" />
+              <span>{notifyMsg}</span>
+            </div>
+          )}
+
+          {/* 3. Hero Welcome Banner (Matches screenshot top banner) */}
+          <section className="pk-saas-hero-banner">
+            <h2 className="pk-saas-hero-title">Chào buổi sáng, {isGuard ? 'Bảo vệ' : 'Quản trị viên'} 👋</h2>
+            <p className="pk-saas-hero-sub">
+              Hệ thống quản lý bãi đậu xe thông minh SIGOLF GoPick 250 Lương Định Của — Tự động nhận diện biển số & đối soát ca chuẩn xác.
+            </p>
+
+            {/* Quick Action Shortcuts */}
+            <div className="pk-saas-shortcuts-row">
+              <div
+                className="pk-saas-shortcut-pill"
+                onClick={() => setActiveTab('map')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="pk-saas-shortcut-icon blue">
+                  <Grid size={16} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Sơ đồ bãi xe</strong>
+                  <span>65 ô P01–P65</span>
+                </div>
+              </div>
+
+              <div
+                className="pk-saas-shortcut-pill"
+                onClick={() => setActiveTab('schedule')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="pk-saas-shortcut-icon green">
+                  <Calendar size={16} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Lịch đặt chỗ</strong>
+                  <span>Lên lịch & giữ ô</span>
+                </div>
+              </div>
+
+              <div
+                className="pk-saas-shortcut-pill"
+                onClick={() => setActiveTab('gate')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="pk-saas-shortcut-icon orange">
+                  <Camera size={16} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Quét ANPR</strong>
+                  <span>Vào / ra camera</span>
+                </div>
+              </div>
+
+              <div
+                className="pk-saas-shortcut-pill"
+                onClick={() => setActiveTab('reconciliation')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="pk-saas-shortcut-icon purple">
+                  <TrendingUp size={16} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Đối soát ca</strong>
+                  <span>Báo cáo doanh thu</span>
+                </div>
+              </div>
+
+              <div
+                className="pk-saas-shortcut-pill"
+                onClick={() => setActiveTab('settings')}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="pk-saas-shortcut-icon sky">
+                  <DollarSign size={16} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Cài đặt SePay</strong>
+                  <span>Tài trợ & thanh toán</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="pk-saas-action-cta-btn"
+                onClick={() => {
+                  setShowPaperModal(true);
+                }}
+              >
+                <Plus size={16} />
+                <span>Đặt chỗ mới</span>
+              </button>
+            </div>
+          </section>
+
+          {/* 4. 3-Column Dashboard Row (Matches screenshot middle row) */}
+          {activeTab === 'map' && (
+            <div className="pk-saas-grid-3">
+              {/* Card 1: Tình trạng bãi hôm nay */}
+              <div className="pk-saas-card">
+                <div className="pk-saas-card-header">
+                  <h3 className="pk-saas-card-title">
+                    <Calendar size={16} color="#6366f1" />
+                    Tình trạng bãi hôm nay
+                  </h3>
+                  <button
+                    type="button"
+                    className="pk-saas-card-link"
+                    onClick={() => setActiveTab('schedule')}
+                  >
+                    <span>Xem lịch</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                <div style={{ fontSize: 13, color: '#64748b' }}>
+                  {new Date().toLocaleDateString('vi-VN', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      background: '#f8fafc',
+                      border: '1px solid #edf2f7',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Khung giờ hiện tại</strong>
+                      <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                        {slotPreset === 'now' ? 'Trực tiếp theo thời gian thực' : slotPreset}
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        background: '#ecfdf5',
+                        color: '#059669',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {mapSummary.available} ô trống
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      background: '#f8fafc',
+                      border: '1px solid #edf2f7',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Phương tiện đang đỗ</strong>
+                      <div style={{ fontSize: 11.5, color: '#64748b' }}>Bãi xe GoPick 250 Lương Định Của</div>
+                    </div>
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        background: '#eff6ff',
+                        color: '#2563eb',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {mapSummary.occupied} xe trong bãi
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderRadius: 10,
+                      background: '#f8fafc',
+                      border: '1px solid #edf2f7',
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Ô đặt trước / Đang giữ</strong>
+                      <div style={{ fontSize: 11.5, color: '#64748b' }}>Khách chơi Golf & Khách vãng lai</div>
+                    </div>
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 6,
+                        background: '#fffbeb',
+                        color: '#d97706',
+                        fontSize: 12,
+                        fontWeight: 700,
+                      }}
+                    >
+                      {mapSummary.booked + mapSummary.held} ô đã giữ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Xe & Vé đang vận hành */}
+              <div className="pk-saas-card">
+                <div className="pk-saas-card-header">
+                  <h3 className="pk-saas-card-title">
+                    <Car size={16} color="#6366f1" />
+                    Xe & Vé trong ca trực
+                  </h3>
+                  <button
+                    type="button"
+                    className="pk-saas-card-link"
+                    onClick={() => setActiveTab('gate')}
+                  >
+                    <span>Vào / Ra</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+
+                <div className="pk-saas-pill-tabs">
+                  <button
+                    type="button"
+                    className={`pk-saas-pill-tab ${recentTab === 'active' ? 'active' : ''}`}
+                    onClick={() => setRecentTab('active')}
+                  >
+                    Đang đỗ ({activeLotTickets.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`pk-saas-pill-tab ${recentTab === 'booked' ? 'active' : ''}`}
+                    onClick={() => setRecentTab('booked')}
+                  >
+                    Đặt trước ({mapSummary.booked})
+                  </button>
+                  <button
+                    type="button"
+                    className={`pk-saas-pill-tab ${recentTab === 'all' ? 'active' : ''}`}
+                    onClick={() => setRecentTab('all')}
+                  >
+                    Tất cả
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                  {activeLotTickets.length === 0 ? (
+                    <div style={{ padding: '20px 10px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                      Hiện chưa có xe đang đỗ trong bãi.
+                    </div>
+                  ) : (
+                    activeLotTickets.slice(0, 4).map((t) => (
+                      <div
+                        key={t.id || t.ticketCode}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          padding: '7px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #edf2f7',
+                          background: '#ffffff',
+                          fontSize: 12.5,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: '#f1f5f9',
+                              fontWeight: 700,
+                              color: '#334155',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            {t.spotId}
+                          </span>
+                          <strong style={{ color: '#0f172a' }}>{t.licensePlate || 'Xe chưa rõ biển'}</strong>
+                        </div>
+                        <span style={{ color: '#64748b', fontSize: 11.5 }}>
+                          {t.actualIn || t.expectedIn
+                            ? new Date(t.actualIn || t.expectedIn).toLocaleTimeString('vi-VN', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Vừa vào'}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="pk-saas-card-link"
+                  style={{ marginTop: 'auto', alignSelf: 'flex-start' }}
+                  onClick={() => setActiveTab('schedule')}
+                >
+                  <span>Xem tất cả danh sách xe</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+
+              {/* Card 3: Hoạt động & Doanh thu */}
+              <div className="pk-saas-card">
+                <div className="pk-saas-card-header">
+                  <h3 className="pk-saas-card-title">
+                    <TrendingUp size={16} color="#6366f1" />
+                    Hoạt động bãi xe
+                  </h3>
+                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Hôm nay ▾</span>
+                </div>
+
+                <div className="pk-saas-metric-row">
+                  <div className="pk-saas-metric-box">
+                    <div className="pk-saas-metric-number">65</div>
+                    <div className="pk-saas-metric-label">Tổng vị trí</div>
+                    <div className="pk-saas-trend-badge">
+                      <ArrowUpRight size={11} /> 100%
+                    </div>
+                  </div>
+
+                  <div className="pk-saas-metric-box">
+                    <div className="pk-saas-metric-number" style={{ color: '#059669' }}>
+                      {mapSummary.available}
+                    </div>
+                    <div className="pk-saas-metric-label">Ô đang trống</div>
+                    <div className="pk-saas-trend-badge">
+                      <ArrowUpRight size={11} /> {Math.round((mapSummary.available / 65) * 100)}%
+                    </div>
+                  </div>
+
+                  <div className="pk-saas-metric-box">
+                    <div className="pk-saas-metric-number" style={{ color: '#6366f1' }}>
+                      {mapSummary.occupied}
+                    </div>
+                    <div className="pk-saas-metric-label">Xe đang đỗ</div>
+                    <div className="pk-saas-trend-badge" style={{ background: '#f5f3ff', color: '#6366f1' }}>
+                      <ArrowUpRight size={11} /> Đang phục vụ
+                    </div>
+                  </div>
+                </div>
+
+                {/* Smooth Trend Chart (SVG spline curve matching screenshot) */}
+                <div className="pk-saas-chart-container">
+                  <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                    <defs>
+                      <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M 0,65 Q 40,55 75,58 T 150,42 T 225,28 T 300,18 L 300,80 L 0,80 Z"
+                      fill="url(#chartGradient)"
+                    />
+                    <path
+                      d="M 0,65 Q 40,55 75,58 T 150,42 T 225,28 T 300,18"
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                    <circle cx="75" cy="58" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="150" cy="42" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="225" cy="28" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="300" cy="18" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                  </svg>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      fontSize: 10,
+                      color: '#94a3b8',
+                      marginTop: 2,
+                    }}
+                  >
+                    <span>06:00</span>
+                    <span>10:00</span>
+                    <span>14:00</span>
+                    <span>18:00</span>
+                    <span>22:00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ===================================================================
               TAB 1: SƠ ĐỒ BÃI XE (Bám sát ảnh 2 - Sơ đồ bãi xe)
               =================================================================== */}
@@ -3177,7 +3708,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               </div>
             </div>
           )}
-        </section>
+        </main>
       </div>
 
       {/* Modal: Đổi ô đỗ */}

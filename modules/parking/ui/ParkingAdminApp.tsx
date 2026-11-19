@@ -921,34 +921,32 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               type="button"
               className="pk-saas-back-btn"
               onClick={() => onNavigate('dashboard')}
-              title="Quay lại Bảng điều khiển SiGolf"
+              title="Về SiGolf"
             >
-              <ArrowLeft size={14} />
-              <span>Về SIGOLF</span>
+              <ArrowLeft size={14} strokeWidth={2} />
+              <span className="pk-saas-back-text">Về SiGolf</span>
             </button>
           )}
           <div className="pk-saas-logo-icon">
-            <Grid size={18} />
+            <Grid size={16} strokeWidth={2} />
           </div>
-          <div>
-            <h1 className="pk-saas-brand-title">Bãi xe GoPick</h1>
-          </div>
+          <h1 className="pk-saas-brand-title">Bãi xe GoPick</h1>
         </div>
 
         {/* Global Search Bar with Ctrl+K */}
         <div className="pk-saas-search-box">
-          <Search size={15} className="pk-saas-search-icon" />
+          <Search size={14} strokeWidth={2} className="pk-saas-search-icon" />
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Tìm kiếm biển số xe, mã vé, vị trí ô đỗ (P01–P65)..."
+            placeholder="Tìm biển số, mã vé, ô P01–P65..."
             value={globalSearch}
             onChange={(e) => {
               setGlobalSearch(e.target.value);
               setSearchTicket(e.target.value);
             }}
           />
-          <kbd className="pk-saas-search-kbd">Ctrl + K</kbd>
+          <kbd className="pk-saas-search-kbd">Ctrl K</kbd>
         </div>
 
         {/* Header Right Utilities */}
@@ -956,45 +954,31 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           <button
             type="button"
             className="pk-saas-icon-btn"
-            title="Thông báo hệ thống"
-            onClick={() => notify('Hệ thống bãi xe GoPick 250 Lương Định Của đang kết nối ổn định.')}
-          >
-            <Bell size={16} />
-            <span className="pk-saas-unread-dot" />
-          </button>
-
-          <button
-            type="button"
-            className="pk-saas-icon-btn"
-            title="Trợ giúp & Hướng dẫn sử dụng"
-            onClick={() =>
-              notify(
-                'Hướng dẫn: 1. Sơ đồ 65 ô P01-P65. 2. Quét ANPR nhận diện biển số tự động. 3. Thanh toán SePay tự động khóa/mở ô.',
-              )
-            }
-          >
-            <HelpCircle size={16} />
-          </button>
-
-          <div className="pk-saas-user-pill">
-            <div className="pk-saas-avatar">
-              <User size={15} />
-            </div>
-            <span>{isGuard ? 'Bảo vệ cổng' : 'Quản lý bãi xe'}</span>
-            <ChevronDown size={13} style={{ opacity: 0.7 }} />
-          </div>
-
-          <button
-            type="button"
-            className="pk-saas-icon-btn"
             onClick={() => {
               void loadConfigAndSpots();
               void loadActiveLotTickets();
             }}
-            title="Làm mới dữ liệu bãi xe"
+            title="Làm mới"
           >
-            <RefreshCw size={15} />
+            <RefreshCw size={14} strokeWidth={2} />
           </button>
+
+          <button
+            type="button"
+            className="pk-saas-icon-btn pk-desktop-only"
+            title="Thông báo"
+            onClick={() => notify('Bãi xe GoPick hoạt động bình thường.')}
+          >
+            <Bell size={14} strokeWidth={2} />
+            <span className="pk-saas-unread-dot" />
+          </button>
+
+          <div className="pk-saas-user-pill pk-desktop-only">
+            <div className="pk-saas-avatar">
+              <User size={13} strokeWidth={2} />
+            </div>
+            <span>{isGuard ? 'Bảo vệ' : 'Quản lý'}</span>
+          </div>
         </div>
       </header>
 
@@ -1008,11 +992,11 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 type="button"
                 className={`pk-saas-nav-item ${activeTab === 'map' ? 'active' : ''}`}
                 onClick={() => setActiveTab('map')}
-                title="Sơ đồ 65 ô bãi xe"
+                title="Sơ đồ bãi xe"
               >
                 <div className="pk-saas-nav-item-left">
-                  <Grid size={17} />
-                  <span>Tổng quan & Sơ đồ</span>
+                  <Grid size={16} strokeWidth={2} />
+                  <span>Sơ đồ 65 ô</span>
                 </div>
                 <span className="pk-saas-nav-badge">65 ô</span>
               </button>
@@ -1024,8 +1008,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 title="Lịch đặt chỗ"
               >
                 <div className="pk-saas-nav-item-left">
-                  <Calendar size={17} />
-                  <span>Lịch đặt chỗ</span>
+                  <Calendar size={16} strokeWidth={2} />
+                  <span>Đặt chỗ</span>
                 </div>
               </button>
 
@@ -1033,10 +1017,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 type="button"
                 className={`pk-saas-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
                 onClick={() => setActiveTab('gate')}
-                title="Kiểm soát xe vào / ra"
+                title="Cổng vào / ra"
               >
                 <div className="pk-saas-nav-item-left">
-                  <Car size={17} />
+                  <Car size={16} strokeWidth={2} />
                   <span>Vào / Ra cổng</span>
                 </div>
                 {activeLotTickets.length > 0 && (
@@ -1050,10 +1034,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 type="button"
                 className={`pk-saas-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
                 onClick={() => setActiveTab('reconciliation')}
-                title="Đối soát ca & Doanh thu"
+                title="Đối soát ca"
               >
                 <div className="pk-saas-nav-item-left">
-                  <TrendingUp size={17} />
+                  <TrendingUp size={16} strokeWidth={2} />
                   <span>Đối soát ca</span>
                 </div>
               </button>
@@ -1062,17 +1046,17 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 type="button"
                 className={`pk-saas-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
                 onClick={() => setActiveTab('settings')}
-                title="Cài đặt bãi xe"
+                title="Cài đặt hệ thống"
               >
                 <div className="pk-saas-nav-item-left">
-                  <Sliders size={17} />
-                  <span>Cài đặt hệ thống</span>
+                  <Sliders size={16} strokeWidth={2} />
+                  <span>Cài đặt</span>
                 </div>
               </button>
             </nav>
 
             {/* Section Filter List */}
-            <div className="pk-saas-section-header">Khu vực ô đỗ (65 ô)</div>
+            <div className="pk-saas-section-header">Khu vực ô đỗ</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <button
                 type="button"
@@ -1082,8 +1066,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   if (activeTab !== 'map') setActiveTab('map');
                 }}
               >
-                <Folder size={15} color="#6366f1" />
-                <span>Tất cả vị trí (P01–P65)</span>
+                <Folder size={14} color="#6366f1" strokeWidth={2} />
+                <span>Tất cả ô (P01–P65)</span>
               </button>
               <button
                 type="button"
@@ -1093,8 +1077,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   if (activeTab !== 'map') setActiveTab('map');
                 }}
               >
-                <Folder size={15} color="#3b82f6" />
-                <span>Dãy A (P01 – P20)</span>
+                <Folder size={14} color="#3b82f6" strokeWidth={2} />
+                <span>Dãy A (P01–P20)</span>
               </button>
               <button
                 type="button"
@@ -1104,8 +1088,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   if (activeTab !== 'map') setActiveTab('map');
                 }}
               >
-                <Folder size={15} color="#10b981" />
-                <span>Dãy B (P21 – P40)</span>
+                <Folder size={14} color="#10b981" strokeWidth={2} />
+                <span>Dãy B (P21–P40)</span>
               </button>
               <button
                 type="button"
@@ -1115,20 +1099,20 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   if (activeTab !== 'map') setActiveTab('map');
                 }}
               >
-                <Folder size={15} color="#f59e0b" />
-                <span>Dãy C (P41 – P65)</span>
+                <Folder size={14} color="#f59e0b" strokeWidth={2} />
+                <span>Dãy C (P41–P65)</span>
               </button>
             </div>
           </div>
 
-          {/* Bottom Capacity Card (Storage Card in screenshot) */}
+          {/* Bottom Capacity Card */}
           <div className="pk-saas-storage-card">
             <div className="pk-saas-storage-top">
               <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <HardDrive size={14} color="#6366f1" />
+                <HardDrive size={13} color="#6366f1" strokeWidth={2} />
                 Sức chứa bãi xe
               </span>
-              <ArrowRight size={13} color="#94a3b8" />
+              <ArrowRight size={12} color="#94a3b8" />
             </div>
             <div className="pk-saas-progress-track">
               <div
@@ -1139,7 +1123,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               />
             </div>
             <div className="pk-saas-storage-bottom">
-              <span>Đang dùng {mapSummary.occupied + mapSummary.booked} / 65 ô</span>
+              <span>Đang đỗ {mapSummary.occupied + mapSummary.booked} / 65 ô</span>
               <strong style={{ color: '#0f172a' }}>
                 {Math.round(((mapSummary.occupied + mapSummary.booked) / 65) * 100)}%
               </strong>
@@ -1153,178 +1137,163 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           {notifyMsg && (
             <div
               style={{
-                padding: '12px 18px',
+                padding: '10px 14px',
                 background: '#ecfdf5',
                 border: '1px solid #a7f3d0',
-                borderRadius: 14,
+                borderRadius: 12,
                 color: '#065f46',
                 fontWeight: 600,
-                fontSize: 13.5,
+                fontSize: 13,
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 8,
               }}
             >
-              <CheckCircle2 size={18} color="#059669" />
+              <CheckCircle2 size={16} color="#059669" strokeWidth={2} />
               <span>{notifyMsg}</span>
             </div>
           )}
 
-          {/* 3. Hero Welcome Banner (Matches screenshot top banner) */}
+          {/* 3. Hero Welcome Banner (Clean, compact on mobile) */}
           <section className="pk-saas-hero-banner">
-            <h2 className="pk-saas-hero-title">Chào buổi sáng, {isGuard ? 'Bảo vệ' : 'Quản trị viên'} 👋</h2>
-            <p className="pk-saas-hero-sub">
-              Hệ thống quản lý bãi đậu xe thông minh SIGOLF GoPick 250 Lương Định Của — Tự động nhận diện biển số & đối soát ca chuẩn xác.
-            </p>
-
-            {/* Quick Action Shortcuts */}
-            <div className="pk-saas-shortcuts-row">
-              <div
-                className="pk-saas-shortcut-pill"
-                onClick={() => setActiveTab('map')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="pk-saas-shortcut-icon blue">
-                  <Grid size={16} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Sơ đồ bãi xe</strong>
-                  <span>65 ô P01–P65</span>
-                </div>
+            <div className="pk-saas-hero-header">
+              <div>
+                <h2 className="pk-saas-hero-title">Chào buổi sáng 👋</h2>
+                <p className="pk-saas-hero-sub">GoPick 250 Lương Định Của · 65 ô P01–P65</p>
               </div>
-
-              <div
-                className="pk-saas-shortcut-pill"
-                onClick={() => setActiveTab('schedule')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="pk-saas-shortcut-icon green">
-                  <Calendar size={16} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Lịch đặt chỗ</strong>
-                  <span>Lên lịch & giữ ô</span>
-                </div>
-              </div>
-
-              <div
-                className="pk-saas-shortcut-pill"
-                onClick={() => setActiveTab('gate')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="pk-saas-shortcut-icon orange">
-                  <Camera size={16} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Quét ANPR</strong>
-                  <span>Vào / ra camera</span>
-                </div>
-              </div>
-
-              <div
-                className="pk-saas-shortcut-pill"
-                onClick={() => setActiveTab('reconciliation')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="pk-saas-shortcut-icon purple">
-                  <TrendingUp size={16} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Đối soát ca</strong>
-                  <span>Báo cáo doanh thu</span>
-                </div>
-              </div>
-
-              <div
-                className="pk-saas-shortcut-pill"
-                onClick={() => setActiveTab('settings')}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="pk-saas-shortcut-icon sky">
-                  <DollarSign size={16} />
-                </div>
-                <div className="pk-saas-shortcut-text">
-                  <strong>Cài đặt SePay</strong>
-                  <span>Tài trợ & thanh toán</span>
-                </div>
-              </div>
-
               <button
                 type="button"
                 className="pk-saas-action-cta-btn"
-                onClick={() => {
-                  setShowPaperModal(true);
-                }}
+                onClick={() => setShowPaperModal(true)}
               >
-                <Plus size={16} />
-                <span>Đặt chỗ mới</span>
+                <Plus size={14} strokeWidth={2.2} />
+                <span>Đặt chỗ</span>
+              </button>
+            </div>
+
+            {/* Quick Action Shortcuts */}
+            <div className="pk-saas-shortcuts-row">
+              <button
+                type="button"
+                className={`pk-saas-shortcut-pill ${activeTab === 'map' ? 'active' : ''}`}
+                onClick={() => setActiveTab('map')}
+              >
+                <div className="pk-saas-shortcut-icon blue">
+                  <Grid size={15} strokeWidth={2} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Sơ đồ</strong>
+                  <span>65 ô P01–P65</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-shortcut-pill ${activeTab === 'schedule' ? 'active' : ''}`}
+                onClick={() => setActiveTab('schedule')}
+              >
+                <div className="pk-saas-shortcut-icon green">
+                  <Calendar size={15} strokeWidth={2} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Đặt chỗ</strong>
+                  <span>Giữ & khóa ô</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-shortcut-pill ${activeTab === 'gate' ? 'active' : ''}`}
+                onClick={() => setActiveTab('gate')}
+              >
+                <div className="pk-saas-shortcut-icon orange">
+                  <Camera size={15} strokeWidth={2} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Vào / Ra</strong>
+                  <span>Quét ANPR</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-shortcut-pill ${activeTab === 'reconciliation' ? 'active' : ''}`}
+                onClick={() => setActiveTab('reconciliation')}
+              >
+                <div className="pk-saas-shortcut-icon purple">
+                  <TrendingUp size={15} strokeWidth={2} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Đối soát</strong>
+                  <span>Báo cáo ca</span>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`pk-saas-shortcut-pill ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+              >
+                <div className="pk-saas-shortcut-icon sky">
+                  <DollarSign size={15} strokeWidth={2} />
+                </div>
+                <div className="pk-saas-shortcut-text">
+                  <strong>Cài đặt</strong>
+                  <span>Biểu phí & SePay</span>
+                </div>
               </button>
             </div>
           </section>
 
-          {/* 4. 3-Column Dashboard Row (Matches screenshot middle row) */}
+          {/* 4. 3-Column Dashboard Row */}
           {activeTab === 'map' && (
             <div className="pk-saas-grid-3">
-              {/* Card 1: Tình trạng bãi hôm nay */}
+              {/* Card 1: Trạng thái hôm nay */}
               <div className="pk-saas-card">
                 <div className="pk-saas-card-header">
                   <h3 className="pk-saas-card-title">
-                    <Calendar size={16} color="#6366f1" />
-                    Tình trạng bãi hôm nay
+                    <Calendar size={15} color="#6366f1" strokeWidth={2} />
+                    Trạng thái hôm nay
                   </h3>
                   <button
                     type="button"
                     className="pk-saas-card-link"
                     onClick={() => setActiveTab('schedule')}
                   >
-                    <span>Xem lịch</span>
-                    <ArrowRight size={13} />
+                    <span>Lịch</span>
+                    <ArrowRight size={12} />
                   </button>
                 </div>
 
-                <div style={{ fontSize: 13, color: '#64748b' }}>
-                  {new Date().toLocaleDateString('vi-VN', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: 10,
                       background: '#f8fafc',
                       border: '1px solid #edf2f7',
                     }}
                   >
                     <div>
-                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Khung giờ hiện tại</strong>
-                      <div style={{ fontSize: 11.5, color: '#64748b' }}>
-                        {slotPreset === 'now' ? 'Trực tiếp theo thời gian thực' : slotPreset}
+                      <strong style={{ fontSize: 12.5, color: '#0f172a' }}>Khung giờ</strong>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>
+                        {slotPreset === 'now' ? 'Hiện tại' : slotPreset}
                       </div>
                     </div>
                     <span
                       style={{
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: 6,
                         background: '#ecfdf5',
                         color: '#059669',
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: 700,
                       }}
                     >
-                      {mapSummary.available} ô trống
+                      {mapSummary.available} trống
                     </span>
                   </div>
 
@@ -1333,27 +1302,27 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: 10,
                       background: '#f8fafc',
                       border: '1px solid #edf2f7',
                     }}
                   >
                     <div>
-                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Phương tiện đang đỗ</strong>
-                      <div style={{ fontSize: 11.5, color: '#64748b' }}>Bãi xe GoPick 250 Lương Định Của</div>
+                      <strong style={{ fontSize: 12.5, color: '#0f172a' }}>Đang đỗ</strong>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>250 Lương Định Của</div>
                     </div>
                     <span
                       style={{
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: 6,
                         background: '#eff6ff',
                         color: '#2563eb',
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: 700,
                       }}
                     >
-                      {mapSummary.occupied} xe trong bãi
+                      {mapSummary.occupied} xe
                     </span>
                   </div>
 
@@ -1362,38 +1331,38 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      padding: '8px 12px',
+                      padding: '8px 10px',
                       borderRadius: 10,
                       background: '#f8fafc',
                       border: '1px solid #edf2f7',
                     }}
                   >
                     <div>
-                      <strong style={{ fontSize: 13, color: '#0f172a' }}>Ô đặt trước / Đang giữ</strong>
-                      <div style={{ fontSize: 11.5, color: '#64748b' }}>Khách chơi Golf & Khách vãng lai</div>
+                      <strong style={{ fontSize: 12.5, color: '#0f172a' }}>Đã giữ chỗ</strong>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Golf & Vãng lai</div>
                     </div>
                     <span
                       style={{
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: 6,
                         background: '#fffbeb',
                         color: '#d97706',
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: 700,
                       }}
                     >
-                      {mapSummary.booked + mapSummary.held} ô đã giữ
+                      {mapSummary.booked + mapSummary.held} ô
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Card 2: Xe & Vé đang vận hành */}
+              {/* Card 2: Xe trong ca */}
               <div className="pk-saas-card">
                 <div className="pk-saas-card-header">
                   <h3 className="pk-saas-card-title">
-                    <Car size={16} color="#6366f1" />
-                    Xe & Vé trong ca trực
+                    <Car size={15} color="#6366f1" strokeWidth={2} />
+                    Xe trong ca
                   </h3>
                   <button
                     type="button"
@@ -1401,7 +1370,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     onClick={() => setActiveTab('gate')}
                   >
                     <span>Vào / Ra</span>
-                    <ArrowRight size={13} />
+                    <ArrowRight size={12} />
                   </button>
                 </div>
 
@@ -1418,7 +1387,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     className={`pk-saas-pill-tab ${recentTab === 'booked' ? 'active' : ''}`}
                     onClick={() => setRecentTab('booked')}
                   >
-                    Đặt trước ({mapSummary.booked})
+                    Đã đặt ({mapSummary.booked})
                   </button>
                   <button
                     type="button"
@@ -1429,10 +1398,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 180, overflowY: 'auto' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 160, overflowY: 'auto' }}>
                   {activeLotTickets.length === 0 ? (
-                    <div style={{ padding: '20px 10px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-                      Hiện chưa có xe đang đỗ trong bãi.
+                    <div style={{ padding: '16px 8px', textAlign: 'center', color: '#94a3b8', fontSize: 12 }}>
+                      Chưa có xe đang đỗ.
                     </div>
                   ) : (
                     activeLotTickets.slice(0, 4).map((t) => (
@@ -1442,29 +1411,30 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          padding: '7px 10px',
+                          padding: '6px 8px',
                           borderRadius: 8,
                           border: '1px solid #edf2f7',
                           background: '#ffffff',
-                          fontSize: 12.5,
+                          fontSize: 12,
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span
                             style={{
-                              padding: '2px 6px',
+                              padding: '2px 5px',
                               borderRadius: 4,
                               background: '#f1f5f9',
                               fontWeight: 700,
                               color: '#334155',
                               fontFamily: 'monospace',
+                              fontSize: 11,
                             }}
                           >
                             {t.spotId}
                           </span>
-                          <strong style={{ color: '#0f172a' }}>{t.licensePlate || 'Xe chưa rõ biển'}</strong>
+                          <strong style={{ color: '#0f172a' }}>{t.licensePlate || 'Xe vãng lai'}</strong>
                         </div>
-                        <span style={{ color: '#64748b', fontSize: 11.5 }}>
+                        <span style={{ color: '#64748b', fontSize: 11 }}>
                           {t.actualIn || t.expectedIn
                             ? new Date(t.actualIn || t.expectedIn).toLocaleTimeString('vi-VN', {
                                 hour: '2-digit',
@@ -1483,27 +1453,27 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   style={{ marginTop: 'auto', alignSelf: 'flex-start' }}
                   onClick={() => setActiveTab('schedule')}
                 >
-                  <span>Xem tất cả danh sách xe</span>
-                  <ArrowRight size={13} />
+                  <span>Xem danh sách vé</span>
+                  <ArrowRight size={12} />
                 </button>
               </div>
 
-              {/* Card 3: Hoạt động & Doanh thu */}
+              {/* Card 3: Hoạt động */}
               <div className="pk-saas-card">
                 <div className="pk-saas-card-header">
                   <h3 className="pk-saas-card-title">
-                    <TrendingUp size={16} color="#6366f1" />
-                    Hoạt động bãi xe
+                    <TrendingUp size={15} color="#6366f1" strokeWidth={2} />
+                    Hoạt động
                   </h3>
-                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Hôm nay ▾</span>
+                  <span style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>Hôm nay ▾</span>
                 </div>
 
                 <div className="pk-saas-metric-row">
                   <div className="pk-saas-metric-box">
                     <div className="pk-saas-metric-number">65</div>
-                    <div className="pk-saas-metric-label">Tổng vị trí</div>
+                    <div className="pk-saas-metric-label">Tổng ô</div>
                     <div className="pk-saas-trend-badge">
-                      <ArrowUpRight size={11} /> 100%
+                      <ArrowUpRight size={10} /> 100%
                     </div>
                   </div>
 
@@ -1511,9 +1481,9 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     <div className="pk-saas-metric-number" style={{ color: '#059669' }}>
                       {mapSummary.available}
                     </div>
-                    <div className="pk-saas-metric-label">Ô đang trống</div>
+                    <div className="pk-saas-metric-label">Trống</div>
                     <div className="pk-saas-trend-badge">
-                      <ArrowUpRight size={11} /> {Math.round((mapSummary.available / 65) * 100)}%
+                      <ArrowUpRight size={10} /> {Math.round((mapSummary.available / 65) * 100)}%
                     </div>
                   </div>
 
@@ -1521,50 +1491,49 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     <div className="pk-saas-metric-number" style={{ color: '#6366f1' }}>
                       {mapSummary.occupied}
                     </div>
-                    <div className="pk-saas-metric-label">Xe đang đỗ</div>
+                    <div className="pk-saas-metric-label">Đang đỗ</div>
                     <div className="pk-saas-trend-badge" style={{ background: '#f5f3ff', color: '#6366f1' }}>
-                      <ArrowUpRight size={11} /> Đang phục vụ
+                      Phục vụ
                     </div>
                   </div>
                 </div>
 
-                {/* Smooth Trend Chart (SVG spline curve matching screenshot) */}
+                {/* Smooth Trend Chart */}
                 <div className="pk-saas-chart-container">
-                  <svg viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <svg viewBox="0 0 300 70" preserveAspectRatio="none">
                     <defs>
                       <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.28" />
+                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.25" />
                         <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
                       </linearGradient>
                     </defs>
                     <path
-                      d="M 0,65 Q 40,55 75,58 T 150,42 T 225,28 T 300,18 L 300,80 L 0,80 Z"
+                      d="M 0,55 Q 40,48 75,50 T 150,36 T 225,24 T 300,16 L 300,70 L 0,70 Z"
                       fill="url(#chartGradient)"
                     />
                     <path
-                      d="M 0,65 Q 40,55 75,58 T 150,42 T 225,28 T 300,18"
+                      d="M 0,55 Q 40,48 75,50 T 150,36 T 225,24 T 300,16"
                       fill="none"
                       stroke="#6366f1"
-                      strokeWidth="2.5"
+                      strokeWidth="2.2"
                       strokeLinecap="round"
                     />
-                    <circle cx="75" cy="58" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
-                    <circle cx="150" cy="42" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
-                    <circle cx="225" cy="28" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
-                    <circle cx="300" cy="18" r="3.5" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="75" cy="50" r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="150" cy="36" r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="225" cy="24" r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
+                    <circle cx="300" cy="16" r="3" fill="#ffffff" stroke="#6366f1" strokeWidth="2" />
                   </svg>
                   <div
                     style={{
                       display: 'flex',
                       justifyContent: 'space-between',
-                      fontSize: 10,
+                      fontSize: 9.5,
                       color: '#94a3b8',
                       marginTop: 2,
                     }}
                   >
                     <span>06:00</span>
-                    <span>10:00</span>
-                    <span>14:00</span>
+                    <span>12:00</span>
                     <span>18:00</span>
                     <span>22:00</span>
                   </div>
@@ -2109,8 +2078,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               </div>
 
               {/* Danh sách vé */}
-              <div className="pk-card" style={{ padding: 0, overflow: 'hidden' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
+              <div className="pk-card pk-table-responsive" style={{ padding: 0, overflowX: 'auto' }}>
+                <table style={{ width: '100%', minWidth: 500, borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--pk-border)' }}>
                       <th style={{ padding: '10px 14px' }}>Vé</th>
@@ -4060,24 +4029,15 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
         </div>
       )}
 
-      {/* Mobile Bottom Navigation for Staff / Guard */}
-      <nav className="pk-bottom-nav" aria-label="Thanh điều hướng nhân viên bãi xe">
-        <button
-          type="button"
-          className={`pk-bottom-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
-          onClick={() => setActiveTab('gate')}
-        >
-          <Car size={18} />
-          <span>Cổng vào/ra</span>
-        </button>
-
+      {/* Mobile App Bottom Navigation Bar */}
+      <nav className="pk-bottom-nav" aria-label="Điều hướng nhanh bãi xe">
         <button
           type="button"
           className={`pk-bottom-nav-item ${activeTab === 'map' ? 'active' : ''}`}
           onClick={() => setActiveTab('map')}
         >
-          <MapPin size={18} />
-          <span>Sơ đồ 65 ô</span>
+          <Grid size={18} strokeWidth={2} />
+          <span>Sơ đồ</span>
         </button>
 
         <button
@@ -4085,8 +4045,17 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           className={`pk-bottom-nav-item ${activeTab === 'schedule' ? 'active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
-          <Calendar size={18} />
-          <span>Tra vé / Lịch</span>
+          <Calendar size={18} strokeWidth={2} />
+          <span>Đặt chỗ</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pk-bottom-nav-item ${activeTab === 'gate' ? 'active' : ''}`}
+          onClick={() => setActiveTab('gate')}
+        >
+          <Car size={18} strokeWidth={2} />
+          <span>Vào / Ra</span>
         </button>
 
         <button
@@ -4094,8 +4063,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           className={`pk-bottom-nav-item ${activeTab === 'reconciliation' ? 'active' : ''}`}
           onClick={() => setActiveTab('reconciliation')}
         >
-          <TrendingUp size={18} />
-          <span>Đối soát ca</span>
+          <TrendingUp size={18} strokeWidth={2} />
+          <span>Đối soát</span>
         </button>
 
         <button
@@ -4103,7 +4072,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
           className={`pk-bottom-nav-item ${activeTab === 'settings' ? 'active' : ''}`}
           onClick={() => setActiveTab('settings')}
         >
-          <Sliders size={18} />
+          <Sliders size={18} strokeWidth={2} />
           <span>Cài đặt</span>
         </button>
       </nav>

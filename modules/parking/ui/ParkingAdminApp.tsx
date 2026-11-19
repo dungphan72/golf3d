@@ -37,6 +37,9 @@ import {
   Trash2,
   Printer,
   Bell,
+  Volume2,
+  VolumeX,
+  SwitchCamera,
   User,
   ChevronDown,
   Grid,
@@ -122,6 +125,19 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
   const [gatePaymentMethod, setGatePaymentMethod] = useState<'cash' | 'vietqr'>('cash');
   const [showPrintSlipModal, setShowPrintSlipModal] = useState<boolean>(false);
   const [ticketToPrint, setTicketToPrint] = useState<ParkingTicket | null>(null);
+  const [slipPaperSize, setSlipPaperSize] = useState<'80mm' | '58mm'>('80mm');
+  const [slipPrintMode, setSlipPrintMode] = useState<'compact' | 'full'>('full');
+  const [soundMuted, setSoundMuted] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return localStorage.getItem('pk_gate_sound_muted') === 'true';
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+  const prevActiveCountRef = useRef<number | null>(null);
   const [bank, setBank] = useState<{ bin: string; account: string; holder: string; bankName: string }>({
     bin: '970422',
     account: '0877834888',
@@ -149,6 +165,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   // Camera & Plate Recognition States
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false);
+  const [cameraFacing, setCameraFacing] = useState<'environment' | 'user'>('environment');
   const [cameraLoading, setCameraLoading] = useState<boolean>(false);
   const [cameraError, setCameraError] = useState<string>('');
   const [torchEnabled, setTorchEnabled] = useState<boolean>(false);
@@ -306,23 +323,63 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenant, mapMode, mapDate, slotPreset, customSlotStart, customSlotEnd]);
 
-  // Load active parked tickets for quick 1-touch gate checkout
+  // Load active parked tickets for quick 1-touch gate checkout & sound alerts
   async function loadActiveLotTickets() {
     try {
       const res = await fetch(`/api/parking?action=tickets-list&tenant=${tenant}&status=active`);
       const data: any = await res.json();
-      if (data.ok && data.tickets) {
+      if (data.ok && Array.isArray(data.tickets)) {
+        if (prevActiveCountRef.current !== null && data.tickets.length > prevActiveCountRef.current) {
+          playGateAudio('alert');
+          notify(`🔔 Có ${data.tickets.length - prevActiveCountRef.current} xe mới vào bãi`);
+        }
+        prevActiveCountRef.current = data.tickets.length;
         setActiveLotTickets(data.tickets);
       }
     } catch {}
   }
 
   useEffect(() => {
-    if (activeTab === 'gate') void loadActiveLotTickets();
+    if (activeTab === 'gate') {
+      void loadActiveLotTickets();
+      const interval = setInterval(() => {
+        void loadActiveLotTickets();
+      }, 15000);
+      return () => clearInterval(interval);
+    }
     if (activeTab === 'schedule') void loadTicketsList();
     if (activeTab === 'reconciliation') void loadReconciliation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, searchTicket, statusFilter, reconDate]);
+
+  // Audio mute & sound alerts helper
+  function toggleSoundMute() {
+    setSoundMuted((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('pk_gate_sound_muted', String(next));
+        } catch {}
+      }
+      notify(next ? 'Đã tắt chuông thông báo bốt gác' : 'Đã bật chuông thông báo bốt gác');
+      return next;
+    });
+  }
+
+  function playGateAudio(type: 'success' | 'alert' | 'beep') {
+    if (soundMuted) return;
+    try {
+      if (type === 'success' || type === 'alert') {
+        const audio = new Audio('/service-bell.wav');
+        audio.volume = 0.85;
+        audio.play().catch(() => playPlateBeep());
+      } else {
+        playPlateBeep();
+      }
+    } catch {
+      playPlateBeep();
+    }
+  }
 
   // Audio beep feedback upon license plate recognition
   function playPlateBeep() {
@@ -345,7 +402,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
   // Handle successful plate detection
   async function onPlateDetected(plate: string) {
-    playPlateBeep();
+    playGateAudio('beep');
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([100, 50, 100]);
     }
@@ -355,9 +412,8 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     await handleGateSearch(plate);
   }
 
-  // Start live camera with ANPR viewfinder
-  async function startLiveCamera() {
-    setShowCameraModal(true);
+  // Camera stream initialization with facingMode
+  async function initCameraStream(facing: 'environment' | 'user') {
     setCameraLoading(true);
     setCameraError('');
     setTorchSupported(false);
@@ -366,7 +422,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: { ideal: 'environment' },
+          facingMode: { ideal: facing },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -374,7 +430,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       streamRef.current = stream;
 
       const track = stream.getVideoTracks()[0];
-      const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
+      const capabilities: any = track?.getCapabilities ? track.getCapabilities() : {};
       if (capabilities.torch) {
         setTorchSupported(true);
       }
@@ -385,14 +441,31 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       }
       setCameraLoading(false);
 
-      // Continuous scanning interval (every 500ms)
+      if (scanIntervalRef.current) clearInterval(scanIntervalRef.current);
       scanIntervalRef.current = setInterval(() => {
         void scanVideoFrame();
       }, 500);
     } catch {
       setCameraLoading(false);
-      setCameraError('Không thể mở camera. Vui lòng cấp quyền hoặc dùng tính năng Chụp ảnh.');
+      setCameraError('Không thể mở camera. Vui lòng cấp quyền truy cập thiết bị hoặc dùng tính năng Chụp ảnh.');
     }
+  }
+
+  // Start live camera with ANPR viewfinder
+  async function startLiveCamera() {
+    setShowCameraModal(true);
+    await initCameraStream(cameraFacing);
+  }
+
+  // Switch between front and rear cameras
+  async function switchCameraFacing() {
+    const next = cameraFacing === 'environment' ? 'user' : 'environment';
+    setCameraFacing(next);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    await initCameraStream(next);
   }
 
   // Stop camera stream & cleanup
@@ -613,8 +686,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       });
       const data: any = await res.json();
       if (data.ok && data.ticket) {
+        playGateAudio('success');
         notify(`✓ Đã xác nhận xe ${data.ticket.licensePlate} vào ô ${data.ticket.spotCode}!`);
         setGateFoundTicket(data.ticket);
+        setTicketToPrint(data.ticket);
         void loadConfigAndSpots();
         void loadActiveLotTickets();
       } else {
@@ -642,11 +717,13 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       });
       const data: any = await res.json();
       if (data.ok && data.ticket) {
+        playGateAudio('success');
         const msg = data.surchargeDue > 0
           ? `✓ Xe đã ra bãi! Đã thu phụ thu quá giờ: ${money(data.surchargeDue)}`
           : `✓ Xe ${data.ticket.licensePlate} đã ra khỏi bãi an toàn. Ô ${data.ticket.spotCode} đã trống!`;
         notify(msg);
         setGateFoundTicket(data.ticket);
+        setTicketToPrint(data.ticket);
         void loadConfigAndSpots();
         void loadActiveLotTickets();
       } else {
@@ -2345,6 +2422,27 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     <Plus size={15} />
                     <span>Vé giấy</span>
                   </button>
+
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
+                    style={{
+                      width: 'auto',
+                      padding: '0 12px',
+                      height: 38,
+                      gap: 6,
+                      background: soundMuted ? '#fef2f2' : '#f0fdf4',
+                      borderColor: soundMuted ? '#fecaca' : '#bbf7d0',
+                      color: soundMuted ? '#991b1b' : '#166534',
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                    }}
+                    onClick={toggleSoundMute}
+                    title={soundMuted ? 'Bấm để bật chuông thông báo xe bốt gác' : 'Bấm để tắt chuông thông báo'}
+                  >
+                    {soundMuted ? <VolumeX size={15} color="#ef4444" /> : <Volume2 size={15} color="#16a34a" />}
+                    <span>{soundMuted ? 'Chuông: Tắt' : 'Chuông: Bật'}</span>
+                  </button>
                 </div>
               </div>
 
@@ -2387,22 +2485,29 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                   <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
                     {activeLotTickets.map((t) => {
                       const isSelected = gateFoundTicket?.id === t.id;
+                      const otMins = getOvertimeMinutes(t);
+                      const isOvertime = otMins > 15;
                       return (
                         <button
                           key={t.id}
                           type="button"
-                          className={`pk-vehicle-pill ${isSelected ? 'active' : ''}`}
+                          className={`pk-vehicle-pill ${isSelected ? 'active' : ''} ${isOvertime ? 'overtime' : ''}`}
                           onClick={() => {
                             setGateMode('out');
                             setGateInput(t.licensePlate);
                             setGateFoundTicket(t);
                             notify(`Đã chọn xe ${t.licensePlate} (Ô ${t.spotCode})`);
                           }}
-                          title={`Bấm để chọn xe ${t.licensePlate} ra bãi`}
+                          title={`Bấm để chọn xe ${t.licensePlate} ra bãi ${isOvertime ? `(Quá giờ ${otMins} phút)` : ''}`}
                         >
                           <span>📍 Ô {t.spotCode}</span>
                           <span>·</span>
-                          <span style={{ color: 'var(--pk-primary)' }}>{t.licensePlate}</span>
+                          <span style={{ color: isOvertime ? '#dc2626' : 'var(--pk-primary)' }}>{t.licensePlate}</span>
+                          {isOvertime && (
+                            <span style={{ fontSize: 10, background: '#ef4444', color: '#ffffff', padding: '1px 5px', borderRadius: 10, fontWeight: 800 }}>
+                              +{otMins}p
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -2780,18 +2885,57 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               {showCameraModal && (
                 <div className="pk-camera-modal">
                   <div className="pk-camera-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <Camera size={20} color="#22c55e" />
-                      <span style={{ fontSize: 15, fontWeight: 800 }}>Quét biển số xe trực tiếp (ANPR)</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="pk-live-dot" />
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: 14.5, fontWeight: 800, letterSpacing: 0.3 }}>
+                          LIVE ANPR · QUÉT BIỂN SỐ XE
+                        </span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                          Tự động nhận diện biển số & đối soát barie
+                        </span>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={stopLiveCamera}
-                      style={{ background: 'transparent', border: 'none', color: '#ffffff', cursor: 'pointer', padding: 4 }}
-                      title="Đóng"
-                    >
-                      <X size={24} />
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        type="button"
+                        onClick={switchCameraFacing}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.15)',
+                          border: '1px solid rgba(255, 255, 255, 0.25)',
+                          color: '#ffffff',
+                          borderRadius: 20,
+                          padding: '6px 12px',
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                        }}
+                        title="Đổi giữa camera trước và sau"
+                      >
+                        <SwitchCamera size={14} />
+                        <span>{cameraFacing === 'environment' ? 'Cam sau' : 'Cam trước'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={stopLiveCamera}
+                        style={{
+                          background: 'rgba(255,255,255,0.15)',
+                          border: 'none',
+                          color: '#ffffff',
+                          cursor: 'pointer',
+                          padding: 6,
+                          borderRadius: '50%',
+                        }}
+                        title="Đóng camera"
+                      >
+                        <X size={20} />
+                      </button>
+                    </div>
                   </div>
 
                   <div className="pk-camera-viewfinder-wrap">
@@ -2804,16 +2948,51 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     />
                     <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-                    {/* Viewfinder Target Frame with Laser Beam */}
+                    {/* Viewfinder Target Frame with 4 Corner Brackets & Laser Beam */}
                     <div className="pk-camera-viewfinder-frame">
+                      <div className="pk-camera-corner pk-corner-tl" />
+                      <div className="pk-camera-corner pk-corner-tr" />
+                      <div className="pk-camera-corner pk-corner-bl" />
+                      <div className="pk-camera-corner pk-corner-br" />
                       <div className="pk-camera-laser" />
-                      <div style={{ background: 'rgba(0,0,0,0.65)', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#86efac', fontWeight: 700 }}>
-                        ĐẶT BIỂN SỐ VÀO KHUNG NÀY
+
+                      <div style={{ background: 'rgba(15, 23, 42, 0.75)', padding: '4px 10px', borderRadius: 6, fontSize: 11, color: '#86efac', fontWeight: 800, letterSpacing: 0.5 }}>
+                        CĂN CHỈNH BIỂN SỐ VÀO KHUNG NÀY
                       </div>
-                      <div style={{ background: 'rgba(0,0,0,0.65)', padding: '2px 8px', borderRadius: 4, fontSize: 11, color: '#ffffff' }}>
-                        Tự động nhận diện biển số Việt Nam
+                      <div style={{ background: 'rgba(15, 23, 42, 0.75)', padding: '3px 10px', borderRadius: 6, fontSize: 11, color: '#e2e8f0', fontWeight: 500 }}>
+                        Tự động quét biển số ôtô / xe máy Việt Nam
                       </div>
                     </div>
+
+                    {/* Quick Active Lot Chips Overlay for fast guard tap */}
+                    {activeLotTickets.length > 0 && (
+                      <div className="pk-camera-quick-chips">
+                        <span style={{ fontSize: 11, color: '#94a3b8', whiteSpace: 'nowrap', fontWeight: 700 }}>
+                          Xe trong bãi:
+                        </span>
+                        {activeLotTickets.slice(0, 10).map((t) => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => void onPlateDetected(t.licensePlate)}
+                            style={{
+                              background: '#ffffff',
+                              color: '#0f172a',
+                              border: '1px solid #cbd5e1',
+                              borderRadius: 14,
+                              padding: '4px 10px',
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={`Chạm để chọn nhanh xe ${t.licensePlate}`}
+                          >
+                            Ô {t.spotCode}: {t.licensePlate}
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
                     {cameraLoading && (
                       <div
@@ -2891,6 +3070,26 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                     >
                       <Camera size={18} />
                       <span>{recognizingPlate ? 'Đang nhận dạng...' : 'Chụp & Nhận dạng ngay'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={switchCameraFacing}
+                      style={{
+                        background: 'rgba(255,255,255,0.2)',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: 48,
+                        height: 48,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                      }}
+                      title="Đổi camera"
+                    >
+                      <SwitchCamera size={20} />
                     </button>
 
                     <button
@@ -3931,42 +4130,154 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
       {showPrintSlipModal && ticketToPrint && (
         <div className="pk-modal-overlay" onClick={() => setShowPrintSlipModal(false)}>
           <div
-            className="pk-modal-card pk-thermal-slip"
+            className={`pk-modal-card pk-thermal-slip slip-${slipPaperSize}`}
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: 380,
               background: '#ffffff',
-              padding: 24,
-              borderRadius: 8,
-              boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+              padding: slipPaperSize === '58mm' ? 16 : 24,
+              borderRadius: 12,
+              boxShadow: '0 16px 40px rgba(0,0,0,0.25)',
               fontFamily: "'Courier New', Courier, monospace",
             }}
           >
-            <div style={{ textAlign: 'center', borderBottom: '1px dashed #333', paddingBottom: 12, marginBottom: 12 }}>
-              <div style={{ fontSize: 16, fontWeight: 900, textTransform: 'uppercase', color: '#000000' }}>
+            {/* Top Toolbar (Paper Size + Print Mode) */}
+            <div
+              className="no-print"
+              style={{
+                marginBottom: 16,
+                paddingBottom: 12,
+                borderBottom: '1px solid #e2e8f0',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', fontFamily: 'var(--pk-font)' }}>
+                  In vé nhiệt ESC/POS
+                </span>
+                <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'var(--pk-font)' }}>
+                  Chuẩn máy in bốt gác
+                </span>
+              </div>
+
+              {/* Segmented Paper Size Toggle */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  type="button"
+                  style={{
+                    flex: 1,
+                    padding: '6px 8px',
+                    border: '1px solid',
+                    borderColor: slipPaperSize === '80mm' ? 'var(--pk-primary)' : '#cbd5e1',
+                    background: slipPaperSize === '80mm' ? '#f0fdf4' : '#ffffff',
+                    color: slipPaperSize === '80mm' ? 'var(--pk-primary)' : '#475569',
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--pk-font)',
+                  }}
+                  onClick={() => setSlipPaperSize('80mm')}
+                >
+                  Khổ 80mm (Chuẩn)
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    flex: 1,
+                    padding: '6px 8px',
+                    border: '1px solid',
+                    borderColor: slipPaperSize === '58mm' ? 'var(--pk-primary)' : '#cbd5e1',
+                    background: slipPaperSize === '58mm' ? '#f0fdf4' : '#ffffff',
+                    color: slipPaperSize === '58mm' ? 'var(--pk-primary)' : '#475569',
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--pk-font)',
+                  }}
+                  onClick={() => setSlipPaperSize('58mm')}
+                >
+                  Khổ 58mm (Mini)
+                </button>
+              </div>
+
+              {/* Segmented Print Mode Toggle */}
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  type="button"
+                  style={{
+                    flex: 1,
+                    padding: '4px 8px',
+                    border: '1px solid',
+                    borderColor: slipPrintMode === 'full' ? 'var(--pk-primary)' : '#e2e8f0',
+                    background: slipPrintMode === 'full' ? '#f8fafc' : '#ffffff',
+                    color: slipPrintMode === 'full' ? 'var(--pk-primary)' : '#64748b',
+                    borderRadius: 4,
+                    fontWeight: 600,
+                    fontSize: 11.5,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--pk-font)',
+                  }}
+                  onClick={() => setSlipPrintMode('full')}
+                >
+                  In đầy đủ
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    flex: 1,
+                    padding: '4px 8px',
+                    border: '1px solid',
+                    borderColor: slipPrintMode === 'compact' ? 'var(--pk-primary)' : '#e2e8f0',
+                    background: slipPrintMode === 'compact' ? '#f8fafc' : '#ffffff',
+                    color: slipPrintMode === 'compact' ? 'var(--pk-primary)' : '#64748b',
+                    borderRadius: 4,
+                    fontWeight: 600,
+                    fontSize: 11.5,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--pk-font)',
+                  }}
+                  onClick={() => setSlipPrintMode('compact')}
+                >
+                  Rút gọn tiết kiệm giấy
+                </button>
+              </div>
+            </div>
+
+            {/* Slip Paper Body */}
+            <div style={{ textAlign: 'center', borderBottom: '1px dashed #333', paddingBottom: 10, marginBottom: 10 }}>
+              <div className="pk-slip-title" style={{ fontSize: slipPaperSize === '58mm' ? 14 : 16, fontWeight: 900, textTransform: 'uppercase', color: '#000000' }}>
                 {config?.facilityName || 'BÃI XE GOPICK'}
               </div>
-              <div style={{ fontSize: 11, color: '#555', marginTop: 2 }}>
-                {config?.address || '250 Lương Định Của, P. An Phú, Thủ Đức'}
-              </div>
-              <div style={{ fontSize: 13, fontWeight: 800, marginTop: 8, color: '#000000' }}>
+              {slipPrintMode === 'full' && (
+                <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>
+                  {config?.address || '250 Lương Định Của, P. An Phú, Thủ Đức'}
+                </div>
+              )}
+              <div style={{ fontSize: slipPaperSize === '58mm' ? 11 : 12.5, fontWeight: 800, marginTop: 6, color: '#000000' }}>
                 {ticketToPrint.status === 'completed'
                   ? '--- PHIẾU XUẤT BÃI & THU PHÍ ---'
                   : '--- VÉ GỬI XE (CỔNG VÀO) ---'}
               </div>
             </div>
 
-            <div style={{ fontSize: 12, lineHeight: 1.7, color: '#000000' }}>
+            <div style={{ fontSize: slipPaperSize === '58mm' ? 11 : 12, lineHeight: 1.6, color: '#000000' }}>
               <div>Mã vé: <strong>{ticketToPrint.ticketCode}</strong></div>
-              <div>Biển số: <strong style={{ fontSize: 16 }}>{ticketToPrint.licensePlate}</strong></div>
-              <div>Vị trí đỗ: <strong style={{ fontSize: 14 }}>Ô {ticketToPrint.spotCode}</strong> ({ticketToPrint.section || 'GoPick'})</div>
+              <div style={{ marginTop: 2, marginBottom: 2 }}>
+                Biển số: <strong className="pk-slip-plate" style={{ fontSize: slipPaperSize === '58mm' ? 16 : 18, letterSpacing: 0.5 }}>{ticketToPrint.licensePlate}</strong>
+              </div>
+              <div>Vị trí đỗ: <strong style={{ fontSize: slipPaperSize === '58mm' ? 13 : 14 }}>Ô {ticketToPrint.spotCode}</strong> ({ticketToPrint.section || 'GoPick'})</div>
               <div>
                 Giờ vào: {ticketToPrint.actualIn ? new Date(ticketToPrint.actualIn).toLocaleString('vi-VN') : new Date(ticketToPrint.expectedIn).toLocaleString('vi-VN')}
               </div>
-              <div>
-                Giờ ra: {ticketToPrint.actualOut ? new Date(ticketToPrint.actualOut).toLocaleString('vi-VN') : new Date(ticketToPrint.expectedOut).toLocaleString('vi-VN')}
-              </div>
-              <div style={{ borderTop: '1px dashed #888', margin: '8px 0' }} />
+              {ticketToPrint.status === 'completed' && (
+                <div>
+                  Giờ ra: {ticketToPrint.actualOut ? new Date(ticketToPrint.actualOut).toLocaleString('vi-VN') : new Date(ticketToPrint.expectedOut).toLocaleString('vi-VN')}
+                </div>
+              )}
+              <div style={{ borderTop: '1px dashed #888', margin: '6px 0' }} />
               <div>Cước đỗ xe: <strong>{money(ticketToPrint.totalAmount || 0)}</strong></div>
               {ticketToPrint.feePayer === 'gopick_sponsored' ? (
                 <div>Quyền lợi: <strong>GoPick tài trợ 100% (0 đ)</strong></div>
@@ -3982,28 +4293,35 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               )}
             </div>
 
-            <div style={{ textAlign: 'center', margin: '14px 0' }}>
+            <div style={{ textAlign: 'center', margin: '12px 0' }}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=110x110&data=${encodeURIComponent(
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=${slipPaperSize === '58mm' ? '85x85' : '110x110'}&data=${encodeURIComponent(
                   `SIGOLF_PARKING:${ticketToPrint.ticketCode}:${ticketToPrint.accessToken || 'VERIFIED'}`,
                 )}`}
                 alt="QR đối soát"
-                style={{ width: 110, height: 110, margin: '0 auto', display: 'block' }}
+                style={{
+                  width: slipPaperSize === '58mm' ? 85 : 110,
+                  height: slipPaperSize === '58mm' ? 85 : 110,
+                  margin: '0 auto',
+                  display: 'block',
+                }}
               />
-              <div style={{ fontSize: 10, color: '#666', marginTop: 4 }}>Quét QR để kiểm tra tính hợp lệ của vé</div>
+              <div style={{ fontSize: 9.5, color: '#666', marginTop: 3 }}>Quét QR đối soát barie tự động</div>
             </div>
 
-            <div style={{ textAlign: 'center', borderTop: '1px dashed #333', paddingTop: 10, fontSize: 11, color: '#333' }}>
-              <div>Quý khách vui lòng giữ vé và xuất trình khi ra bãi.</div>
-              <div>Hotline: 0877 834 888 · Chúc quý khách an toàn & vui vẻ!</div>
-            </div>
+            {slipPrintMode === 'full' && (
+              <div style={{ textAlign: 'center', borderTop: '1px dashed #333', paddingTop: 8, fontSize: 10, color: '#333' }}>
+                <div>Quý khách vui lòng giữ vé và xuất trình khi ra bãi.</div>
+                <div>Hotline: 0877 834 888 · Chúc quý khách an toàn & vui vẻ!</div>
+              </div>
+            )}
 
             <div className="no-print" style={{ display: 'flex', gap: 8, marginTop: 18 }}>
               <button
                 type="button"
                 className="pk-btn-secondary"
                 onClick={() => setShowPrintSlipModal(false)}
-                style={{ flex: 1 }}
+                style={{ flex: 1, fontFamily: 'var(--pk-font)' }}
               >
                 Đóng
               </button>
@@ -4011,10 +4329,10 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 type="button"
                 className="pk-btn-primary"
                 onClick={() => window.print()}
-                style={{ flex: 1, gap: 6, background: '#0284c7', borderColor: '#0284c7' }}
+                style={{ flex: 1.3, gap: 6, background: '#0284c7', borderColor: '#0284c7', fontFamily: 'var(--pk-font)' }}
               >
                 <Printer size={16} />
-                <span>In máy nhiệt</span>
+                <span>In phiếu ({slipPaperSize})</span>
               </button>
             </div>
           </div>

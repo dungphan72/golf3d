@@ -855,12 +855,16 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
     notify(`✓ Đã xuất file CSV đối soát ngày ${reconDate}`);
   }
 
-  function handleCancelTicket() {
-    if (!selectedTicket) return;
-    const targetTicket = selectedTicket;
+  function handleCancelTicket(ticketOverride?: ParkingTicket) {
+    const targetTicket = ticketOverride || selectedTicket;
+    if (!targetTicket) return;
+    if (targetTicket.status === 'cancelled') {
+      notify('Vé này đã được hủy trước đó');
+      return;
+    }
     setConfirmDialog({
       title: 'Xác nhận hủy vé',
-      message: `Bạn có chắc muốn hủy vé ${targetTicket.ticketCode} của xe ${targetTicket.licensePlate}?`,
+      message: `Bạn có chắc muốn hủy vé ${targetTicket.ticketCode} của xe ${targetTicket.licensePlate} (Ô ${targetTicket.spotCode})?`,
       confirmLabel: 'Hủy vé này',
       tone: 'danger',
       onConfirm: async () => {
@@ -872,19 +876,35 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
               action: 'cancel-ticket',
               tenant,
               ticketCode: targetTicket.ticketCode,
+              accessToken: targetTicket.accessToken,
               reason: 'Quản lý hủy tại bãi',
             }),
           });
-          const data: any = await res.json();
-          if (data.ok) {
-            notify('Đã hủy vé thành công');
+          let data: any = {};
+          try {
+            data = await res.json();
+          } catch {
+            throw new Error('Phản hồi từ máy chủ không hợp lệ');
+          }
+          if (res.ok && data.ok) {
+            notify(`✓ Đã hủy vé ${targetTicket.ticketCode} thành công`);
+            setTicketsList((prev) =>
+              prev.map((item) =>
+                item.ticketCode === targetTicket.ticketCode ? { ...item, status: 'cancelled' } : item
+              )
+            );
+            setSelectedTicket((prev) =>
+              prev && prev.ticketCode === targetTicket.ticketCode
+                ? { ...prev, status: 'cancelled' }
+                : prev
+            );
             void loadTicketsList();
             void loadConfigAndSpots();
           } else {
             notify(data.error || 'Hủy vé thất bại');
           }
-        } catch {
-          notify('Lỗi hủy vé');
+        } catch (err: any) {
+          notify(err?.message || 'Lỗi kết nối khi hủy vé');
         }
       },
     });
@@ -2279,6 +2299,7 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       <th style={{ padding: '10px 14px' }}>Ô đỗ</th>
                       <th style={{ padding: '10px 14px' }}>Giờ vào</th>
                       <th style={{ padding: '10px 14px' }}>Trạng thái</th>
+                      <th style={{ padding: '10px 14px', textAlign: 'right' }}>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2336,11 +2357,39 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                             )}
                           </div>
                         </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          {t.status !== 'cancelled' && t.status !== 'completed' ? (
+                            <button
+                              type="button"
+                              style={{
+                                height: 30,
+                                padding: '0 10px',
+                                fontSize: 11.5,
+                                background: '#fee2e2',
+                                color: '#b91c1c',
+                                border: '1px solid #fca5a5',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedTicket(t);
+                                handleCancelTicket(t);
+                              }}
+                            >
+                              Hủy vé
+                            </button>
+                          ) : (
+                            <span style={{ fontSize: 11.5, color: '#94a3b8' }}>—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                     {ticketsList.length === 0 && (
                       <tr>
-                        <td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--pk-text-muted)' }}>
+                        <td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--pk-text-muted)' }}>
                           Chưa có lịch đặt chỗ nào phù hợp.
                         </td>
                       </tr>
@@ -2398,32 +2447,40 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                       <span>Mở vé</span>
                     </a>
 
-                    <button
-                      type="button"
-                      className="pk-btn-secondary"
-                      style={{ height: 36, padding: '0 10px', fontSize: 12.5 }}
-                      onClick={() => setShowChangeSpotModal(true)}
-                    >
-                      Đổi ô
-                    </button>
+                    {selectedTicket.status !== 'cancelled' && selectedTicket.status !== 'completed' ? (
+                      <>
+                        <button
+                          type="button"
+                          className="pk-btn-secondary"
+                          style={{ height: 36, padding: '0 10px', fontSize: 12.5 }}
+                          onClick={() => setShowChangeSpotModal(true)}
+                        >
+                          Đổi ô
+                        </button>
 
-                    <button
-                      type="button"
-                      style={{
-                        height: 36,
-                        padding: '0 10px',
-                        fontSize: 12.5,
-                        background: '#fee2e2',
-                        color: '#b91c1c',
-                        border: '1px solid #fca5a5',
-                        borderRadius: 'var(--pk-radius)',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                      }}
-                      onClick={handleCancelTicket}
-                    >
-                      Hủy vé
-                    </button>
+                        <button
+                          type="button"
+                          style={{
+                            height: 36,
+                            padding: '0 10px',
+                            fontSize: 12.5,
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: '1px solid #fca5a5',
+                            borderRadius: 'var(--pk-radius)',
+                            cursor: 'pointer',
+                            fontWeight: 600,
+                          }}
+                          onClick={() => handleCancelTicket(selectedTicket)}
+                        >
+                          Hủy vé
+                        </button>
+                      </>
+                    ) : (
+                      <span className="pk-badge-status pk-badge-cancelled" style={{ padding: '6px 12px', fontSize: 12 }}>
+                        {selectedTicket.status === 'cancelled' ? 'Vé đã hủy' : 'Đã hoàn thành'}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}

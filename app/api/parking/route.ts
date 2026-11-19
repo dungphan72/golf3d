@@ -60,7 +60,7 @@ export async function GET(req: Request) {
   const auth = await getAuth();
   const tenant = tenantParam || auth?.tenant || DEFAULT_PARKING_TENANT;
   if (action === 'tickets-list' || action === 'reconciliation') {
-    const denied = requireParking(auth, tenant, action === 'tickets-list' ? 'parking.view' : 'parking.manage');
+    const denied = requireParking(auth, tenant, 'parking.view');
     if (denied) return denied;
   }
 
@@ -257,8 +257,8 @@ export async function POST(req: Request) {
   const staffActions: Record<string, Permission> = {
     'recognize-plate': 'parking.gate', 'gate-checkin': 'parking.gate',
     'gate-checkout': 'parking.gate', 'gate-paper-ticket': 'parking.gate',
-    'close-shift': 'parking.manage', 'change-spot': 'parking.manage',
-    'cancel-ticket': 'parking.manage', 'set-spot-status': 'parking.manage',
+    'close-shift': 'parking.gate', 'change-spot': 'parking.gate',
+    'set-spot-status': 'parking.gate',
     'update-settings': 'parking.manage', 'save-spot': 'parking.manage', 'delete-spot': 'parking.manage',
   };
   if (staffActions[action]) {
@@ -536,17 +536,30 @@ export async function POST(req: Request) {
     if (action === 'cancel-ticket') {
       const ticketCode = String(body.ticketCode || '').trim();
       const reason = String(body.reason || 'Khách yêu cầu hủy').trim();
+      const providedToken = String(body.accessToken || '').trim();
 
       const ticket = await db().prepare('SELECT * FROM parking_tickets WHERE tenant=? AND ticket_code=?').bind(tenant, ticketCode).first<any>();
       if (!ticket) throw new Error('Không tìm thấy vé để hủy');
 
+      // Authorize either via valid customer accessToken or staff parking.gate / booking.cancel permission
+      const hasCustomerToken = Boolean(providedToken && ticket.access_token && providedToken === ticket.access_token);
+      if (!hasCustomerToken) {
+        const denied = requireParking(auth, tenant, 'parking.gate');
+        if (denied) return denied;
+      }
+
+      if (ticket.status === 'cancelled') {
+        return Response.json({ ok: true, message: 'Vé đã được hủy trước đó' });
+      }
+
+      const refundAmt = Number(ticket.paid_amount) > 0 ? Number(ticket.paid_amount) : 0;
       await db()
-        .prepare("UPDATE parking_tickets SET status='cancelled', updated_at=? WHERE id=?")
-        .bind(Date.now(), ticket.id)
+        .prepare("UPDATE parking_tickets SET status='cancelled', refund_amount=?, updated_at=? WHERE id=?")
+        .bind(refundAmt, Date.now(), ticket.id)
         .run();
 
       // If customer paid, record refund transaction
-      if (ticket.paid_amount > 0) {
+      if (refundAmt > 0) {
         await db()
           .prepare(
             `INSERT INTO parking_transactions (
@@ -559,10 +572,10 @@ export async function POST(req: Request) {
             ticket.id,
             ticket.ticket_code,
             ticket.payment_method || 'transfer',
-            ticket.paid_amount,
+            refundAmt,
             `REFUND-${ticket.ticket_code}`,
             `Hoàn tiền hủy vé: ${reason}`,
-            auth?.name || 'Nhân viên',
+            auth?.name || 'Khách hàng / Nhân viên',
             Date.now(),
           )
           .run();

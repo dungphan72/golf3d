@@ -88,11 +88,31 @@ export function ParkingConfirmModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="pk-confirm-dialog-title"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(4px)',
+        WebkitBackdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10050,
+        padding: 16,
+      }}
       onClick={onClose}
     >
       <div
-        className="pk-modal-box"
-        style={{ maxWidth: 400 }}
+        className="pk-card pk-modal-box"
+        style={{
+          width: '100%',
+          maxWidth: 400,
+          background: '#ffffff',
+          borderRadius: 16,
+          padding: 20,
+          boxShadow: '0 20px 40px rgba(15, 23, 42, 0.25)',
+          border: '1px solid #e2e8f0',
+        }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>

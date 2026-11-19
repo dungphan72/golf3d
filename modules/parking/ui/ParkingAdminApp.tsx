@@ -52,7 +52,19 @@ import { money } from '../../../lib/club';
 import { sepayQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
 import { extractVietnamesePlate, formatVietnamesePlate } from '../core/plate-recognition';
+import qrcode from 'qrcode-generator';
 import '../../../app/parking.css';
+
+function getQrDataUrl(data: string, cellSize = 3, margin = 1): string {
+  try {
+    const qr = qrcode(0, 'M');
+    qr.addData(data);
+    qr.make();
+    return qr.createDataURL(cellSize, margin);
+  } catch {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(data)}`;
+  }
+}
 
 interface Props {
   tenant?: string;
@@ -2239,11 +2251,9 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
                 <div className="pk-card pk-ticket-detail-card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(
-                        `SIGOLF-PK:${selectedTicket.ticketCode}`,
-                      )}`}
+                      src={getQrDataUrl(`SIGOLF-PK:${selectedTicket.ticketCode}`, 3, 1)}
                       alt="QR"
-                      style={{ width: 64, height: 64, border: '1px solid #e2e8f0', borderRadius: 4 }}
+                      style={{ width: 64, height: 64, border: '1px solid #e2e8f0', borderRadius: 4, imageRendering: 'pixelated' }}
                     />
 
                     <div>
@@ -4295,15 +4305,18 @@ export default function ParkingAdminApp({ tenant = 'gopick', role = 'admin', onN
 
             <div style={{ textAlign: 'center', margin: '12px 0' }}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=${slipPaperSize === '58mm' ? '85x85' : '110x110'}&data=${encodeURIComponent(
+                src={getQrDataUrl(
                   `SIGOLF_PARKING:${ticketToPrint.ticketCode}:${ticketToPrint.accessToken || 'VERIFIED'}`,
-                )}`}
+                  slipPaperSize === '58mm' ? 3 : 4,
+                  1,
+                )}
                 alt="QR đối soát"
                 style={{
                   width: slipPaperSize === '58mm' ? 85 : 110,
                   height: slipPaperSize === '58mm' ? 85 : 110,
                   margin: '0 auto',
                   display: 'block',
+                  imageRendering: 'pixelated',
                 }}
               />
               <div style={{ fontSize: 9.5, color: '#666', marginTop: 3 }}>Quét QR đối soát barie tự động</div>

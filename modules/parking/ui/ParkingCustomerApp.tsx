@@ -924,19 +924,7 @@ export default function ParkingCustomerApp({
           <a
             href="/app"
             title={t.backToSigolf}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 4,
-              background: 'rgba(255,255,255,0.18)',
-              color: '#ffffff',
-              padding: '5px 8px',
-              borderRadius: 'var(--pk-radius)',
-              fontSize: 11.5,
-              fontWeight: 700,
-              textDecoration: 'none',
-              border: '1px solid rgba(255,255,255,0.25)',
-            }}
+            className="pk-btn-home-pill"
           >
             <Home size={13} />
             <span className="hidden-xs">{t.backToSigolf}</span>
@@ -990,19 +978,11 @@ export default function ParkingCustomerApp({
                   </p>
 
                   <div className="pk-card">
-                    {/* Bãi xe */}
-                    <div className="pk-input-group">
-                      <label className="pk-label">
-                        <MapPin size={14} color="var(--pk-primary)" />
-                        {t.parkingLot}
-                      </label>
-                      <select
-                        className="pk-select"
-                        value={tenant}
-                        onChange={(e) => setTenant(e.target.value)}
-                      >
-                        <option value="gopick">Bãi xe GoPick — 250 Lương Định Của (65 ô)</option>
-                      </select>
+                    {/* Bãi xe: Huy hiệu vị trí gọn gàng */}
+                    <div className="pk-facility-compact-badge">
+                      <MapPin size={15} color="var(--pk-primary)" />
+                      <span><strong>Bãi xe GoPick</strong> · 250 Lương Định Của</span>
+                      <span className="pk-facility-spots-count">65 ô</span>
                     </div>
 
                     {/* Ngày đậu xe */}

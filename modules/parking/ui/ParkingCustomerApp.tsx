@@ -32,10 +32,13 @@ import {
   Zap,
   Bell,
   Camera,
+  Download,
+  PlusCircle,
 } from 'lucide-react';
 import { money } from '../../../lib/club';
 import { sepayQrUrl, vietQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings } from '../core/types';
+import { getQrDataUrl, downloadTicketPassImage } from '../core/ticket-pass';
 import { PwaInstallProvider } from '../../../app/ui/PwaInstallPrompt';
 import '../../../app/parking.css';
 
@@ -368,6 +371,64 @@ export default function ParkingCustomerApp({
   const [lookupQuery, setLookupQuery] = useState<string>('');
   const [fullScreenQrTicket, setFullScreenQrTicket] = useState<ParkingTicket | null>(null);
   const [reminderNotice, setReminderNotice] = useState<string>('');
+
+  // Stay extension states
+  const [showExtendModal, setShowExtendModal] = useState<boolean>(false);
+  const [extendHours, setExtendHours] = useState<number>(1);
+  const [extending, setExtending] = useState<boolean>(false);
+  const [extendError, setExtendError] = useState<string>('');
+  const [extendSuccess, setExtendSuccess] = useState<string>('');
+  const [downloadingTicket, setDownloadingTicket] = useState<boolean>(false);
+
+  async function handleDownloadTicket(tItem: ParkingTicket) {
+    try {
+      setDownloadingTicket(true);
+      await downloadTicketPassImage(tItem);
+    } catch (e: any) {
+      alert('Không thể tạo file ảnh vé: ' + (e?.message || ''));
+    } finally {
+      setDownloadingTicket(false);
+    }
+  }
+
+  async function handleExtendStaySubmit() {
+    if (!ticket) return;
+    try {
+      setExtending(true);
+      setExtendError('');
+      setExtendSuccess('');
+
+      const isSpon = ticket.feePayer === 'gopick_sponsored' || ticket.sponsoredAmount >= ticket.totalAmount;
+      const res = await fetch('/api/parking?action=extend-stay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketCode: ticket.ticketCode,
+          accessToken: ticket.accessToken,
+          extraMinutes: extendHours * 60,
+          paymentMethod: isSpon ? 'gopick_sponsored' : 'vietqr',
+        }),
+      });
+
+      const data: any = await res.json();
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || 'Không thể gia hạn đỗ xe lúc này');
+      }
+
+      setTicket(data.ticket);
+      setExtendSuccess(
+        `Gia hạn thành công thêm ${extendHours} giờ! Giờ ra mới: ${new Date(data.ticket.expectedOut).toTimeString().slice(0, 5)}`
+      );
+      setTimeout(() => {
+        setShowExtendModal(false);
+        setExtendSuccess('');
+      }, 2000);
+    } catch (err: any) {
+      setExtendError(err.message || 'Lỗi khi gia hạn vé');
+    } finally {
+      setExtending(false);
+    }
+  }
 
   // Handle notification reminder for expiring ticket
   async function handleEnableReminder(tItem: ParkingTicket) {
@@ -1758,13 +1819,12 @@ export default function ParkingCustomerApp({
 
                   <div className="pk-ticket-qr-box">
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
-                        `SIGOLF_PARKING:${ticket.ticketCode}:${ticket.accessToken}`,
-                      )}`}
+                      src={getQrDataUrl(`SIGOLF_PARKING:${ticket.ticketCode}:${ticket.accessToken}`, 5, 2)}
                       alt="QR"
                       style={{ width: 150, height: 150 }}
                     />
                     <div className="pk-ticket-code-label">Mã vé: {ticket.ticketCode}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Mã QR hoạt động 100% Offline</div>
                   </div>
 
                   <div className="pk-ticket-perforation">
@@ -1811,29 +1871,53 @@ export default function ParkingCustomerApp({
                     return (
                       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12.5, color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span>⏱ Thời gian còn lại: <strong>{hours > 0 ? `${hours}h ${mins}m` : `${mins} phút`}</strong> (Đến {new Date(ticket.expectedOut).toTimeString().slice(0, 5)})</span>
-                        <button
-                          type="button"
-                          onClick={() => handleEnableReminder(ticket)}
-                          style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: 'var(--pk-primary)', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                        >
-                          <Bell size={12} />
-                          <span>Bật nhắc nhở</span>
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            type="button"
+                            onClick={() => setShowExtendModal(true)}
+                            style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: 'var(--pk-primary)', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <PlusCircle size={12} />
+                            <span>Gia hạn</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleEnableReminder(ticket)}
+                            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <Bell size={12} />
+                            <span>Nhắc nhở</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   }
                   if (diffMins > 0 && diffMins <= 15) {
                     return (
-                      <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#854d0e' }}>
-                        ⚠️ <strong>Sắp hết giờ đỗ xe:</strong> Còn {diffMins} phút là đến giờ xe ra ({new Date(ticket.expectedOut).toTimeString().slice(0, 5)}). Quý khách vui lòng ra bãi đúng giờ để tránh phát sinh phụ thu ngoài giờ.
+                      <div style={{ background: '#fefce8', border: '1px solid #fef08a', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#854d0e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>⚠️ <strong>Sắp hết giờ đỗ:</strong> Còn {diffMins} phút là đến giờ xe ra ({new Date(ticket.expectedOut).toTimeString().slice(0, 5)}).</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowExtendModal(true)}
+                          style={{ background: '#ca8a04', color: '#ffffff', border: 'none', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          Gia hạn ngay
+                        </button>
                       </div>
                     );
                   }
                   if (diffMins <= 0) {
                     const otMins = Math.abs(diffMins);
                     return (
-                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#991b1b' }}>
-                        ⚠️ <strong>Đã quá giờ đỗ {otMins} phút:</strong> Phụ thu ngoài giờ (sau 15 phút ân hạn) sẽ được tính tại cổng khi quý khách xuất bãi.
+                      <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '10px 14px', marginTop: 12, fontSize: 12, color: '#991b1b', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>⚠️ <strong>Quá giờ đỗ {otMins} phút:</strong> Phụ thu ngoài giờ sẽ tính khi xe ra cổng.</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowExtendModal(true)}
+                          style={{ background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: 4, padding: '4px 8px', fontSize: 11.5, fontWeight: 700, cursor: 'pointer', flexShrink: 0 }}
+                        >
+                          Gia hạn bù
+                        </button>
                       </div>
                     );
                   }
@@ -1850,6 +1934,27 @@ export default function ParkingCustomerApp({
                   <button
                     type="button"
                     className="pk-btn-primary"
+                    onClick={() => handleDownloadTicket(ticket)}
+                    disabled={downloadingTicket}
+                    style={{ height: 46, background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)' }}
+                  >
+                    <Download size={16} />
+                    <span>{downloadingTicket ? 'Đang tạo ảnh...' : 'Lưu ảnh vé vào máy (Offline)'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
+                    onClick={() => setShowExtendModal(true)}
+                    style={{ height: 46 }}
+                  >
+                    <Clock size={16} />
+                    <span>Gia hạn thêm giờ đỗ xe</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="pk-btn-secondary"
                     onClick={() => setFullScreenQrTicket(ticket)}
                     style={{ height: 46 }}
                   >
@@ -1923,9 +2028,7 @@ export default function ParkingCustomerApp({
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <div style={{ background: '#ffffff', padding: 6, borderRadius: 6, border: '1px solid #cbd5e1' }}>
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(
-                      `SIGOLF_PARKING:${activeTicket.ticketCode}:${activeTicket.accessToken}`,
-                    )}`}
+                    src={getQrDataUrl(`SIGOLF_PARKING:${activeTicket.ticketCode}:${activeTicket.accessToken}`, 4, 1)}
                     alt="QR"
                     style={{ width: 80, height: 80 }}
                   />
@@ -2242,9 +2345,7 @@ export default function ParkingCustomerApp({
 
             <div style={{ background: '#ffffff', padding: 8, border: '2px solid var(--pk-primary)', borderRadius: 8 }}>
               <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(
-                  `SIGOLF_PARKING:${fullScreenQrTicket.ticketCode}:${fullScreenQrTicket.accessToken}`,
-                )}`}
+                src={getQrDataUrl(`SIGOLF_PARKING:${fullScreenQrTicket.ticketCode}:${fullScreenQrTicket.accessToken}`, 7, 2)}
                 alt="QR Fullscreen"
                 style={{ width: 220, height: 220 }}
               />
@@ -2255,6 +2356,155 @@ export default function ParkingCustomerApp({
             </div>
             <div style={{ fontSize: 12, color: '#166534', fontWeight: 600 }}>
               Đưa mã này cho bảo vệ quét tại cổng vào / ra
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gia hạn đỗ xe */}
+      {showExtendModal && ticket && (
+        <div className="pk-modal-overlay" onClick={() => setShowExtendModal(false)}>
+          <div
+            className="pk-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 400, borderRadius: 16 }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <h3 className="pk-modal-title" style={{ margin: 0, fontSize: 18 }}>
+                🕒 Gia hạn đỗ xe
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowExtendModal(false)}
+                style={{
+                  background: '#f1f5f9',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: 30,
+                  height: 30,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: 13, color: 'var(--pk-text-muted)', marginBottom: 14 }}>
+              Gia hạn thêm thời gian đỗ tại ô <strong>{ticket.spotCode}</strong> (Xe: {ticket.licensePlate})
+            </p>
+
+            {extendError && (
+              <div
+                style={{
+                  background: '#fef2f2',
+                  border: '1px solid #fecaca',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  color: '#991b1b',
+                  fontSize: 12.5,
+                  marginBottom: 14,
+                }}
+              >
+                ⚠️ {extendError}
+              </div>
+            )}
+
+            {extendSuccess && (
+              <div
+                style={{
+                  background: '#f0fdf4',
+                  border: '1px solid #bbf7d0',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                  color: '#166534',
+                  fontSize: 12.5,
+                  marginBottom: 14,
+                }}
+              >
+                ✓ {extendSuccess}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#334155' }}>
+                Chọn số giờ gia hạn:
+              </span>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                {[1, 2, 3].map((h) => {
+                  const isSelected = extendHours === h;
+                  const isSpon = ticket.feePayer === 'gopick_sponsored' || ticket.sponsoredAmount >= ticket.totalAmount;
+                  const price = isSpon ? 0 : h * 20000;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      onClick={() => setExtendHours(h)}
+                      style={{
+                        padding: '10px 4px',
+                        borderRadius: 8,
+                        border: isSelected ? '2px solid var(--pk-primary)' : '1px solid #cbd5e1',
+                        background: isSelected ? '#eef2ff' : '#ffffff',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <div style={{ fontSize: 15, fontWeight: 800, color: isSelected ? 'var(--pk-primary)' : '#1e293b' }}>
+                        +{h}h
+                      </div>
+                      <div style={{ fontSize: 11.5, color: isSelected ? 'var(--pk-primary)' : '#64748b', marginTop: 2 }}>
+                        {isSpon ? 'Tài trợ' : `${money(price)}`}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: 8,
+                padding: '10px 12px',
+                fontSize: 12.5,
+                marginBottom: 16,
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{ color: '#64748b' }}>Giờ ra mới dự kiến:</span>
+                <strong style={{ color: '#0f172a' }}>
+                  {new Date(new Date(ticket.expectedOut).getTime() + extendHours * 3600 * 1000).toTimeString().slice(0, 5)}
+                </strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: '#64748b' }}>Phí gia hạn:</span>
+                <strong style={{ color: ticket.feePayer === 'gopick_sponsored' ? '#059669' : 'var(--pk-primary)', fontSize: 13.5 }}>
+                  {ticket.feePayer === 'gopick_sponsored' ? '0 đ (GoPick tài trợ)' : money(extendHours * 20000)}
+                </strong>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="pk-btn-secondary"
+                onClick={() => setShowExtendModal(false)}
+                style={{ flex: 1, height: 42 }}
+              >
+                Đóng
+              </button>
+              <button
+                type="button"
+                className="pk-btn-primary"
+                onClick={handleExtendStaySubmit}
+                disabled={extending}
+                style={{ flex: 2, height: 42 }}
+              >
+                {extending ? 'Đang xử lý...' : 'Xác nhận gia hạn'}
+              </button>
             </div>
           </div>
         </div>

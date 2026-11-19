@@ -14,6 +14,7 @@ import {
   getShiftReconciliation,
   closeShift,
   changeTicketSpot,
+  extendParkingTicket,
   updateParkingSettings,
   saveParkingSpot,
   deleteParkingSpot,
@@ -324,6 +325,19 @@ export async function POST(req: Request) {
         staffName,
       });
       return Response.json({ ok: true, ...result });
+    }
+
+    if (action === 'extend-stay') {
+      const staffName = auth?.name || body.staffName || 'Khách hàng';
+      const ticket = await extendParkingTicket(tenant, {
+        ticketCode: body.ticketCode,
+        accessToken: body.accessToken,
+        extraMinutes: Number(body.extraMinutes) || 60,
+        paymentMethod: body.paymentMethod || 'vietqr',
+        paymentRef: body.paymentRef,
+        staffName,
+      });
+      return Response.json({ ok: true, ticket });
     }
 
     if (action === 'gate-paper-ticket') {

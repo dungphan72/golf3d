@@ -24,6 +24,7 @@ import {
   updateParkingSettings,
   saveParkingSpot,
   deleteParkingSpot,
+  extendParkingTicket,
 } from '../modules/parking/server/parking-service.ts';
 import { db } from '../lib/server/common.ts';
 import { receiveSepay } from '../lib/server/bank-service.ts';
@@ -779,6 +780,47 @@ test('15. Parking settings and spot management (CRUD)', async () => {
       allowPaperTickets: true,
     },
     'Admin Test'
+  );
+});
+
+test('16. Stay Extension (extendParkingTicket) with spot collision check and receipt', async () => {
+  const baseTime = Date.now() + 5000000;
+  const initialTicket = await holdSpot(TENANT, {
+    spotCode: 'P25',
+    licensePlate: '51K-EXT.01',
+    customerName: 'Khách Gia Hạn',
+    expectedIn: baseTime,
+    expectedOut: baseTime + 2 * 3600 * 1000,
+  });
+
+  const confirmed = await confirmTicket(TENANT, {
+    ticketCode: initialTicket.ticketCode,
+    paymentMethod: 'vietqr',
+  });
+
+  // Now extend stay by 1 hour (+60 minutes)
+  const extended = await extendParkingTicket(TENANT, {
+    ticketCode: confirmed.ticketCode,
+    extraMinutes: 60,
+    paymentMethod: 'vietqr',
+  });
+
+  assert.equal(extended.expectedOut, confirmed.expectedOut + 3600 * 1000);
+  assert.ok(extended.totalAmount > confirmed.totalAmount);
+  assert.ok(extended.paidAmount > confirmed.paidAmount);
+
+  // Attempting to book an overlapping ticket on P25 during the extended period should now be rejected!
+  await assert.rejects(
+    async () => {
+      await holdSpot(TENANT, {
+        spotCode: 'P25',
+        licensePlate: '51K-EXT.COLLIDE',
+        customerName: 'Khách Trùng Giờ',
+        expectedIn: confirmed.expectedOut + 15 * 60 * 1000, // Inside the extended window
+        expectedOut: extended.expectedOut + 3600 * 1000,
+      });
+    },
+    /vừa có người giữ chỗ hoặc đã được đặt/i,
   );
 });
 

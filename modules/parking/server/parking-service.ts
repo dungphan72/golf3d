@@ -4,6 +4,7 @@
  */
 
 import { db, audit } from '../../../lib/server/common.ts';
+import { pushToTenant } from '../../../lib/server/webpush.ts';
 import type {
   ParkingSettings,
   ParkingSpot,
@@ -16,6 +17,7 @@ import type {
   GateCheckOutInput,
   CreatePaperTicketInput,
   ChangeSpotInput,
+  ExtendParkingTicketInput,
 } from '../core/types.ts';
 import { calculateParkingPricing } from '../core/pricing.ts';
 import { evaluateSpotState, doesTicketConflict } from '../core/availability.ts';
@@ -684,6 +686,21 @@ export async function gateCheckIn(
 
   await audit(tenant, 'XE_VÀO_CỔNG', `Cho xe ${ticket.license_plate} vào ô ${ticket.spot_code} (Vé: ${ticket.ticket_code})`);
 
+  // WebPush notification to reception POS
+  try {
+    const isGolf = ticket.fee_payer === 'gopick_sponsored' || Boolean(ticket.golf_booking_id);
+    const title = isGolf ? `🏌️ Khách Golf vào bãi: ${ticket.license_plate}` : `🚗 Xe vào cổng: ${ticket.license_plate}`;
+    const body = `Khách: ${ticket.customer_name || 'Khách vãng lai'} — Ô: ${ticket.spot_code} (Vé: ${ticket.ticket_code})${isGolf ? ' • GoPick đài thọ đỗ xe' : ''}`;
+    await pushToTenant(tenant, {
+      title,
+      body,
+      url: '/quan-ly?view=parking',
+      tag: `parking-gate-${ticket.ticket_code}`,
+    });
+  } catch (pushErr) {
+    console.warn('WebPush to reception POS skipped:', pushErr);
+  }
+
   const updated = await db().prepare('SELECT * FROM parking_tickets WHERE id=?').bind(ticket.id).first<any>();
   return mapDbTicket(updated);
 }
@@ -940,6 +957,140 @@ export async function changeTicketSpot(
     .first<any>();
 
   return mapDbTicket(updatedTicket);
+}
+
+/**
+ * Extends the duration of an existing parking ticket.
+ * Atomic collision checking prevents double booking the spot during extended time.
+ */
+export async function extendParkingTicket(
+  tenant: string = DEFAULT_PARKING_TENANT,
+  input: ExtendParkingTicketInput,
+  now: number = Date.now(),
+): Promise<ParkingTicket> {
+  const extraMinutes = Math.max(15, Number(input.extraMinutes) || 60);
+  const ticketCode = (input.ticketCode || '').trim();
+  const accessToken = (input.accessToken || '').trim();
+
+  let query = 'SELECT * FROM parking_tickets WHERE tenant=? AND (ticket_code=? OR access_token=?)';
+  const ticket = await db().prepare(query).bind(tenant, ticketCode, accessToken).first<any>();
+
+  if (!ticket) {
+    throw new Error('Không tìm thấy thông tin vé đỗ xe để gia hạn');
+  }
+
+  if (['completed', 'cancelled'].includes(ticket.status)) {
+    throw new Error(`Không thể gia hạn vé có trạng thái "${ticket.status}"`);
+  }
+
+  const settings = await ensureParkingInitialized(tenant);
+  const newExpectedOut = ticket.expected_out + extraMinutes * 60 * 1000;
+
+  // Collision checking on target spot
+  const overlapping = await db()
+    .prepare(
+      `SELECT * FROM parking_tickets
+       WHERE tenant=?
+         AND spot_id=?
+         AND id<>?
+         AND status IN ('holding', 'confirmed', 'active')
+         AND (
+           status IN ('confirmed', 'active')
+           OR (status = 'holding' AND hold_expires_at > ?)
+         )`
+    )
+    .bind(tenant, ticket.spot_id, ticket.id, now)
+    .all<any>();
+
+  const mappedOverlaps = overlapping.results.map(mapDbTicket);
+  for (const ot of mappedOverlaps) {
+    if (doesTicketConflict(ot, ticket.expected_in, newExpectedOut, settings.bufferMinutes, now)) {
+      const nextTime = new Date(ot.expectedIn).toTimeString().slice(0, 5);
+      throw new Error(
+        `Ô ${ticket.spot_code} đã có lượt khách tiếp theo đặt lúc ${nextTime}. Quý khách vui lòng liên hệ lễ tân/quản lý để đổi ô khác trước khi gia hạn.`
+      );
+    }
+  }
+
+  // Calculate pricing for extra time
+  let extraCharge = 0;
+  let extraSponsored = 0;
+
+  if (ticket.golf_booking_id && ticket.fee_payer === 'gopick_sponsored') {
+    const totalHours = (newExpectedOut - ticket.expected_in) / (3600 * 1000);
+    if (totalHours <= settings.golfFreeHours) {
+      extraSponsored = 0;
+      extraCharge = 0;
+    } else {
+      const extraHours = Math.ceil(extraMinutes / 60);
+      extraCharge = extraHours * (settings.defaultHourlyRate || 20000);
+    }
+  } else {
+    const extraHours = Math.ceil(extraMinutes / 60);
+    extraCharge = extraHours * (settings.defaultHourlyRate || 20000);
+  }
+
+  await db()
+    .prepare(
+      `UPDATE parking_tickets
+       SET expected_out=?,
+           total_amount=total_amount + ?,
+           paid_amount=paid_amount + ?,
+           sponsored_amount=sponsored_amount + ?,
+           updated_at=?
+       WHERE id=?`
+    )
+    .bind(
+      newExpectedOut,
+      extraCharge + extraSponsored,
+      extraCharge,
+      extraSponsored,
+      now,
+      ticket.id,
+    )
+    .run();
+
+  if (extraCharge > 0) {
+    await db()
+      .prepare(
+        `INSERT INTO parking_transactions (
+          id, tenant, ticket_id, ticket_code, shift_id, tx_type, method, amount, reference_code, note, recorded_by, created_at
+        ) VALUES (?, ?, ?, ?, NULL, 'online_payment', ?, ?, ?, ?, ?, ?)`
+      )
+      .bind(
+        `tx-ext-${ticket.id}-${now}`,
+        tenant,
+        ticket.id,
+        ticket.ticket_code,
+        input.paymentMethod || 'vietqr',
+        extraCharge,
+        input.paymentRef || `EXT-${ticket.ticket_code}`,
+        `Gia hạn thêm ${Math.round(extraMinutes / 60)} giờ`,
+        input.staffName || 'Khách hàng',
+        now,
+      )
+      .run();
+  }
+
+  await audit(
+    tenant,
+    'GIA_HẠN_ĐỖ_XE',
+    `Gia hạn thêm ${extraMinutes} phút cho xe ${ticket.license_plate} (Vé ${ticket.ticket_code}). Phí thêm: ${extraCharge} đ`,
+  );
+
+  try {
+    await pushToTenant(tenant, {
+      title: `🕒 Gia hạn đỗ xe: ${ticket.license_plate}`,
+      body: `Ô ${ticket.spot_code} vừa gia hạn thêm ${Math.round(extraMinutes / 60)} giờ (Đến ${new Date(newExpectedOut).toTimeString().slice(0, 5)})`,
+      url: '/quan-ly?view=parking',
+      tag: `parking-ext-${ticket.ticket_code}`,
+    });
+  } catch (pushErr) {
+    console.warn('WebPush to reception POS skipped:', pushErr);
+  }
+
+  const updated = await db().prepare('SELECT * FROM parking_tickets WHERE id=?').bind(ticket.id).first<any>();
+  return mapDbTicket(updated);
 }
 
 /**

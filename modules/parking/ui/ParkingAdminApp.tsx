@@ -52,19 +52,8 @@ import { money } from '../../../lib/club';
 import { sepayQrUrl } from '../../../lib/bank';
 import type { ParkingSpot, ParkingTicket, ParkingSettings, ShiftReconciliationSummary } from '../core/types';
 import { extractVietnamesePlate, formatVietnamesePlate } from '../core/plate-recognition';
-import qrcode from 'qrcode-generator';
+import { getQrDataUrl, downloadTicketPassImage } from '../core/ticket-pass';
 import '../../../app/parking.css';
-
-function getQrDataUrl(data: string, cellSize = 3, margin = 1): string {
-  try {
-    const qr = qrcode(0, 'M');
-    qr.addData(data);
-    qr.make();
-    return qr.createDataURL(cellSize, margin);
-  } catch {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(data)}`;
-  }
-}
 
 interface Props {
   tenant?: string;

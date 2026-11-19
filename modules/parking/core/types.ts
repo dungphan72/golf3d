@@ -222,3 +222,13 @@ export interface ChangeSpotInput {
   newSpotCode: string;
   staffName?: string;
 }
+
+export interface ExtendParkingTicketInput {
+  tenant?: string;
+  ticketCode?: string;
+  accessToken?: string;
+  extraMinutes: number;
+  paymentMethod?: string;
+  paymentRef?: string;
+  staffName?: string;
+}

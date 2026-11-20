@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { BRAND } from '../../lib/brand';
 import { money } from '../../lib/club';
 import {
@@ -503,9 +503,8 @@ export default function MemberPortal({
   registerFirst?: boolean;
   publicOverview?: Overview;
 }) {
-  const router = useRouter();
   const [data, setData] = useState<Overview | null>(null);
-  const [state, setState] = useState<'loading' | 'out' | 'in'>('loading');
+  const [state, setState] = useState<'loading' | 'out' | 'in' | 'error'>('loading');
   const [activeTab, setActiveTab] = useState<MemberTab>('overview');
   const [now, setNow] = useState(() => Date.now());
   const [copiedCode, setCopiedCode] = useState(false);
@@ -526,18 +525,21 @@ export default function MemberPortal({
   const mounted = useRef(true);
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/member', { cache: 'no-store' });
-    if (!mounted.current) return;
-    if (!r.ok) return;
-    const v = (await r.json()) as Overview & { signedOut?: boolean };
-    if (!mounted.current) return;
-    if (v.signedOut) {
-      setState('out');
-      setData(null);
-      return;
+    try {
+      const response = await fetch('/api/member', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Member overview unavailable');
+      const overview = (await response.json()) as Overview & { signedOut?: boolean };
+      if (!mounted.current) return;
+      if (overview.signedOut) {
+        setData(null);
+        setState('out');
+        return;
+      }
+      setData(overview);
+      setState('in');
+    } catch {
+      if (mounted.current) setState('error');
     }
-    setData(v);
-    setState('in');
   }, []);
 
   useEffect(() => {
@@ -558,6 +560,22 @@ export default function MemberPortal({
     }
   };
 
+  if (state === 'error') {
+    return (
+      <section className="mp-wrap">
+        <div className="mp-card" role="alert">
+          <h2>Chưa tải được thông tin hội viên</h2>
+          <button type="button" className="mp-btn-action" onClick={() => {
+            setState('loading');
+            void load();
+          }}>
+            Thử lại
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   if (state === 'loading') {
     return (
       <div className="mp-wrap" style={{ textAlign: 'center', padding: '10rem 1rem' }}>
@@ -574,26 +592,18 @@ export default function MemberPortal({
 
   if (state === 'out' || !data) {
     if (publicOverview) {
-      const navigate = (tab: MemberTab) => {
-        if (tab === 'overview' || tab === 'packages') setActiveTab(tab);
-        else if (tab === 'booking') router.push('/#dat-cho');
-        else router.push('/tai-khoan');
-      };
       return (
-        <MemberShell
-          tab={activeTab}
-          onTab={navigate}
-          name="Khách"
-          signedOut
-          tier="guest"
-          reminders={[]}
-          onBook={() => navigate('booking')}
-          onLogout={() => router.push('/tai-khoan')}
-        >
-          <div className={activeTab === 'packages' ? 'mr-guest-packages' : ''}>
-            <MemberHome data={publicOverview} now={now} tier="guest" onTab={navigate} />
+        <section className="mp-wrap">
+          <div className="mp-card">
+            <h1>Hội viên {publicOverview.club.name}</h1>
+            <p>Đăng nhập để xem lịch đặt line và thẻ của bạn.</p>
+            <div className="mp-head-actions">
+              <Link className="mp-btn-action" href="/tai-khoan">Đăng nhập</Link>
+              <Link className="mp-btn-action ghost" href="/tai-khoan?dang-ky">Đăng ký</Link>
+              <Link className="mp-btn-action ghost" href="/bang-gia">Xem bảng giá và gói thẻ</Link>
+            </div>
           </div>
-        </MemberShell>
+        </section>
       );
     }
     return (
